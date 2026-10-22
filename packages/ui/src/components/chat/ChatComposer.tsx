@@ -2,7 +2,6 @@ import React, { type FormEvent, useRef, useState } from "react";
 import { cn } from "../../utils";
 import { Badge } from "../Badge";
 import { Button } from "../Button";
-import { Panel } from "../Panel";
 import { Textarea } from "../TextArea";
 import { H2 } from "../Typography";
 import { Tooltip } from "../Tooltip";

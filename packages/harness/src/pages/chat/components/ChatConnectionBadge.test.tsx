@@ -20,7 +20,7 @@ import { ChatConnectionBadge } from './ChatConnectionBadge';
 // with `vi.hoisted` so the (also-hoisted) factory can read it.
 const mock = vi.hoisted(() => ({ workspace: null as unknown }));
 vi.mock('../../../hooks/useAcpWorkspace', () => ({
-  useAcpWorkspace: () => ({ workspace: mock.workspace }),
+  useAcpWorkspace: () => ({ workspace: mock.workspace, sessions: { slices: {} } }),
 }));
 
 beforeAll(async () => {

@@ -33,9 +33,9 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         className={cn(
           "rounded-xl border p-6 transition-all duration-300 shadow-sm backdrop-blur-sm",
-          "hover:-translate-y-1 hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/10 dark:hover:border-indigo-400/30",
+          "hover:-translate-y-1 hover:border-primary-500/30 hover:shadow-lg hover:shadow-primary-500/10 dark:hover:border-primary-400/30",
           {
-            "bg-white/80 border-neutral-200/60 dark:bg-neutral-950/80 dark:border-neutral-800/60":
+            "bg-white/80 border-surface-200/60 dark:bg-dark-surface-50/80 dark:border-dark-surface-400/60":
               variant === "default",
             "bg-surface-100/80 border-surface-200/60 dark:bg-dark-surface-300/80 dark:border-dark-surface-400/60":
               variant === "filled",

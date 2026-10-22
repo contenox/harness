@@ -42,7 +42,7 @@ export function ChatConnectionBadge() {
   // Find the currently running tool in the active session
   const activeSession = activeSessionId ? sessions.slices[activeSessionId] : null;
   const isPrompting = activeSession?.isPrompting ?? false;
-  const runningTool = isPrompting
+  const runningTool = activeSession?.isPrompting
     ? Object.values(activeSession.toolCalls).find(
         tc => tc.status === 'in_progress' || tc.status === 'pending'
       )
