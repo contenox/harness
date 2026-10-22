@@ -96,7 +96,7 @@ The server binds to 127.0.0.1:32123 by default (local-only). Pass --remote to
 bind all interfaces (0.0.0.0) so other machines on your LAN can reach it, or set
 ADDR/PORT to bind a specific address. TOKEN gates every API request and the Beam
 login, and is MANDATORY for any non-loopback bind (--remote or a LAN ADDR). The
-token is resolved as: TOKEN env, else ~/.contenox/serve-token.txt, else (with
+token is resolved as: TOKEN env, else ~/.contenox-harness/serve-token.txt, else (with
 --remote) a freshly generated token saved there (0600); programmatic clients
 (contenox approvals/mission/fleet) discover the same file automatically. Serving
 is plain HTTP — put a TLS-terminating reverse proxy in front for untrusted
@@ -110,7 +110,7 @@ func init() {
 	serveCmd.Flags().StringArray("workspace-root", nil,
 		"Directory a browser client may choose as a session workspace (repeatable). The serve directory is always the default; these extend the allowlist. Also settable via WORKSPACE_ROOTS (OS path-list separated) or as `contenox serve [dir]...` positional arguments.")
 	serveCmd.Flags().Bool("remote", false,
-		"Serve on all network interfaces (0.0.0.0) so other machines on your LAN can reach the API and Beam UI. Auto-provisions a TOKEN (env, else ~/.contenox/serve-token.txt, else generated and saved there) since a token is mandatory off loopback. A shorthand for ADDR=0.0.0.0; an explicit ADDR still wins. Plain HTTP — front with a TLS reverse proxy for untrusted networks.")
+		"Serve on all network interfaces (0.0.0.0) so other machines on your LAN can reach the API and Beam UI. Auto-provisions a TOKEN (env, else ~/.contenox-harness/serve-token.txt, else generated and saved there) since a token is mandatory off loopback. A shorthand for ADDR=0.0.0.0; an explicit ADDR still wins. Plain HTTP — front with a TLS reverse proxy for untrusted networks.")
 }
 
 // resolveServeAddr picks the bind host for `contenox serve`. An explicitly
@@ -203,7 +203,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 	config.Token = strings.TrimSpace(config.Token)
 	// Token resolution, the serve-token.txt convention: an explicit TOKEN env wins;
-	// else the token persisted at ~/.contenox/serve-token.txt (shared with
+	// else the token persisted at ~/.contenox-harness/serve-token.txt (shared with
 	// programmatic clients, and control-plane-denied so no agent can read it); else
 	// --remote provisions one — it mandates a token — by generating and persisting
 	// it. Loopback with nothing configured stays zero-friction (no token, no login).
@@ -264,7 +264,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// /files ProjectRoot, and the Factory default. When a project directory is
 	// served positionally it BECOMES that root, bounding all of the above to the
 	// project. Only the argument-less `contenox serve` falls back to the parent
-	// of ~/.contenox (home), preserving today's behavior.
+	// of ~/.contenox-harness (home), preserving today's behavior.
 	workspaceRoot := filepath.Dir(contenoxDir)
 	if len(args) > 0 {
 		servedDir, err := filepath.Abs(args[0])
@@ -310,7 +310,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("resolve workspace roots: %w", err)
 	}
 	// Control-plane isolation (vfs-invariant slice, 2026-07-21). Register the
-	// runtime's OWN state dirs (~/.contenox: config, database, HITL policies,
+	// runtime's OWN state dirs (~/.contenox-harness: config, database, HITL policies,
 	// declared agents, models) so NO session, browse root, or agent fs tool can
 	// reach them — even though the default workspace root is the PARENT of the
 	// .contenox dir, which containment (landed today) would otherwise let a client
@@ -595,7 +595,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// already author are fireable as fleet units without a second registration
 	// step. It SEEDS ONLY: nothing in the spawn path learns a second lookup, so
 	// the registry stays the single source of truth for what can be fired.
-	// Workspace .contenox/ shadows ~/.contenox/, the precedence every other
+	// Workspace .contenox/ shadows ~/.contenox-harness/, the precedence every other
 	// config file here follows. A failure must not take serve down — the fleet
 	// keeps working with whatever the registry already holds.
 	discoverChainAgents(ctx, agentRegistry, contenoxDir)
@@ -805,13 +805,13 @@ func runServe(cmd *cobra.Command, args []string) error {
 		rootMux.Handle("/acp", acpWebSocketHandler(acpAgentFactory, config.Token))
 	}
 	uiHandler := internalweb.SPAHandler()
-	if strings.TrimSpace(config.BeamDevProxyURL) != "" {
-		devProxy, err := internalweb.DevProxyHandler(config.BeamDevProxyURL)
+	if strings.TrimSpace(config.HarnessDevProxyURL) != "" {
+		devProxy, err := internalweb.DevProxyHandler(config.HarnessDevProxyURL)
 		if err != nil {
 			return fmt.Errorf("beam dev proxy: %w", err)
 		}
 		uiHandler = devProxy
-		fmt.Fprintf(cmd.OutOrStdout(), "Beam dev proxy: %s\n", config.BeamDevProxyURL)
+		fmt.Fprintf(cmd.OutOrStdout(), "Harness dev proxy: %s\n", config.HarnessDevProxyURL)
 	}
 	rootMux.Handle("/", uiHandler)
 
@@ -1020,7 +1020,7 @@ func startHITLApprovalSweeper(ctx context.Context, svc hitlservice.Service, inte
 
 // discoverChainAgents runs one chain-agent discovery pass over the two
 // directories every other contenox config file is resolved through — the
-// workspace .contenox/ first, then ~/.contenox/ — so a chain named by the
+// workspace .contenox/ first, then ~/.contenox-harness/ — so a chain named by the
 // agent-* convention in either, and the agent-shaped chains `contenox init`
 // ships, are declared as fleet-dispatchable agents without an operator
 // registering anything by hand.

@@ -71,7 +71,7 @@ type FindResult struct {
 //
 // Safety: the walk root is contained once up front, but filepath.WalkDir descends
 // into children the single-path guard has never seen — an interior symlink could
-// point out of the root or straight into the control plane (~/.contenox). So EVERY
+// point out of the root or straight into the control plane (~/.contenox-harness). So EVERY
 // visited node is re-resolved through the same non-privileged vfs view the flat
 // methods use (s.view.Resolve): a node that escapes or is denied is skipped (a
 // directory via SkipDir, pruning its whole subtree), never emitted or descended.
@@ -186,7 +186,7 @@ func New(root string) (Service, error) {
 
 // NewPrivileged is New over a vfs.OpenPrivilegedView: the runtime reading its
 // OWN control plane (chain-agent discovery, serve's chain wiring, the
-// operator's chain-editor API — all deliberately rooted at ~/.contenox). See
+// operator's chain-editor API — all deliberately rooted at ~/.contenox-harness). See
 // OpenPrivilegedView's doc for the invariant boundary; agent-facing consumers
 // must keep using New.
 func NewPrivileged(root string) (Service, error) {

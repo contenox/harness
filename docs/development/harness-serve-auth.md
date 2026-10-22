@@ -2,7 +2,7 @@
 
 How `contenox serve` authenticates the Beam web UI and the HTTP/WebSocket API.
 This is the contributor reference; the user-facing steps are in
-[the Beam guide](../guide/beam.md#remote-access-and-login).
+[the Beam guide](../guide/harness.md#remote-access-and-login).
 
 ## Model: BFF with an HttpOnly cookie
 
@@ -54,7 +54,7 @@ load — they carry no data), `/health*`, `/version`, `/ui/login`, `/ui/auth-sta
 
 ## Browser side (pure cookie)
 
-`packages/beam/src/lib/fetch.ts` sends `credentials: 'same-origin'` on every
+`packages/harness/src/lib/fetch.ts` sends `credentials: 'same-origin'` on every
 request and sets **no** `Authorization` header — there is no `localStorage` token
 path. `AuthProvider` polls `/ui/auth-status`; `AuthGate` (`App.tsx`) renders the
 `AuthPage` login form in place of the whole app whenever `required && !authenticated`.
@@ -69,7 +69,7 @@ path. `AuthProvider` polls `/ui/auth-status`; `AuthGate` (`App.tsx`) renders the
 > cookies, and put an XSS-readable copy of the secret in storage — defeating the
 > HttpOnly cookie. The `localStorage` reader was removed (2026-07-18) so the browser
 > authenticates **only** via the cookie. Pinned by a test in
-> `packages/beam/src/lib/authApi.test.ts` asserting no `Authorization` header is sent
+> `packages/harness/src/lib/authApi.test.ts` asserting no `Authorization` header is sent
 > even when a token sits in `localStorage`.
 
 ## Programmatic / remote clients
@@ -82,13 +82,13 @@ by the browser going cookie-only.
 ### The `serve-token.txt` convention
 
 So one credential is shared without re-passing `TOKEN`, serve persists its token
-to `~/.contenox/serve-token.txt` (`runtime/contenoxcli/serve_token.go`). Serve
+to `~/.contenox-harness/serve-token.txt` (`runtime/contenoxcli/serve_token.go`). Serve
 resolves its token as `TOKEN` env → that file → (with `--remote`) a generated
 token written there (`0600`); the same-machine clients (`newServeClient` in
 `serveclient.go`, used by `approvals`/`mission`/`fleet`) resolve `--token` →
-`CONTENOX_SERVER_TOKEN` → that file. It lives in the **global** `~/.contenox` (not
+`CONTENOX_SERVER_TOKEN` → that file. It lives in the **global** `~/.contenox-harness` (not
 a workspace-local `.contenox`) so clients find it without knowing serve's
-workspace, and because `controlPlaneDirs` always denies `~/.contenox`
+workspace, and because `controlPlaneDirs` always denies `~/.contenox-harness`
 (`cli.go`), the token file is inside the control-plane isolation boundary — no
 session, browse root, or agent fs tool can read it. A remote client on another
 host has no such file and still sets `--token`/`CONTENOX_SERVER_TOKEN` explicitly.

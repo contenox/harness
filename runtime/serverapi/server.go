@@ -67,7 +67,7 @@ type Config struct {
 	UIBaseURL           string `json:"ui_base_url"`
 	AllowedAPIOrigins   string `json:"allowed_api_origins"`
 	ProxyOrigin         string `json:"proxy_origin"`
-	BeamDevProxyURL     string `json:"beam_dev_proxy_url"`
+	HarnessDevProxyURL   string `json:"harness_dev_proxy_url"`
 	TerminalEnabled     string `json:"terminal_enabled"`
 	TerminalAllowedRoot string `json:"terminal_allowed_root"`
 	TerminalShell       string `json:"terminal_shell"`

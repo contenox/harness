@@ -40,7 +40,7 @@ automatically on 401/403 and retry the call without any external refresh tooling
 Examples:
   contenox tools add myapi --url http://localhost:8080
   contenox tools add myapi --url http://localhost:8080 --header "Authorization: Bearer $TOKEN"
-  contenox tools add erpnext --url https://erp.example.com --spec ~/.contenox/erp-subset.yaml
+  contenox tools add erpnext --url https://erp.example.com --spec ~/.contenox-harness/erp-subset.yaml
   contenox tools list
   contenox tools show myapi
   contenox tools update myapi --url http://new-host:8080
@@ -160,7 +160,7 @@ Examples:
   contenox tools update myapi --url http://new-host:9090
   contenox tools update myapi --timeout 15000
   contenox tools update myapi --header "Authorization: Bearer $NEW_TOKEN"
-  contenox tools update myapi --spec ~/.contenox/new-spec.yaml
+  contenox tools update myapi --spec ~/.contenox-harness/new-spec.yaml
   contenox tools update myapi --spec ""`,
 
 	Args: cobra.ExactArgs(1),

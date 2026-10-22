@@ -1,6 +1,7 @@
 package modelregistryapi
 
 import (
+	"github.com/contenox/harness/runtime/homedir"
 	"context"
 	"fmt"
 	"io"
@@ -153,7 +154,7 @@ func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modelDir := filepath.Join(homeDir, ".contenox", "models", req.Name)
+	modelDir := filepath.Join(homeDir, homedir.DirName, "models", req.Name)
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
 		_ = apiframework.Error(w, r, fmt.Errorf("create model directory: %w", err), apiframework.CreateOperation)
 		return

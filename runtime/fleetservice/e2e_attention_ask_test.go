@@ -125,7 +125,7 @@ func TestFleetE2E_AttentionAsk_OperatorAnswerReachesTheUnit(t *testing.T) {
 
 	ctx := context.Background()
 
-	// THE UNIT'S OWN DATABASE — $HOME/.contenox/local.db, the one its spawned
+	// THE UNIT'S OWN DATABASE — $HOME/.contenox-harness/local.db, the one its spawned
 	// process boots against and raises its ask into. The operator's side of this
 	// test reads and answers through it, which is exactly the crossing serve makes
 	// (the unit is a different process; the shared file is the meeting point).

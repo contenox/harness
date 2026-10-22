@@ -46,7 +46,7 @@ Restart the IDE. Open the agent panel — Contenox now appears in the agent pick
 
 **HITL through the editor.** If your chain uses `local_fs`/`local_shell`/`webtools`, Contenox's [HITL policy](/docs/guide/hitl/) applies — and the approval dialog is routed to the IDE's permission UI instead of a terminal prompt. The default policy gates `local_fs.write_file`, `local_fs.sed`, `local_shell.*`, and mutating `webtools` calls.
 
-**Session history that replays.** Close the IDE mid-conversation and reopen the project — your prompts, the agent's responses, and every tool call (with its output) come back. State lives in `~/.contenox/local.db`.
+**Session history that replays.** Close the IDE mid-conversation and reopen the project — your prompts, the agent's responses, and every tool call (with its output) come back. State lives in `~/.contenox-harness/local.db`.
 
 **Missions from the composer.** `/mission <intent>` (or `/mission <agent-name> <intent>`) fires a declared agent at the intent unattended, as a child subprocess of this editor session — no `contenox serve` needed — and its reports stream live back into the firing session. Configure the fallbacks first (`contenox config set default-mission-agent` / `default-mission-policy`); details in the [Zed guide](/docs/integrations/editors/zed/#fire-missions-with-mission) and the [CLI reference](/docs/reference/contenox-cli/#the-mission-slash-command).
 
@@ -56,7 +56,7 @@ Restart the IDE. Open the agent panel — Contenox now appears in the agent pick
 
 ACP sessions use a dedicated chain file separate from the CLI's default chain:
 
-- Default location: `~/.contenox/default-acp-chain.json`
+- Default location: `~/.contenox-harness/default-acp-chain.json`
 - Override path with the `CONTENOX_ACP_CHAIN_PATH` environment variable (set it in the shell that launches the IDE).
 
 The default chain uses `"tools": ["*"]`, which exposes everything the engine has registered — `local_fs`, `local_shell`, `webtools`, plus any MCP servers you've added via `contenox mcp add`.
@@ -88,7 +88,7 @@ Models are global; chains are local. Switching the model for ACP also switches i
 contenox config set telemetry-enabled true
 ```
 
-Subsequent ACP sessions write structured operation traces to `~/.contenox/telemetry.log` (chain steps, tool calls, model requests, session updates sent to the IDE).
+Subsequent ACP sessions write structured operation traces to `~/.contenox-harness/telemetry.log` (chain steps, tool calls, model requests, session updates sent to the IDE).
 
 ---
 

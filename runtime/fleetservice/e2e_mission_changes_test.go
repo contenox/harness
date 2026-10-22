@@ -130,7 +130,7 @@ func TestFleetService_E2E_MissionChanges(t *testing.T) {
 	// It is $HOME, deliberately. This unit is declared as an EXTERNAL agent, so it
 	// is spawned inside the agent sandbox, whose one writable root is this cwd —
 	// and it is a contenox binary, so it must also reach its own
-	// $HOME/.contenox/local.db to boot at all. A cwd in some other temp dir leaves
+	// $HOME/.contenox-harness/local.db to boot at all. A cwd in some other temp dir leaves
 	// that database outside the wall and the unit dies on `unable to open database
 	// file` before it can write anything. (A contenox-runs-contenox unit in
 	// production is a CHAIN agent, self-spawned and unconfined, so it has no such

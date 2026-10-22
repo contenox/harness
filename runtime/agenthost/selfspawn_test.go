@@ -14,7 +14,7 @@ import (
 // "every spawned agent runs inside the wall": a command that resolves to THIS
 // running executable is contenox spawning contenox — a dispatched mission unit or
 // a chain unit — and runs unconfined, because the wall would deny it the shared
-// runtime state (~/.contenox is not carved) that being contenox is defined by.
+// runtime state (~/.contenox-harness is not carved) that being contenox is defined by.
 // The observable difference is the assembled command: the target itself, with the
 // parent's environment, rather than the /proc/self/exe shim re-exec.
 func TestUnit_BuildAgentCmd_SelfInvocationIsNotConfined(t *testing.T) {

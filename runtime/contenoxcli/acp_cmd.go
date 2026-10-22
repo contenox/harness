@@ -1,6 +1,7 @@
 package contenoxcli
 
 import (
+	"github.com/contenox/harness/runtime/homedir"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,7 +9,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -43,7 +43,7 @@ var acpCmd = &cobra.Command{
 	Short: "Run the Contenox ACP server over stdio.",
 	Long: `Speak Agent Client Protocol over stdio so editors like Zed can run local Contenox chains.
 
-The chain executed for each session/prompt is loaded from ~/.contenox/default-acp-chain.json
+The chain executed for each session/prompt is loaded from ~/.contenox-harness/default-acp-chain.json
 (override with the CONTENOX_ACP_CHAIN_PATH environment variable). Populate it like any other
 contenox chain.
 
@@ -67,7 +67,7 @@ var acpxCmd = &cobra.Command{
 	Long: `Same Agent Client Protocol server as 'acp', for drivers that are not the
 device owner — OpenClaw and other non-editor clients. It loads the hardened
 hitl-policy-acpx.json (local_shell denied, web mutations denied, web reads
-gated) and the chain at ~/.contenox/headless-acp-chain.json (override with
+gated) and the chain at ~/.contenox-harness/headless-acp-chain.json (override with
 CONTENOX_ACPX_CHAIN_PATH).
 
 Containment for the untrusted driver is the HITL policy, not an in-chain
@@ -82,7 +82,7 @@ func init() {
 		c.Flags().Bool("auto", false, "Non-interactive mode: disable HITL permission prompts (gated tools run unattended)")
 		c.Flags().Bool("setup", false, "Run interactive setup wizard to configure provider and model, then exit.")
 		c.Flags().Bool("setup-web", false, "Serve the Beam setup wizard in the browser, exit once configured.")
-		c.Flags().String("workspace-id", "", "Workspace ID for new ACP sessions (default: the stable workspace from ~/.contenox/workspace.id, same as the CLI). Existing sessions are always located by their session ID regardless of workspace.")
+		c.Flags().String("workspace-id", "", "Workspace ID for new ACP sessions (default: the stable workspace from ~/.contenox-harness/workspace.id, same as the CLI). Existing sessions are always located by their session ID regardless of workspace.")
 	}
 	acpCmd.Flags().Bool("experimental-acp", false, "Accepted for compatibility with ACP clients that hardcode this launch flag (e.g. AionUi); no effect.")
 	_ = acpCmd.Flags().MarkHidden("experimental-acp")
@@ -177,11 +177,11 @@ func runACPProfile(cmd *cobra.Command, profile acpProfile) error {
 
 	// Anchor seeding/telemetry to the SAME directory the ACP runtime reads from.
 	// The DB (globalDBPath), the chain (LoadChainRegistryFrom) and HITL policies
-	// (acpPolicySource) all resolve to $HOME/.contenox via os.UserHomeDir(),
+	// (acpPolicySource) all resolve to $HOME/.contenox-harness via os.UserHomeDir(),
 	// ignoring ResolveContenoxDir's cwd-walk. Using that cwd-walk here meant a
 	// launch from an arbitrary working directory (Zed's project dir, or the ACP
 	// registry's isolated sandbox) seeded presets into <cwd>/.contenox while the
-	// loaders looked in $HOME/.contenox — so the chain/policy presets were
+	// loaders looked in $HOME/.contenox-harness — so the chain/policy presets were
 	// silently absent and `acp` hard-errored before serving initialize.
 	contenoxDir, err := globalContenoxDir()
 	if err != nil {
@@ -256,7 +256,7 @@ func runACPProfile(cmd *cobra.Command, profile acpProfile) error {
 	_, _, end := tracker.Start(ctx, "load", "acp_chain", "source", chains.Source(), "id", chains.Default().ID)
 	end()
 
-	// The ONE bus this process owns, over the shared $HOME/.contenox/local.db. It is
+	// The ONE bus this process owns, over the shared $HOME/.contenox-harness/local.db. It is
 	// created here — before the tools and the engine — because the mission tools
 	// need a publisher at construction time, and the fleet's report router (embedded
 	// below) needs the same subject stream. Sharing it is deliberate: the engine
@@ -296,7 +296,7 @@ func runACPProfile(cmd *cobra.Command, profile acpProfile) error {
 		// dispatched unit holds while running unattended. Registered here because
 		// a fleet unit IS a `contenox acp` subprocess, and the mission tools are
 		// its OWN local providers writing to the shared mission store (this db,
-		// under the same $HOME/.contenox the dispatcher reads). The grant is still
+		// under the same $HOME/.contenox-harness the dispatcher reads). The grant is still
 		// per-mission: the provider exposes nothing and executes nothing unless the
 		// session was constructed with a mission id (session/new `_meta`), so an
 		// ordinary editor session over `contenox acp` never sees them. The nil
@@ -307,7 +307,7 @@ func runACPProfile(cmd *cobra.Command, profile acpProfile) error {
 		// It shares the publisher-wired `missions` created above: report routing
 		// runs in the DISPATCHER's process (the report router this editor embeds
 		// below, OR serve's), subscribed to the SQLite bus over this same shared
-		// $HOME/.contenox/local.db, and it routes purely off ReportAddedEvent. A
+		// $HOME/.contenox-harness/local.db, and it routes purely off ReportAddedEvent. A
 		// publisher-less service here would store a unit's report durably but never
 		// publish, so the supervision edge would silently go nowhere — the exact
 		// cross-process seam the composed round-trip e2e keeps closed.
@@ -381,7 +381,7 @@ func runACPProfile(cmd *cobra.Command, profile acpProfile) error {
 
 	updateBanner := acpUpdateBanner(dbCtx, db, contenoxDir)
 
-	// Fleet presence store (shared-SQLite over the same $HOME/.contenox/local.db
+	// Fleet presence store (shared-SQLite over the same $HOME/.contenox-harness/local.db
 	// serve reads): serve REGISTERS its reachable address here; this process
 	// self-registers below. Presence is now board-only telemetry — the `/mission`
 	// forwarder no longer discovers a serve through it (forwarding is the explicit
@@ -744,11 +744,11 @@ func (p transportPrompter) PromptContenoxSession(ctx context.Context, contenoxSe
 }
 
 func acpPolicySource() hitlservice.PolicySource {
-	home, err := os.UserHomeDir()
+	dir, err := homedir.Dir()
 	if err != nil {
 		return hitlservice.NewFSPolicySource()
 	}
-	return hitlservice.NewFSPolicySource(filepath.Join(home, ".contenox"))
+	return hitlservice.NewFSPolicySource(dir)
 }
 
 // acpUpdateBanner checks for a newer contenox version and returns a one-line

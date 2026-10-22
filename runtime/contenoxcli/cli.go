@@ -2,6 +2,7 @@
 package contenoxcli
 
 import (
+	"github.com/contenox/harness/runtime/homedir"
 	"context"
 	"errors"
 	"fmt"
@@ -121,12 +122,8 @@ func dispatchSubcommand(args []string, onlyHelp bool) string {
 
 func recordStartupFailure(execErr error) {
 	defer func() { _ = recover() }()
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
-		return
-	}
-	dir := filepath.Join(home, ".contenox")
-	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+	dir, err := homedir.Dir()
+	if err != nil {
 		return
 	}
 	f, openErr := os.OpenFile(filepath.Join(dir, "telemetry.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
@@ -242,7 +239,7 @@ work directly from the CLI; local GGUF/OpenVINO inference is served by modeld.
     contenox config set default-autocomplete-model    qwen3-coder-30b-a3b
 
   Scope note:
-    Backends and config are GLOBAL (stored in ~/.contenox/local.db).
+    Backends and config are GLOBAL (stored in ~/.contenox-harness/local.db).
     Chain files (.contenox/) are LOCAL to each project directory — like .git/.
     Run 'contenox init' once per project to create the local chain files.`,
 	SilenceUsage:  true,
@@ -280,7 +277,7 @@ Giving the model tools (file system and shell access):
 
 Human-in-the-loop is on by default. The workflow pauses for terminal approval before
 write_file, sed, and local_shell calls. The active policy is defined in
-~/.contenox/hitl-policy-default.json (override per workspace via
+~/.contenox-harness/hitl-policy-default.json (override per workspace via
 .contenox/hitl-policy-*.json or via 'contenox config set hitl-policy-name').
 
   --auto                             non-interactive mode: skip approval prompts
@@ -378,7 +375,7 @@ func init() {
 
 	// Run flags on root so "contenox --input x" and "contenox hi" both work.
 	f := rootCmd.PersistentFlags()
-	f.String("db", "", "SQLite database path (default: ~/.contenox/local.db)")
+	f.String("db", "", "SQLite database path (default: ~/.contenox-harness/local.db)")
 	f.String("data-dir", "", "Override the .contenox data directory path")
 	f.String("ollama", defaultOllama, "Ollama base URL")
 	f.String("model", defaultModel, "Model name (task/chat/embed)")
@@ -434,7 +431,7 @@ func init() {
 }
 
 // setupTelemetryLogging checks if the user has enabled file logging.
-// If enabled, it sets up slog to write to both os.Stderr and ~/.contenox/telemetry.log.
+// If enabled, it sets up slog to write to both os.Stderr and ~/.contenox-harness/telemetry.log.
 // Returns a cleanup function to close the file.
 func setupTelemetryLogging(ctx context.Context, store runtimetypes.Store, contenoxDir string) (func(), error) {
 	enabledStr := clikv.Read(ctx, store, "telemetry-enabled")
@@ -495,7 +492,7 @@ func ResolveContenoxDir(cmd *cobra.Command) (string, error) {
 // controlPlaneDirs is the SINGLE definition of "what the runtime's control plane
 // is" for a given command: the resolved .contenox data/config dir (contenoxDir —
 // chains, HITL policies, declared agents, and, unless split by --db, the local.db)
-// PLUS the home global ~/.contenox (the default database and the model cache).
+// PLUS the home global ~/.contenox-harness (the default database and the model cache).
 // These are the directories no session, browse root, or agent fs tool may reach,
 // per the control-plane isolation invariant (runtime/vfs/controlplane.go).
 //
@@ -688,7 +685,7 @@ func runChat(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if effectiveChain == "" {
-		fmt.Fprintln(os.Stderr, "No default chain found in .contenox/ (workspace) or ~/.contenox/.")
+		fmt.Fprintln(os.Stderr, "No default chain found in .contenox/ (workspace) or ~/.contenox-harness/.")
 		fmt.Fprintln(os.Stderr, "Run 'contenox init' to scaffold one, or pass --chain explicitly.")
 		return errChainRequired
 	}

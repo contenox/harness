@@ -85,7 +85,7 @@ const (
 // name resolution, and common tooling actually read, and the core read-only /dev
 // character devices (/dev/zero, /dev/random, /dev/urandom, /dev/tty). It is NOT a spec carve-out
 // and holds none of the loot paths the wall exists to deny — those all live under
-// the operator's real $HOME (~/.ssh, ~/.aws, ~/.npmrc, ~/.contenox), which is not
+// the operator's real $HOME (~/.ssh, ~/.aws, ~/.npmrc, ~/.contenox-harness), which is not
 // on this list and not under the scoped HOME. Granted read+execute, read-only.
 // Missing entries (merged-/usr layouts, absent /sbin, an /etc file this distro
 // lacks) are skipped — a rule cannot name an absent inode, and an absent path

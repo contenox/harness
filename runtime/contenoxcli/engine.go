@@ -1,10 +1,10 @@
 package contenoxcli
 
 import (
+	"github.com/contenox/harness/runtime/homedir"
 	"context"
 	"log/slog"
 	"os"
-	"path/filepath"
 
 	"github.com/contenox/harness/libdbexec"
 	"github.com/contenox/harness/libtracker"
@@ -119,11 +119,11 @@ func readinessDefaults(opts chatOpts) (model, provider string) {
 }
 
 // hitlPolicySource builds the CLI's HITL policy lookup: the workspace .contenox
-// dir first, then the user's ~/.contenox as fallback.
+// dir first, then the user's ~/.contenox-harness as fallback.
 func hitlPolicySource(primaryDir string) hitlservice.PolicySource {
 	dirs := []string{primaryDir}
-	if home, err := os.UserHomeDir(); err == nil {
-		dirs = append(dirs, filepath.Join(home, ".contenox"))
+	if dir, err := homedir.Dir(); err == nil {
+		dirs = append(dirs, dir)
 	}
 	return hitlservice.NewFSPolicySource(dirs...)
 }

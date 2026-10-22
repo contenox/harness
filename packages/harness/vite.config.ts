@@ -7,15 +7,15 @@ import type { Plugin } from 'vite';
 import { defineConfig, loadEnv } from 'vite';
 
 /** Always load `.env`, `.env.proxy`, etc. from this package — not `process.cwd()` (monorepo / tooling can start Vite from the repo root). */
-const beamPackageRoot = path.dirname(fileURLToPath(import.meta.url));
-const beamDistDir = path.resolve(beamPackageRoot, '../../runtime/internal/web/beam/dist');
+const harnessPackageRoot = path.dirname(fileURLToPath(import.meta.url));
+const harnessDistDir = path.resolve(harnessPackageRoot, '../../runtime/internal/web/harness/dist');
 
 /**
  * When using the dev API proxy, the browser only talks to the Vite origin.
  * Without a fallback, direct navigation to e.g. /chats 404s because there is no static file.
  * Mirrors the Go embed handler’s SPA fallback for non-/api routes.
  */
-function beamSpaFallback(): Plugin {
+function harnessSpaFallback(): Plugin {
   return {
     name: 'beam-spa-fallback',
     enforce: 'pre',
@@ -59,32 +59,32 @@ function keepBeamDistDir(): Plugin {
     name: 'beam-keep-dist-dir',
     apply: 'build',
     closeBundle() {
-      fs.mkdirSync(beamDistDir, { recursive: true });
-      fs.writeFileSync(path.join(beamDistDir, '.gitkeep'), '');
+      fs.mkdirSync(harnessDistDir, { recursive: true });
+      fs.writeFileSync(path.join(harnessDistDir, '.gitkeep'), '');
     },
   };
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, beamPackageRoot, '');
+  const env = loadEnv(mode, harnessPackageRoot, '');
   const devApiProxy = env.VITE_DEV_API_PROXY === '1' || env.VITE_DEV_API_PROXY === 'true';
   const proxyTarget = env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:32123';
 
   return {
-    envDir: beamPackageRoot,
+    envDir: harnessPackageRoot,
     plugins: [
       react(),
       tailwindcss(),
-      ...(devApiProxy ? [beamSpaFallback()] : []),
+      ...(devApiProxy ? [harnessSpaFallback()] : []),
       keepBeamDistDir(),
     ],
     resolve: {
       alias: {
-        '@': path.resolve(beamPackageRoot, './src'),
+        '@': path.resolve(harnessPackageRoot, './src'),
       },
     },
     build: {
-      outDir: beamDistDir,
+      outDir: harnessDistDir,
       emptyOutDir: true,
     },
     /** Root-relative URLs so deep links (e.g. /chat/:id) still load /assets/* from the server root. */

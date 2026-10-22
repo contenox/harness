@@ -94,7 +94,7 @@ func TestSmoke_SandboxConfinesSpawnedAgent(t *testing.T) {
 		t.Skip("sandbox unavailable: needs landlock + unprivileged user/network namespaces")
 	}
 	// Hermetic + offline: point HOME at an empty temp dir so buildAgentCmd finds
-	// no ~/.contenox/sandbox-carveouts.json and therefore grants no network — the
+	// no ~/.contenox-harness/sandbox-carveouts.json and therefore grants no network — the
 	// empty netns must make any outbound connect unreachable.
 	t.Setenv("HOME", t.TempDir())
 	// The namespaced network wall is OPT-IN (it needs unprivileged user namespaces

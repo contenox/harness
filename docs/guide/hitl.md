@@ -105,7 +105,7 @@ a person) answered it.
 
 ## Built-in presets
 
-Contenox ships five policy presets, written to `~/.contenox/` by `contenox init`. (A workspace `.contenox/` file with the same name overrides the global one.) The first three are the general-purpose postures; the last two are the profiles the ACP editor transports load.
+Contenox ships five policy presets, written to `~/.contenox-harness/` by `contenox init`. (A workspace `.contenox/` file with the same name overrides the global one.) The first three are the general-purpose postures; the last two are the profiles the ACP editor transports load.
 
 | Name | Behaviour |
 |---|---|
@@ -139,7 +139,7 @@ This writes to the KV store and takes effect immediately — no restart required
 When HITL is enabled and a tool call needs evaluation, the engine resolves the policy as follows:
 
 1. Read the `hitl-policy-name` key from the KV store.
-2. If set, load that file from the workspace `.contenox/` directory, falling back to `~/.contenox/`.
+2. If set, load that file from the workspace `.contenox/` directory, falling back to `~/.contenox-harness/`.
 3. If the key is empty or the file is missing, fall back to `hitl-policy-default.json`.
 4. If that file is also missing, use a built-in fail-closed policy (same shape as `hitl-policy-default.json`: reads and safe webtools verbs are allowed, everything else — including any tool call that matches no rule — requires approval).
 

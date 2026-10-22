@@ -191,7 +191,7 @@ tooling, and modes surfaced to editors via `session/set_mode`.
 The planner is not a new agent KIND — it is a capability PROFILE (the OpenHands
 lesson: constrained toolset + boundary prompt + plan artifact suffices). It ships
 as a declared chain agent, `runtime/contenoxcli/agent-planner.json`, scaffolded
-into `~/.contenox/` by `contenox init` and declared as a fleet-dispatchable agent
+into `~/.contenox-harness/` by `contenox init` and declared as a fleet-dispatchable agent
 by the `agent-*` filename convention (chain-agent discovery). Fire it like any
 mission: `contenox mission fire --agent agent-planner --intent "…" --policy …`.
 

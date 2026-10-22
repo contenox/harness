@@ -12,7 +12,7 @@
 // halves that must agree:
 //
 //   - The GRANT is a durable config value (clikv key ConfigKey), stored in the
-//     shared ~/.contenox/local.db every process already opens. It is the SOURCE
+//     shared ~/.contenox-harness/local.db every process already opens. It is the SOURCE
 //     OF TRUTH: a grant added while serve was down is honored at its next boot,
 //     and a serve that missed a live signal still converges by re-reading it.
 //   - The DOORBELL is a fire-and-forget bus event (RootsChangedSubject) on the

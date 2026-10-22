@@ -97,7 +97,7 @@ func newApprovalsAnswerTestCmd() *cobra.Command {
 // ─── serveClient ────────────────────────────────────────────────────────
 
 func TestUnit_NewServeClient_DefaultsToServeAddrPort(t *testing.T) {
-	t.Setenv("HOME", t.TempDir()) // isolate ~/.contenox so no persisted serve-token.txt leaks in
+	t.Setenv("HOME", t.TempDir()) // isolate ~/.contenox-harness so no persisted serve-token.txt leaks in
 	c := newApprovalsListTestCmd()
 	c.SetArgs([]string{})
 	require.NoError(t, c.ParseFlags(nil))

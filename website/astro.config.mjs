@@ -36,6 +36,7 @@ export default defineConfig({
     "/docs/guide/providers/openai": "/docs/integrations/providers/openai/",
     "/docs/guide/providers/openrouter": "/docs/integrations/providers/openrouter/",
     "/docs/guide/providers/vertex": "/docs/integrations/providers/vertex/",
+    "/docs/guide/beam": "/docs/guide/harness/",
     "/docs/guide/local-models": "/docs/integrations/providers/local-models/",
     "/docs/guide/vscode-vscodium": "/docs/integrations/editors/vscode-vscodium/",
     "/docs/guide/zed": "/docs/integrations/editors/zed/",

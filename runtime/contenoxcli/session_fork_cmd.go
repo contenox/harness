@@ -188,7 +188,7 @@ func resolveSystemChain(cmd *cobra.Command, contenoxDir, name string) (string, e
 }
 
 // lookupSystemFile finds a config file by name. Workspace .contenox/ overrides
-// home ~/.contenox/. Returns an error if neither exists.
+// home ~/.contenox-harness/. Returns an error if neither exists.
 func lookupSystemFile(contenoxDir, name string) (string, error) {
 	if contenoxDir != "" {
 		workspacePath := filepath.Join(contenoxDir, name)
@@ -198,13 +198,13 @@ func lookupSystemFile(contenoxDir, name string) (string, error) {
 	}
 	homeDir, err := globalContenoxDir()
 	if err != nil {
-		return "", fmt.Errorf("could not resolve ~/.contenox: %w", err)
+		return "", fmt.Errorf("could not resolve ~/.contenox-harness: %w", err)
 	}
 	homePath := filepath.Join(homeDir, name)
 	if _, err := os.Stat(homePath); err == nil {
 		return homePath, nil
 	}
-	return "", fmt.Errorf("file %q not found in workspace %q or ~/.contenox; run 'contenox init' to populate it", name, contenoxDir)
+	return "", fmt.Errorf("file %q not found in workspace %q or ~/.contenox-harness; run 'contenox init' to populate it", name, contenoxDir)
 }
 
 func resolveDefaultModelProvider(cmd *cobra.Command, db libdb.DBManager) (model, provider, altModel, altProvider, maxTokens string, err error) {

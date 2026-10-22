@@ -191,7 +191,7 @@ func (f *Factory) DescribeRoots() string {
 // is refused.
 //
 // Control-plane carveout (vfs-invariant slice, 2026-07-21 — containment made it
-// live): a path AT or UNDER the runtime's control plane (~/.contenox: config,
+// live): a path AT or UNDER the runtime's control plane (~/.contenox-harness: config,
 // database, HITL policies, chains, declared agents, models) is refused BEFORE the
 // containment check, with its OWN teaching error (ErrControlPlane), distinct from
 // the not-under-roots refusal. Checking first — rather than "after containment
@@ -357,7 +357,7 @@ func OpenView(root string) (*View, error) {
 // The invariant this package enforces is "an AGENT must never fs-reach the
 // runtime's governing state." The runtime reading its OWN state is not that
 // threat — it is how the state exists at all: chain-agent discovery walks
-// ~/.contenox for agent-*.json, serve's chain wiring and the operator's
+// ~/.contenox-harness for agent-*.json, serve's chain wiring and the operator's
 // chain-editor API are deliberately rooted AT the control plane. Routing those
 // through the guarded path bricked discovery at boot the day the carveout
 // landed ("path is inside the runtime control plane" on the runtime's own

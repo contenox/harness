@@ -29,10 +29,10 @@ export OLLAMA_HOST
 
 DEV_CONTENOX_BIN := $(HOME)/.local/bin/contenox
 UI_DIR := $(PROJECT_ROOT)/packages/ui
-BEAM_DIR := $(PROJECT_ROOT)/packages/beam
-BEAM_DEV_HOST ?= 127.0.0.1
-BEAM_DEV_PORT ?= 5173
-BEAM_DEV_PROXY_URL ?= http://127.0.0.1:$(BEAM_DEV_PORT)
+HARNESS_DIR := $(PROJECT_ROOT)/packages/harness
+HARNESS_DEV_HOST ?= 127.0.0.1
+HARNESS_DEV_PORT ?= 5173
+HARNESS_DEV_PROXY_URL ?= http://127.0.0.1:$(HARNESS_DEV_PORT)
 CONTENOX_DEV_ADDR ?= 127.0.0.1
 CONTENOX_DEV_PORT ?= 32123
 CONTENOX_DEV_URL ?= http://$(CONTENOX_DEV_ADDR):$(CONTENOX_DEV_PORT)
@@ -46,12 +46,12 @@ CONTENOX_DEV_URL ?= http://$(CONTENOX_DEV_ADDR):$(CONTENOX_DEV_PORT)
 	\
 	clean \
 	deps-ui \
-	dev-beam dev-web-proxy dev-install dev-link dev-unlink \
+	dev-harness dev-web-proxy dev-install dev-link dev-unlink \
 	\
 	test test-all test-unit test-api test-ui test-vllm test-system test-contenox-verbose test-contenox-help \
 	tool-eval \
 	acp-conformance acp-client-e2e acp-host-e2e \
-	verify-ui-embed
+	verify-ui-embed visual
 
 help:
 	@echo "build-*    build-contenox build-contenox-windows build-ui"
@@ -61,7 +61,7 @@ help:
 	@echo "acp-conformance  validate libacp's agent-side wire dispatch against Rust reference ACP clients (needs ACP_VALIDATOR_BIN, see Makefile comment)"
 	@echo "acp-client-e2e   validate libacp's client-side wire dispatch against the Rust reference testy agent over a real subprocess (needs ACP_TESTY_BIN, see Makefile comment)"
 	@echo "acp-host-e2e     validate the composed registry→host path (runtime/agenthost) end to end: contenox self-loopback always; testy/claude too when ACP_TESTY_BIN/ACP_CLAUDE_ACP_BIN are set (see Makefile comment)"
-	@echo "dev-*      dev-beam dev-web-proxy dev-install dev-link dev-unlink"
+	@echo "dev-*      dev-harness dev-web-proxy dev-install dev-link dev-unlink"
 	@echo "deps-*     deps-ui"
 	@echo "           (checks/pulls the expected native dep bundle from the store)"
 	@echo "verify-*   verify-ui-embed"
@@ -84,7 +84,7 @@ build-contenox-windows: verify-ui-embed
 
 build-ui: deps-ui
 	cd $(UI_DIR) && npm run build
-	cd $(BEAM_DIR) && npm run build
+	cd $(HARNESS_DIR) && npm run build
 
 test:
 	GOMAXPROCS=1 go test -C $(PROJECT_ROOT) -timeout 30m ./...
@@ -143,8 +143,11 @@ test-api: build-ui
 	@CONTENOX_BIN=$(PROJECT_ROOT)/bin/contenox $(PROJECT_ROOT)/scripts/run_apitests.sh $(PYTEST_ARGS)
 
 test-ui: deps-ui
-	cd $(BEAM_DIR) && npm run typecheck
-	cd $(BEAM_DIR) && npm test
+	cd $(HARNESS_DIR) && npm run typecheck
+	cd $(HARNESS_DIR) && npm test
+
+visual:
+	bash $(PROJECT_ROOT)/packages/harness/e2e/run.sh
 
 verify-ui-embed:
 	@test -f "$(PROJECT_ROOT)/runtime/internal/web/beam/dist/index.html" || { echo "missing Beam dist; run: make build-ui"; exit 1; }
@@ -223,20 +226,20 @@ acp-host-e2e:
 	ACP_TESTY_BIN=$(ACP_TESTY_BIN) ACP_MCP_ECHO_BIN=$(ACP_MCP_ECHO_BIN) ACP_CLAUDE_ACP_BIN=$(ACP_CLAUDE_ACP_BIN) go test -C $(PROJECT_ROOT) -run '^TestHostE2E_' -v ./runtime/agenthost/...
 
 # dev
-dev-beam:
-	@test -d "$(BEAM_DIR)/node_modules" || { echo "missing Beam node_modules; run: make deps-ui"; exit 1; }
+dev-harness:
+	@test -d "$(HARNESS_DIR)/node_modules" || { echo "missing Beam node_modules; run: make deps-ui"; exit 1; }
 	@set -eu; \
-	cd "$(BEAM_DIR)" && VITE_DEV_API_PROXY=1 VITE_DEV_PROXY_TARGET="$(CONTENOX_DEV_URL)" npm run dev -- --host "$(BEAM_DEV_HOST)" --port "$(BEAM_DEV_PORT)" --strictPort & \
+	cd "$(HARNESS_DIR)" && VITE_DEV_API_PROXY=1 VITE_DEV_PROXY_TARGET="$(CONTENOX_DEV_URL)" npm run dev -- --host "$(HARNESS_DEV_HOST)" --port "$(HARNESS_DEV_PORT)" --strictPort & \
 	vite_pid=$$!; \
 	trap 'kill $$vite_pid 2>/dev/null || true; wait $$vite_pid 2>/dev/null || true' EXIT INT TERM; \
 	sleep 1; \
 	if ! kill -0 $$vite_pid 2>/dev/null; then wait $$vite_pid; exit $$?; fi; \
-	echo "Beam dev UI: $(BEAM_DEV_PROXY_URL)"; \
+	echo "Harness dev UI: $(HARNESS_DEV_PROXY_URL)"; \
 	echo "contenox serve API/UI proxy: $(CONTENOX_DEV_URL)"; \
-	BEAM_DEV_PROXY_URL="$(BEAM_DEV_PROXY_URL)" ADDR="$(CONTENOX_DEV_ADDR)" PORT="$(CONTENOX_DEV_PORT)" \
+	HARNESS_DEV_PROXY_URL="$(HARNESS_DEV_PROXY_URL)" ADDR="$(CONTENOX_DEV_ADDR)" PORT="$(CONTENOX_DEV_PORT)" \
 		go run $(PROJECT_ROOT)/cmd/contenox serve
 
-dev-web-proxy: dev-beam
+dev-web-proxy: dev-harness
 
 dev-install: build-contenox dev-link
 
@@ -251,7 +254,7 @@ dev-unlink:
 
 deps-ui:
 	cd $(UI_DIR) && npm ci
-	cd $(BEAM_DIR) && npm ci
+	cd $(HARNESS_DIR) && npm ci
 
 deps-website:
 	cd $(PROJECT_ROOT)/website && npm ci

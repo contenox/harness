@@ -201,7 +201,7 @@ func exitCode(err error) int {
 // then the probe), runs it, and asserts allowed/denied from the probe's exit
 // code. It proves the wall lets the workspace and a ro carve-out through, blocks
 // a write to the ro hole, and blocks reads/writes outside the wall — including a
-// "~/.contenox"-shaped loot path under a pretend real home.
+// "~/.contenox-harness"-shaped loot path under a pretend real home.
 //
 // As of slice 3 Command also clones into a fresh user+network namespace, so this
 // suite doubles as the composition regression: the fs assertions must still hold
@@ -235,7 +235,7 @@ func TestIntegration_FSWall(t *testing.T) {
 	secretFile := filepath.Join(secret, "id_rsa")
 	require.NoError(t, os.WriteFile(secretFile, []byte("PRIVATE KEY"), 0o600))
 
-	// A "~/.contenox"-shaped control-plane path under the pretend real home. The
+	// A "~/.contenox-harness"-shaped control-plane path under the pretend real home. The
 	// scoped HOME means the agent's "~" is elsewhere, so this must be unreachable.
 	contenoxDir := filepath.Join(realHome, ".contenox")
 	require.NoError(t, os.MkdirAll(contenoxDir, 0o700))
@@ -262,7 +262,7 @@ func TestIntegration_FSWall(t *testing.T) {
 		{"read a ro carve-out is allowed", "read", claudeFile, exitAllowed},
 		{"write to a ro carve-out is denied", "write", claudeFile, exitDenied},
 		{"read a secret outside the wall is denied", "read", secretFile, exitDenied},
-		{"read a ~/.contenox-shaped path is denied", "read", contenoxFile, exitDenied},
+		{"read a ~/.contenox-harness-shaped path is denied", "read", contenoxFile, exitDenied},
 		{"write outside the workspace is denied", "write", filepath.Join(secret, "planted"), exitDenied},
 	}
 

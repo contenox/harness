@@ -14,7 +14,7 @@ import (
 // openKV opens a fresh file-backed SQLite KV manager. A FILE (not :memory:) is
 // used so a second manager over the same path exercises the real cross-process
 // path — an editor writer and serve's reader are separate processes sharing
-// $HOME/.contenox/local.db.
+// $HOME/.contenox-harness/local.db.
 func openKV(t *testing.T, dir string) libkvstore.KVManager {
 	t.Helper()
 	path := filepath.Join(dir, "local.db")

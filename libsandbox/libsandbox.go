@@ -19,7 +19,7 @@
 // registry to install — justified one by one, minimized, and read-only wherever
 // it can be. A carve-out means "the agent cannot boot or work without this," it
 // never means "policy allows this." The default answer is no hole. The loot
-// paths a supply-chain attack hunts — ~/.ssh, ~/.aws, ~/.npmrc, ~/.contenox —
+// paths a supply-chain attack hunts — ~/.ssh, ~/.aws, ~/.npmrc, ~/.contenox-harness —
 // are simply not reachable: they are not under the scoped HOME and not carved
 // out, so there is nothing to guard.
 //

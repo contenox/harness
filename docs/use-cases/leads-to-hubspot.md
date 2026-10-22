@@ -97,7 +97,7 @@ export HUBSPOT_TOKEN=pat-na1-...
 
 ## 2.2 Drop the OpenAPI sub-spec
 
-Save to `~/.contenox/hubspot-revops.yaml` — a hand-curated 3-operation subset of HubSpot's CRM v3 REST API. Small enough to keep the model focused; covers everything this recipe needs.
+Save to `~/.contenox-harness/hubspot-revops.yaml` — a hand-curated 3-operation subset of HubSpot's CRM v3 REST API. Small enough to keep the model focused; covers everything this recipe needs.
 
 ```yaml
 openapi: 3.0.3
@@ -244,7 +244,7 @@ components:
 ```bash
 contenox tools add hubspot \
     --url https://api.hubapi.com \
-    --spec ~/.contenox/hubspot-revops.yaml \
+    --spec ~/.contenox-harness/hubspot-revops.yaml \
     --header "Authorization: Bearer $HUBSPOT_TOKEN"
 ```
 
@@ -359,11 +359,11 @@ The new companies appear at the top with descriptions matching the `Summary:` li
 
 - **Tavily free tier limits.** $5 in monthly credits, ~1k searches/mo at the standard rate. Plenty for occasional lead-discovery; check your usage if you run it in a loop.
 - **HubSpot Service Keys are Public Beta** at time of writing. The scope picker doesn't expose `crm.objects.notes.*` — use a Private App if you need notes.
-- **HITL on file writes.** Part 1's `local_fs.write_file` call to save `leads.txt` triggers contenox's default approval prompt. That's by design — you review what the agent extracted before it lands on disk. The HubSpot create operations in Part 2 flow through without prompts because `hubspot` isn't in the default HITL policy. To require approval per CRM write, add a rule to `~/.contenox/hitl-policy-default.json`:
+- **HITL on file writes.** Part 1's `local_fs.write_file` call to save `leads.txt` triggers contenox's default approval prompt. That's by design — you review what the agent extracted before it lands on disk. The HubSpot create operations in Part 2 flow through without prompts because `hubspot` isn't in the default HITL policy. To require approval per CRM write, add a rule to `~/.contenox-harness/hitl-policy-default.json`:
 
   ```json
   {"tools": "hubspot", "tool": "createCompany", "action": "approve"}
   ```
 
 - **One lead per chat invocation.** Each lead gets a fresh agent round budget. Batching all leads into one prompt also works for small batches but hits the chat chain's tool-call budget around lead 3 (the default chat chain caps its loops at 12 main / 8 recovery rounds; the one-shot `contenox run` chain caps at 10).
-- **Token storage.** Your `HUBSPOT_TOKEN` ends up in contenox's local SQLite (`~/.contenox/local.db`) inside the `remote_tools` row's headers. Same machine, same posture as any locally-stored credential — rotate as you would any other token. Tavily OAuth tokens are stored the same way under the MCP server's row.
+- **Token storage.** Your `HUBSPOT_TOKEN` ends up in contenox's local SQLite (`~/.contenox-harness/local.db`) inside the `remote_tools` row's headers. Same machine, same posture as any locally-stored credential — rotate as you would any other token. Tavily OAuth tokens are stored the same way under the MCP server's row.

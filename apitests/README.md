@@ -22,4 +22,4 @@ APITEST_RUN_DOWNLOAD=1 make test-api PYTEST_ARGS="-k download_curated"
 ```
 
 By default the suite avoids real providers, real model downloads, and the user's
-real `~/.contenox` state.
+real `~/.contenox-harness` state.

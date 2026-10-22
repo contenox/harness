@@ -57,16 +57,16 @@ jobs:
           cache: npm
           cache-dependency-path: |
             packages/ui/package-lock.json
-            packages/beam/package-lock.json
+            packages/harness/package-lock.json
 
-      - name: Build, test, and verify Beam UI
+      - name: Build, test, and verify harness UI
         run: make build-ui test-ui verify-ui-embed
 
-      - name: Upload Beam dist
+      - name: Upload harness dist
         uses: actions/upload-artifact@v4
         with:
-          name: beam-dist
-          path: runtime/internal/web/beam/dist
+          name: harness-dist
+          path: runtime/internal/web/harness/dist
 
       - name: Upload UI dist
         uses: actions/upload-artifact@v4
@@ -97,11 +97,11 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Download Beam dist
+      - name: Download harness dist
         uses: actions/download-artifact@v4
         with:
-          name: beam-dist
-          path: runtime/internal/web/beam/dist
+          name: harness-dist
+          path: runtime/internal/web/harness/dist
 
       - name: Set up Go
         uses: actions/setup-go@v5

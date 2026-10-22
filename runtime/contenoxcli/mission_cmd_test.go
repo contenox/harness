@@ -31,7 +31,7 @@ func newMissionFireTestCmd() *cobra.Command {
 	c.Flags().Duration("wait-timeout", 5*time.Minute, "")
 	c.Flags().Duration("wait-interval", 2*time.Second, "")
 	// --db lets a test point the config-default resolution at a temp database
-	// instead of the operator's real ~/.contenox/local.db (resolveDBPath reads
+	// instead of the operator's real ~/.contenox-harness/local.db (resolveDBPath reads
 	// this flag). The real command inherits it as a root persistent flag.
 	c.Flags().String("db", "", "")
 	return c

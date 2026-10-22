@@ -18,7 +18,7 @@ import (
 // So a caller can pass a variable through by name yet override it explicitly, but
 // the emulated PATH and the scoped HOME are authoritative — HOME unconditionally,
 // PATH unless the caller opts into an explicit EnvSet override. They are the
-// mechanism that keeps ~/.ssh, ~/.aws, ~/.contenox, and the operator's
+// mechanism that keeps ~/.ssh, ~/.aws, ~/.contenox-harness, and the operator's
 // profile-built PATH out of reach, not defaults to be overridden.
 //
 // The result is sorted by name, so the same inputs always produce the same
@@ -61,7 +61,7 @@ func scrubEnv(parentEnv []string, allow []string, set map[string]string, home st
 	}
 	// HOME is forced to the scoped home dir, overriding anything inherited or
 	// set: the scoped HOME is the whole reason ~/.ssh, ~/.aws, ~/.npmrc, and
-	// ~/.contenox are not reachable (see Spec.Home).
+	// ~/.contenox-harness are not reachable (see Spec.Home).
 	out["HOME"] = home
 
 	names := make([]string, 0, len(out))

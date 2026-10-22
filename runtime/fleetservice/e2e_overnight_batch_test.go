@@ -45,7 +45,7 @@ import (
 //
 // Nothing is mocked below the service layer and no LLM/GPU/network is involved.
 // The three chain/acp units are REAL `contenox` subprocesses sharing one
-// HOME-isolated $HOME/.contenox/local.db; the gated unit is the hermetic
+// HOME-isolated $HOME/.contenox-harness/local.db; the gated unit is the hermetic
 // acp-stub-agent. Both binaries are freshly built.
 //
 // # Why the bus is SQLite-backed (not in-mem)
@@ -170,7 +170,7 @@ func TestFleetE2E_OvernightBatch(t *testing.T) {
 	require.DirExists(t, contenoxDir)
 
 	ctx := context.Background()
-	// The ONE shared store: every chain/acp unit resolves $HOME/.contenox/local.db,
+	// The ONE shared store: every chain/acp unit resolves $HOME/.contenox-harness/local.db,
 	// and so does this handle. A unit's report row is visible here through it, and
 	// the SQLite bus rides the same file cross-process.
 	db, err := libdb.NewSQLiteDBManager(ctx, filepath.Join(contenoxDir, "local.db"), runtimetypes.SchemaSQLite)

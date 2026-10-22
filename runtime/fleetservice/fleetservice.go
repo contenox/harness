@@ -750,7 +750,7 @@ func (s *service) Cancel(ctx context.Context, instanceID, sessionID string) erro
 // pins that.
 //
 // Traced footgun (why the first real dispatch landed a unit in $HOME): serve's
-// effective workspace root defaults to filepath.Dir(~/.contenox) — i.e. $HOME —
+// effective workspace root defaults to filepath.Dir(~/.contenox-harness) — i.e. $HOME —
 // for an argument-less `contenox serve` (serve_cmd.go: workspaceRoot :=
 // filepath.Dir(contenoxDir)), and that same root is passed BOTH as the Factory
 // default and as this layer's projectRoot. An operator-fired mission with no cwd

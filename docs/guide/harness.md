@@ -1,14 +1,14 @@
 ---
-title: "Beam: the bundled web UI"
-description: Run Contenox in the browser with contenox serve — the same sessions, chains, models, and approval gates as the CLI, plus a workspace file tree, an agent-view policy overlay, and a diff-backed approval gate.
+title: "Harness: the bundled web UI"
+description: Run Contenox in the browser with contenox serve — the same sessions, chains, models and approval gates as the CLI, plus a workspace file tree, an agent-view policy overlay and a diff-backed approval gate.
 ---
 
-# Beam: the bundled web UI
+# Harness: the bundled web UI
 
-Beam is the web UI that ships inside `contenox`. Run one command and the runtime
+The harness UI ships inside `contenox`. Run one command and the runtime
 you already drive from the terminal opens in the browser: the same sessions, the
 same chains, the same model and provider config, the same HITL policies. Nothing
-is hosted — Beam is served by your local `contenox serve` process, reads and
+is hosted — it is served by the local `contenox serve` process, reads and
 writes the same SQLite state as the CLI, and stays on `127.0.0.1`.
 
 It is the product's face for work you want to *watch*: you see the workspace the
@@ -25,10 +25,10 @@ what the policy lets it touch.*
 
 ---
 
-## 1. Start Beam
+## 1. Start the harness UI
 
 If you have not installed Contenox and configured a model yet, do the
-[Quickstart](/docs/guide/quickstart/) first — Beam needs a working model like any
+[Quickstart](/docs/guide/quickstart/) first — the harness UI needs a working model like any
 other entrypoint.
 
 Install (macOS / Linux):
@@ -50,7 +50,7 @@ contenox serve
 # Contenox serve <version> ready: http://127.0.0.1:32123
 ```
 
-Beam is now at **http://127.0.0.1:32123**. By default the server binds to
+The harness UI is now at **http://127.0.0.1:32123**. By default the server binds to
 `127.0.0.1:32123` — reachable only from this machine. To let other machines on
 your LAN reach it, add `--remote` (binds all interfaces, `0.0.0.0`); set `ADDR`
 and `PORT` for a specific bind. A bearer `TOKEN` is optional on loopback and
@@ -61,21 +61,21 @@ to the network always requires one.
 
 Serve to your LAN with `--remote`. It needs a bearer token (mandatory off
 loopback) and provisions one automatically: it uses `TOKEN` if set, otherwise the
-token saved at `~/.contenox/serve-token.txt`, otherwise it generates one and saves
+token saved at `~/.contenox-harness/serve-token.txt`, otherwise it generates one and saves
 it there (mode `0600`):
 
 ```bash
 contenox serve --remote
-# serve token: generated and saved to ~/.contenox/serve-token.txt (0600) — clients auto-discover it there; `cat` it to log in, or set TOKEN to override
+# serve token: generated and saved to ~/.contenox-harness/serve-token.txt (0600) — clients auto-discover it there; `cat` it to log in, or set TOKEN to override
 # contenox serve <version> ready: http://0.0.0.0:32123
 #   reachable on LAN: http://192.168.1.50:32123
 #   note: plain HTTP — the TOKEN travels in cleartext; front with a TLS reverse proxy on untrusted networks
 ```
 
 Other machines open the printed **reachable on LAN** URL and log in with the token
-(`cat ~/.contenox/serve-token.txt`). Programmatic clients on the same machine —
+(`cat ~/.contenox-harness/serve-token.txt`). Programmatic clients on the same machine —
 `contenox approvals`, `mission`, `fleet` — discover that file automatically, so
-they need no `--token` / `CONTENOX_SERVER_TOKEN`. The file lives in `~/.contenox`,
+they need no `--token` / `CONTENOX_SERVER_TOKEN`. The file lives in `~/.contenox-harness`,
 which is always control-plane-denied, so no agent or workspace tool can read it.
 To rotate the token, delete the file (a fresh one is generated on the next
 `--remote` start); to return to a tokenless loopback dev server, remove the file
@@ -84,9 +84,9 @@ a TLS-terminating reverse proxy in front (the login cookie is marked `Secure`
 automatically once the connection is HTTPS, directly or via
 `X-Forwarded-Proto: https`).
 
-When a `TOKEN` is set (required for any non-loopback bind), Beam gates the whole
+When a `TOKEN` is set (required for any non-loopback bind), the harness UI gates the whole
 UI behind a login page: opening the site shows a single **Access token** field.
-![Beam's login page: a single Access token field gating the whole UI](/beam-login.png)
+![The harness login page: a single Access token field gating the whole UI](/beam-login.png)
 
 Paste the configured `TOKEN` and the server verifies it (constant-time) and
 returns a secure, `HttpOnly` session cookie — `SameSite=Strict`, and `Secure`
@@ -188,11 +188,11 @@ under an **Options** dropdown on narrow viewports):
 Changing a control affects only that session, so you can keep one session on a
 local model with a strict policy and another on a hosted model — side by side.
 
-![A new Beam session bound to a project workspace, with the per-session Model, HITL Policy, Think, Token Limit, and Workspace controls above an empty chat, and the sidebar's "New chat with an agent" chevron beside seeded sessions](/beam-new-chat.png)
+![A new harness session bound to a project workspace, with the per-session Model, HITL Policy, Think, Token Limit, and Workspace controls above an empty chat, and the sidebar's "New chat with an agent" chevron beside seeded sessions](/beam-new-chat.png)
 
 ### Chat with a declared agent
 
-Beam is not only a face for the default runtime chain — it can also drive any of
+The harness UI is not only a face for the default runtime chain — it can also drive any of
 the runtime's [declared agents](/docs/reference/contenox-cli/#contenox-agent)
 (the task chains discovered from your chain files) from the same window, gated by
 the same approvals.
@@ -222,7 +222,7 @@ The **Files** toggle opens the **Workspace** panel: a lazy file tree of the
 session's chosen workspace. Click a file and it opens as a read-only tab beside
 the chat; directories expand in place.
 
-The tree has an **Agent view** toggle (the shield button). Turn it on and Beam
+The tree has an **Agent view** toggle (the shield button). Turn it on and the harness UI
 overlays each file with the verdict the session's HITL policy would return for
 it — computed from the *same* policy source the live agent uses, so what you see
 is what the agent gets:
@@ -264,7 +264,7 @@ The prompt composer understands three inline prefixes:
 ### The approval gate
 
 When a tool call matches an **approve** rule in the active HITL policy, the run
-pauses and Beam raises an **inline permission card** — a warning-styled card that
+pauses and the harness UI raises an **inline permission card** — a warning-styled card that
 appears in the transcript flow, anchored to the pending tool call it belongs to,
 so the request lives exactly where it happened instead of floating over the page.
 The card shows the action's kind and title, the target paths (`path:line`), a
@@ -295,7 +295,7 @@ reload.
 
 ## 3. Shared with the CLI
 
-Beam is a view onto the runtime, not a separate app. The sessions you start in
+The harness UI is a view onto the runtime, not a separate app. The sessions you start in
 the browser are the sessions the CLI lists:
 
 ```bash
@@ -303,7 +303,7 @@ contenox session list
 contenox session switch <name>
 ```
 
-The same holds for the same work everywhere else: the chains you run in Beam are
+The same holds for the same work everywhere else: the chains you run in the harness UI are
 the chains you run from the terminal, or from any
 [ACP editor](/docs/guide/quickstart/#4-optional-editor-use). One runtime, one set
 of sessions and policies, many front ends.

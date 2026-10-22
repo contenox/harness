@@ -797,9 +797,9 @@ func providerAddCommand(provider string) string {
 	case "gemini":
 		return "contenox backend add gemini --type gemini --api-key-env GEMINI_API_KEY"
 	case "llama":
-		return "contenox backend add llama --type llama --url ~/.contenox/models/llama"
+		return "contenox backend add llama --type llama --url ~/.contenox-harness/models/llama"
 	case "openvino":
-		return "contenox backend add openvino --type openvino --url ~/.contenox/models/openvino"
+		return "contenox backend add openvino --type openvino --url ~/.contenox-harness/models/openvino"
 	case "vertex-google":
 		return fmt.Sprintf("gcloud auth application-default login && contenox backend add %s --type %s --url \"https://us-central1-aiplatform.googleapis.com/v1/projects/$GOOGLE_CLOUD_PROJECT/locations/us-central1\"", provider, provider)
 	case "bedrock":

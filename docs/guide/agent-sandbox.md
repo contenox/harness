@@ -18,7 +18,7 @@ privilege**:
 - **Filesystem** — the agent may *write* only inside its workspace (its cwd) and
   *read* only its workspace plus a short list of auth/config directories
   (`~/.claude`, `~/.codex`, `~/.config/goose`, read-only). Everything else —
-  `~/.ssh`, `~/.aws`, `~/.npmrc`, `~/.contenox`, the rest of the disk — is simply
+  `~/.ssh`, `~/.aws`, `~/.npmrc`, `~/.contenox-harness`, the rest of the disk — is simply
   unreachable, so there is nothing to guard.
 - **Exec** — it can only run programs it is allowed to reach.
 - **Environment** — a scrubbed, minimal environment with a scoped `$HOME`, so no
@@ -40,7 +40,7 @@ a copy or a rename does not qualify) and is spawned outside the wall.
 
 That is a deliberate line, not a gap. A unit like this is defined by sharing the
 one runtime state — the same database, the same seeded presets, the same
-workspace — and the wall denies exactly that state on purpose (`~/.contenox` is
+workspace — and the wall denies exactly that state on purpose (`~/.contenox-harness` is
 never carved, so an agent can never reach the policy that governs it). Being
 contenox buys only the right to run as contenox: what such a unit then does runs
 through the runtime's own tool grants and the
@@ -60,7 +60,7 @@ host turns the wall on and refuses every host you did not name.
 
 ### Where to whitelist allowed domains
 
-Edit `~/.contenox/sandbox-carveouts.json` — the necessity list. It is deny-default:
+Edit `~/.contenox-harness/sandbox-carveouts.json` — the necessity list. It is deny-default:
 absent or empty means the FS/exec fence only, network open. Unknown fields are
 rejected, and every hole must say why it exists.
 

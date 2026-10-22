@@ -1,6 +1,7 @@
 package acpsvc
 
 import (
+	"github.com/contenox/harness/runtime/homedir"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -92,7 +93,7 @@ func (t *Transport) handleCompact(ctx context.Context, _ libacp.SessionID, sess 
 }
 
 // loadCompactChain reads chain-compact.json from the active .contenox directory,
-// falling back to ~/.contenox. It does not import the CLI's resolver (that would
+// falling back to ~/.contenox-harness. It does not import the CLI's resolver (that would
 // create an import cycle); this is a plain file lookup, not duplicated logic.
 func (t *Transport) loadCompactChain() (*taskengine.TaskChainDefinition, error) {
 	const name = "chain-compact.json"
@@ -100,8 +101,8 @@ func (t *Transport) loadCompactChain() (*taskengine.TaskChainDefinition, error) 
 	if t.deps.ContenoxDir != "" {
 		candidates = append(candidates, filepath.Join(t.deps.ContenoxDir, name))
 	}
-	if home, err := os.UserHomeDir(); err == nil {
-		candidates = append(candidates, filepath.Join(home, ".contenox", name))
+	if hd, err := homedir.Dir(); err == nil {
+		candidates = append(candidates, filepath.Join(hd, name))
 	}
 	for _, p := range candidates {
 		data, err := os.ReadFile(p)
@@ -117,5 +118,5 @@ func (t *Transport) loadCompactChain() (*taskengine.TaskChainDefinition, error) 
 		}
 		return &chain, nil
 	}
-	return nil, fmt.Errorf("%s not found in %q or ~/.contenox; run 'contenox init' to populate it", name, t.deps.ContenoxDir)
+	return nil, fmt.Errorf("%s not found in %q or ~/.contenox-harness; run 'contenox init' to populate it", name, t.deps.ContenoxDir)
 }

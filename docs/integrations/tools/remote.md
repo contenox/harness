@@ -20,7 +20,7 @@ contenox tools add myapi --url https://api.example.com \
 
 # Example: legacy API where the spec lives at a different path
 contenox tools add erpnext --url https://erp.example.com \
-  --spec ~/.contenox/erp-subset.yaml \
+  --spec ~/.contenox-harness/erp-subset.yaml \
   --header "Authorization: token $ERP_TOKEN"
 
 # Example: spec hosted on a raw GitHub URL
@@ -271,7 +271,7 @@ For services that don't serve their spec at `/openapi.json` (legacy APIs, ERPNex
 ```bash
 # Hand-crafted spec in your home directory
 contenox tools add legacy --url https://erp.example.com \
-  --spec ~/.contenox/erp-subset.yaml
+  --spec ~/.contenox-harness/erp-subset.yaml
 
 # Spec at a custom HTTP path
 contenox tools add mylegacy --url https://api.example.com \

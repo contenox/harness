@@ -48,11 +48,11 @@ that cannot run.
 | D1 | Headless approval **hangs forever**. The fallback blocks on a channel nothing can write to; its comment claims an approval API that does not exist. | `runtime/contenoxcli/serve_cmd.go:279-284`, comment `:277-278`, repeated `runtime/acpsvc/router.go:13-16` |
 | D2 | `hitlservice.Respond` is **dead code** — zero callers repo-wide — and would drop answers if wired: `select` with `default:` on an **unbuffered** channel. | `runtime/hitlservice/hitlservice.go:170`, `:177-182` |
 | D3 | Pending approvals are an **in-process map**; a restart loses every in-flight approval. | `runtime/hitlservice/hitlservice.go:43-44` |
-| D4 | Beam **parses `approval_requested` and discards it**: `taskEvents.ts` reduces it into `state.pendingApproval`; its only consumer never reads it. | `packages/beam/src/lib/taskEvents.ts:113-121`, `packages/beam/src/pages/admin/prompt/ExecPromptPage.tsx:27` |
+| D4 | Beam **parses `approval_requested` and discards it**: `taskEvents.ts` reduces it into `state.pendingApproval`; its only consumer never reads it. | `packages/harness/src/lib/taskEvents.ts:113-121`, `packages/harness/src/pages/admin/prompt/ExecPromptPage.tsx:27` |
 | D5 | No pending-approval surface exists on **any** channel — no REST route, no CLI verb, no beam page. | `grep -i approv` over `runtime/internal/` returns nothing outside tests |
 | D6 | `Enabled` had **two independently drifted implementations**, not one gap. CORRECTED 2026-07-20: an earlier draft of this row claimed the chat path "never checks" — that was wrong, drawn from a truncated grep. Both spawn paths did check; they had diverged in message text, neither offered the remedy, and neither had test coverage. Consolidated in C5 to one shared judgment. | `runtime/fleetservice/fleetservice.go`, and `acpsvc`'s external resolve (present at HEAD before this work) |
-| D7 | Beam's chain editor declares **task handlers that no longer exist in Go** (`hook`, `prompt_to_string`, `prompt_to_int`). | `packages/beam/src/lib/types.ts:1042-1061` vs `runtime/taskengine/tasktype.go:15-24` |
-| D8 | `adopt` works but is reachable **only by hand-crafting `_meta`** — no button, no verb. | `runtime/acpsvc/adopt.go`; no consumer in `packages/beam` or `runtime/contenoxcli` |
+| D7 | Beam's chain editor declares **task handlers that no longer exist in Go** (`hook`, `prompt_to_string`, `prompt_to_int`). | `packages/harness/src/lib/types.ts:1042-1061` vs `runtime/taskengine/tasktype.go:15-24` |
+| D8 | `adopt` works but is reachable **only by hand-crafting `_meta`** — no button, no verb. | `runtime/acpsvc/adopt.go`; no consumer in `packages/harness` or `runtime/contenoxcli` |
 | D9 | The fleet has **no CLI**. | only `serve_cmd.go` and `fleet_telemetry.go` mention fleet in `runtime/contenoxcli/` |
 | D10 | The board cannot tell a dispatched instance from **the chat you have open** — fleet reports downstream ACP session ids, beam routes on upstream contenox ids, and the KV mapping is one-directional. | `runtime/acpsvc/session.go:426-427` |
 | D11 | **No e2e coverage** for agents, fleet, missions, or sessions. | `apitests/` covers backends, health, hitl_policies, mcp_servers, model_registry, taskchains, tools |
@@ -289,7 +289,7 @@ Consequences of the correction:
   to `os.Executable()`, so a test can point the spawn at a built fixture binary.
 - Discovery landed with it (the sequencing constraint holds): `runtime/chainagents`
   reuses the existing chain walker (`taskchainservice.List` over
-  `localfileservice`) across the workspace `.contenox/` and `~/.contenox/`,
+  `localfileservice`) across the workspace `.contenox/` and `~/.contenox-harness/`,
   seeds rows with `Source = "discovered"`, and is run once at `contenox serve`
   startup. A chain file that vanishes DISABLES its row rather than deleting it,
   so the refusal goes through `ResolveForSpawn`'s one message instead of a new

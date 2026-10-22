@@ -4,86 +4,37 @@ import Landing from '../components/Landing.astro';
 import type { LandingStrings } from '../components/Landing.astro';
 
 const t: LandingStrings = {
-  badge: 'Local-first AI workflow runtime',
-  h1a: 'AI workflows you can run,',
-  h1b: 'review, and own.',
-  lede: 'Package repeatable engineering work into versioned Chains, wire in the models and tools you choose, and run them from the CLI, your editor, or any ACP client — with every risky step gated behind an approval you control. No hosted Contenox service required.',
-  ctaRecipe: 'Run a recipe',
-  ctaPackage: 'Package a workflow',
-  ctaGithub: 'View on GitHub',
-  installNote: 'Installs <code class="font-mono">contenox</code>. Run <code class="font-mono">contenox init</code> to scaffold a workspace.',
-  positioning: 'Contenox is not just a chatbot, not just a VS Code extension, and not just an agent framework. It is a local-first workflow runtime for specific, reviewable AI work.',
-  tableWorld: 'Nearby world',
-  tableWhy: 'Why Contenox is different',
-  rows: [
-    ['Cursor / IDE copilots', 'Runtime-first, not editor-first. The same engine works from the terminal, VS Code, and ACP clients.'],
-    ['Aider / CLI coding agents', 'Broader workflow, session, tool policy, and provider scope than a single coding loop.'],
-    ['LangChain / agent frameworks', 'End-user executable product, not just a library you wire into an application.'],
-    ['Dify / n8n / web AI workflow tools', 'Local desktop/workspace-first, not web-app or SaaS-first.'],
-    ['Ollama wrappers', 'Provider-neutral and workflow/tool/HITL-oriented, with local and hosted models.'],
-  ],
-  authorEyebrow: 'What you can author',
-  authorH2: 'Repeatable work, with policy in the file.',
-  authorItems: [
-    'Release evidence pack: feed in git history, PRs, ticket notes, and CI output; the chain drafts the changelog, risk notes, and deployment checklist, then stops before publishing.',
-    'API-to-workflow wrapper: register a narrow OpenAPI subset, inject hidden workspace or environment arguments, and require approval for mutating calls.',
-    'Repo maintenance chain: inspect an issue, plan the patch, touch only approved files, run tests, and prepare a review packet instead of silently changing the project.',
-    'Browser QA evidence: Playwright captures the live app state, the chain writes documentation or screenshots, and the policy decides what needs human approval.',
-  ],
-  editorsEyebrow: 'Run it where work happens',
-  editorsH2: 'The same chain can run in your editor, terminal, or automation.',
-  editorsLede: 'Contenox ships a native VS Code extension, and speaks the Agent Client Protocol over stdio for other editors. Use VS Code, Zed, JetBrains, or AionUi when an editor UI helps; keep the workflow itself in the chain file, with tool calls and HITL approvals routed through the client.',
-  guides: [
-    ['Get the VS Code extension', 'https://marketplace.visualstudio.com/items?itemName=contenox.contenox-runtime'],
-    ['Read the VS Code guide', '/docs/integrations/editors/vscode-vscodium/'],
-    ['Read the Zed guide', '/docs/integrations/editors/zed/'],
-    ['Read the JetBrains guide', '/docs/integrations/editors/jetbrains/'],
-    ['Read the AionUi guide', '/docs/integrations/editors/aionui/'],
-  ],
-  capsEyebrow: 'Core capabilities',
-  caps: [
-    ['The Chain is the contract', 'Prompts, model routing, tool allowlists, command policy, budgets, and approval gates are visible keys in a versioned file — reviewable, diffable, repeatable.'],
-    ['Runs where work happens', 'One runtime behind the CLI, the VS Code extension, and any ACP editor. Same chains, same sessions, same policy everywhere.'],
-    ['Providers are config', 'Route inference to local modeld, Ollama, vLLM, OpenAI, Anthropic, Mistral, Gemini, OpenRouter, Bedrock, or Vertex — without touching the workflow.'],
-    ['Local by default', 'Sessions, config, run logs, and state live in SQLite on your machine. No hosted Contenox service, no account — telemetry is opt-in and off by default.'],
-  ],
-  hitlDemoAlt: 'Terminal demo: a destructive rm command stops at a human approval gate before it runs',
-  beamShotAlt: 'Beam web UI: an agent file edit pauses at the approval gate showing a diff of the change, is approved live, then the workspace tree switches to agent view and marks each file with its policy verdict',
-  beamShotCaption: 'Live from Beam, the bundled local web UI: the agent’s file edit stops at the approval gate with a diff of the exact change, gets approved on the spot, then the workspace tree flips to agent view — every file marked allowed, needs approval, blocked, or unreachable. contenox serve opens the same sessions, chains, and backends in the browser.',
-  beamEyebrow: 'The bundled web UI',
-  beamH2: 'See the work. Approve the diff.',
-  beamLede: 'contenox serve opens the whole runtime in your browser — the same sessions, chains, and policies as the CLI, served locally and never hosted. Beam is where you watch what the agent is about to do, before it does it.',
-  beamPoints: [
-    ['Approve the diff, not the vibe', 'Every gated write or command pauses at the approval gate. File edits render as a diff of the exact change — allow (Y) or reject (N). Nothing runs until you say so.'],
-    ['See what the agent may touch', 'Flip the workspace tree to agent view and every file carries its policy verdict — allowed, needs approval, blocked, or unreachable — computed from the same policy the live agent obeys.'],
-    ['One runtime, in the browser', 'Sessions started in Beam are the sessions the CLI lists. Files and a workspace terminal open as tabs; tool calls and errors persist as cards across reloads.'],
-    ['Bring your own agent', 'Register any ACP agent with contenox agent add and drive it from the same sidebar — its turns stream into Beam, gated by the same approval cards, each session labelled with the agent that ran it.'],
-  ],
-  beamCta: 'Read the Beam guide',
-  standardsEyebrow: 'Built on open standards',
-  standardsH2: 'Speaks the protocols your tools already use.',
-  standards: [
-    ['Agent Client Protocol', 'The full runtime inside Zed, JetBrains, AionUi, and any ACP client — over stdio, no plugin lock-in.', 'https://agentclientprotocol.com'],
-    ['Model Context Protocol', 'Register any MCP server — stdio, SSE, or HTTP — and its tools become policy-scoped chain tools.', 'https://modelcontextprotocol.io'],
-    ['OpenAPI', 'Point at any HTTP service with a spec and every operation becomes a callable, allowlistable tool.', '/docs/integrations/tools/remote/'],
-  ],
-  bottomEyebrow: 'Get started',
-  bottomH2: 'Own your AI workflows in the next five minutes.',
-  bottomCta: 'Read the Quickstart',
-  bottomContact: 'Questions? <a href="mailto:hello@contenox.com" class="underline hover:text-black dark:hover:text-white">hello@contenox.com</a> · Issues and PRs on <a href="https://github.com/contenox/harness" class="underline hover:text-black dark:hover:text-white">GitHub</a>',
-  builtOnEyebrow: 'Built on',
-  builtOnNote: 'Local inference links these upstream projects at build time; their runtime libraries and license texts ship inside each release package. Hosted providers connect over their public APIs.',
-  builtOn: [
-    ['llama.cpp', 'GGUF inference · CPU/CUDA/HIP/Metal', 'https://github.com/ggml-org/llama.cpp'],
-    ['OpenVINO', 'inference runtime · CPU/iGPU', 'https://github.com/openvinotoolkit/openvino'],
-    ['OpenVINO GenAI', 'LLM pipeline', 'https://github.com/openvinotoolkit/openvino.genai'],
-    ['Go', 'the pure-Go runtime', 'https://go.dev'],
-    ['SQLite', 'local state', 'https://sqlite.org'],
-  ],
+  eyebrow: 'Contenox Harness',
+  h1: 'What will you make?',
+  lede: 'A harness for demanding work — and the people accountable for it.',
+  ctaInstall: 'Install Contenox',
+  ctaHow: 'How it works',
+  principles: ['Operator-controlled', 'Model-independent', 'Open source'],
+  s1Eyebrow: 'The harness',
+  s1H2: 'Your machine. Your models. Your policy.',
+  s1P1:
+    'Contenox runs authored workflows as a local process. The policy that gates each tool call is a file you wrote, enforced before anything runs — not by a hosted service.',
+  s1P2:
+    'Backends are configuration: any provider key or local endpoint you add. The model named in the request is the model that serves it, or the run stops with the candidates it could have used. Sessions, approvals and per-step records stay on disk.',
+  s2Eyebrow: 'Install',
+  s2H2: 'Contenox for your machine.',
+  s2P:
+    'One binary. No account, no service, nothing hosted. Editors attach over ACP; the cockpit is served from the same process.',
+  s2Note: 'Then run contenox setup to choose a provider and a model.',
+  s3Eyebrow: 'The foundation',
+  s3H2: 'Built in the open.',
+  s3P:
+    'SQLite is the zero-dependency default. PostgreSQL, NATS and Valkey form the server-backed deployment.',
+  s3License: 'The Contenox Project is 100% Fair & Open Source under the Apache-2.0 License.',
+  endEyebrow: 'Contenox',
+  endH2: 'Start with Contenox.',
+  endCta: 'Install Contenox',
 };
 ---
+
 <Base
-  title="Contenox - Local-first AI workflow runtime for developers"
+  title="Contenox — What will you make?"
+  description="An agent harness for policy-bound, vendor-agnostic AI-assisted software engineering."
   alternates={{ en: '/', de: '/de/' }}
 >
   <Landing t={t} />

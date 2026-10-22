@@ -62,7 +62,7 @@ type ExternalACPAgent struct {
 	// shares the one global runtime state — HOME resolves the database, the seeded
 	// presets, the workspace id — which is precisely what distinguishes it from an
 	// external agent that brings its own everything. Confining it would deny that
-	// state on purpose: ~/.contenox is deliberately NOT carved (control-plane
+	// state on purpose: ~/.contenox-harness is deliberately NOT carved (control-plane
 	// isolation — an agent must never reach the policy that governs it), so a
 	// confined unit cannot open the database it is supposed to share, and the
 	// scrubbed env would strip the very inheritance it is defined by. What governs a
@@ -173,13 +173,13 @@ func (a *ExternalACPAgent) connectStdio(ctx context.Context, harness libacp.Clie
 const sandboxDocsURL = "https://contenox.com/docs/guide/agent-sandbox/"
 
 // sandboxCarveoutFile is the control-plane necessity-list an operator may place
-// at ~/.contenox/sandbox-carveouts.json to widen the wall for a specific
+// at ~/.contenox-harness/sandbox-carveouts.json to widen the wall for a specific
 // deployment: extra filesystem holes and the registry hosts the agent's
 // toolchain must reach. Absent = the defaults only, offline by construction. It
 // is read from the OPERATOR's real home (the parent process configuring the
-// wall), never from the confined agent's reach — ~/.contenox is not carved, so
+// wall), never from the confined agent's reach — ~/.contenox-harness is not carved, so
 // the agent cannot see it.
-const sandboxCarveoutFile = ".contenox/sandbox-carveouts.json"
+const sandboxCarveoutFile = ".contenox-harness/sandbox-carveouts.json"
 
 // buildAgentCmd assembles the confined *exec.Cmd for spawning the external ACP
 // agent described by a, through libsandbox: the agent is ALWAYS spawned inside
@@ -197,7 +197,7 @@ const sandboxCarveoutFile = ".contenox/sandbox-carveouts.json"
 //     default to the whole filesystem.
 //   - Home is the operator's REAL home. "~" in a carve-out resolves against it,
 //     so "~/.claude" reaches the operator's actual agent config — while Landlock
-//     denies everything not carved, so ~/.ssh, ~/.aws, ~/.contenox stay out of
+//     denies everything not carved, so ~/.ssh, ~/.aws, ~/.contenox-harness stay out of
 //     reach even though the real home is $HOME. (A separate scoped home would
 //     make "~/.claude" resolve to an empty dir and the agent would not find its
 //     config.)

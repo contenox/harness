@@ -1,17 +1,17 @@
 # Configuration
 
-Contenox stores all configuration in a single SQLite database at `~/.contenox/local.db`.
+Contenox stores all configuration in a single SQLite database at `~/.contenox-harness/local.db`.
 There is no YAML file — register backends and set defaults using CLI commands.
 
 ## Workspaces vs global
 
 Contenox has two layers of state:
 
-- **Global state** — one shared database at `~/.contenox/local.db`. Holds backends, provider configuration, sessions, MCP registrations, and defaults. Shared by every project on your machine.
-- **Global runtime files** — `~/.contenox/` also stores pulled GGUF models and the shipped default chain/HITL policy presets.
+- **Global state** — one shared database at `~/.contenox-harness/local.db`. Holds backends, provider configuration, sessions, MCP registrations, and defaults. Shared by every project on your machine.
+- **Global runtime files** — `~/.contenox-harness/` also stores pulled GGUF models and the shipped default chain/HITL policy presets.
 - **Workspace state** — one `.contenox/` directory per project, containing a `workspace.id` file (a UUID written on `contenox init`) and optional workspace chain overrides. Each workspace scopes its own messages and workspace-specific config overrides inside the single global database.
 
-Running `contenox init` in a project directory creates a `.contenox/` folder with a fresh `workspace.id`, ensures the default runtime files exist under `~/.contenox/`, and runs the default setup steps. The same project always resolves to the same workspace regardless of where you invoke `contenox` from, as long as you're inside the directory tree.
+Running `contenox init` in a project directory creates a `.contenox/` folder with a fresh `workspace.id`, ensures the default runtime files exist under `~/.contenox-harness/`, and runs the default setup steps. The same project always resolves to the same workspace regardless of where you invoke `contenox` from, as long as you're inside the directory tree.
 
 Backends and global defaults survive across every workspace. A workspace's sessions and workspace-scoped overrides are invisible to other workspaces.
 
@@ -71,7 +71,7 @@ contenox backend add vertex --type vertex-google \
   --url "https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT_ID/locations/us-central1"
 ```
 
-Backends are **global** — they live in `~/.contenox/local.db` and are visible to every workspace.
+Backends are **global** — they live in `~/.contenox-harness/local.db` and are visible to every workspace.
 
 ## Set persistent defaults
 
@@ -135,7 +135,7 @@ contenox backend remove myvllm
 
 ## Database location
 
-Contenox uses **one** database at `~/.contenox/local.db` by default. Override with:
+Contenox uses **one** database at `~/.contenox-harness/local.db` by default. Override with:
 
 - `--db <path>` — use a specific SQLite file (useful for isolated tests or per-environment state)
 - `--data-dir <path>` — point at a specific workspace directory (overrides the walk-up discovery)

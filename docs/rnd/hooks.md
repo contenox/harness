@@ -1,0 +1,28 @@
+---
+title: "Hooks became tools"
+description: The external-capability boundary contenox shipped before the industry settled on a name for it — one repo interface, five wire protocols, OpenAPI tool discovery, and an approval decorator that MCP later slotted into unchanged.
+---
+
+# Hooks became tools
+
+A hook was the one way anything outside the chain engine ever got called. The contract was a single Go interface — `Exec`, `Supports`, `GetSchemasForSupportedHooks`, `GetToolsForHookByName` — and every capability satisfied it. `SimpleRepo` held in-process hooks in a map: `local_fs` for reads, writes and searches inside a configured directory, `local_shell` behind an opt-in flag, `webhook` for any HTTP endpoint, `js_execution` for sandboxed JavaScript, plus `echo` and `print`. `PersistentRepo` looked a name up in the database and dialled whatever HTTP service it found registered there. `MultiRepo` composed any number of repos into one flat namespace by asking each in turn what it supported and routing the call to the first that claimed the name. A chain task reached one with `handler: "hook"` and a name; the engine neither knew nor cared which implementation answered. The vocabulary was older than the code — the April 2025 MVP's chain format already carried a hook call as a first-class task type alongside model execution.
+
+## Remote hooks and wire protocols
+
+The registry landed in August 2025, while tool calling was still something you worked around per model rather than relied on. Remote hooks were a database row, not a plugin: name, endpoint URL, HTTP method, timeout in milliseconds, headers, body properties, and a protocol type validated on write. The protocol type selected one of five `ProtocolHandler` implementations, each exactly two methods — build the request body, parse the response body. `openai` sent an OpenAI `FunctionCall` with its arguments as a JSON string and took the whole reply back. `openai-object` sent the arguments as a real object instead. `ollama` sent an object and read `message.content` out of the response. `langserve-openai` sent the OpenAI shape and unwrapped LangServe's `output` envelope. `langserve-direct` sent the bare argument map and took the bare reply. Every unwrap that failed said so with the offending body quoted back rather than returning a plausible nil, and each protocol had its own end-to-end API test driving a real chain against a mock server whose request validator asserted the exact bytes on the wire. A hook that served an OpenAPI 3 document skipped the hand-written shape entirely: the engine fetched `{endpointUrl}/openapi.json`, walked every path and method, derived a tool name per operation, and at call time mapped the model's arguments back into path, query, header, and body parameters. Registering an internal API as an agent capability was a `POST` and a URL.
+
+## Tools and MCP
+
+By September 2025 the same registered hook was handing the model an OpenAI-shaped tool schema, taking a tool call back, and executing it — the repo interface grew `GetToolsForHookByName` and the boundary did not move. MCP support landed in March 2026 as one more provider behind the identical interface: an MCP tool's `inputSchema` maps straight onto the engine's own `Tool` type, and parameters the runtime injects on the server's behalf are stripped out of `properties` and `required` before the schema reaches the model, so a credential a server needs never appears as a field the model could invent. Which hooks a task can see is resolved by an allowlist grammar — `*` for everything, exact names, `!name` exclusions combined with `*` — and a second allowlist attached at runtime is intersected with the task's, stricter side winning, so a chain author can never widen what the caller has already narrowed. Approval sits on the same seam: `HITLWrapper` decorates any repo, evaluating a policy per tool call, passing allows straight through, blocking approvals on a human, and answering denials with a sentence the model can act on — "please ask for clarification or try a different, less destructive approach" — rather than an error that kills the run. The boundary is the same whatever it is called: a model needs a named, schema-described capability it can ask for, an executor that runs it under a policy, and a result that comes back as context.
+
+The hook boundary: a chain task names its hooks, each hook returns its tool schemas, the schemas go to the model with the prompt, and the model's tool call comes back through the executor.
+
+![Architecture diagram of the hook boundary: a chain task fetching tool schemas from local and remote hooks, passing them to the model, and executing the returned tool call](/hooks_architecture.png)
+
+## Problems it solved
+
+- **One interface for every capability.** Local hooks, registered HTTP services, OpenAPI-discovered operations, and MCP servers are four implementations of the same four methods, so adding MCP changed nothing above the seam.
+- **Many wire shapes.** Five protocols fit behind two methods — build a request, parse a response — each with an end-to-end test asserting the exact bytes on the wire.
+- **Schema registration.** Fetching `/openapi.json` and deriving one tool per operation makes an existing internal API an agent capability with a `POST` and a URL, and it stays correct when the API changes.
+- **A chain granting itself capabilities.** Allowlists compose by intersection, so a task's allowlist only narrows the caller's.
+- **Approval at the right place.** Wrapping the repo rather than the executor puts every tool call — in-process, remote, OpenAPI, MCP — behind one policy, and makes a denial a message the model can reason about.

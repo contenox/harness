@@ -121,7 +121,7 @@ func TestUnit_EnvPolicy_AllowingDenyingReturnCopies(t *testing.T) {
 
 // HOME is never a default passthrough: scrubEnv forces the scoped HOME, and
 // inheriting the real one would defeat the mechanism that keeps ~/.ssh, ~/.aws,
-// and ~/.contenox out of reach.
+// and ~/.contenox-harness out of reach.
 func TestUnit_DefaultEnvAllow_ExcludesHome(t *testing.T) {
 	require.NotContains(t, DefaultEnvAllow(), "HOME")
 }

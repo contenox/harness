@@ -154,7 +154,7 @@ func mapErrorToStatus(op Operation, err error) int {
 	if errors.Is(err, ErrForbidden) {
 		return http.StatusForbidden
 	}
-	// The vfs control-plane refusal (a path at/under ~/.contenox: config, DB,
+	// The vfs control-plane refusal (a path at/under ~/.contenox-harness: config, DB,
 	// policies, agents) is a security boundary — 403 Forbidden carrying the
 	// teaching text, not a mystery 404/500. Surfaces on every /files, search, and
 	// fs-tool path that resolves through vfs. See runtime/vfs/controlplane.go.

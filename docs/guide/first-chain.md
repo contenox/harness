@@ -17,10 +17,10 @@ If you haven't installed Contenox yet, do the [Quickstart](/docs/guide/quickstar
 
 **A project-local workspace marker** — `.contenox/workspace.id` in the current directory. This is like `.git/` — it marks this directory tree as a Contenox workspace. The engine walks up from your current directory looking for this marker to resolve which workspace you're in.
 
-**Global runtime files** — `~/.contenox/` stores everything that's shared across workspaces: default chain presets, HITL policies, pulled models, and the SQLite database.
+**Global runtime files** — `~/.contenox-harness/` stores everything that's shared across workspaces: default chain presets, HITL policies, pulled models, and the SQLite database.
 
 ```
-~/.contenox/                    ← global (shared across all workspaces)
+~/.contenox-harness/                    ← global (shared across all workspaces)
 ├── local.db                    ← SQLite: backends, config, sessions, MCP registrations
 ├── models/                     ← GGUF model files (populated by `contenox model pull`)
 ├── default-chain.json          ← the interactive chat chain
@@ -39,7 +39,7 @@ To make any directory a workspace, run `contenox init` inside it. Workspace-scop
 
 ## What `contenox init` already gave you
 
-Look in `~/.contenox/`. You'll find two chains the engine ships with:
+Look in `~/.contenox-harness/`. You'll find two chains the engine ships with:
 
 - `default-chain.json` — the interactive chat loop, used by `contenox chat` **and** by a bare `contenox "..."` (a bare prompt is session-backed chat, not a stateless run)
 - `default-run-chain.json` — the one-shot, stateless pipeline loop, used only by `contenox run`
@@ -48,7 +48,7 @@ The second one is a real authored chain: a main agentic loop with a 10-round bud
 
 You don't have to start there. You can write your own.
 
-Chains live as files in `~/.contenox/` (and your workspace `.contenox/`); the
+Chains live as files in `~/.contenox-harness/` (and your workspace `.contenox/`); the
 CLI picks one per invocation with `--chain`, or falls back to the configured
 `default-chain`. Sessions in the Beam UI (`contenox serve`) run the workspace's
 default chain, with the model, HITL policy, and reasoning effort switchable per

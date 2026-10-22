@@ -73,7 +73,7 @@ xterm `disableStdin`) with an explicit **"Shell übernehmen"** affordance that
 flips the same view interactive behind an honest confirmation naming what it
 grants (a real shell on the host, bounded by the serve credential). The
 default lives at `TERMINAL_READ_ONLY_DEFAULT` in
-`packages/beam/src/lib/hostTerminal.ts` with a register-quality comment —
+`packages/harness/src/lib/hostTerminal.ts` with a register-quality comment —
 flip it there if the posture should change. Same-day fix that unblocked it:
 `terminalapi` now authenticates via the injected serverapi gate (raw token OR
 session JWT — one login, every surface), replacing its raw-only compare that

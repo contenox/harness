@@ -11,7 +11,7 @@ import (
 // TestUnit_FlattenPromptBlocks_ResourceLinkFromMention pins the server side of
 // the @-mention wire contract: beam's composer emits a text block plus one
 // resource_link block per mention ({type:"resource_link", name:<path>,
-// uri:<path>} — see packages/beam/.../mentions.ts promptBlocksFromDraft), and
+// uri:<path>} — see packages/harness/.../mentions.ts promptBlocksFromDraft), and
 // the runtime must consume the resource_link as a "name: uri" line appended to
 // the prompt (the reference the agent follows with local_fs), never dropping it.
 // Reference only: no embedded resource content is required for a mention.

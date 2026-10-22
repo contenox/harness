@@ -16,7 +16,7 @@ When `contenox chat` starts a new session, it walks up from the current working 
 Because it lands in chat history (not the system prompt), it's:
 
 - **Cached** by providers on subsequent turns — no re-render cost
-- **Persisted** in `messagestore` — survives restarts, visible in `sqlite3 ~/.contenox/local.db`
+- **Persisted** in `messagestore` — survives restarts, visible in `sqlite3 ~/.contenox-harness/local.db`
 - **Reference material**, not unconditional rules — the model treats it as project context to consult, not directives to obey blindly
 
 `contenox run` is stateless, so it loads `AGENTS.md` afresh on every invocation when input type is `chat`.

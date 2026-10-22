@@ -20,7 +20,7 @@ import (
 
 // TestUnit_WorkspaceRoutes_ControlPlaneShownButUnenterable is the composed proof
 // of the control-plane carveout on the /files explorer surface — the live hole
-// containment opened today (a granted root whose CHILD is ~/.contenox).
+// containment opened today (a granted root whose CHILD is ~/.contenox-harness).
 //
 // Show-vs-hide decision (documented, and enforced here): the control-plane entry
 // is SHOWN in its parent's listing but is UNENTERABLE. Hiding it would lie about

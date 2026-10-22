@@ -1,4 +1,4 @@
-# CI: Beam build/test/embed smoke, contenox compile smoke, Windows cross-compile smoke, and cheap TestUnit_* Go tests.
+# CI: harness build/test/embed smoke, contenox compile smoke, Windows cross-compile smoke, and cheap TestUnit_* Go tests.
 # No TestSystem_* / Docker / LLM integration tests.
 name: CI
 
@@ -28,9 +28,9 @@ jobs:
           cache: npm
           cache-dependency-path: |
             packages/ui/package-lock.json
-            packages/beam/package-lock.json
+            packages/harness/package-lock.json
 
-      - name: Build, test, and verify Beam UI
+      - name: Build, test, and verify harness UI
         run: make build-ui test-ui verify-ui-embed
 
       - name: Build contenox (compile smoke)

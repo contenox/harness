@@ -1,6 +1,7 @@
 package contenoxcli
 
 import (
+	"github.com/contenox/harness/runtime/homedir"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -361,15 +362,7 @@ func globalDBPath() (string, error) {
 }
 
 func globalContenoxDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine home directory: %w", err)
-	}
-	dir := filepath.Join(home, ".contenox")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return "", fmt.Errorf("create ~/.contenox: %w", err)
-	}
-	return dir, nil
+	return homedir.Dir()
 }
 
 func init() {

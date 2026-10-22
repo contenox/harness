@@ -3,7 +3,7 @@
 // Code's `vscode-agent`, or `contenox serve` itself — self-registers a small,
 // durable-ish record into the shared store so the fleet board can show it. These
 // instances run in their own process, over their own stdio connection, sharing
-// only $HOME/.contenox with everyone else; the kernel never spawned them and owns
+// only $HOME/.contenox-harness with everyone else; the kernel never spawned them and owns
 // no lifecycle over them.
 //
 // # Presence is observation, never control
@@ -39,7 +39,7 @@
 // # Storage: keyed rows in the shared SQLite KV store
 //
 // Presence is inherently MANY records that a reader enumerates, so it rides the
-// shared-SQLite KV store (libkvstore over $HOME/.contenox/local.db): one keyed
+// shared-SQLite KV store (libkvstore over $HOME/.contenox-harness/local.db): one keyed
 // row per instance, listed by glob, each with a native per-row TTL. That is the
 // multi-holder shape a fleet needs — liblease is single-holder-per-path and would
 // have to reinvent a directory scheme on top of its atomic-write helper to hold
@@ -214,7 +214,7 @@ func WithHardTTL(d time.Duration) StoreOption {
 }
 
 // NewStore returns a Store over kv. kv is the shared-SQLite KV manager both the
-// editor writers and serve's board reader hold against $HOME/.contenox/local.db.
+// editor writers and serve's board reader hold against $HOME/.contenox-harness/local.db.
 func NewStore(kv libkvstore.KVManager, opts ...StoreOption) *Store {
 	s := &Store{
 		kv:       kv,

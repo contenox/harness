@@ -4,7 +4,7 @@
 // directory.
 //
 // Unlike `contenox fleet` / `mission`, these do NOT reach serve over REST. A
-// grant is DURABLE config in the shared ~/.contenox/local.db every process opens,
+// grant is DURABLE config in the shared ~/.contenox-harness/local.db every process opens,
 // so `workspace add/remove` writes it directly (the config-command register of
 // `contenox config`) and then rings a reload doorbell on the shared SQLite bus —
 // the same cross-process rail the report-routing slice proved (CLI writer → serve
@@ -110,7 +110,7 @@ func runWorkspaceAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Control-plane isolation (vfs-invariant slice): refuse granting the runtime's
-	// own state dir (~/.contenox: config, database, HITL policies, declared agents)
+	// own state dir (~/.contenox-harness: config, database, HITL policies, declared agents)
 	// as a workspace root. This CLI runs in a SEPARATE process from serve, which is
 	// where the vfs global denylist is set, so we compute the control-plane dirs
 	// here (the same set serve denies) and check against them directly. See

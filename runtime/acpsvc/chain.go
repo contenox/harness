@@ -1,6 +1,7 @@
 package acpsvc
 
 import (
+	"github.com/contenox/harness/runtime/homedir"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -24,17 +25,17 @@ func LoadChainRegistry() (*ChainRegistry, error) {
 }
 
 // LoadChainRegistryFrom loads the ACP chain for a specific profile: filename is
-// the ~/.contenox/ file the chain is read from, envVar overrides that path.
+// the ~/.contenox-harness/ file the chain is read from, envVar overrides that path.
 // A missing file is a hard error (fail closed) — callers must not fall back to
 // a different chain.
 func LoadChainRegistryFrom(filename, envVar string) (*ChainRegistry, error) {
 	path := os.Getenv(envVar)
 	if path == "" {
-		home, err := os.UserHomeDir()
+		dir, err := homedir.Dir()
 		if err != nil {
 			return nil, fmt.Errorf("acpsvc: cannot determine home directory and %s is not set: %w", envVar, err)
 		}
-		path = filepath.Join(home, ".contenox", filename)
+		path = filepath.Join(dir, filename)
 	}
 
 	data, err := os.ReadFile(path)

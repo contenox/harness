@@ -39,7 +39,7 @@ Restart Zed (or reload the window). Open the agent panel — Contenox now appear
 
 **HITL through the editor.** When your chain calls a tool listed in your active HITL policy, Contenox's [HITL policy](/docs/guide/hitl/) applies — and the approval dialog is routed to Zed's permission UI instead of a terminal prompt. The default policy gates `local_fs.write_file`, `local_fs.sed`, `local_shell.*`, and mutating `webtools` calls.
 
-**Session history that replays.** Close Zed mid-conversation and reopen the project — your prompts, the agent's responses, and every tool call (with its output) come back. State lives in `~/.contenox/local.db`.
+**Session history that replays.** Close Zed mid-conversation and reopen the project — your prompts, the agent's responses, and every tool call (with its output) come back. State lives in `~/.contenox-harness/local.db`.
 
 ---
 
@@ -47,7 +47,7 @@ Restart Zed (or reload the window). Open the agent panel — Contenox now appear
 
 ACP sessions use a dedicated chain file separate from the CLI's default chain:
 
-- Default location: `~/.contenox/default-acp-chain.json`
+- Default location: `~/.contenox-harness/default-acp-chain.json`
 - Override path with the `CONTENOX_ACP_CHAIN_PATH` environment variable (set it in the shell that launches Zed).
 
 The ACP chain looks like any other Contenox chain. The default chain uses `"tools": ["*"]`, which exposes everything the engine has registered — `local_fs`, `local_shell`, `webtools`, plus any MCP servers you've added via `contenox mcp add`.
@@ -116,7 +116,7 @@ Setting `CONTENOX_SERVER_URL` (in the shell that launches Zed) forwards `/missio
 contenox config set telemetry-enabled true
 ```
 
-Subsequent ACP sessions write structured operation traces to `~/.contenox/telemetry.log` (chain steps, tool calls, model requests, session updates sent to Zed). Stderr from the agent process also lands in Zed's `Zed.log`.
+Subsequent ACP sessions write structured operation traces to `~/.contenox-harness/telemetry.log` (chain steps, tool calls, model requests, session updates sent to Zed). Stderr from the agent process also lands in Zed's `Zed.log`.
 
 ---
 

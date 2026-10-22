@@ -51,8 +51,8 @@ Today every bypass path is wide open:
   environment** and inherits the **real HOME and full filesystem**. No
   `SysProcAttr`, no namespaces, no fs restriction.
 - **Control-plane isolation:** `vfs/controlplane.go` denies *native tools* access
-  to `~/.contenox` — but a foreign subprocess runs *outside* that guard, so
-  nothing stops it reaching `~/.contenox` today.
+  to `~/.contenox-harness` — but a foreign subprocess runs *outside* that guard, so
+  nothing stops it reaching `~/.contenox-harness` today.
 - **Telemetry seam:** `libtracker.ActivityTracker` — `Start` → `(reportErr,
   reportChange, end)`, chainable, credential-field redaction on by default.
 - **Workspace:** `fleetservice` dispatches each mission with a `Cwd` via
@@ -97,8 +97,8 @@ without this,"* not *"policy permits this."* Discipline:
 - **Read-only** wherever possible (cred/config dirs are read, not written).
 - The **loot paths stay out** — `~/.ssh`, `~/.aws`, `~/.npmrc` — unless a real
   breakage forces one, because each is exactly what a `postinstall` hunts.
-- `~/.contenox` is **never** a carve-out.
-- The carve-out list itself lives in the **control plane** (`~/.contenox`,
+- `~/.contenox-harness` is **never** a carve-out.
+- The carve-out list itself lives in the **control plane** (`~/.contenox-harness`,
   unreachable by the agent) — the agent can never punch its own hole.
 - One shared list across agents is fine: `~/.claude` is inert to a non-Claude
   agent; per-agent scoping is an optional refinement, not a requirement.
@@ -120,7 +120,7 @@ mechanism config.
 
 The scoped-HOME lever reconciles "needs `~/.claude`" with "deny the rest": set
 `HOME` to a per-mission dir; the carve-out binds `~/.claude` read-only into it;
-`~/.ssh`, `~/.aws`, `~/.npmrc`, `~/.contenox` are simply not under it.
+`~/.ssh`, `~/.aws`, `~/.npmrc`, `~/.contenox-harness` are simply not under it.
 
 ## 3. Telemetry — watch the wall
 
@@ -220,7 +220,7 @@ Recommended stack:
 
 - **Phase 0 — stop the leak.** Env-scrub at `externalacp.go` (`:93`) to a minimal
   allowlist (`PATH`, scoped `HOME`, `TERM`, `LANG` + explicit config env); deny
-  `~/.contenox` to the subprocess. Closes the incident class.
+  `~/.contenox-harness` to the subprocess. Closes the incident class.
 - **Phase 1 — the fs wall.** Landlock/mount-ns so only the workspace + fs
   necessity carve-outs are visible; scoped HOME. Proof: a `postinstall` reaching
   `~/.ssh` is blocked.

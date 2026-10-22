@@ -90,7 +90,7 @@ export function Layout({ defaultOpen = true, mainContent, sidebarContent, classN
       : sidebarContent;
 
   const headerTitle = useMemo(() => {
-    // "Beam" is the product name of the chat surface (same in every language) —
+    // The harness is the product name of the chat surface (same in every language) —
     // it replaces the old in-body "Chat" H2, which moved up into this navbar.
     if (location.pathname.startsWith('/chat')) return 'Beam';
     if (location.pathname.startsWith('/fleet')) return t('navbar.fleet');

@@ -8,14 +8,15 @@ package localtools
 // its own durable copy, so read_file names the exact resume line instead (see
 // fs.go); spooling a read would be a redundant, possibly huge copy.
 //
-// Spool location: $CONTENOX_TOOL_OUTPUT_DIR when set, else ~/.contenox/tool_output
+// Spool location: $CONTENOX_TOOL_OUTPUT_DIR when set, else ~/.contenox-harness/tool_output
 // (the opencode `.opencode/tool_output/` pattern, rehomed under the runtime's
-// ~/.contenox data root). Output is bucketed per session (or per calendar day
+// ~/.contenox-harness data root). Output is bucketed per session (or per calendar day
 // when no session id is in scope). Retention is bounded (pruneToolOutput):
 // anything older than maxSpoolAge is removed, and the newest maxSpoolFiles are
 // kept, oldest-first eviction beyond that. Both caps are documented constants.
 
 import (
+	"github.com/contenox/harness/runtime/homedir"
 	"bytes"
 	"context"
 	"fmt"
@@ -29,7 +30,7 @@ import (
 
 const (
 	// toolOutputEnvVar overrides the spool root. Useful for tests (hermetic temp
-	// dir) and for deployments whose data dir is not ~/.contenox.
+	// dir) and for deployments whose data dir is not ~/.contenox-harness.
 	toolOutputEnvVar = "CONTENOX_TOOL_OUTPUT_DIR"
 
 	// maxSpoolFiles bounds how many spool files are retained across all buckets.
@@ -53,8 +54,8 @@ func toolOutputRoot() string {
 	if v := strings.TrimSpace(os.Getenv(toolOutputEnvVar)); v != "" {
 		return v
 	}
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		return filepath.Join(home, ".contenox", "tool_output")
+	if dir, err := homedir.Dir(); err == nil {
+		return filepath.Join(dir, "tool_output")
 	}
 	// Last resort: OS temp dir, so spooling never becomes a hard dependency on a
 	// resolvable home directory.

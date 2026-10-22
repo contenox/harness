@@ -35,10 +35,10 @@ import (
 // harness records.
 //
 // State isolation: every state path `contenox acp` reads — the SQLite DB, the
-// seeded chain/HITL presets, workspace id — resolves under $HOME/.contenox
+// seeded chain/HITL presets, workspace id — resolves under $HOME/.contenox-harness
 // via os.UserHomeDir() (runtime/contenoxcli/backend_cmd.go globalContenoxDir).
 // The spawned agent (and the `contenox config set` seeding runs) therefore get
-// HOME pointed at a per-test temp dir, so the user's real ~/.contenox is never
+// HOME pointed at a per-test temp dir, so the user's real ~/.contenox-harness is never
 // touched. os/exec deduplicates Cmd.Env keeping the last entry, so appending
 // HOME to os.Environ() reliably overrides it for the child.
 
@@ -133,16 +133,16 @@ func registerLoopbackAgent(t *testing.T, name, command string, args []string, en
 func TestHostE2E_Loopback_DeterministicChainReply(t *testing.T) {
 	// KNOWN INCOMPATIBILITY with the sandbox-only spawn path. This self-hosting
 	// loopback boots `contenox acp` and relies on its state (SQLite DB, seeded
-	// presets) resolving under a per-test isolated $HOME/.contenox. But the wall
+	// presets) resolving under a per-test isolated $HOME/.contenox-harness. But the wall
 	// (1) FORCES $HOME to the operator's real home (libsandbox scrubEnv overrides
 	// any inherited/EnvSet HOME with Spec.Home = os.UserHomeDir()), so the confined
-	// process no longer sees the test's temp HOME, and (2) DENIES ~/.contenox by
+	// process no longer sees the test's temp HOME, and (2) DENIES ~/.contenox-harness by
 	// construction (it is not carved — the control-plane isolation invariant). So
 	// the confined `contenox acp` cannot reach the state this test seeds. It is
 	// skipped, not weakened: re-enabling it needs a per-agent scoped home plus a
 	// control-plane carve-out mechanism the fixed Spec does not (yet) provide.
 	t.Skip("self-hosting loopback is incompatible with the sandbox-only spawn path: " +
-		"the wall forces HOME to the operator's real home and denies ~/.contenox, so a " +
+		"the wall forces HOME to the operator's real home and denies ~/.contenox-harness, so a " +
 		"confined `contenox acp` cannot reach the isolated state this test seeds (see file comment)")
 
 	if testing.Short() {
@@ -165,10 +165,10 @@ func TestHostE2E_Loopback_DeterministicChainReply(t *testing.T) {
 
 	env := map[string]string{
 		// Full state isolation: every path `contenox acp` reads (DB, seeded
-		// presets, workspace id, telemetry) resolves under $HOME/.contenox.
+		// presets, workspace id, telemetry) resolves under $HOME/.contenox-harness.
 		"HOME": home,
 		// The chain that answers the session: CONTENOX_ACP_CHAIN_PATH
-		// overrides ~/.contenox/default-acp-chain.json (acpsvc.LoadChainRegistryFrom).
+		// overrides ~/.contenox-harness/default-acp-chain.json (acpsvc.LoadChainRegistryFrom).
 		"CONTENOX_ACP_CHAIN_PATH": chainPath,
 		// Neutralize ambient CONTENOX_DEFAULT_* overrides from the invoking
 		// environment: they are read env-first on every acp launch

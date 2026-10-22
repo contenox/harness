@@ -230,7 +230,7 @@ being fixed directly.
         `contenox serve` restarted to reach the beam chat window.
       - `default-chain` (Workspace-Standards) doesn't affect beam/ACP chat
         *at all*, restart or not: the ACP chain is loaded once from
-        `~/.contenox/default-acp-chain.json` (`runtime/acpsvc/chain.go`),
+        `~/.contenox-harness/default-acp-chain.json` (`runtime/acpsvc/chain.go`),
         entirely separate from the `default-chain` KV key. That key only
         drives the OpenAI-compatible API and the VS Code extension. Surfaced
         via `settingsAdvanced.chain_scope_notice` on WorkspaceSettingsSection

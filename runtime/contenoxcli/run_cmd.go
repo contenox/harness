@@ -79,7 +79,7 @@ Examples:
 			}
 		}
 		if chainPath == "" {
-			fmt.Fprintln(os.Stderr, "No default-run-chain.json found in .contenox/ (workspace) or ~/.contenox/.")
+			fmt.Fprintln(os.Stderr, "No default-run-chain.json found in .contenox/ (workspace) or ~/.contenox-harness/.")
 			fmt.Fprintln(os.Stderr, "Run 'contenox init' to scaffold it, or pass --chain explicitly.")
 			return errChainRequired
 		}

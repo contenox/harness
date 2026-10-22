@@ -19,7 +19,7 @@ import (
 // # The invariant (control-plane isolation)
 //
 // An agent must never fs-reach its own governing state. Could it read or write
-// ~/.contenox, it could read the very HITL policy that gates it, forge the
+// ~/.contenox-harness, it could read the very HITL policy that gates it, forge the
 // approval envelopes it must not, or corrupt the database that is the runtime's
 // source of truth. So the control plane is NEVER a workspace, a session cwd, a
 // browsable root, or a resolvable subpath — EVEN when it sits under a granted
@@ -30,9 +30,9 @@ import (
 //
 // Workspace roots gained CONTAINMENT semantics today (see Factory.Resolve):
 // granting a root now grants everything under it. Before, only an exact
-// allowlisted directory resolved, so ~/.contenox was reachable only if it was
+// allowlisted directory resolved, so ~/.contenox-harness was reachable only if it was
 // granted verbatim (nobody does that). With containment, a single broad grant
-// like /home/user makes its child ~/.contenox reachable through every fs surface
+// like /home/user makes its child ~/.contenox-harness reachable through every fs surface
 // — the /files explorer, the local_fs agent tool, a session cwd, workspace
 // search. And serve's own default root is the PARENT of its .contenox dir
 // (workspaceRoot = filepath.Dir(contenoxDir)), so the control plane is a direct
@@ -62,7 +62,7 @@ var ErrControlPlane = errors.New("path is inside the runtime control plane")
 var controlPlaneDenied atomic.Pointer[[]string]
 
 // SetControlPlaneDenied registers the runtime's control-plane directories. serve
-// calls it ONCE at boot with its resolved ~/.contenox data/config dir(s); each
+// calls it ONCE at boot with its resolved ~/.contenox-harness data/config dir(s); each
 // path is absolutized and symlink-resolved so the stored form matches the
 // resolved candidates it is compared against, and duplicates are collapsed.
 // Calling it with no paths CLEARS the denylist — the reset a test uses between

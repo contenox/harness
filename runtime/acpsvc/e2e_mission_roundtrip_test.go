@@ -84,7 +84,7 @@ import (
 // OWN filed report routes end to end and keeps that seam closed.
 //
 // HOME is isolated to a per-test temp dir, and BOTH the units and this test's DB
-// handle resolve to the one $HOME/.contenox/local.db — that shared file is how a
+// handle resolve to the one $HOME/.contenox-harness/local.db — that shared file is how a
 // unit's report row is visible here (assertion a) and how the SQLite event bus
 // (durable, cross-process) carries a routing event from a publisher over the same
 // file to the router polling it. The default-model is a name that resolves to no
@@ -159,7 +159,7 @@ func TestFleetE2E_MissionRoundTrip(t *testing.T) {
 	contenoxDir := filepath.Join(home, ".contenox")
 	require.DirExists(t, contenoxDir, "the CLI seeding run must have created the isolated state directory")
 
-	// The one shared store: the units resolve $HOME/.contenox/local.db, and so does
+	// The one shared store: the units resolve $HOME/.contenox-harness/local.db, and so does
 	// this handle. A unit's report row is visible here through it, and the SQLite
 	// bus below rides the same file cross-process.
 	dbPath := filepath.Join(contenoxDir, "local.db")

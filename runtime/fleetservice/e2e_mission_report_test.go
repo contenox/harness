@@ -68,7 +68,7 @@ func buildContenoxBin(t *testing.T) string {
 // session/new (`_meta`), the unit's ACP agent binds it into the session
 // (envelope at construction), and the unit's mission_report tool reports against
 // exactly that mission — over a SQLite DB shared by parent and unit because both
-// are the same binary rooted at the same $HOME/.contenox.
+// are the same binary rooted at the same $HOME/.contenox-harness.
 func TestFleetService_E2E_MissionReportFromDispatchedUnit(t *testing.T) {
 	if testing.Short() {
 		t.Skip("e2e: builds the contenox binary and spawns a real ACP subprocess")
@@ -76,7 +76,7 @@ func TestFleetService_E2E_MissionReportFromDispatchedUnit(t *testing.T) {
 
 	bin := buildContenoxBin(t)
 
-	// Isolate HOME so the unit's $HOME/.contenox (its DB, chain, and policies)
+	// Isolate HOME so the unit's $HOME/.contenox-harness (its DB, chain, and policies)
 	// and this test's DB handle are one and the same store. The spawned
 	// subprocess inherits this process's environment, so the t.Setenv HOME
 	// reaches it.
@@ -160,7 +160,7 @@ func TestFleetService_E2E_MissionReportFromDispatchedUnit(t *testing.T) {
 // runContenox runs the built binary with args and fails the test on a non-zero
 // exit, surfacing combined output. It inherits the process environment (so the
 // isolated HOME reaches it), which is how config/seed subcommands land in the
-// same $HOME/.contenox the unit reads.
+// same $HOME/.contenox-harness the unit reads.
 func runContenox(t *testing.T, bin string, args ...string) {
 	t.Helper()
 	out, err := exec.Command(bin, args...).CombinedOutput()

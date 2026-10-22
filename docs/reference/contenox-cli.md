@@ -12,7 +12,7 @@ Persistent flags on the root command (also shown under **Global Flags** on subco
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `--model <name>`                 | Model override for this invocation; persistent default is `contenox config set default-model <name>`                               |
 | `--provider <type>`              | Provider override for this invocation. See `contenox backend add --help` for supported backend types. |
-| `--db <path>`                    | SQLite DB path (default: `~/.contenox/local.db`). The one global database is shared by every workspace. |
+| `--db <path>`                    | SQLite DB path (default: `~/.contenox-harness/local.db`). The one global database is shared by every workspace. |
 | `--data-dir <path>`              | Override the `.contenox` data directory (skips walk-up search). Used to locate the workspace's `workspace.id` and chain files; does not change the database location. |
 | `--timeout`                      | Max execution time per invocation (default `5m`)                                                                                  |
 | `--context`                      | Context length hint for the tokenizer                                                                                             |
@@ -35,7 +35,7 @@ Persistent flags on the root command (also shown under **Global Flags** on subco
 
 ### `contenox setup`
 
-Runs an interactive setup wizard to configure your primary provider, model, and API key. This is the recommended first step for all new users. It ensures your global `~/.contenox/` configuration is ready for use.
+Runs an interactive setup wizard to configure your primary provider, model, and API key. This is the recommended first step for all new users. It ensures your global `~/.contenox-harness/` configuration is ready for use.
 
 ```bash
 contenox setup
@@ -47,7 +47,7 @@ The wizard will guide you through picking a provider (like a local model, OpenAI
 
 If the first token is **not** a reserved subcommand (`chat`, `init`, `run`, …), the CLI **prepends `chat`**. This starts or continues a stateful, session-backed conversation. It is the default, interactive mode.
 
-The default chat chain is resolved by name: workspace `.contenox/default-chain.json` wins when present, otherwise Contenox falls back to `~/.contenox/default-chain.json`.
+The default chat chain is resolved by name: workspace `.contenox/default-chain.json` wins when present, otherwise Contenox falls back to `~/.contenox-harness/default-chain.json`.
 
 ```bash
 contenox "what can you do?"
@@ -197,7 +197,7 @@ contenox tools remove <name>
 
 ### `contenox agent`
 
-Inspect and manage the runtime's declared agents. An agent is one of the runtime's own [task chains](/docs/guide/beam/), addressable and spawnable as an ACP peer. Agents are registered automatically by chain-agent discovery from the chain files on disk — this command inspects them, toggles their enabled state, and removes stale registrations. They appear in [Beam](/docs/guide/beam/)'s agent picker and over the read-only `GET /api/agents` endpoint.
+Inspect and manage the runtime's declared agents. An agent is one of the runtime's own [task chains](/docs/guide/harness/), addressable and spawnable as an ACP peer. Agents are registered automatically by chain-agent discovery from the chain files on disk — this command inspects them, toggles their enabled state, and removes stale registrations. They appear in [Beam](/docs/guide/harness/)'s agent picker and over the read-only `GET /api/agents` endpoint.
 
 ```bash
 contenox agent list                       # id, name, source, kind, enabled
@@ -210,9 +210,9 @@ contenox agent remove agent-reviewer      # (alias: rm)
 
 ### `contenox init [provider]`
 
-Initializes a workspace (`.contenox/`) and ensures default runtime presets exist globally (`~/.contenox/`). It's best to run `contenox setup` first for a guided configuration.
+Initializes a workspace (`.contenox/`) and ensures default runtime presets exist globally (`~/.contenox-harness/`). It's best to run `contenox setup` first for a guided configuration.
 
-`init` creates the `.contenox/workspace.id` marker — a project's portable identity. The marker carries a stable workspace UUID (the database scoping token every session under the project is filed under) plus an optional friendly **name** (what the Beam project registry and the folder picker show). It travels *with* the directory, so a project means one thing to serve, the CLI, and the API alike. Default chains and HITL policies are written under `~/.contenox/` unless they already exist. Workspace-local `.contenox/` files can override these global presets by name.
+`init` creates the `.contenox/workspace.id` marker — a project's portable identity. The marker carries a stable workspace UUID (the database scoping token every session under the project is filed under) plus an optional friendly **name** (what the Beam project registry and the folder picker show). It travels *with* the directory, so a project means one thing to serve, the CLI, and the API alike. Default chains and HITL policies are written under `~/.contenox-harness/` unless they already exist. Workspace-local `.contenox/` files can override these global presets by name.
 
 By default `init` walks up to reuse an ancestor's `.contenox` if one exists (like `git`). Pass `--project` to force a *fresh* project marker in the current directory instead — a distinct workspace nested under a larger one — and `--name` to give it a friendly name (default: the folder's own name). Marking a project does not by itself let sessions open it; `init --project` prints the `contenox workspace add` line that grants it.
 
@@ -479,7 +479,7 @@ contenox workspace remove /home/me/scratch        # revoke a grant
 
 Granting a root also **registers it as a project**: `add` writes (or reuses) the folder's `.contenox/workspace.id` marker, so a root added here shows the same friendly name in `list`, the API, and the Beam project registry. `--name` sets that name (default: the folder's own name); re-running `add` on an already-granted path with a new `--name` **renames** the project without changing its workspace id, so its existing sessions stay attached. This is the exact same marker stamp `init --project` and Beam's "Add project" apply — one on-disk result across all three entry points.
 
-Unlike `fleet` / `mission`, these do **not** reach serve over REST. A grant is durable config in the shared database (`~/.contenox/local.db`), so `add`/`remove` write it directly and then ring a reload doorbell on the shared bus. A running `contenox serve` picks up the signal and swaps its live workspace-root set **without a restart**; a serve started later reads the same durable config at boot. So these verbs work whether or not serve is up, and a running serve applies them live.
+Unlike `fleet` / `mission`, these do **not** reach serve over REST. A grant is durable config in the shared database (`~/.contenox-harness/local.db`), so `add`/`remove` write it directly and then ring a reload doorbell on the shared bus. A running `contenox serve` picks up the signal and swaps its live workspace-root set **without a restart**; a serve started later reads the same durable config at boot. So these verbs work whether or not serve is up, and a running serve applies them live.
 
 `add` requires the path to be an existing directory (a workspace root must be a real directory); `remove` does not, so a grant to a since-deleted directory can be cleaned up. Both are idempotent. `list` prints the durable grants these verbs manage, each with its project name when set — serve additionally always allows its own launched default root (its served directory, or home for a bare `contenox serve`), which is not a grant and appears in the API and Beam folder picker (`GET /workspace/roots`) rather than here.
 

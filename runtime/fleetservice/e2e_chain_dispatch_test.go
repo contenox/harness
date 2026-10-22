@@ -45,7 +45,7 @@ import (
 // HOME is isolated to a per-test temp dir so the developer's real state is never
 // touched. That isolation is also what makes the assertion meaningful in the
 // other direction: the spawned unit reads its default-model configuration out of
-// $HOME/.contenox, and the kernel sets ONLY the chain-path variable on the child,
+// $HOME/.contenox-harness, and the kernel sets ONLY the chain-path variable on the child,
 // so a reply coming back at all is proof the child inherited this process's
 // environment — which is the point of a chain unit (it shares the one global
 // state) and the deliberate difference from an external agent that brings its
@@ -162,7 +162,7 @@ func TestFleetE2E_ChainAgent_DiscoveredDispatchedAndAnswers(t *testing.T) {
 	home := t.TempDir()
 
 	// Full state isolation for the spawned unit: every path it reads (its DB,
-	// the seeded presets, the workspace id) resolves under $HOME/.contenox. The
+	// the seeded presets, the workspace id) resolves under $HOME/.contenox-harness. The
 	// kernel sets no HOME on the child — it inherits THIS process's — so setting
 	// it here is what redirects the child, and is also what proves inheritance
 	// when the unit answers.

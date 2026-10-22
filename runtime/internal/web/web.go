@@ -1,4 +1,4 @@
-// Package web serves the embedded Beam React SPA from the contenox binary.
+// Package web serves the embedded harness React SPA from the contenox binary.
 package web
 
 import (
@@ -11,28 +11,28 @@ import (
 	"strings"
 )
 
-//go:embed all:beam/dist
-var beamFiles embed.FS
+//go:embed all:harness/dist
+var harnessFiles embed.FS
 
-// BeamFS returns the embedded Beam dist as an io/fs.FS rooted at the dist dir.
-func BeamFS() fs.FS {
-	sub, err := fs.Sub(beamFiles, "beam/dist")
+// HarnessFS returns the embedded harness dist as an io/fs.FS rooted at the dist dir.
+func HarnessFS() fs.FS {
+	sub, err := fs.Sub(harnessFiles, "harness/dist")
 	if err != nil {
-		panic("web: failed to sub-FS beam/dist: " + err.Error())
+		panic("web: failed to sub-FS harness/dist: " + err.Error())
 	}
 	return sub
 }
 
-// SPAHandler serves Beam with an index.html fallback for client-side routes.
+// SPAHandler serves the harness SPA with an index.html fallback for client-side routes.
 func SPAHandler() http.Handler {
-	beamFS := BeamFS()
-	fileServer := http.FileServer(http.FS(beamFS))
+	harnessFS := HarnessFS()
+	fileServer := http.FileServer(http.FS(harnessFS))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/")
 		if path == "" {
 			path = "index.html"
 		}
-		if f, err := beamFS.Open(path); err == nil {
+		if f, err := harnessFS.Open(path); err == nil {
 			_ = f.Close()
 			fileServer.ServeHTTP(w, r)
 			return
@@ -44,7 +44,7 @@ func SPAHandler() http.Handler {
 	})
 }
 
-// DevProxyHandler proxies Beam UI requests to a Vite dev server while the Go
+// DevProxyHandler proxies harness UI requests to a Vite dev server while the Go
 // server remains the browser origin for /api and auth cookies.
 func DevProxyHandler(target string) (http.Handler, error) {
 	raw := strings.TrimSpace(target)
@@ -69,7 +69,7 @@ func DevProxyHandler(target string) (http.Handler, error) {
 			pr.SetXForwarded()
 		},
 		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, _ error) {
-			http.Error(w, "beam dev proxy unavailable", http.StatusBadGateway)
+			http.Error(w, "harness dev proxy unavailable", http.StatusBadGateway)
 		},
 	}, nil
 }

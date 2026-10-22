@@ -148,7 +148,7 @@ var providerConfigs = map[string]providerConfig{
 
 // ensureLocalBackends registers the implicit local inference backends (llama +
 // openvino) if missing, each pointed at its own per-type directory under
-// ~/.contenox/models/<type>/ so GGUF and OpenVINO IR models never collide. They
+// ~/.contenox-harness/models/<type>/ so GGUF and OpenVINO IR models never collide. They
 // are always-present infrastructure; the user populates them via
 // `contenox model pull`. modeld serves one backend at a time, so both are
 // registered and the daemon's mode decides which is live. Idempotent.
@@ -178,7 +178,7 @@ func ensureLocalBackends(out io.Writer) error {
 		present[strings.ToLower(b.Type)] = true
 	}
 
-	// A legacy flat ~/.contenox/models backend (type "llama" or its "local" alias)
+	// A legacy flat ~/.contenox-harness/models backend (type "llama" or its "local" alias)
 	// counts as the llama backend — leave it and its files in place. New per-type
 	// pulls land under models/<type>/.
 	if !present["llama"] && !present["local"] {
@@ -195,7 +195,7 @@ func ensureLocalBackends(out io.Writer) error {
 }
 
 // registerLocalBackend creates one local backend of the given type pointed at
-// ~/.contenox/models/<type>/, creating the directory.
+// ~/.contenox-harness/models/<type>/, creating the directory.
 func registerLocalBackend(ctx context.Context, out io.Writer, svc backendservice.Service, homeDir, typ string) error {
 	modelsDir := filepath.Join(homeDir, "models", typ)
 	if err := os.MkdirAll(modelsDir, 0o755); err != nil {
@@ -238,15 +238,15 @@ func hasBackendOfType(providerType string) bool {
 	return false
 }
 
-// RunGlobalInit ensures ~/.contenox/ has chain files, HITL policies, and a llama backend.
+// RunGlobalInit ensures ~/.contenox-harness/ has chain files, HITL policies, and a llama backend.
 // Unlike RunInit it does NOT create a workspace-scoped .contenox/ directory.
 func RunGlobalInit(out io.Writer) error {
 	homeDir, err := globalContenoxDir()
 	if err != nil {
-		return fmt.Errorf("could not resolve ~/.contenox: %w", err)
+		return fmt.Errorf("could not resolve ~/.contenox-harness: %w", err)
 	}
 	if err := os.MkdirAll(homeDir, 0o750); err != nil {
-		return fmt.Errorf("create ~/.contenox: %w", err)
+		return fmt.Errorf("create ~/.contenox-harness: %w", err)
 	}
 	writeFile := func(path, content string) error {
 		if _, err := os.Stat(path); err == nil {
@@ -389,7 +389,7 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 
 	homeDir, hdErr := globalContenoxDir()
 	if hdErr != nil {
-		return fmt.Errorf("could not resolve ~/.contenox: %w", hdErr)
+		return fmt.Errorf("could not resolve ~/.contenox-harness: %w", hdErr)
 	}
 	if err := writeFile(filepath.Join(homeDir, "default-chain.json"), initChain); err != nil {
 		return err
@@ -442,7 +442,7 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 			}
 			db.Close()
 			if curModel != "" || curProvider != "" {
-				fmt.Fprintln(out, "Current config (from ~/.contenox/local.db):")
+				fmt.Fprintln(out, "Current config (from ~/.contenox-harness/local.db):")
 				if curProvider != "" {
 					fmt.Fprintf(out, "  default-provider = %s\n", curProvider)
 				}

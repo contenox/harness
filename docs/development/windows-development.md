@@ -32,7 +32,7 @@ you need Windows-specific verification.
   ```
 
 - Go 1.25+ (official MSI).
-- Node.js 22+ for `packages/ui` and `packages/beam`.
+- Node.js 22+ for `packages/ui` and `packages/harness`.
 - Make is helpful but not required. Either install it (`choco install make`) or invoke the individual `go build` / `npm` commands.
 
 ## Building and testing on Windows
@@ -51,7 +51,7 @@ make build-contenox-windows
 
 - Unit tests: `go test -short ./...` (or `make test-unit` if make is present).
 - Many system tests assume Unix shells; expect differences in `local_shell`, path handling, and process execution. Run real Windows verification with `cmd.exe` / PowerShell.
-- The Beam UI builds with `npm ci && npm run build` in `packages/ui`, then `packages/beam`.
+- The Beam UI builds with `npm ci && npm run build` in `packages/ui`, then `packages/harness`.
 
 ## Common Windows gotchas
 

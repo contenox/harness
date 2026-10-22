@@ -199,7 +199,7 @@ func (h *searchHandler) search(w http.ResponseWriter, r *http.Request) {
 	//   artifacts and vendored trees don't drown the results.
 	// Control-plane carveout for the RECURSION, not just the root: the root was
 	// validated above (a denied dir can never BE the root), but rg descends into
-	// subdirectories — a search rooted at a granted PARENT of ~/.contenox would
+	// subdirectories — a search rooted at a granted PARENT of ~/.contenox-harness would
 	// otherwise read the runtime's own config/policies/DB into results. Same
 	// invariant vfs enforces on every resolve path, applied to rg's walk via
 	// per-denied-dir glob excludes (relative to the root when contained in it).

@@ -25,7 +25,7 @@ Enter
 Wait
 Sleep 2.5s
 
-Type "jq '.tasks[1].execute_config.tools_policies.local_shell' ~/.contenox/default-chain.json"
+Type "jq '.tasks[1].execute_config.tools_policies.local_shell' ~/.contenox-harness/default-chain.json"
 Sleep 800ms
 Enter
 Wait

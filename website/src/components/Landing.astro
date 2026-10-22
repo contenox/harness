@@ -1,224 +1,104 @@
 ---
 export interface LandingStrings {
-  badge: string;
-  h1a: string;
-  h1b: string;
+  eyebrow: string;
+  h1: string;
   lede: string;
-  ctaRecipe: string;
-  ctaPackage: string;
-  ctaGithub: string;
-  installNote: string;
-  positioning: string;
-  tableWorld: string;
-  tableWhy: string;
-  rows: [string, string][];
-  authorEyebrow: string;
-  authorH2: string;
-  authorItems: string[];
-  editorsEyebrow: string;
-  editorsH2: string;
-  editorsLede: string;
-  guides: [string, string][];
-  capsEyebrow: string;
-  caps: [string, string][];
-  hitlDemoAlt: string;
-  beamShotAlt: string;
-  beamShotCaption: string;
-  beamEyebrow: string;
-  beamH2: string;
-  beamLede: string;
-  beamPoints: [string, string][];
-  beamCta: string;
-  standardsEyebrow: string;
-  standardsH2: string;
-  standards: [string, string, string][];
-  bottomEyebrow: string;
-  bottomH2: string;
-  bottomCta: string;
-  bottomContact: string;
-  builtOnEyebrow: string;
-  builtOnNote: string;
-  builtOn: [string, string, string][];
+  ctaInstall: string;
+  ctaHow: string;
+  principles: string[];
+  s1Eyebrow: string;
+  s1H2: string;
+  s1P1: string;
+  s1P2: string;
+  s2Eyebrow: string;
+  s2H2: string;
+  s2P: string;
+  s2Note: string;
+  s3Eyebrow: string;
+  s3H2: string;
+  s3P: string;
+  s3License: string;
+  endEyebrow: string;
+  endH2: string;
+  endCta: string;
 }
 interface Props {
   t: LandingStrings;
 }
 const { t } = Astro.props;
-const th = 'border-b border-neutral-200 bg-neutral-100/50 px-4 py-3 text-left font-semibold text-neutral-900 dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-neutral-100';
-const tdKey = 'border-b border-neutral-100 px-4 py-3 font-medium text-neutral-800 dark:border-neutral-800/50 dark:text-neutral-200';
-const tdVal = 'border-b border-neutral-100 px-4 py-3 dark:border-neutral-800/50';
-const btnGhost = 'rounded-lg border border-neutral-200 px-4 py-2 text-sm font-semibold transition-all hover:bg-neutral-50 hover:shadow-sm dark:border-neutral-800 dark:hover:bg-neutral-900';
+const install = 'curl -fsSL https://contenox.com/install.sh | sh';
+const foundation = ['Go', 'SQLite', 'PostgreSQL', 'NATS', 'Valkey', 'MCP', 'ACP'];
+const eyebrow = 'text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400';
+const h2 = 'mt-4 text-3xl font-bold tracking-tight sm:text-4xl';
+const body = 'mt-6 max-w-2xl text-base leading-relaxed text-neutral-600 dark:text-neutral-300';
+const primary = 'rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200';
+const ghost = 'rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900';
+const index = 'text-sm font-medium tabular-nums text-neutral-400 dark:text-neutral-600';
 ---
-<section class="hero-grid border-b border-neutral-200 px-5 py-20 text-center dark:border-neutral-800">
-  <span class="inline-block rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-600 dark:border-neutral-800 dark:bg-black dark:text-neutral-400">
-    {t.badge}
-  </span>
-  <h1 class="mx-auto mt-6 max-w-3xl bg-gradient-to-br from-neutral-900 to-neutral-500 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl dark:from-white dark:to-neutral-500">
-    {t.h1a}
-    <span class="text-neutral-500 dark:text-neutral-400">{t.h1b}</span>
-  </h1>
-  <p class="mx-auto mt-6 max-w-xl text-neutral-600 dark:text-neutral-400">{t.lede}</p>
-  <div class="mt-8 flex flex-wrap justify-center gap-3">
-    <a href="/docs/use-cases/" class="rounded-lg bg-gradient-to-r from-indigo-500 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 transition-all hover:scale-105 hover:shadow-indigo-500/40">{t.ctaRecipe}</a>
-    <a href="/docs/specification/" class={btnGhost}>{t.ctaPackage}</a>
-    <a href="https://github.com/contenox/harness" class={btnGhost}>{t.ctaGithub}</a>
-  </div>
-  <div class="mx-auto mt-10 flex max-w-lg items-center gap-4 overflow-x-auto rounded-xl border border-neutral-200/50 bg-white/60 px-4 py-3 font-mono text-sm shadow-sm backdrop-blur-md whitespace-nowrap dark:border-neutral-800/50 dark:bg-neutral-950/60">
-    <span class="text-neutral-400 dark:text-neutral-500">$</span>
-    <span>curl -fsSL https://contenox.com/install.sh | sh</span>
-  </div>
-  <p class="mt-3 text-xs text-neutral-500" set:html={t.installNote} />
-  <video
-    src="/beam-demo.webm"
-    poster="/beam-video-cover.png"
-    autoplay
-    loop
-    muted
-    playsinline
-    aria-label={t.beamShotAlt}
-    class="mx-auto mt-10 w-full max-w-4xl rounded-xl border border-neutral-200/60 shadow-lg dark:border-neutral-800/60"
-  ></video>
-  <p class="mx-auto mt-3 max-w-2xl text-center text-xs text-neutral-500">{t.beamShotCaption}</p>
-  <div class="mt-4 text-center text-sm">
-    <a href="/docs/guide/beam/" class="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">{t.beamCta} →</a>
-  </div>
-  <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
-    <a href="https://github.com/contenox/harness"><img src="https://img.shields.io/github/stars/contenox/runtime?style=flat&logo=github&color=444" alt="GitHub stars" loading="lazy" /></a>
-    <a href="https://github.com/contenox/harness/releases"><img src="https://img.shields.io/github/v/release/contenox/runtime?label=version&color=444" alt="Latest release" loading="lazy" /></a>
-    <img src="https://img.shields.io/badge/License-Apache%202.0-444" alt="Apache-2.0" loading="lazy" />
+
+<section class="border-b border-neutral-200 px-5 pb-20 pt-24 dark:border-neutral-800">
+  <div class="mx-auto max-w-5xl">
+    <p class={eyebrow}>{t.eyebrow}</p>
+    <h1 class="mt-6 max-w-3xl text-5xl font-bold tracking-tight sm:text-6xl">{t.h1}</h1>
+    <p class="mt-7 max-w-2xl text-lg leading-relaxed text-neutral-600 dark:text-neutral-300">{t.lede}</p>
+    <div class="mt-10 flex flex-wrap gap-3">
+      <a href="#install" class={primary}>{t.ctaInstall}</a>
+      <a href="#harness" class={ghost}>{t.ctaHow}</a>
+    </div>
+    <ul class="mt-16 flex flex-wrap gap-x-8 gap-y-2 border-t border-neutral-200 pt-6 text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
+      {t.principles.map((p) => <li>{p}</li>)}
+    </ul>
   </div>
 </section>
 
-<section class="border-b border-neutral-200 px-5 py-16 dark:border-neutral-800">
-  <p class="text-center text-xs font-semibold tracking-widest text-neutral-500 uppercase">{t.beamEyebrow}</p>
-  <h2 class="mt-2 text-center text-2xl font-bold tracking-tight sm:text-3xl">{t.beamH2}</h2>
-  <p class="mx-auto mt-6 max-w-2xl text-center text-neutral-600 dark:text-neutral-400">{t.beamLede}</p>
-  <div class="mx-auto mt-8 grid max-w-4xl gap-4 sm:grid-cols-3">
-    {t.beamPoints.map(([title, body]) => (
-      <div class="rounded-xl border border-neutral-200/60 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/10 dark:border-neutral-800/60 dark:bg-neutral-950/80 dark:hover:border-indigo-400/30">
-        <h3 class="font-semibold">{title}</h3>
-        <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">{body}</p>
+<section id="harness" class="scroll-mt-20 border-b border-neutral-200 px-5 py-20 dark:border-neutral-800">
+  <div class="mx-auto grid max-w-5xl gap-10 md:grid-cols-[4rem_1fr]">
+    <div class={index}>01</div>
+    <div>
+      <p class={eyebrow}>{t.s1Eyebrow}</p>
+      <h2 class={h2}>{t.s1H2}</h2>
+      <p class={body}>{t.s1P1}</p>
+      <p class={body}>{t.s1P2}</p>
+    </div>
+  </div>
+</section>
+
+<section id="install" class="scroll-mt-20 border-b border-neutral-200 px-5 py-20 dark:border-neutral-800">
+  <div class="mx-auto grid max-w-5xl gap-10 md:grid-cols-[4rem_1fr]">
+    <div class={index}>02</div>
+    <div>
+      <p class={eyebrow}>{t.s2Eyebrow}</p>
+      <h2 class={h2}>{t.s2H2}</h2>
+      <p class={body}>{t.s2P}</p>
+      <div class="mt-8 flex max-w-xl items-center justify-between gap-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 font-mono text-sm dark:border-neutral-800 dark:bg-neutral-900">
+        <span class="truncate">{install}</span>
       </div>
-    ))}
-  </div>
-  <div class="mt-8 text-center text-sm">
-    <a href="/docs/guide/beam/" class="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white">{t.beamCta} →</a>
+      <p class="mt-4 text-sm text-neutral-500 dark:text-neutral-400">{t.s2Note}</p>
+    </div>
   </div>
 </section>
 
-<section class="border-b border-neutral-200 px-5 py-16 dark:border-neutral-800">
-  <p class="text-center text-xs font-semibold tracking-widest text-neutral-500 uppercase">{t.capsEyebrow}</p>
-  <div class="mx-auto mt-8 grid max-w-4xl gap-4 sm:grid-cols-2">
-    {t.caps.map(([title, body]) => (
-      <div class="rounded-xl border border-neutral-200/60 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/10 dark:border-neutral-800/60 dark:bg-neutral-950/80 dark:hover:border-indigo-400/30">
-        <h3 class="font-semibold">{title}</h3>
-        <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">{body}</p>
-      </div>
-    ))}
-  </div>
-  <img
-    src="/hitl-approve.gif"
-    alt={t.hitlDemoAlt}
-    loading="lazy"
-    class="mx-auto mt-10 w-full max-w-3xl rounded-xl border border-neutral-200/60 shadow-lg dark:border-neutral-800/60"
-  />
-</section>
-
-<section class="border-b border-neutral-200 px-5 py-16 dark:border-neutral-800">
-  <p class="mx-auto max-w-2xl text-center text-neutral-600 dark:text-neutral-400">{t.positioning}</p>
-  <div class="mx-auto mt-10 max-w-3xl overflow-x-auto rounded-xl border border-neutral-200/60 bg-white/50 shadow-sm backdrop-blur-sm dark:border-neutral-800/60 dark:bg-neutral-950/50">
-    <table class="w-full text-sm">
-      <thead>
-        <tr>
-          <th class={th}>{t.tableWorld}</th>
-          <th class={th}>{t.tableWhy}</th>
-        </tr>
-      </thead>
-      <tbody class="text-neutral-600 dark:text-neutral-400">
-        {t.rows.map(([world, why]) => (
-          <tr>
-            <td class={tdKey}>{world}</td>
-            <td class={tdVal}>{why}</td>
-          </tr>
+<section id="foundation" class="scroll-mt-20 border-b border-neutral-200 px-5 py-20 dark:border-neutral-800">
+  <div class="mx-auto grid max-w-5xl gap-10 md:grid-cols-[4rem_1fr]">
+    <div class={index}>03</div>
+    <div>
+      <p class={eyebrow}>{t.s3Eyebrow}</p>
+      <h2 class={h2}>{t.s3H2}</h2>
+      <p class={body}>{t.s3P}</p>
+      <ul class="mt-10 grid grid-cols-2 gap-x-8 gap-y-4 border-t border-neutral-200 pt-8 sm:grid-cols-4 dark:border-neutral-800">
+        {foundation.map((name) => (
+          <li class="text-sm font-medium text-neutral-800 dark:text-neutral-200">{name}</li>
         ))}
-      </tbody>
-    </table>
+      </ul>
+      <p class="mt-8 text-sm text-neutral-500 dark:text-neutral-400">{t.s3License}</p>
+    </div>
   </div>
 </section>
 
-<section class="border-b border-neutral-200 px-5 py-16 dark:border-neutral-800">
-  <p class="text-center text-xs font-semibold tracking-widest text-neutral-500 uppercase">{t.authorEyebrow}</p>
-  <h2 class="mt-2 text-center text-2xl font-bold tracking-tight sm:text-3xl">{t.authorH2}</h2>
-  <ul class="mx-auto mt-8 max-w-2xl space-y-4 text-neutral-600 dark:text-neutral-400">
-    {t.authorItems.map((item) => (
-      <li class="flex gap-3"><span class="text-neutral-400 dark:text-neutral-600">→</span><span>{item}</span></li>
-    ))}
-  </ul>
-</section>
-
-<section class="px-5 py-16">
-  <p class="text-center text-xs font-semibold tracking-widest text-neutral-500 uppercase">{t.editorsEyebrow}</p>
-  <h2 class="mt-2 text-center text-2xl font-bold tracking-tight sm:text-3xl">{t.editorsH2}</h2>
-  <p class="mx-auto mt-6 max-w-2xl text-center text-neutral-600 dark:text-neutral-400">{t.editorsLede}</p>
-  <div class="mx-auto mt-8 max-w-lg overflow-x-auto rounded-xl border border-neutral-200/60 bg-white/60 p-4 font-mono text-sm text-neutral-700 shadow-sm backdrop-blur-md dark:border-neutral-800/60 dark:bg-neutral-950/60 dark:text-neutral-300">
-    <pre class="m-0">// ~/.config/zed/settings.json
-&#123;
-  "agent_servers": &#123;
-    "Contenox": &#123;
-      "type": "custom",
-      "command": "contenox",
-      "args": ["acp"]
-    &#125;
-  &#125;
-&#125;</pre>
-  </div>
-  <div class="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
-    {t.guides.map(([label, href]) => (
-      <a href={href} class="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white">{label} →</a>
-    ))}
-  </div>
-</section>
-
-<section class="border-t border-neutral-200 px-5 py-16 dark:border-neutral-800">
-  <p class="text-center text-xs font-semibold tracking-widest text-neutral-500 uppercase">{t.standardsEyebrow}</p>
-  <h2 class="mt-2 text-center text-2xl font-bold tracking-tight sm:text-3xl">{t.standardsH2}</h2>
-  <div class="mx-auto mt-8 grid max-w-4xl gap-4 sm:grid-cols-3">
-    {t.standards.map(([name, body, href]) => (
-      <a href={href} class="rounded-xl border border-neutral-200/60 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/10 dark:border-neutral-800/60 dark:bg-neutral-950/80 dark:hover:border-indigo-400/30 no-underline">
-        <h3 class="font-semibold">{name}</h3>
-        <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">{body}</p>
-      </a>
-    ))}
-  </div>
-</section>
-
-<section class="border-t border-neutral-200 px-5 py-12 dark:border-neutral-800">
-  <p class="text-center text-xs font-semibold tracking-widest text-neutral-500 uppercase">{t.builtOnEyebrow}</p>
-  <div class="mx-auto mt-6 flex max-w-3xl flex-wrap items-baseline justify-center gap-x-8 gap-y-3">
-    {t.builtOn.map(([name, role, href]) => (
-      <a href={href} rel="noopener noreferrer" class="group text-sm no-underline">
-        <span class="font-semibold text-neutral-700 group-hover:text-black dark:text-neutral-300 dark:group-hover:text-white">{name}</span>
-        <span class="ml-1.5 text-neutral-500">{role}</span>
-      </a>
-    ))}
-  </div>
-  <p class="mx-auto mt-5 max-w-2xl text-center text-xs text-neutral-500">{t.builtOnNote}</p>
-</section>
-
-<section class="hero-grid border-t border-neutral-200 px-5 py-16 text-center dark:border-neutral-800">
-  <p class="text-xs font-semibold tracking-widest text-neutral-500 uppercase">{t.bottomEyebrow}</p>
-  <h2 class="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{t.bottomH2}</h2>
-  <div class="mx-auto mt-8 flex max-w-lg items-center gap-4 overflow-x-auto rounded-xl border border-neutral-200/50 bg-white/60 px-4 py-3 font-mono text-sm shadow-sm backdrop-blur-md whitespace-nowrap dark:border-neutral-800/50 dark:bg-neutral-950/60">
-    <span class="text-neutral-400 dark:text-neutral-500">$</span>
-    <span>curl -fsSL https://contenox.com/install.sh | sh</span>
-  </div>
-  <div class="mt-6 flex flex-wrap justify-center gap-3">
-    <a href="/docs/guide/quickstart/" class="rounded-lg bg-gradient-to-r from-indigo-500 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 transition-all hover:scale-105 hover:shadow-indigo-500/40">{t.bottomCta}</a>
-  </div>
-  <p class="mt-6 text-sm text-neutral-500" set:html={t.bottomContact} />
-  
-  <div class="mt-20 flex justify-center pointer-events-none select-none overflow-hidden">
-    <img src="/logo-wide-colored-light.svg" alt="" aria-hidden="true" class="w-full max-w-5xl opacity-40 dark:hidden" />
-    <img src="/logo-wide-colored-dark.svg" alt="" aria-hidden="true" class="hidden w-full max-w-5xl opacity-40 dark:block" />
+<section class="px-5 py-24">
+  <div class="mx-auto max-w-5xl">
+    <p class={eyebrow}>{t.endEyebrow}</p>
+    <h2 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">{t.endH2}</h2>
+    <a href="#install" class={`mt-10 inline-block ${primary}`}>{t.endCta}</a>
   </div>
 </section>

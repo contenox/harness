@@ -1,7 +1,7 @@
 # Workspace Canvas: a side-by-side working area for terminals, files, diffs
 
 Status: landing in slices — the canvas tab-model (slice B1) is in
-`packages/beam` (`useCanvasTabs`); later slices follow the body below.
+`packages/harness` (`useCanvasTabs`); later slices follow the body below.
 Phase B of the tab work — supersedes the terminal-sidebar and the file-tree
 floating-peek. Decisions confirmed with the maintainer 2026-07-16.
 

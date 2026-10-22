@@ -1,6 +1,7 @@
 package contenoxcli
 
 import (
+	"github.com/contenox/harness/runtime/homedir"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -13,16 +14,16 @@ import (
 // bearer token so a repeat serve AND every programmatic client (contenox
 // approvals / mission / fleet) share one credential without re-passing TOKEN.
 //
-// It lives in the GLOBAL ~/.contenox for two reasons:
+// It lives in the GLOBAL ~/.contenox-harness for two reasons:
 //   - Discovery: a client does not know a serve's workspace-local `.contenox`
-//     (ResolveContenoxDir may pick one), but every client can find ~/.contenox.
-//   - Isolation: controlPlaneDirs ALWAYS denies ~/.contenox (see cli.go), so the
+//     (ResolveContenoxDir may pick one), but every client can find ~/.contenox-harness.
+//   - Isolation: controlPlaneDirs ALWAYS denies ~/.contenox-harness (see cli.go), so the
 //     token file is inside the control-plane deny zone and no session, browse
 //     root, or agent fs tool can read it — the same invariant that protects the
 //     policy/config the token gates.
 const serveTokenFileName = "serve-token.txt"
 
-// serveTokenFilePath is ~/.contenox/serve-token.txt. It ensures ~/.contenox
+// serveTokenFilePath is ~/.contenox-harness/serve-token.txt. It ensures ~/.contenox-harness
 // exists (globalContenoxDir MkdirAll's it, 0700).
 func serveTokenFilePath() (string, error) {
 	dir, err := globalContenoxDir()
@@ -38,7 +39,7 @@ func serveTokenPathHint() string {
 	if p, err := serveTokenFilePath(); err == nil {
 		return p
 	}
-	return filepath.Join("~", ".contenox", serveTokenFileName)
+	return filepath.Join("~", homedir.DirName, serveTokenFileName)
 }
 
 // readServeTokenFile returns the trimmed token persisted at serveTokenFilePath,

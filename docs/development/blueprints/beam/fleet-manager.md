@@ -59,12 +59,12 @@ inferred from names.
 
 - SSE pattern to copy: `runtime/internal/taskeventsapi/routes.go` (bus
   subject → `data: {json}\n\n`), consumed by `EventSource` +
-  `packages/beam/src/hooks/useTaskEvents.ts` (reconnect/backoff `:95-106`).
+  `packages/harness/src/hooks/useTaskEvents.ts` (reconnect/backoff `:95-106`).
   Note it is per-requestId; a fleet feed is a global subject.
 - Bus sink pattern to copy: `taskengine.BusTaskEventSink`
   (`runtime/taskengine/events.go:93-142`).
 - Beam registration is a table: route entry in
-  `packages/beam/src/config/routes.tsx:88`, nav via `adminRouteDefinitions`
+  `packages/harness/src/config/routes.tsx:88`, nav via `adminRouteDefinitions`
   (`:51` → `ControlPlaneDropdown` + `ControlPlanePage`), `headerTitle` case in
   `components/Layout.tsx:92-100`, en+de blocks in `src/i18n.ts`.
 - UI kit covers the board compositionally: `StatusIndicator` (statuses map

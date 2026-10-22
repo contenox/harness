@@ -13,7 +13,7 @@ That's not how Contenox does it, and the difference is exactly the difference th
 
 In Contenox, HITL is on by default. But *what* pauses is determined by a policy file — a JSON document you write, version in git, and review in PRs alongside the chains it governs.
 
-The default policy (`~/.contenox/hitl-policy-default.json`) pauses on destructive actions — filesystem writes, `sed`, shell commands, mutating HTTP verbs — allows reads and the safe HTTP verbs, and fail-closes to an approval prompt for anything else (`default_action: "approve"`). But you can author your own:
+The default policy (`~/.contenox-harness/hitl-policy-default.json`) pauses on destructive actions — filesystem writes, `sed`, shell commands, mutating HTTP verbs — allows reads and the safe HTTP verbs, and fail-closes to an approval prompt for anything else (`default_action: "approve"`). But you can author your own:
 
 ```json
 {
@@ -41,7 +41,7 @@ Authored policies are the in-between. The pause goes where the operator who wrot
 
 ## Three policies, three postures
 
-Contenox ships five presets (all under `~/.contenox/`). Two are transport-specific — `hitl-policy-acp.json` for editor (ACP) sessions and `hitl-policy-acpx.json` for headless/untrusted-driver sessions. The three general-purpose postures are:
+Contenox ships five presets (all under `~/.contenox-harness/`). Two are transport-specific — `hitl-policy-acp.json` for editor (ACP) sessions and `hitl-policy-acpx.json` for headless/untrusted-driver sessions. The three general-purpose postures are:
 
 **Default** (`hitl-policy-default.json`). Prompts on writes, `sed`, shell commands, and mutating HTTP verbs. Allows reads and safe HTTP methods. Anything else fail-closes to an approval prompt (`default_action: "approve"`). This is what runs out of the box.
 

@@ -1,15 +1,19 @@
 # Contenox
 
-**AI workflows you can run, review, and own.**
+**An agent harness for policy-bound, vendor-agnostic AI-assisted software engineering.**
 
-AI is becoming an integral part of software engineering. The critical question is whether it makes you sharper or merely more dependent.
+Contenox runs authored agent workflows as a local process. The policy that gates
+each tool call is a file the operator wrote, enforced by the harness before
+anything runs. Backends are configuration; sessions, approvals and per-step
+records stay on disk.
 
-Naive AI usage risks turning engineering judgment into **rented fluency**—highly useful while the model is strong, reachable, and affordable, but ephemeral. The durable value in software engineering has never been the typing; it is knowing *what* to build, knowing *what* changed, and maintaining the capacity to own the system when it breaks.
+The harness is the product. One binary serves the CLI and a local cockpit,
+editors attach over ACP, and the model named in a request is the model that
+serves it — or the run stops with the candidates it could have used.
 
-Contenox is built as an **exoskeleton, not an autopilot**. It amplifies the engineer doing the work. You remain firmly in the loop because the workflows, tools, state, and approval policies are entirely authored and reviewed by you.
-
-> **What Contenox is not:** It is not an autonomous coding employee, a hosted autopilot, or a prompt habit hidden away in your shell history.
-> It is a **local runtime** for AI-assisted work that keeps an engineer in control.
+> **What Contenox is not:** it is not an autonomous coding employee, not a hosted
+> autopilot, and not a vendor's harness. It is a local runtime for AI-assisted
+> work that keeps the operator accountable for what runs.
 
 Docs: **[contenox.com](https://contenox.com)**
 
@@ -26,7 +30,7 @@ In these environments, an "AI agent" cannot mean "give a model broad credentials
 * **Human-in-the-loop (HITL) approval** for execution.
 * **Reviewable evidence** for auditing.
 
-The core issue is not that agents can act; it is agents acting outside a boundary you author. The model can reason, inspect, and propose—but the **Chain** decides what it may touch, and the **operator** decides what it may change.
+The core issue is not that agents can act; it is agents acting outside a boundary the operator authors. The model can reason, inspect, and propose—but the **Chain** decides what it may touch, and the **operator** decides what it may change.
 
 ---
 

@@ -57,7 +57,7 @@ type Spec struct {
 	// $HOME, so the agent's tools resolve ~/… into here instead of the
 	// operator's real home. It is the lever that reconciles "the agent needs
 	// ~/.claude" with "deny the rest": the ~/.claude carve-out binds into this
-	// dir, while ~/.ssh, ~/.aws, ~/.npmrc, and ~/.contenox are simply not under
+	// dir, while ~/.ssh, ~/.aws, ~/.npmrc, and ~/.contenox-harness are simply not under
 	// it. It is a necessity: without a HOME the agent's toolchain misbehaves,
 	// and without it being *scoped* the real home leaks.
 	Home string

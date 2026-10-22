@@ -513,7 +513,7 @@ func (m *manager) chainSpawner(agent *runtimetypes.Agent, cwd string) (agenthost
 		},
 		// This is contenox spawning contenox, not a foreign agent, so it runs
 		// OUTSIDE the sandbox — see agenthost.ExternalACPAgent.SelfSpawn. The wall
-		// would deny the unit the very state it is defined by sharing (~/.contenox
+		// would deny the unit the very state it is defined by sharing (~/.contenox-harness
 		// is not carved, the env is scrubbed); what governs it is the in-process
 		// capability grants and the HITL gate its tool calls already run through.
 		SelfSpawn: true,

@@ -50,7 +50,6 @@ Sleep 300ms
 Enter
 Wait
 
-Type "~/.contenox/modeld/v*/linux-amd64/modeld serve >/dev/null 2>&1 &"
 Sleep 500ms
 Enter
 Wait

@@ -179,7 +179,7 @@ func canonicalizeTopLevel(p string) string {
 // resolveTilde expands a leading "~" against the scoped home — the lever that
 // reconciles "the agent needs ~/.claude" with "deny the rest": "~/.claude"
 // binds under the per-mission home, while the operator's real ~/.ssh, ~/.aws,
-// and ~/.contenox are simply not under it (see Spec.Home). Only "~" and "~/…"
+// and ~/.contenox-harness are simply not under it (see Spec.Home). Only "~" and "~/…"
 // are special-cased; "~user" and already-absolute paths pass through unchanged.
 func resolveTilde(p, home string) string {
 	if p == "~" {
