@@ -7,25 +7,24 @@ description: Install Contenox and connect a model.
 
 ## 1. Install
 
-**macOS / Linux (one line):**
+**macOS / Linux:**
 
 ```bash
 curl -fsSL https://contenox.com/install.sh | sh
 ```
 
-To also preinstall the local inference daemon (a ~600 MB download, otherwise
-installed on demand by `contenox setup`):
+**Windows (PowerShell):**
 
-```bash
-curl -fsSL https://contenox.com/install.sh | CONTENOX_WITH_MODELD=1 sh
+```powershell
+irm https://contenox.com/install.ps1 | iex
 ```
 
-Or download the binary directly from [GitHub Releases](https://github.com/contenox/harness/releases/latest).
+Either script installs a prebuilt release when one exists for the platform, and
+falls back to `go install github.com/contenox/harness/cmd/contenox@latest` when
+none does. Go 1.25+ is the only prerequisite for the fallback; the harness is
+pure Go and needs no C toolchain.
 
-The whole local-first path — install, setup, daemon, model pull, first prompt —
-in one take:
-
-![Install demo: install.sh, contenox setup picking a provider, and a first answer](/install.gif)
+Or download a build directly from [GitHub Releases](https://github.com/contenox/harness/releases/latest).
 
 ---
 

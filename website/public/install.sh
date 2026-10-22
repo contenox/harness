@@ -1,115 +1,103 @@
 #!/usr/bin/env sh
-# install.sh — Contenox installer
-# Usage:
+# Contenox Harness installer.
+#
 #   curl -fsSL https://contenox.com/install.sh | sh
-#   curl -fsSL https://contenox.com/install.sh | CONTENOX_WITH_MODELD=1 sh   # also preinstall the local inference daemon
-set -e
+#   CONTENOX_VERSION=v1.0.0 curl -fsSL https://contenox.com/install.sh | sh
+#
+# Resolution order:
+#   1. a prebuilt asset on the latest release of the repository, named
+#      contenox-<os>-<arch>;
+#   2. `go install` of the module, which is the path that works before any
+#      release has been published;
+#   3. an explicit error naming the manual options.
+set -eu
 
-REPO="contenox/runtime"
+REPO="contenox/harness"
+MODULE="github.com/contenox/harness"
 BIN="contenox"
+VERSION="${CONTENOX_VERSION:-latest}"
 
-# ── Detect OS ─────────────────────────────────────────────────────────────────
-OS="$(uname -s)"
-case "${OS}" in
-  Linux)  GOOS="linux" ;;
-  Darwin) GOOS="darwin" ;;
+die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+fetch() {
+  if have curl; then curl -fsSL --max-time 300 "$1" -o "$2"
+  elif have wget; then wget -qO "$2" "$1"
+  else die "curl or wget is required"
+  fi
+}
+
+case "$(uname -s)" in
+  Linux)  GOOS=linux ;;
+  Darwin) GOOS=darwin ;;
   *)
-    echo "Unsupported OS: ${OS}"
-    echo "Please download manually from https://github.com/${REPO}/releases"
-    exit 1
+    die "unsupported OS $(uname -s); on Windows run: irm https://contenox.com/install.ps1 | iex"
     ;;
 esac
 
-# ── Detect arch ───────────────────────────────────────────────────────────────
-ARCH="$(uname -m)"
-case "${ARCH}" in
-  x86_64|amd64) GOARCH=amd64 ;;
+case "$(uname -m)" in
+  x86_64|amd64)  GOARCH=amd64 ;;
   arm64|aarch64) GOARCH=arm64 ;;
-  *)
-    echo "Unsupported architecture: ${ARCH}"
-    echo "Please download manually from https://github.com/${REPO}/releases"
-    exit 1
-    ;;
+  *) die "unsupported architecture $(uname -m)" ;;
 esac
 
-# ── Fetch latest release tag ──────────────────────────────────────────────────
-# Resolved from the releases/latest redirect (not the GitHub API, which is
-# rate-limited for unauthenticated callers).
-echo "Fetching latest Contenox release..."
-LATEST_URL="https://github.com/${REPO}/releases/latest"
-if command -v curl >/dev/null 2>&1; then
-  TAG="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "${LATEST_URL}" | sed 's|.*/tag/||')"
-elif command -v wget >/dev/null 2>&1; then
-  TAG="$(wget --max-redirect=10 -qO /dev/null -S "${LATEST_URL}" 2>&1 | grep -i '^ *location:' | tail -1 | sed 's|.*/tag/||' | tr -d '\r')"
+# Install beside an existing binary when one is on PATH, otherwise prefer a
+# system directory the user can write, and fall back to ~/.local/bin.
+DEST=""
+if EXISTING="$(command -v "$BIN" 2>/dev/null || true)" && [ -n "$EXISTING" ]; then
+  DEST="$(dirname "$EXISTING")"
+elif [ -d /usr/local/bin ] && [ -w /usr/local/bin ]; then
+  DEST=/usr/local/bin
 else
-  echo "Error: curl or wget is required to install contenox."
-  exit 1
+  DEST="$HOME/.local/bin"
+  mkdir -p "$DEST" || die "cannot create $DEST"
 fi
 
-if [ -z "${TAG}" ]; then
-  echo "Error: could not determine latest release tag."
-  echo "Please download manually from https://github.com/${REPO}/releases"
-  exit 1
-fi
-
-echo "Latest version: ${TAG}"
-
-# ── Download binary ───────────────────────────────────────────────────────────
-ASSET="contenox-${GOOS}-${GOARCH}"
-URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET}"
 TMP="$(mktemp)"
+trap 'rm -f "$TMP"' EXIT
 
-echo "Downloading ${ASSET}..."
-if command -v curl >/dev/null 2>&1; then
-  curl -fL --progress-bar --max-time 600 "${URL}" -o "${TMP}"
-elif command -v wget >/dev/null 2>&1; then
-  wget --show-progress -qO "${TMP}" "${URL}"
+installed=""
+
+# 1. Prebuilt asset from the repository's latest release.
+if have curl && have jq; then
+  if curl -fsSL --max-time 30 "https://api.github.com/repos/${REPO}/releases/${VERSION}" -o "$TMP.json" 2>/dev/null; then
+    URL="$(jq -r --arg n "${BIN}-${GOOS}-${GOARCH}" \
+      '.assets[]? | select(.name == $n) | .browser_download_url' "$TMP.json" | head -1)"
+    if [ -n "$URL" ] && [ "$URL" != "null" ]; then
+      printf 'Downloading %s-%s...\n' "$BIN" "${GOOS}-${GOARCH}"
+      fetch "$URL" "$TMP"
+      chmod +x "$TMP"
+      if [ "$(id -u)" -eq 0 ] || [ -w "$DEST" ]; then
+        mv "$TMP" "${DEST}/${BIN}"
+      else
+        sudo mv "$TMP" "${DEST}/${BIN}"
+      fi
+      installed="$DEST/${BIN}"
+    fi
+  fi
+  rm -f "$TMP.json"
 fi
 
-chmod +x "${TMP}"
-
-# ── macOS: strip quarantine flag (defensive; curl downloads usually don't get it) ──
-if [ "${GOOS}" = "darwin" ]; then
-  xattr -d com.apple.quarantine "${TMP}" 2>/dev/null || true
+# 2. Build from source with the Go toolchain. The harness is pure Go, so this
+#    needs no C toolchain and produces the same binary.
+if [ -z "$installed" ] && have go; then
+  GOVER="$(go env GOVERSION 2>/dev/null | sed 's/^go//')"
+  case "$GOVER" in
+    1.2[5-9]*|1.[3-9][0-9]*) ;;
+    *) die "go ${GOVER} is too old; Go 1.25 or newer is required" ;;
+  esac
+  printf 'Building %s with the Go toolchain (no release asset found)...\n' "$BIN"
+  GOBIN="$DEST" go install "${MODULE}/cmd/${BIN}@${VERSION}" \
+    || die "go install failed; install Go 1.25+ or download a build from https://github.com/${REPO}/releases"
+  installed="$DEST/${BIN}"
 fi
 
-# ── Install ────────────────────────────────────────────────────────────────────
-EXISTING="$(command -v ${BIN} 2>/dev/null || true)"
-if [ -n "${EXISTING}" ]; then
-  INSTALL_DIR="$(dirname "${EXISTING}")"
-else
-  INSTALL_DIR="/usr/local/bin"
-fi
+[ -n "$installed" ] || die "no release asset for ${GOOS}-${GOARCH} and no Go toolchain found.
+Install Go 1.25+ (https://go.dev/dl/) or download a build from https://github.com/${REPO}/releases"
 
-if [ -w "${INSTALL_DIR}" ]; then
-  mv "${TMP}" "${INSTALL_DIR}/${BIN}"
-elif command -v sudo >/dev/null 2>&1; then
-  echo "Moving to ${INSTALL_DIR} (sudo required)..."
-  sudo mv "${TMP}" "${INSTALL_DIR}/${BIN}"
-else
-  INSTALL_DIR="${HOME}/.local/bin"
-  mkdir -p "${INSTALL_DIR}"
-  mv "${TMP}" "${INSTALL_DIR}/${BIN}"
-  echo ""
-  echo "Note: installed to ${INSTALL_DIR}/${BIN}"
-  echo "Make sure ${INSTALL_DIR} is in your PATH."
-fi
-
-echo ""
-echo "✓ contenox ${TAG} installed to ${INSTALL_DIR}/${BIN}"
-
-# ── Optional: preinstall the local inference daemon (modeld) ──────────────────
-# Local GGUF/OpenVINO inference needs the modeld daemon (~600 MB download).
-# It also installs on demand when `contenox setup` selects a local provider.
-if [ -n "${CONTENOX_WITH_MODELD}" ]; then
-  echo ""
-  echo "Installing the local modeld inference daemon (CONTENOX_WITH_MODELD set)..."
-  "${INSTALL_DIR}/${BIN}" modeld install --backend "${CONTENOX_MODELD_BACKEND:-llama}"
-fi
-
-echo ""
-echo "Get started:"
-echo "  contenox setup                        # pick a provider/model (local models or a hosted API)"
-echo "  contenox init                         # scaffold a workspace in your project directory"
-echo "  contenox \"say hello world in python\"   # run a prompt"
-echo "  contenox acp                          # speak ACP over stdio (Zed, JetBrains, AionUi)"
+printf '\n\xe2\x9c\x93 %s installed at %s\n\n' "$BIN" "$installed"
+printf 'Get started:\n'
+printf '  contenox setup        # choose a provider and a model\n'
+printf '  contenox init         # mark this repository as a workspace\n'
+printf '  contenox "summarise this repository"\n'
+printf '  contenox acp          # serve the agent to an ACP editor\n'
