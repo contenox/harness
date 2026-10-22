@@ -112,7 +112,7 @@ func TestUnit_normalizeMaxTokensConfig(t *testing.T) {
 func TestUnit_resolveDBPath_defaultsToGlobalDB(t *testing.T) {
 	home, err := os.UserHomeDir()
 	require.NoError(t, err)
-	expected := filepath.Join(home, ".contenox", "local.db")
+	expected := filepath.Join(home, ".contenox-harness", "local.db")
 
 	cmd := testCobraCmd()
 	dbPath, err := resolveDBPath(cmd)

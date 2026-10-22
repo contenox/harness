@@ -150,7 +150,7 @@ visual:
 	bash $(PROJECT_ROOT)/packages/harness/e2e/run.sh
 
 verify-ui-embed:
-	@test -f "$(PROJECT_ROOT)/runtime/internal/web/beam/dist/index.html" || { echo "missing Beam dist; run: make build-ui"; exit 1; }
+	@test -f "$(PROJECT_ROOT)/runtime/internal/web/harness/dist/index.html" || { echo "missing harness dist; run: make build-ui"; exit 1; }
 	go test -C $(PROJECT_ROOT) ./runtime/internal/web
 
 test-contenox-verbose:

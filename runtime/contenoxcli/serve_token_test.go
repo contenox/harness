@@ -27,7 +27,7 @@ func TestUnit_ServeToken_FileRoundTrip(t *testing.T) {
 	require.Equal(t, "s3cr3t", readServeTokenFile(), "written token reads back trimmed")
 
 	// It lands at ~/.contenox-harness/serve-token.txt with owner-only perms.
-	path := filepath.Join(home, ".contenox", serveTokenFileName)
+	path := filepath.Join(home, ".contenox-harness", serveTokenFileName)
 	info, err := os.Stat(path)
 	require.NoError(t, err)
 	require.Equal(t, os.FileMode(0o600), info.Mode().Perm(), "token file is owner-only")
@@ -35,7 +35,7 @@ func TestUnit_ServeToken_FileRoundTrip(t *testing.T) {
 
 func TestUnit_ServeToken_ReadTrimsWhitespace(t *testing.T) {
 	home := isolateHome(t)
-	path := filepath.Join(home, ".contenox", serveTokenFileName)
+	path := filepath.Join(home, ".contenox-harness", serveTokenFileName)
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
 	require.NoError(t, os.WriteFile(path, []byte("  padded-token\n\n"), 0o600))
 	require.Equal(t, "padded-token", readServeTokenFile())
@@ -43,7 +43,7 @@ func TestUnit_ServeToken_ReadTrimsWhitespace(t *testing.T) {
 
 func TestUnit_ServeToken_ReadEmptyFileIsEmpty(t *testing.T) {
 	home := isolateHome(t)
-	path := filepath.Join(home, ".contenox", serveTokenFileName)
+	path := filepath.Join(home, ".contenox-harness", serveTokenFileName)
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
 	require.NoError(t, os.WriteFile(path, []byte("   \n"), 0o600))
 	require.Equal(t, "", readServeTokenFile(), "a whitespace-only file is treated as no token")

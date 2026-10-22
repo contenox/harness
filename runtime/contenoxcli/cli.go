@@ -468,8 +468,14 @@ func ResolveContenoxDir(cmd *cobra.Command) (string, error) {
 		return "", err
 	}
 
+	home, _ := os.UserHomeDir()
 	dir := cwd
 	for {
+		// Stop at the user's home directory: ~/.contenox is a per-user data
+		// directory from earlier product shapes, never a workspace marker.
+		if home != "" && dir == home {
+			return filepath.Join(cwd, ".contenox"), nil
+		}
 		candidate := filepath.Join(dir, ".contenox")
 		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
 			// Require workspace.id to be present — a .contenox/ without it is
