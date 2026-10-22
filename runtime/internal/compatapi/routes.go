@@ -3,10 +3,10 @@ package compatapi
 import (
 	"net/http"
 
-	"github.com/contenox/runtime/apiframework/middleware"
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/stateservice"
-	"github.com/contenox/runtime/runtime/taskchainservice"
+	"github.com/contenox/harness/apiframework/middleware"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/stateservice"
+	"github.com/contenox/harness/runtime/taskchainservice"
 )
 
 // CompatDeps holds the dependencies required by the OpenAI/Ollama compat handlers.

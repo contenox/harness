@@ -4,9 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/modelrepo/modeldconn"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/statetype"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 func TestSystem_Evaluate_missingDefaults(t *testing.T) {
@@ -375,37 +374,3 @@ func TestSystem_Evaluate_defaultModelNotAvailable(t *testing.T) {
 // misclassified as unsupported), and the hint distinguishes the local
 // (lease-resolved) case from a remote host:port so the user knows which
 // daemon to go check.
-func TestUnit_BuildBackendChecks_ModeldUnreachableClassifiesAndHints(t *testing.T) {
-	remote := runtimetypes.Backend{ID: "modeld-remote", Name: "gpu-box", Type: "modeld", BaseURL: "100.64.0.5:9090"}
-	local := runtimetypes.Backend{ID: "modeld-local", Name: "local", Type: "modeld", BaseURL: modeldconn.LocalSentinel}
-	states := []statetype.BackendRuntimeState{
-		{Backend: remote, Error: "modeldconn: dial 100.64.0.5:9090: connection refused"},
-		{Backend: local, Error: "modeldconn: health probe 127.0.0.1:9090: context deadline exceeded"},
-	}
-
-	checks := buildBackendChecks(nil, states, "")
-
-	byID := map[string]BackendCheck{}
-	for _, c := range checks {
-		byID[c.ID] = c
-	}
-
-	remoteCheck, ok := byID["modeld-remote"]
-	if !ok {
-		t.Fatalf("no check built for remote modeld backend: %+v", checks)
-	}
-	if remoteCheck.Status != "error" || remoteCheck.Reachable {
-		t.Fatalf("remote modeld check = %+v, want status=error reachable=false", remoteCheck)
-	}
-	if !strings.Contains(remoteCheck.Hint, "100.64.0.5:9090") {
-		t.Fatalf("remote modeld hint = %q, want it to mention the remote address", remoteCheck.Hint)
-	}
-
-	localCheck, ok := byID["modeld-local"]
-	if !ok {
-		t.Fatalf("no check built for local modeld backend: %+v", checks)
-	}
-	if !strings.Contains(localCheck.Hint, "lease") {
-		t.Fatalf("local modeld hint = %q, want it to mention the lease (not a stored address)", localCheck.Hint)
-	}
-}

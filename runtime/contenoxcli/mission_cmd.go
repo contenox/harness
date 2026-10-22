@@ -33,11 +33,11 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/agentinstance"
-	"github.com/contenox/runtime/runtime/fleetservice"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/missionservice"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/agentinstance"
+	"github.com/contenox/harness/runtime/fleetservice"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/missionservice"
 	"github.com/spf13/cobra"
 )
 

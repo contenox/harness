@@ -19,14 +19,12 @@ import (
 	"sync"
 	"time"
 
-	libbus "github.com/contenox/runtime/libbus"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libkvstore"
-	"github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/modelrepo/modeldconn"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/statetype"
-	"github.com/contenox/runtime/runtime/transport"
+	libbus "github.com/contenox/harness/libbus"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libkvstore"
+	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 // ProviderCacheDuration defines how long the state of models from an external
@@ -351,14 +349,6 @@ func (s *State) processBackend(ctx context.Context, backend *runtimetypes.Backen
 		// catalog provider (GGUF for llama, OpenVINO IR for openvino); the handler is
 		// generic over the backend type.
 		s.processLocalBackend(ctx, backend, declaredModels)
-	case "modeld":
-		// A modeld node — local (BaseURL == modeldconn.LocalSentinel) or remote
-		// (explicit host:port). We resolve the live endpoint/instance/engine here
-		// (via the good Endpoint cache) and store them so that LocalProviderAdapter
-		// can build targeted providers without any per-request network I/O.
-		// Model push to the node is a separate explicit operation (see push routes
-		// and `model push --backend`).
-		s.processModeldBackend(ctx, backend, declaredModels)
 	case "vertex-google":
 		s.processVertexBackend(ctx, backend, declaredModels)
 	case "bedrock":
@@ -479,14 +469,6 @@ func (s *State) processLocalBackend(ctx context.Context, backend *runtimetypes.B
 	// entry, so doctor explains the state. The live engine's row reconciles its
 	// models normally, and resolution serves whichever engine is live regardless
 	// of which local row a request named (see LocalProviderAdapter).
-	if len(observedModels) == 0 {
-		if live := modeldconn.ServeableBackend(); live != "" && live != modelrepo.CanonicalBackendType(backend.Type) {
-			storeBackendError(s, backend, "",
-				fmt.Errorf("modeld is running the %q engine; %q models are dormant until modeld runs that engine",
-					live, modelrepo.CanonicalBackendType(backend.Type)), nil)
-			return
-		}
-	}
 	stateservice := &statetype.BackendRuntimeState{
 		ID:      backend.ID,
 		Name:    backend.Name,
@@ -520,63 +502,6 @@ func (s *State) processLocalBackend(ctx context.Context, backend *runtimetypes.B
 // remote node's host:port. Either way, reconcile traffic goes through
 // modeldconn.Endpoint's separate per-backend connection cache, so it can
 // never disturb that hot path's cached connection.
-func (s *State) processModeldBackend(ctx context.Context, backend *runtimetypes.Backend, _ []*runtimetypes.Model) {
-	addr := backend.BaseURL
-	if addr == "" || addr == modeldconn.LocalSentinel {
-		resolved, err := modeldconn.LocalEndpointAddr(ctx)
-		if err != nil {
-			storeBackendError(s, backend, "", err, nil)
-			return
-		}
-		addr = resolved
-	}
-
-	ep, err := modeldconn.Endpoint(ctx, backend.ID, addr)
-	if err != nil {
-		storeBackendError(s, backend, "", err, nil)
-		return
-	}
-	nodeModels, err := ep.ListModels(ctx)
-	if err != nil {
-		storeBackendError(s, backend, "", err, nil)
-		return
-	}
-
-	stateservice := &statetype.BackendRuntimeState{
-		ID:               backend.ID,
-		Name:             backend.Name,
-		Backend:          *backend,
-		Models:           make([]string, 0, len(nodeModels)),
-		ResolvedEndpoint: addr,
-		ResolvedInstance: ep.InstanceID,
-		LiveEngine:       ep.Backend,
-	}
-	pulledModels := make([]statetype.ModelPullStatus, 0, len(nodeModels))
-	for _, m := range nodeModels {
-		pull := modelPullStatusFromNodeModel(m)
-		// Reached only because ListModels just succeeded against this live,
-		// single-slot, single-engine node — every model it reports is
-		// chat/prompt/stream-capable by construction (mirrors the same
-		// reasoning LocalProviderAdapter's modeld loop uses to populate the
-		// providers that actually serve these requests; this keeps `model
-		// list`'s displayed capability flags from contradicting what is
-		// actually servable). Embed is safe to advertise because
-		// modeldconn.EmbedTarget routes to this specific node, not the
-		// ambient local lease.
-		pull.CanChat = true
-		pull.CanPrompt = true
-		pull.CanStream = true
-		pull.CanEmbed = true
-		pulledModels = append(pulledModels, s.applyCapabilityOverrides(ctx, backend.Type, pull))
-	}
-	stateservice.PulledModels = pulledModels
-	if s.autoDiscoverModels {
-		for _, m := range nodeModels {
-			stateservice.Models = append(stateservice.Models, m.Name)
-		}
-	}
-	s.state.Store(backend.ID, stateservice)
-}
 
 // modelPullStatusFromNodeModel converts a node's raw model inventory entry
 // into the state's pull-status shape. ContextLength comes from a cheap,
@@ -585,15 +510,6 @@ func (s *State) processModeldBackend(ctx context.Context, backend *runtimetypes.
 // capability fields (CanChat, …) are set unconditionally by
 // LocalProviderAdapter's modeld loop instead (see runtime/runtimestate/adapter.go),
 // since a single-slot, already-reconciled node serves every listed model.
-func modelPullStatusFromNodeModel(m transport.NodeModel) statetype.ModelPullStatus {
-	return statetype.ModelPullStatus{
-		Name:          m.Name,
-		Model:         m.Name,
-		Size:          m.SizeBytes,
-		Digest:        m.Digest,
-		ContextLength: m.ContextLength,
-	}
-}
 
 // processVLLMBackend handles the state reconciliation for a single vLLM backend.
 // Since vLLM instances typically serve a single model, we verify that the running model

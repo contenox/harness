@@ -16,8 +16,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/accessview"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/accessview"
 	"github.com/spf13/cobra"
 )
 

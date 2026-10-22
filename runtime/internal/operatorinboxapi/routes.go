@@ -14,8 +14,8 @@ package operatorinboxapi
 import (
 	"net/http"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/operatorinbox"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/operatorinbox"
 )
 
 // AddRoutes registers the operator-inbox read route on mux.

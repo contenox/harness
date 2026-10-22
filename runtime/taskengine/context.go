@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"maps"
 
-	libmodelprovider "github.com/contenox/runtime/runtime/modelrepo"
+	libmodelprovider "github.com/contenox/harness/runtime/modelrepo"
 )
 
 type templateVarsKey struct{}

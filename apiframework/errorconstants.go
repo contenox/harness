@@ -4,10 +4,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/contenox/runtime/libauth"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/vfs"
+	"github.com/contenox/harness/libauth"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 var (

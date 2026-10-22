@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/mcpserverservice"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/mcpserverservice"
 )
 
 type oauthStartRequest struct {

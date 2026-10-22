@@ -14,11 +14,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/taskengine"
 	"github.com/spf13/cobra"
 )
 

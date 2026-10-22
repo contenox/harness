@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/runtime/fleetservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/fleetservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/stretchr/testify/require"
 )
 

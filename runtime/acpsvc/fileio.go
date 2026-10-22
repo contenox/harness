@@ -8,11 +8,11 @@ import (
 	"os"
 	"strings"
 
-	libacp "github.com/contenox/runtime/libacp"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/localtools"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/vfs"
+	libacp "github.com/contenox/harness/libacp"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/localtools"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 var osFallback = localtools.NewOSFileIO()

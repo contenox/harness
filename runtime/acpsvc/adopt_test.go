@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	libacp "github.com/contenox/runtime/libacp"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/agentinstance"
-	"github.com/contenox/runtime/runtime/agentregistryservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libacp "github.com/contenox/harness/libacp"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/agentinstance"
+	"github.com/contenox/harness/runtime/agentregistryservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )

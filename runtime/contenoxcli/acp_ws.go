@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/serverapi"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/serverapi"
 	"golang.org/x/net/websocket"
 )
 

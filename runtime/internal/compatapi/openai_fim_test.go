@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/internal/compatapi"
-	"github.com/contenox/runtime/runtime/stateservice"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/internal/compatapi"
+	"github.com/contenox/harness/runtime/stateservice"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 func TestFIMCompletions_Streaming(t *testing.T) {

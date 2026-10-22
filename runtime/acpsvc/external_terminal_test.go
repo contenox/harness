@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	libacp "github.com/contenox/runtime/libacp"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/enginesvc"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/shellsession"
-	"github.com/contenox/runtime/runtime/vfs"
+	libacp "github.com/contenox/harness/libacp"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/enginesvc"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/shellsession"
+	"github.com/contenox/harness/runtime/vfs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

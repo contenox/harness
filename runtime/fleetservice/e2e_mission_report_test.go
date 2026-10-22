@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/agentinstance"
-	"github.com/contenox/runtime/runtime/agentregistryservice"
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/agentinstance"
+	"github.com/contenox/harness/runtime/agentregistryservice"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,7 +54,7 @@ const missionReportChain = `{
 func buildContenoxBin(t *testing.T) string {
 	t.Helper()
 	binPath := filepath.Join(t.TempDir(), "contenox")
-	out, err := exec.Command("go", "build", "-o", binPath, "github.com/contenox/runtime/cmd/contenox").CombinedOutput()
+	out, err := exec.Command("go", "build", "-o", binPath, "github.com/contenox/harness/cmd/contenox").CombinedOutput()
 	require.NoError(t, err, "build contenox:\n%s", out)
 	return binPath
 }

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/hitlservice"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/hitlservice"
 	"github.com/stretchr/testify/require"
 )
 

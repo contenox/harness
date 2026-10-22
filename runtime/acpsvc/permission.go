@@ -3,10 +3,10 @@ package acpsvc
 import (
 	"context"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/approvalflow"
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/approvalflow"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 func (t *Transport) AskApproval(ctx context.Context, req hitlservice.ApprovalRequest) (bool, error) {

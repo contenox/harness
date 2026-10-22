@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/libacp/acpexec"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/agenthost"
-	"github.com/contenox/runtime/runtime/agentregistryservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/libacp/acpexec"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/agenthost"
+	"github.com/contenox/harness/runtime/agentregistryservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/taskengine"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,7 +52,7 @@ const loopbackFixtureReply = "contenox loopback fixture reply"
 func buildContenoxBinary(t *testing.T) string {
 	t.Helper()
 	binPath := filepath.Join(t.TempDir(), "contenox")
-	cmd := exec.Command("go", "build", "-o", binPath, "github.com/contenox/runtime/cmd/contenox")
+	cmd := exec.Command("go", "build", "-o", binPath, "github.com/contenox/harness/cmd/contenox")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("build contenox: %v\n%s", err, out)

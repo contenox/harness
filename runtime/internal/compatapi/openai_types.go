@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 // ChatCompletionRequest is the OpenAI /v1/chat/completions request body.

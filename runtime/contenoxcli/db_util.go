@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libkvstore"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libkvstore"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // OpenDBAt opens (and creates if needed) the SQLite database at the given path.

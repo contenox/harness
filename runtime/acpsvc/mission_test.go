@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	libacp "github.com/contenox/runtime/libacp"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/fleetservice"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libacp "github.com/contenox/harness/libacp"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/fleetservice"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // fakeDispatcher records the mission it was asked to fire and returns a canned

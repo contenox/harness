@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/errdefs"
+	"github.com/contenox/harness/runtime/errdefs"
 )
 
 func TestUnit_ExecService_Execute_RejectsEmptyPrompt(t *testing.T) {

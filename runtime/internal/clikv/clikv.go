@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 const Prefix = "cli."

@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/apiframework/middleware"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/terminalservice"
+	"github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/apiframework/middleware"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/terminalservice"
 	"golang.org/x/net/websocket"
 )
 

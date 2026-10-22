@@ -11,15 +11,15 @@ import (
 
 	"github.com/google/uuid"
 
-	libacp "github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/chatservice"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/internal/setupcheck"
-	"github.com/contenox/runtime/runtime/modelcapability"
-	"github.com/contenox/runtime/runtime/reasoning"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/taskengine"
+	libacp "github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/chatservice"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/internal/setupcheck"
+	"github.com/contenox/harness/runtime/modelcapability"
+	"github.com/contenox/harness/runtime/reasoning"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 // allACPCommands is the full, capability-unfiltered admin command set — every

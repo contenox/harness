@@ -3,7 +3,7 @@ package contenoxcli
 import (
 	"testing"
 
-	"github.com/contenox/runtime/runtime/serverapi"
+	"github.com/contenox/harness/runtime/serverapi"
 	"github.com/stretchr/testify/require"
 )
 

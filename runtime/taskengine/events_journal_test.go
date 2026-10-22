@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libkvstore"
-	"github.com/contenox/runtime/libtracker"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libkvstore"
+	"github.com/contenox/harness/libtracker"
 	"github.com/stretchr/testify/require"
 )
 

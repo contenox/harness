@@ -8,11 +8,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/contenox/runtime/libkvstore"
-	"github.com/contenox/runtime/runtime/modelcapability"
-	"github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/statetype"
+	"github.com/contenox/harness/libkvstore"
+	"github.com/contenox/harness/runtime/modelcapability"
+	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 // observedModelCachePrefix is the KV key prefix under which each backend's

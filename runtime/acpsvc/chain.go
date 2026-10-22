@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 const (

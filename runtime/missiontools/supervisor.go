@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 // The SUPERVISOR half of this package's tool surface: what a session that FIRED

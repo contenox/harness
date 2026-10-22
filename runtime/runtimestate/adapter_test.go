@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/runtime/runtimestate"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/statetype"
+	"github.com/contenox/harness/runtime/runtimestate"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/statetype"
 	"github.com/stretchr/testify/require"
 )
 

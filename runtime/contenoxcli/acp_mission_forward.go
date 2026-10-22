@@ -34,9 +34,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/runtime/acpsvc"
-	"github.com/contenox/runtime/runtime/fleetservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/acpsvc"
+	"github.com/contenox/harness/runtime/fleetservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 const (

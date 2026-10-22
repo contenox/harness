@@ -11,12 +11,12 @@ import (
 	"testing"
 	"time"
 
-	libbus "github.com/contenox/runtime/libbus"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/internal/localfileapi"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/vfs"
-	"github.com/contenox/runtime/runtime/workspacegrants"
+	libbus "github.com/contenox/harness/libbus"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/internal/localfileapi"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/vfs"
+	"github.com/contenox/harness/runtime/workspacegrants"
 	"github.com/stretchr/testify/require"
 )
 

@@ -41,11 +41,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/contenox/runtime/libacp"
-	libbus "github.com/contenox/runtime/libbus"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/operatorinbox"
+	"github.com/contenox/harness/libacp"
+	libbus "github.com/contenox/harness/libbus"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/operatorinbox"
 )
 
 // SessionDeliverer injects a report update into a supervising session's stream.

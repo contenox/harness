@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libbus"
-	"github.com/contenox/runtime/libroutine"
-	"github.com/contenox/runtime/libtracker"
+	"github.com/contenox/harness/libbus"
+	"github.com/contenox/harness/libroutine"
+	"github.com/contenox/harness/libtracker"
 )
 
 func TestUnit_Job_RunExecutesOperation(t *testing.T) {

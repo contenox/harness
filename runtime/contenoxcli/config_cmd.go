@@ -8,11 +8,11 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/reasoning"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/reasoning"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/spf13/cobra"
 )
 

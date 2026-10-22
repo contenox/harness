@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/project"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/workspacegrants"
+	"github.com/contenox/harness/runtime/project"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/workspacegrants"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )

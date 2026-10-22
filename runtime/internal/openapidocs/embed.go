@@ -1,6 +1,6 @@
 package openapidocs
 
-//go:generate go run github.com/contenox/runtime/tools/openapi-gen
+//go:generate go run github.com/contenox/harness/tools/openapi-gen
 
 import _ "embed"
 

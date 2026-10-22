@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 const KeyPrefix = "model-capability:"

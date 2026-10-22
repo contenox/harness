@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libauth"
+	"github.com/contenox/harness/libauth"
 	"github.com/golang-jwt/jwt/v5"
 )
 

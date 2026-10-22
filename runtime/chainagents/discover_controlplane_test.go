@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/agentregistryservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/vfs"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/agentregistryservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/vfs"
 	"github.com/stretchr/testify/require"
 )
 

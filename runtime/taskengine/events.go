@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contenox/runtime/libbus"
-	"github.com/contenox/runtime/libtracker"
+	"github.com/contenox/harness/libbus"
+	"github.com/contenox/harness/libtracker"
 )
 
 const TaskEventSubjectAll = "taskengine.events"

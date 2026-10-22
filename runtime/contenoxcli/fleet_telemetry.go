@@ -3,8 +3,8 @@ package contenoxcli
 import (
 	"context"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/agentinstance"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/agentinstance"
 )
 
 // newInstanceEventSink adapts the agentinstance lifecycle EventSink onto the

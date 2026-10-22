@@ -23,7 +23,7 @@ const longSnippet = `package main
 import (
   "context"
   "fmt"
-  "github.com/contenox/runtime/libtracker"
+  "github.com/contenox/harness/libtracker"
 )
 
 func main() {

@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/agentinstance"
-	"github.com/contenox/runtime/runtime/fleetservice"
-	"github.com/contenox/runtime/runtime/internal/fleetapi"
-	"github.com/contenox/runtime/runtime/internal/missionapi"
-	"github.com/contenox/runtime/runtime/missionservice"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/agentinstance"
+	"github.com/contenox/harness/runtime/fleetservice"
+	"github.com/contenox/harness/runtime/internal/fleetapi"
+	"github.com/contenox/harness/runtime/internal/missionapi"
+	"github.com/contenox/harness/runtime/missionservice"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )

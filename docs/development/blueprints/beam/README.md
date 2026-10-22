@@ -18,5 +18,4 @@ oversight surfaces.
 | [workspace-tabs.md](workspace-tabs.md) | implemented | The in-app tabbed workspace: tab model, surfaces, rails-list/tabs-hold |
 | [workspace-canvas.md](workspace-canvas.md) | landing in slices | The side-by-side working area for terminals, files, and diffs inside a chat tab |
 
-[`../v1-feature-map.md`](../v1-feature-map.md) describes how Beam relates to
 the V1 product surface.

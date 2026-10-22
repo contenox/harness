@@ -141,12 +141,10 @@ which is exactly what `acpsvc` wraps (`acpsvc.New(deps) libacp.AgentFactory`,
 pending-request map, and the permission callback, shared machinery the two
 shapes sit on top of as thin adapters.
 
-Why one shared core matters: `runtime/vscodeagent` hand-rolls its own
-pending-request bookkeeping
-(`clientReqPending map[string]chan clientResponse`,
-`runtime/vscodeagent/server.go:42`) to answer reverse calls on its own bespoke
-stdio bridge protocol — the same shape (a request-id-keyed map, resolved when
-the peer's response arrives) that the client core provides for
+Why one shared core matters: a surface that hand-rolls its own
+pending-request bookkeeping (a request-id-keyed map, resolved when the peer's
+response arrives) instead of using the client core duplicates the same shape
+that the client core already provides for
 `session/request_permission`, `fs/read_text_file`, and `terminal/create`.
 Solving it again for real external ACP agents, bespoke and non-reusable,
 would repeat that mistake; a future `/acp` outbound WebSocket dial (mirroring
@@ -211,8 +209,8 @@ permission-routing invariant applying to the remote host's own HITL policy.
   never a bypass justified by "it's just a sub-agent."
 - **A second (or third — counting `acp-web-client`'s official-SDK-based
   browser client) hand-rolled ACP client RPC layer outside `libacp`.**
-  Replicating `vscodeagent`'s bespoke pending-request map instead of extending
-  the shared core repeats a mistake already made once.
+  Replicating a bespoke pending-request map outside `libacp` instead of
+  extending the shared core repeats a mistake already made once.
 - **A chain step or provider that cannot name which sub-agent, session, or
   policy backs it.** The operator must always be able to answer "what is this
   and what rule gated its last action," outbound as well as inbound.

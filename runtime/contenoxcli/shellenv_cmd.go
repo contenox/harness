@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/shellenvservice"
+	"github.com/contenox/harness/runtime/shellenvservice"
 	"github.com/spf13/cobra"
 )
 

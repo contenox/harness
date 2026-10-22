@@ -3,8 +3,8 @@ package contenoxcli
 import (
 	"os"
 
-	"github.com/contenox/runtime/runtime/agentsmd"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/agentsmd"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 const (

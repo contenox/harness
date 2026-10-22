@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"sync"
 
-	libbus "github.com/contenox/runtime/libbus"
-	"github.com/contenox/runtime/runtime/internal/localfileapi"
-	"github.com/contenox/runtime/runtime/project"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/vfs"
-	"github.com/contenox/runtime/runtime/workspacegrants"
+	libbus "github.com/contenox/harness/libbus"
+	"github.com/contenox/harness/runtime/internal/localfileapi"
+	"github.com/contenox/harness/runtime/project"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/vfs"
+	"github.com/contenox/harness/runtime/workspacegrants"
 )
 
 // workspaceRootReloader recomputes and applies the effective workspace-root set

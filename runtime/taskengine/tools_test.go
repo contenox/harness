@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 func sortedNames(names []string) []string {

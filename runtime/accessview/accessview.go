@@ -26,8 +26,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/vfs"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 // DimensionVerdict is the policy decision for one access dimension (read or

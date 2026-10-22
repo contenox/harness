@@ -3,7 +3,7 @@ package modelregistry_test
 import (
 	"testing"
 
-	"github.com/contenox/runtime/runtime/modelregistry"
+	"github.com/contenox/harness/runtime/modelregistry"
 )
 
 func TestUnit_OpenAIModelSupportsVision(t *testing.T) {

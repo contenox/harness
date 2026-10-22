@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/contenox/runtime/libsandbox"
-	"github.com/contenox/runtime/runtime/contenoxcli"
+	"github.com/contenox/harness/libsandbox"
+	"github.com/contenox/harness/runtime/contenoxcli"
 )
 
 func main() {

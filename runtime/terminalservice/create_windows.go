@@ -9,8 +9,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/terminalstore"
+	"github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/terminalstore"
 	"github.com/google/uuid"
 	"golang.org/x/sys/windows"
 )

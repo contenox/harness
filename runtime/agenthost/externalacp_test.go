@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/agenthost"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/agenthost"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +22,7 @@ import (
 func buildStubAgent(t *testing.T) string {
 	t.Helper()
 	binPath := filepath.Join(t.TempDir(), "acp-stub-agent")
-	cmd := exec.Command("go", "build", "-o", binPath, "github.com/contenox/runtime/libacp/cmd/acp-stub-agent")
+	cmd := exec.Command("go", "build", "-o", binPath, "github.com/contenox/harness/libacp/cmd/acp-stub-agent")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("build acp-stub-agent: %v\n%s", err, out)

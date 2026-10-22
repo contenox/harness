@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/agentinstance"
-	"github.com/contenox/runtime/runtime/fleetservice"
-	"github.com/contenox/runtime/runtime/missionservice"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/agentinstance"
+	"github.com/contenox/harness/runtime/fleetservice"
+	"github.com/contenox/harness/runtime/missionservice"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )

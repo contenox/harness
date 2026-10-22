@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/contenox/runtime/libsandbox"
-	"github.com/contenox/runtime/runtime/serverapi"
+	"github.com/contenox/harness/libsandbox"
+	"github.com/contenox/harness/runtime/serverapi"
 	"github.com/spf13/cobra"
 )
 

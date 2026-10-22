@@ -13,8 +13,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/vfs"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 // Streaming-search caps. They are DEFENSIVE bounds, not tuning knobs: a workspace

@@ -12,8 +12,8 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/errdefs"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/errdefs"
 	"github.com/getkin/kin-openapi/openapi3"
 )
 

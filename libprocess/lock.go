@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/liblease"
+	"github.com/contenox/harness/liblease"
 )
 
 // ErrLockUnavailable is returned by Start when the supervision lock is held by

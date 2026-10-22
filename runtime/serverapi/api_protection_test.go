@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libauth"
+	"github.com/contenox/harness/libauth"
 )
 
 // expiredSessionJWT mints a session JWT for token that is already expired, to

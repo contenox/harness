@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo"
 )
 
 type vertexPromptClient struct {

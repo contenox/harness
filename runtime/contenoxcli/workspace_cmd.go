@@ -24,12 +24,12 @@ import (
 	"context"
 	"fmt"
 
-	libbus "github.com/contenox/runtime/libbus"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/project"
-	"github.com/contenox/runtime/runtime/vfs"
-	"github.com/contenox/runtime/runtime/workspacegrants"
+	libbus "github.com/contenox/harness/libbus"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/project"
+	"github.com/contenox/harness/runtime/vfs"
+	"github.com/contenox/harness/runtime/workspacegrants"
 	"github.com/spf13/cobra"
 )
 

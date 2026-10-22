@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 type activityTrackerTaskEnvDecorator struct {

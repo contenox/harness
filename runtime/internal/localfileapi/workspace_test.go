@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/internal/localfileapi"
-	"github.com/contenox/runtime/runtime/localfileservice"
-	"github.com/contenox/runtime/runtime/vfs"
+	"github.com/contenox/harness/runtime/internal/localfileapi"
+	"github.com/contenox/harness/runtime/localfileservice"
+	"github.com/contenox/harness/runtime/vfs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

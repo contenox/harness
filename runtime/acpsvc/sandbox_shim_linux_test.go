@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/contenox/runtime/libsandbox"
+	"github.com/contenox/harness/libsandbox"
 )
 
 // TestMain makes this test binary a valid sandbox-shim host. Binding a session to

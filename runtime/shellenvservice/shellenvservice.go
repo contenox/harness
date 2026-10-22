@@ -17,8 +17,8 @@ import (
 	"errors"
 	"fmt"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // globalKVKey holds the global shell-env map (a JSON object of name→value) at the

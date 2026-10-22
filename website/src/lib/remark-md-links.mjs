@@ -27,11 +27,11 @@ export default function remarkMdLinks() {
       if (repoDir) {
         const resolved = path.posix.normalize(path.posix.join(repoDir, url));
         if (!resolved.startsWith('..')) {
-          node.url = `https://github.com/contenox/runtime/blob/main/${resolved}`;
+          node.url = `https://github.com/contenox/harness/blob/main/${resolved}`;
         } else {
           // Climbs out of docs/ — a repo source path like ../../runtime/foo.go.
           const fromRepoRoot = path.posix.normalize(path.posix.join(repoDir.replace(/^docs/, ''), url)).replace(/^\/+/, '');
-          node.url = `https://github.com/contenox/runtime/blob/main/${fromRepoRoot}`;
+          node.url = `https://github.com/contenox/harness/blob/main/${fromRepoRoot}`;
         }
       }
     });

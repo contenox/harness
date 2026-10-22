@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/apiframework"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/agentinstance"
-	"github.com/contenox/runtime/runtime/fleetservice"
+	"github.com/contenox/harness/apiframework"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/agentinstance"
+	"github.com/contenox/harness/runtime/fleetservice"
 	"github.com/stretchr/testify/require"
 )
 

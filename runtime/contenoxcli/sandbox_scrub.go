@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/libsandbox"
-	"github.com/contenox/runtime/runtime/serverapi"
-	"github.com/contenox/runtime/runtime/shellenvservice"
+	"github.com/contenox/harness/libsandbox"
+	"github.com/contenox/harness/runtime/serverapi"
+	"github.com/contenox/harness/runtime/shellenvservice"
 )
 
 // resolveSandboxScrubs turns the SANDBOX_* configuration into the two environment

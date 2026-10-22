@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contenox/runtime/libdbexec"
+	"github.com/contenox/harness/libdbexec"
 )
 
 // Schema is the DDL needed to bootstrap the kv store table in SQLite.

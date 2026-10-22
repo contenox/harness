@@ -15,14 +15,14 @@ import (
 
 	"github.com/google/uuid"
 
-	libacp "github.com/contenox/runtime/libacp"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/chatservice"
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/taskengine"
-	"github.com/contenox/runtime/runtime/vfs"
+	libacp "github.com/contenox/harness/libacp"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/chatservice"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/taskengine"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 // sessionListTitleMaxLen bounds SessionInfo.Title derived from a session's

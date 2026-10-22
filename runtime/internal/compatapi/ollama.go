@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/stateservice"
-	"github.com/contenox/runtime/runtime/statetype"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/stateservice"
+	"github.com/contenox/harness/runtime/statetype"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 // AddOllamaRoutes registers the Ollama-native compat aliases (/api/chat,

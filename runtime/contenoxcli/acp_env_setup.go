@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/contenox/runtime/libacp"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/acpsvc"
-	"github.com/contenox/runtime/runtime/backendservice"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/libacp"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/acpsvc"
+	"github.com/contenox/harness/runtime/backendservice"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // Environment variables of the non-interactive ACP setup route. They serve two
@@ -98,7 +98,7 @@ func completeEnvSetup(ctx context.Context, db libdb.DBManager) error {
 	if model == "" {
 		model = sp.defaultModel
 	}
-	if model == "" && !isLocalModeldProvider(sp.key) {
+	if model == "" {
 		return fmt.Errorf("set %s: provider %q has no default model", envDefaultModel, sp.key)
 	}
 
@@ -118,10 +118,8 @@ func completeEnvSetup(ctx context.Context, db libdb.DBManager) error {
 		}
 	}
 
-	if !isLocalModeldProvider(sp.key) {
-		if err := registerSetupBackend(ctx, db, sp.key, apiKey, baseURL); err != nil {
-			return err
-		}
+	if err := registerSetupBackend(ctx, db, sp.key, apiKey, baseURL); err != nil {
+		return err
 	}
 
 	store := runtimetypes.New(db.WithoutTransaction())

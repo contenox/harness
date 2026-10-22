@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/agentview"
-	"github.com/contenox/runtime/runtime/localfileservice"
-	"github.com/contenox/runtime/runtime/vfs"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/agentview"
+	"github.com/contenox/harness/runtime/localfileservice"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 // AddRoutes registers the /files browse API in single-root mode, fixed to one

@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/contenox/runtime/runtime/vfs"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 const (

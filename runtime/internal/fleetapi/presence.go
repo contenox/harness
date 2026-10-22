@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/presence"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/presence"
 )
 
 // PresenceReader reads the OBSERVED-presence section of the fleet board: the

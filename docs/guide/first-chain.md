@@ -240,7 +240,7 @@ That's it. You've written:
 - A tool policy with allowlists
 - A retry policy with backoff and jitter
 
-This file works against Ollama, OpenAI, Gemini, vLLM, or local GGUF/OpenVINO models (the `llama`/`openvino` backends served by the `modeld` daemon) by changing one config line. It works on your laptop today; the same artifact runs on Contenox Services tomorrow without modification.
+This file works against Ollama, OpenAI, Gemini, or vLLM by changing one config line. It works on your laptop today; the same artifact runs on Contenox Services tomorrow without modification.
 
 ## Next
 

@@ -28,8 +28,8 @@ import (
 	"net/url"
 	"text/tabwriter"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/agentinstance"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/agentinstance"
 	"github.com/spf13/cobra"
 )
 

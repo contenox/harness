@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/libacp"
+	"github.com/contenox/harness/libacp"
 )
 
 // ErrClosed is returned by Start once the Registry has been Closed. It is a

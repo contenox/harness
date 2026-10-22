@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/acpsvc"
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/missiontools"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/acpsvc"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/missiontools"
 )
 
 // The tool the supervisor is told to call, named from the tool package's own

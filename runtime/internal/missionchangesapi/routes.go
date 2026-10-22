@@ -16,8 +16,8 @@ package missionchangesapi
 import (
 	"net/http"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/missionchanges"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/missionchanges"
 )
 
 // AddRoutes registers the changed-files and diff routes on mux. Both sit under

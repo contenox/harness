@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/modelrepo"
-	msgcodec "github.com/contenox/runtime/runtime/modelrepo/codec/messages"
+	"github.com/contenox/harness/runtime/modelrepo"
+	msgcodec "github.com/contenox/harness/runtime/modelrepo/codec/messages"
 	"github.com/stretchr/testify/require"
 )
 

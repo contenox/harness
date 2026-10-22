@@ -3,7 +3,7 @@ package agentservice
 import (
 	"testing"
 
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 func TestUnit_StampTurnProvenance_StampsOnlyUnstampedMessages(t *testing.T) {

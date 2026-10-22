@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/contenox/runtime/libacp"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/missionservice"
+	"github.com/contenox/harness/libacp"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/missionservice"
 )
 
 // --- notification builders: they construct exactly the shapes acpsvc/events.go

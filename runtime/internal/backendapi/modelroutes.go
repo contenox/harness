@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/stateservice"
-	"github.com/contenox/runtime/runtime/statetype"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/stateservice"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 func AddModelRoutes(mux *http.ServeMux, stateService stateservice.Service, defaults stateservice.RuntimeDefaults) {

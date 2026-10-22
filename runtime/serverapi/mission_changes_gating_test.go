@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	libbus "github.com/contenox/runtime/libbus"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/missionchanges"
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/runtimestate"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libbus "github.com/contenox/harness/libbus"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/missionchanges"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/runtimestate"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // missionChangesGatingMux builds the product mux with or without the

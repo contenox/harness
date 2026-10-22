@@ -11,7 +11,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/contenox/runtime/runtime/terminalstore"
+	"github.com/contenox/harness/runtime/terminalstore"
 	"golang.org/x/sys/windows"
 )
 

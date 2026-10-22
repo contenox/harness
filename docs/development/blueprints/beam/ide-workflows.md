@@ -2,10 +2,10 @@
 
 Date: 2026-07-21
 Status: blueprint (mined + sized; not yet built). Directive: "replicate as many
-VSCode/Zed/IDE workflows as meaningful into beam otherwise it's half-baked" —
+Zed/IDE workflows as meaningful into beam otherwise it's half-baked" —
 with the filter that decides *meaningful*: **Beam's job is the
 supervise–review–intervene loop, never editing.** Real IDEs are ACP clients of
-the same runtime; Beam competing on editing would be a worse VS Code instead of
+the same runtime; Beam competing on editing would be a worse editor instead of
 a better cockpit. OpenHands validates the filter from production: their
 oversight UI never lets the diff view edit — actual editing is a cleanly
 separate escaped-to iframe.
@@ -32,7 +32,7 @@ last `NewText`; status from create/edit/delete. Cap the list; per-file
 **Rendering:** Monaco `DiffEditor` (`@monaco-editor/react`) — the proven
 choice for exactly this use (OpenHands). Collapsed rows by default, lazy
 per-file diff fetch on expand, old/diff/new toggle. Do NOT hand-roll diffing
-(bolt.diy's regret) and do NOT add editing or a VS Code iframe.
+(bolt.diy's regret) and do NOT add editing or an editor iframe.
 
 **The differentiator:** rank the changed-files list by
 Degree-of-Interest — weight and decay the unit's interactions per path (reads,

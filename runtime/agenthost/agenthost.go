@@ -24,7 +24,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/contenox/runtime/libacp"
+	"github.com/contenox/harness/libacp"
 )
 
 // Agent is the runtime-side primitive for driving another ACP agent: given a

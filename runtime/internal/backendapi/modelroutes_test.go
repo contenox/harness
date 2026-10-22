@@ -7,10 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/internal/backendapi"
-	"github.com/contenox/runtime/runtime/internal/setupcheck"
-	"github.com/contenox/runtime/runtime/stateservice"
-	"github.com/contenox/runtime/runtime/statetype"
+	"github.com/contenox/harness/runtime/internal/backendapi"
+	"github.com/contenox/harness/runtime/internal/setupcheck"
+	"github.com/contenox/harness/runtime/stateservice"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 func TestOpenAIModelsIncludesDefaultAliasAndObservedModels(t *testing.T) {

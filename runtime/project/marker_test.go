@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/project"
+	"github.com/contenox/harness/runtime/project"
 	"github.com/stretchr/testify/require"
 )
 

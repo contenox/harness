@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/contenox/runtime/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo"
 	"github.com/google/uuid"
 )
 

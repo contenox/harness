@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/localtools"
+	"github.com/contenox/harness/runtime/localtools"
 	"github.com/stretchr/testify/assert"
 )
 

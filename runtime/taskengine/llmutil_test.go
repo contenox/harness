@@ -3,7 +3,7 @@ package taskengine_test
 import (
 	"testing"
 
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 func TestUnit_ExtractJSONObject(t *testing.T) {

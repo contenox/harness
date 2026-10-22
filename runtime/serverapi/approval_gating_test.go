@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	libbus "github.com/contenox/runtime/libbus"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/runtimestate"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libbus "github.com/contenox/harness/libbus"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/runtimestate"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // approvalGatingMux builds the product mux the way serve does, with or

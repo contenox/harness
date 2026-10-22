@@ -114,14 +114,14 @@ Chain JSON supports runtime macros inside string fields:
 | `{{var:provider}}` | The active provider from config |
 | `{{var:alt_model}}` | Optional secondary model from config |
 | `{{var:alt_provider}}` | Optional secondary provider from config |
-| `{{var:autocomplete_model}}` | Autocomplete model from config — only populated on the VS Code autocomplete (FIM) path; empty elsewhere |
-| `{{var:autocomplete_provider}}` | Autocomplete provider from config — only populated on the VS Code autocomplete (FIM) path; empty elsewhere |
+| `{{var:autocomplete_model}}` | Autocomplete model from config — only populated on the inline-autocomplete (FIM) path; empty elsewhere |
+| `{{var:autocomplete_provider}}` | Autocomplete provider from config — only populated on the inline-autocomplete (FIM) path; empty elsewhere |
 | `{{var:max_tokens}}` | Optional response token cap from config or `--max-tokens` |
 | `{{now:2006-01-02}}` | Current date (Go time format) |
 | `{{toolservice:list}}` | JSON manifest of tools visible to the current task |
 
 > [!NOTE]
-> `{{var:autocomplete_model}}` and `{{var:autocomplete_provider}}` are only filled in when the chain runs on the VS Code inline-autocomplete path (the FIM chain). On chat/run and every other path they expand to empty, so use a fallback (below) if a general-purpose chain references them.
+> `{{var:autocomplete_model}}` and `{{var:autocomplete_provider}}` are only filled in when the chain runs on the inline-autocomplete path (the FIM chain). On chat/run and every other path they expand to empty, so use a fallback (below) if a general-purpose chain references them.
 
 ### Fallbacks
 

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/modelrepo/ollama"
+	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo/ollama"
 	"github.com/ollama/ollama/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

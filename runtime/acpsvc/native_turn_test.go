@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/nativeturn"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/nativeturn"
+	"github.com/contenox/harness/runtime/taskengine"
 	"github.com/stretchr/testify/require"
 )
 

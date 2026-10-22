@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/libacp/acpexec"
-	"github.com/contenox/runtime/libsandbox"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/libacp/acpexec"
+	"github.com/contenox/harness/libsandbox"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // closeTimeout bounds how long Handle.Close waits for the underlying

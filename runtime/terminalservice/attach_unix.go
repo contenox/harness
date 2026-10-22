@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/contenox/runtime/runtime/terminalstore"
+	"github.com/contenox/harness/runtime/terminalstore"
 	"github.com/creack/pty"
 )
 

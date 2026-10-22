@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	libacp "github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/chatservice"
-	"github.com/contenox/runtime/runtime/taskengine"
+	libacp "github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/chatservice"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 const compactDefaultKeep = 8

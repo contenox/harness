@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libacp"
-	libbus "github.com/contenox/runtime/libbus"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/operatorinbox"
+	"github.com/contenox/harness/libacp"
+	libbus "github.com/contenox/harness/libbus"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/operatorinbox"
 	"github.com/stretchr/testify/require"
 )
 

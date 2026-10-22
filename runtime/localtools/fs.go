@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/taskengine"
-	"github.com/contenox/runtime/runtime/vfs"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/taskengine"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 const LocalFSToolsName = "local_fs"

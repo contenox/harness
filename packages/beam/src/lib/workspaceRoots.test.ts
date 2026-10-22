@@ -39,8 +39,8 @@ describe('shortenRootPath', () => {
   });
 
   it('keeps the last N segments with an ellipsis prefix when longer', () => {
-    expect(shortenRootPath('/home/user/src/github.com/contenox/runtime')).toBe(
-      '…/github.com/contenox/runtime',
+    expect(shortenRootPath('/home/user/src/github.com/contenox/harness')).toBe(
+      '…/github.com/contenox/harness',
     );
   });
 
@@ -67,7 +67,7 @@ describe('isWorkspaceRootRefusal', () => {
     // that used to leak through untranslated and truncated in the file tree.
     expect(
       isWorkspaceRootRefusal(
-        'serverops: unprocessable entity: workspace root "/home/naro" is not under any configured workspace root; roots: /home/naro/src/github.com/contenox/runtime, /home/naro/src',
+        'serverops: unprocessable entity: workspace root "/home/naro" is not under any configured workspace root; roots: /home/naro/src/github.com/contenox/harness, /home/naro/src',
       ),
     ).toBe(true);
     // The vfs cwd-check variant ("workspace directory") must route too.

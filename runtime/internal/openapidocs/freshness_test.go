@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/contenox/runtime/internal/openapigen"
+	"github.com/contenox/harness/internal/openapigen"
 )
 
 // TestUnit_OpenAPISpec_Fresh regenerates the OpenAPI spec from the working

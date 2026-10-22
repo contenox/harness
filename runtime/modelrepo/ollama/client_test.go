@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo"
 	"github.com/ollama/ollama/api"
 )
 

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/runtime/localtools"
-	"github.com/contenox/runtime/runtime/taskengine"
-	"github.com/contenox/runtime/runtime/toolguidance"
+	"github.com/contenox/harness/runtime/localtools"
+	"github.com/contenox/harness/runtime/taskengine"
+	"github.com/contenox/harness/runtime/toolguidance"
 )
 
 // TestUnit_ToolGuidance_RealLocalFS_RepeatMarker drives the decorator through the

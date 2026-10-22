@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/backendservice"
+	"github.com/contenox/harness/runtime/backendservice"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

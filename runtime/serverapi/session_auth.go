@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contenox/runtime/libauth"
+	"github.com/contenox/harness/libauth"
 	"golang.org/x/crypto/hkdf"
 )
 

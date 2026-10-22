@@ -11,11 +11,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/internal/backendapi"
-	"github.com/contenox/runtime/runtime/stateservice"
-	"github.com/contenox/runtime/runtime/statetype"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/internal/backendapi"
+	"github.com/contenox/harness/runtime/stateservice"
+	"github.com/contenox/harness/runtime/statetype"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 // chainUsesVar reports whether any task in the chain references {{var:varName}}

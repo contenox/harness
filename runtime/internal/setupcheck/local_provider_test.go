@@ -3,8 +3,8 @@ package setupcheck
 import (
 	"testing"
 
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/statetype"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 func hasIssueCode(r Result, code string) bool {

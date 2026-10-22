@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/contenox/runtime/libacp"
+	"github.com/contenox/harness/libacp"
 )
 
 // Viewer is a consumer attached to one downstream session of a running

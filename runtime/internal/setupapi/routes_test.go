@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/internal/setupcheck"
-	"github.com/contenox/runtime/runtime/stateservice"
-	"github.com/contenox/runtime/runtime/statetype"
+	"github.com/contenox/harness/runtime/internal/setupcheck"
+	"github.com/contenox/harness/runtime/stateservice"
+	"github.com/contenox/harness/runtime/statetype"
 	"github.com/stretchr/testify/require"
 )
 

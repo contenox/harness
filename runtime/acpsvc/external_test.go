@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	libacp "github.com/contenox/runtime/libacp"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/agentregistryservice"
-	"github.com/contenox/runtime/runtime/enginesvc"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libacp "github.com/contenox/harness/libacp"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/agentregistryservice"
+	"github.com/contenox/harness/runtime/enginesvc"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,7 +32,7 @@ import (
 func buildStubAgentBin(t *testing.T) string {
 	t.Helper()
 	binPath := filepath.Join(t.TempDir(), "acp-stub-agent")
-	cmd := exec.Command("go", "build", "-o", binPath, "github.com/contenox/runtime/libacp/cmd/acp-stub-agent")
+	cmd := exec.Command("go", "build", "-o", binPath, "github.com/contenox/harness/libacp/cmd/acp-stub-agent")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("build acp-stub-agent: %v\n%s", err, out)

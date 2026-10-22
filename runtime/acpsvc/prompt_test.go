@@ -7,10 +7,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/enginesvc"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/enginesvc"
+	"github.com/contenox/harness/runtime/taskengine"
 	"github.com/stretchr/testify/require"
 )
 

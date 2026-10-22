@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/workspacegrants"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/workspacegrants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

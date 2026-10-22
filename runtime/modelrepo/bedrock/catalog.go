@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/bedrock"
 	"github.com/aws/aws-sdk-go-v2/service/bedrock/types"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/modelrepo"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/modelrepo"
 )
 
 type catalogProvider struct {

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	libacp "github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/chatservice"
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/taskengine"
+	libacp "github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/chatservice"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/taskengine"
 	"github.com/stretchr/testify/require"
 )
 

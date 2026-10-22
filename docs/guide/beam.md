@@ -304,7 +304,7 @@ contenox session switch <name>
 ```
 
 The same holds for the same work everywhere else: the chains you run in Beam are
-the chains you run from the terminal, from the VS Code extension, or from any
+the chains you run from the terminal, or from any
 [ACP editor](/docs/guide/quickstart/#4-optional-editor-use). One runtime, one set
 of sessions and policies, many front ends.
 

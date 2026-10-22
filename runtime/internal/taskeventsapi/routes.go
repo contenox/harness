@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/apiframework/middleware"
-	libbus "github.com/contenox/runtime/libbus"
-	"github.com/contenox/runtime/runtime/taskengine"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/apiframework/middleware"
+	libbus "github.com/contenox/harness/libbus"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 func AddRoutes(mux *http.ServeMux, pubsub libbus.Messenger, auth middleware.AuthZReader) {

@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/localfileservice"
-	"github.com/contenox/runtime/runtime/taskengine"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/localfileservice"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 type Service interface {

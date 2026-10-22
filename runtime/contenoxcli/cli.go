@@ -16,19 +16,19 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/project"
-	"github.com/contenox/runtime/runtime/reasoning"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/version"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/project"
+	"github.com/contenox/harness/runtime/reasoning"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 // Version is an optional link-time override via
-// -ldflags "-X github.com/contenox/runtime/runtime/contenoxcli.Version=…"
+// -ldflags "-X github.com/contenox/harness/runtime/contenoxcli.Version=…"
 // (e.g. distro packagers). When empty, CLIVersion uses runtime/version/version.txt.
 var Version string
 
@@ -54,7 +54,7 @@ const (
 )
 
 // reservedSubcommands are first-arg names that must not be treated as run input (Cobra or our subcommands).
-var reservedSubcommands = map[string]bool{"init": true, "chat": true, "help": true, "completion": true, "session": true, "run": true, "tools": true, "mcp": true, "backend": true, "agent": true, "config": true, "model": true, "models": true, "modeld": true, "code": true, "doctor": true, "version": true, "state": true, "acp": true, "acpx": true, "vscode-agent": true, "setup": true, "cache": true, "serve": true, "update": true, "approvals": true, "fleet": true, "mission": true, "workspace": true, "sandbox": true, "shell-env": true}
+var reservedSubcommands = map[string]bool{"init": true, "chat": true, "help": true, "completion": true, "session": true, "run": true, "tools": true, "mcp": true, "backend": true, "agent": true, "config": true, "model": true, "models": true, "modeld": true, "doctor": true, "version": true, "state": true, "acp": true, "acpx": true, "setup": true, "cache": true, "serve": true, "update": true, "approvals": true, "fleet": true, "mission": true, "workspace": true, "sandbox": true, "shell-env": true}
 
 // Main runs the contenox CLI: init subcommand or run (default) with optional positional input.
 func Main() {
@@ -407,12 +407,9 @@ func init() {
 	rootCmd.AddCommand(cacheCmd)
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(modelCmd)
-	rootCmd.AddCommand(modeldCmd)
-	rootCmd.AddCommand(codeCmd)
 	rootCmd.AddCommand(stateCmd)
 	rootCmd.AddCommand(acpCmd)
 	rootCmd.AddCommand(acpxCmd)
-	rootCmd.AddCommand(vscodeAgentCmd)
 	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(serveCmd)

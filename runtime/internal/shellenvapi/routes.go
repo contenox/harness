@@ -3,9 +3,9 @@ package shellenvapi
 import (
 	"net/http"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/apiframework/middleware"
-	"github.com/contenox/runtime/runtime/shellenvservice"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/apiframework/middleware"
+	"github.com/contenox/harness/runtime/shellenvservice"
 )
 
 // shellEnvResponse is the GET/PUT body: the global environment variables contenox

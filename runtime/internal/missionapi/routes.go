@@ -13,8 +13,8 @@ package missionapi
 import (
 	"net/http"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/missionservice"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/missionservice"
 )
 
 // MissionPatch is the PATCH body: any subset of intent, status, and a session

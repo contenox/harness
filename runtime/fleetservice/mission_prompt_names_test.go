@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/missiontools"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/missiontools"
+	"github.com/contenox/harness/runtime/taskengine"
 	"github.com/stretchr/testify/require"
 )
 

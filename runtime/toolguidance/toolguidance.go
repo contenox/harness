@@ -69,8 +69,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/taskengine"
 	"github.com/getkin/kin-openapi/openapi3"
 )
 

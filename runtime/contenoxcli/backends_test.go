@@ -6,12 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/backendservice"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/modelrepo/modeldconn"
-	"github.com/contenox/runtime/runtime/runtimestate"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/backendservice"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/runtimestate"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -204,12 +203,6 @@ func TestUnit_getConfigKV_multipleKeys(t *testing.T) {
 		require.NoError(t, err, "key=%s", k)
 		require.Equal(t, want, got, "key=%s", k)
 	}
-}
-
-func TestUnit_DefaultBaseURLForType_ModeldDefaultsToLocalSentinel(t *testing.T) {
-	got, err := defaultBaseURLForType("modeld")
-	require.NoError(t, err)
-	require.Equal(t, modeldconn.LocalSentinel, got)
 }
 
 func TestUnit_DefaultBaseURLForType_UnknownTypesReturnEmptyRequiringExplicitURL(t *testing.T) {

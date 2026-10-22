@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	libbus "github.com/contenox/runtime/libbus"
+	libbus "github.com/contenox/harness/libbus"
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
 )

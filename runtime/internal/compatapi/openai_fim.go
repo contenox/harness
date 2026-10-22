@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 type fimHandler struct {

@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libsandbox"
+	"github.com/contenox/harness/libsandbox"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
 )

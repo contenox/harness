@@ -3,7 +3,7 @@ package taskengine
 import (
 	"testing"
 
-	libmodelprovider "github.com/contenox/runtime/runtime/modelrepo"
+	libmodelprovider "github.com/contenox/harness/runtime/modelrepo"
 	"github.com/stretchr/testify/require"
 )
 

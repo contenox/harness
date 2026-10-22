@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/agenthost"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/agenthost"
 )
 
 // Instance lifecycle states — the vocabulary of InstanceStatus.State.

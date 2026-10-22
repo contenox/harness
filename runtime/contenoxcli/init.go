@@ -12,14 +12,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/backendservice"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/internal/setupcheck"
-	"github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/project"
-	"github.com/contenox/runtime/runtime/runtimestate"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/backendservice"
+	"github.com/contenox/harness/runtime/internal/setupcheck"
+	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/project"
+	"github.com/contenox/harness/runtime/runtimestate"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/google/uuid"
 )
 
@@ -424,20 +423,6 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 		fmt.Fprintf(errOut, "  warning: could not register local backends: %v\n", err)
 	}
 
-	// Make llama the default provider when nothing else is configured.
-	// User-set values are not overwritten.
-	if dbPath, gpErr := globalDBPath(); gpErr == nil {
-		if db, openErr := OpenDBAt(libtracker.WithNewRequestID(context.Background()), dbPath); openErr == nil {
-			ctx := libtracker.WithNewRequestID(context.Background())
-			store := runtimetypes.New(db.WithoutTransaction())
-			if cur, _ := getConfigKV(ctx, store, "default-provider"); cur == "" && isLocalModeldProvider(provider) {
-				workspaceID := ResolveWorkspaceID(contenoxDir)
-				_ = clikv.WriteConfig(ctx, store, workspaceID, "default-provider", provider)
-			}
-			db.Close()
-		}
-	}
-
 	fmt.Fprintln(out, "Done.")
 	fmt.Fprintln(out, "")
 
@@ -523,11 +508,6 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 		fmt.Fprintln(out, "  Get started with Vertex AI: https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts")
 		fmt.Fprintln(out, "")
 		chatStep = 4
-	case "llama", "openvino":
-		fmt.Fprintf(out, "  The %s backend is registered automatically.\n", provider)
-		fmt.Fprintf(out, "  To use it by default: contenox config set default-provider %s\n", provider)
-		setupLocalModeld(out, provider)
-		chatStep = 2
 	case "openrouter":
 		backendRegistered := hasBackendOfType("openrouter")
 		envVal := os.Getenv(pc.envKey)

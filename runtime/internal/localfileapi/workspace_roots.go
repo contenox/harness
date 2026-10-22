@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/project"
-	"github.com/contenox/runtime/runtime/vfs"
-	"github.com/contenox/runtime/runtime/workspacegrants"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/project"
+	"github.com/contenox/harness/runtime/vfs"
+	"github.com/contenox/harness/runtime/workspacegrants"
 )
 
 // workspaceRoot is one entry of the /workspace/roots response: an allowlisted

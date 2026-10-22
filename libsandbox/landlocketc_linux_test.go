@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/contenox/runtime/libsandbox"
+	"github.com/contenox/harness/libsandbox"
 	"github.com/stretchr/testify/require"
 )
 

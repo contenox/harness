@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/runtime/taskengine/llmretry"
+	"github.com/contenox/harness/runtime/taskengine/llmretry"
 )
 
 func TestUnit_ClassifyError(t *testing.T) {

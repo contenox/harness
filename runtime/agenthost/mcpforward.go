@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // McpServerResolver is the narrow lookup surface ResolveForwardedMcpServers

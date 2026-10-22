@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/internal/setupcheck"
-	"github.com/contenox/runtime/runtime/reasoning"
-	"github.com/contenox/runtime/runtime/runtimestate"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/statetype"
+	"github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/internal/setupcheck"
+	"github.com/contenox/harness/runtime/reasoning"
+	"github.com/contenox/harness/runtime/runtimestate"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 // Service exposes runtime backend state plus onboarding/setup evaluation (same inputs as GET /setup-status).

@@ -3,9 +3,9 @@ package toolsapi
 import (
 	"net/http"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/toolsproviderservice"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/toolsproviderservice"
 )
 
 func AddRemoteToolsRoutes(mux *http.ServeMux, service toolsproviderservice.Service) {

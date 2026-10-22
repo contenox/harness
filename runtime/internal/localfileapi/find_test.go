@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/vfs"
+	"github.com/contenox/harness/runtime/vfs"
 	"github.com/stretchr/testify/require"
 )
 

@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/mcpserverservice"
+	"github.com/contenox/harness/runtime/mcpserverservice"
 )
 
 func oauthRedirectURL(res *mcpserverservice.OAuthCallbackResult, status, message string) string {

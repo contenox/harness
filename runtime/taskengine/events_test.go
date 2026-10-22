@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libbus"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/internal/tools"
-	"github.com/contenox/runtime/runtime/llmrepo"
-	libmodelprovider "github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/libbus"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/internal/tools"
+	"github.com/contenox/harness/runtime/llmrepo"
+	libmodelprovider "github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/taskengine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

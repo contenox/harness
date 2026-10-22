@@ -12,8 +12,8 @@ package agentregistryapi
 import (
 	"net/http"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/agentregistryservice"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/agentregistryservice"
 )
 
 // AddAgentRegistryRoutes registers the read-only agent registry routes on mux.

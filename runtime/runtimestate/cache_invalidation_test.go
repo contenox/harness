@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libkvstore"
-	"github.com/contenox/runtime/runtime/runtimestate"
+	"github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libkvstore"
+	"github.com/contenox/harness/runtime/runtimestate"
 	"github.com/stretchr/testify/require"
 )
 

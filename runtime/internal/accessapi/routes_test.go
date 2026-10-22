@@ -11,13 +11,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/internal/accessapi"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/internal/accessapi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/contenox/runtime/runtime/vfs"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 // nopKV forces the hitlservice under test to use its constructor fallback

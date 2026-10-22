@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/apiframework/middleware"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/stateservice"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/apiframework/middleware"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/stateservice"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 type Defaults = stateservice.RuntimeDefaults

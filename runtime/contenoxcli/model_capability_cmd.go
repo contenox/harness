@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/modelcapability"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/modelcapability"
 	"github.com/spf13/cobra"
 )
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contenox/runtime/runtime/taskengine/llmretry"
+	"github.com/contenox/harness/runtime/taskengine/llmretry"
 	"gopkg.in/yaml.v3"
 )
 

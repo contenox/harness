@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

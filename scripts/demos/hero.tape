@@ -13,7 +13,7 @@ Set TypingSpeed 45ms
 Set WaitTimeout 4m
 
 Hide
-Type "mkdir -p /tmp/contenox-demo/.contenox && cd /tmp/contenox-demo && cp ~/src/github.com/contenox/runtime/README.md . && clear"
+Type "mkdir -p /tmp/contenox-demo/.contenox && cd /tmp/contenox-demo && cp ~/src/github.com/contenox/harness/README.md . && clear"
 Enter
 Wait
 Show

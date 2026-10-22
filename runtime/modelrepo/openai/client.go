@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/reasoning"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/reasoning"
 )
 
 type openAIClient struct {

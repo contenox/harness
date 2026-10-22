@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/enginesvc"
-	"github.com/contenox/runtime/runtime/internal/setupcheck"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/enginesvc"
+	"github.com/contenox/harness/runtime/internal/setupcheck"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 func hasIssueCode(issues []setupcheck.Issue, code string) bool {

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/runtime/presence"
+	"github.com/contenox/harness/runtime/presence"
 )
 
 // recordingStore is a ReporterStore test double that counts writes and can be

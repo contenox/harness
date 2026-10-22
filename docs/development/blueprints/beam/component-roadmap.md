@@ -92,4 +92,4 @@ blocks, gates, or delays the basic view.
     maturing (see `attention-layer.md` and the beam criterion).
 
 Deliberately absent (the meaningful-filter): text editing, LSP anything,
-debugging, VS Code iframes, docking layouts.
+debugging, embedded editor iframes, docking layouts.

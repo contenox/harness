@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/agenthost"
-	"github.com/contenox/runtime/runtime/agentregistryservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/agenthost"
+	"github.com/contenox/harness/runtime/agentregistryservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/google/uuid"
 )
 

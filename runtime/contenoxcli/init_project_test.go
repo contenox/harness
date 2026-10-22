@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/project"
+	"github.com/contenox/harness/runtime/project"
 )
 
 // TestUnit_InitProject_ForcesLocalMarker verifies the `init --project` contract:

@@ -15,8 +15,8 @@ import (
 	"net/http"
 	"strings"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/hitlservice"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/hitlservice"
 )
 
 // AnswerRequest is the POST /approvals/{id} body: the human's yes/no answer

@@ -25,9 +25,9 @@ import (
 	"io"
 	"net/http"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/agentinstance"
-	"github.com/contenox/runtime/runtime/fleetservice"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/agentinstance"
+	"github.com/contenox/harness/runtime/fleetservice"
 )
 
 // DispatchRequest is the POST /fleet/dispatch body. It is a type alias onto

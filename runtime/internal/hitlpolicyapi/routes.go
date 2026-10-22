@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/localfileservice"
+	"github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/localfileservice"
 )
 
 func AddRoutes(mux *http.ServeMux, files localfileservice.Service) {

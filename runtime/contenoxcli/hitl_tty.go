@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/localtools"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/localtools"
 )
 
 // ErrApprovalAborted is returned when the operator aborts the whole run from an

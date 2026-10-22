@@ -3,7 +3,7 @@ package libroutine
 import (
 	"context"
 
-	"github.com/contenox/runtime/libbus"
+	"github.com/contenox/harness/libbus"
 )
 
 // SubscribeMessenger triggers r (see Trigger) every time a message is

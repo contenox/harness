@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/runtime/internal/compatapi"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/stateservice"
-	"github.com/contenox/runtime/runtime/statetype"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/internal/compatapi"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/stateservice"
+	"github.com/contenox/harness/runtime/statetype"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 func TestOllamaTagsListsContenoxModels(t *testing.T) {

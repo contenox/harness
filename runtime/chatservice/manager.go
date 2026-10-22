@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"time"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/messagestore"
-	"github.com/contenox/runtime/runtime/taskengine"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/messagestore"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 type Manager struct {

@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/internal/localfileapi"
-	"github.com/contenox/runtime/runtime/vfs"
-	"github.com/contenox/runtime/runtime/workspacegrants"
+	"github.com/contenox/harness/runtime/internal/localfileapi"
+	"github.com/contenox/harness/runtime/vfs"
+	"github.com/contenox/harness/runtime/workspacegrants"
 	"github.com/stretchr/testify/require"
 )
 

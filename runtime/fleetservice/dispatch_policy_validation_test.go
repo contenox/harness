@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/agentregistryservice"
+	"github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/agentregistryservice"
 	"github.com/stretchr/testify/require"
 )
 

@@ -19,7 +19,7 @@ surfaces into leftover chrome.
 A **secondary "canvas" region beside the chat**, holding terminal / file /
 diff as **tabs** (mirroring chats-as-tabs in the primary region). It appears
 side-by-side when something is open and collapses to just-chat when empty.
-The VS Code shape: editor area (chat) + a working pane (canvas).
+The editor shape: editor area (chat) + a working pane (canvas).
 
 - **Terminal** → a canvas tab (full height, real width). The right sidebar is
   removed entirely.

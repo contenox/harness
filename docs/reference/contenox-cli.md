@@ -138,63 +138,7 @@ contenox doctor --skip-cycle    # faster; skips backend sync (status may be stal
 
 ### `contenox model`
 
-Manage models in the local **Model Registry** — a name-to-URL index of GGUF files that can be downloaded for local inference. See [Local Models (GGUF)](/docs/integrations/providers/local-models/) for a full walkthrough.
-
-#### `contenox model registry-list`
-
-List all curated and user-added registry entries. Does not require a running backend.
-
-```bash
-contenox model registry-list
-```
-
-#### `contenox model pull`
-
-Download a curated or custom GGUF model to `~/.contenox/models/llama/<name>/model.gguf` (OpenVINO IR models, curated names ending in `-ov`, land under `~/.contenox/models/openvino/<name>/`).
-
-```bash
-contenox model pull qwen3-4b                                         # curated model
-contenox model pull gemma4-e4b                                       # curated vision model (fetches mmproj.gguf too)
-contenox model pull my-model --url https://huggingface.co/org/repo/resolve/main/model.gguf
-```
-
-After downloading, the model is ready for the `llama` backend (or `openvino` for `-ov` models). `contenox init` registers those backends, and the first pulled model becomes `default-model` on a fresh install. Local inference is served by the `modeld` daemon, which must be running in the matching backend mode.
-
-Curated vision models (shown as `chat+vision` in `model registry-list`) install every artifact image input needs in one pull: llama entries fetch the multimodal projector beside the model as `mmproj.gguf` (a failed projector download is a hard error, and re-running the pull adds a missing projector to an already-installed model); OpenVINO vision snapshots already include their vision encoder.
-
-| Flag    | Description                                          |
-| ------- | ---------------------------------------------------- |
-| `--url` | Direct GGUF download URL (requires a name as arg[0]) |
-
-#### `contenox model add`
-
-Register a custom model entry in the local registry without downloading.
-
-```bash
-contenox model add my-model --url https://huggingface.co/org/repo/resolve/main/model.gguf
-contenox model add my-model --url https://... --size 4500000000
-```
-
-| Flag     | Description                                  |
-| -------- | -------------------------------------------- |
-| `--url`  | Source URL (required)                        |
-| `--size` | File size in bytes (optional, informational) |
-
-#### `contenox model show`
-
-Display registry details for a model.
-
-```bash
-contenox model show qwen3-4b
-```
-
-#### `contenox model remove`
-
-Remove a user-added registry entry by name. Curated entries cannot be removed.
-
-```bash
-contenox model remove my-model
-```
+List the models your configured backends expose, override a model's context window, and manage capability overrides for models whose catalog entry is missing a capability.
 
 #### `contenox model list`
 
@@ -218,23 +162,6 @@ contenox model set-context gemini-3.1-pro-preview --context 1m
 | ----------- | ---------------------------------------------------------------- |
 | `--context` | Context window size: bare integer or shorthand (`12k`, `128k`, `1m`). Required. |
 
-#### `contenox model local`
-
-List installed local model artifacts on disk (under `~/.contenox/models/`), independent of any running backend.
-
-```bash
-contenox model local
-```
-
-#### `contenox model push`
-
-Push a local model artifact to a `modeld` backend (the local daemon or a remote node), so that node can load and serve it.
-
-```bash
-contenox model push qwen3-4b                 # push to the local modeld
-contenox model push qwen3-4b --backend <name> # push to a specific modeld node
-```
-
 #### `contenox model capability`
 
 Manage manual provider/model capability overrides — the reasoning (`think`) and image-input (`vision`) capabilities the runtime assumes for a given provider/model when the catalog doesn't declare them.
@@ -245,28 +172,6 @@ contenox model capability set   <provider> <model> --vision true  # mark the mod
 contenox model capability show  <provider> <model>                # show the current override
 contenox model capability unset <provider> <model>                # remove the override (revert to catalog)
 ```
-
-#### `contenox model snapshot`
-
-Capture and restore local `modeld` session snapshots — the KV-cache / prefill state of a warmed model — for faster resumption.
-
-```bash
-contenox model snapshot save    <model> --out snap.bin   # warm a session, prefill, write the snapshot
-contenox model snapshot restore [model] --in  snap.bin   # restore a session from a snapshot file
-```
-
-### `contenox modeld`
-
-Manage the local `modeld` inference daemon that serves GGUF (llama) and OpenVINO models.
-
-See the dedicated [modeld guide](/docs/integrations/providers/modeld/) for architecture and concepts.
-
-```bash
-contenox modeld install                       # download + verify the prebuilt daemon
-contenox modeld install --backend openvino    # require the openvino backend
-```
-
-`install` resolves the newest protocol-compatible prebuilt build for this platform, verifies its checksum, installs it under `~/.contenox/modeld/`, and prints the `modeld serve` command to start it. It is non-interactive (the same install runs inside `contenox setup` when a local provider is selected); the installer supports it via `CONTENOX_WITH_MODELD=1`.
 
 ### `contenox tools`
 
@@ -336,7 +241,6 @@ Register and manage LLM backend endpoints.
 ```bash
 contenox backend add ollama       --type ollama
 contenox backend add ollama-cloud --type ollama --url https://ollama.com/api --api-key-env OLLAMA_API_KEY
-contenox backend add llama        --type llama --url ~/.contenox/models/llama/
 contenox backend add openai       --type openai  --api-key-env OPENAI_API_KEY
 contenox backend add openrouter   --type openrouter --api-key-env OPENROUTER_API_KEY
 contenox backend add anthropic    --type anthropic --api-key-env ANTHROPIC_API_KEY
@@ -354,7 +258,7 @@ contenox backend remove myvllm
 
 | Flag            | Description                                                                               |
 | --------------- | ----------------------------------------------------------------------------------------- |
-| `--type`        | Backend type: `llama`, `openvino`, `modeld`, `ollama`, `openai`, `openrouter`, `anthropic`, `mistral`, `gemini`, `bedrock`, `vllm`, `vertex-google`. (`local` is a legacy alias for `llama`.) |
+| `--type`        | Backend type: `ollama`, `openai`, `openrouter`, `anthropic`, `mistral`, `gemini`, `bedrock`, `vllm`, `vertex-google`. |
 | `--url`         | Base URL (auto-inferred for openai/openrouter/anthropic/mistral/gemini; required for vllm, bedrock, and vertex-google) |
 | `--api-key-env` | Environment variable holding the API key (preferred)                                      |
 | `--api-key`     | API key literal (avoid — use `--api-key-env`)                                             |
@@ -364,8 +268,8 @@ contenox backend remove myvllm
 Manage persistent CLI defaults stored in SQLite.
 
 ```bash
-contenox config set default-provider llama
-contenox config set default-model    granite-3.2-2b
+contenox config set default-provider ollama
+contenox config set default-model    qwen2.5:7b
 contenox config set default-alt-model gemini-2.5-flash
 contenox config set default-alt-provider gemini
 contenox config set default-autocomplete-model qwen2.5-coder:7b
@@ -616,14 +520,6 @@ The header line names the *resolved* policy (the one that actually gated the bat
 | `--policy <name>` | HITL policy file name to evaluate against, e.g. `hitl-policy-strict.json`; omitted uses the runtime's active policy resolution, the same one the live agent uses |
 | `--server <url>` / `--token <token>` | Reach a running `contenox serve` (as `contenox approvals`) |
 
-### `contenox code [vscode args...]`
-
-Launches VS Code with Contenox's proposed-API extension enabled. Extra arguments are passed through to `code`.
-
-```bash
-contenox code .
-```
-
 ### `contenox state`
 
 Inspects captured execution state from past chain runs — the per-task steps, handlers, transitions, and timings recorded for each request.
@@ -662,14 +558,6 @@ contenox acpx                # headless / untrusted-driver profile
 ```
 
 The chain each profile loads is overridable via `CONTENOX_ACP_CHAIN_PATH` (acp) and `CONTENOX_ACPX_CHAIN_PATH` (acpx). See the [editor integration guides](/docs/integrations/editors/zed/) for client setup.
-
-### `contenox vscode-agent`
-
-Runs the Contenox VS Code bridge over stdio. This is launched by the VS Code extension, not typically invoked by hand.
-
-```bash
-contenox vscode-agent --stdio
-```
 
 ### `contenox version`
 

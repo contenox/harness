@@ -56,9 +56,9 @@ import (
 	"sort"
 	"strings"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/missionservice"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/missionservice"
 )
 
 // The DOI weight table (Stage 1). These weights

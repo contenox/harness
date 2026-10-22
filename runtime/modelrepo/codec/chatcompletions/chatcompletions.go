@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo"
 )
 
 // Request is the OpenAI-compatible chat/completions request body.

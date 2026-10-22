@@ -10,12 +10,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/backendservice"
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/modelregistry"
-	"github.com/contenox/runtime/runtime/modelregistryservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/backendservice"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/modelregistry"
+	"github.com/contenox/harness/runtime/modelregistryservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/google/uuid"
 )
 

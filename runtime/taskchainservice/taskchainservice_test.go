@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/localfileservice"
-	"github.com/contenox/runtime/runtime/taskchainservice"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/localfileservice"
+	"github.com/contenox/harness/runtime/taskchainservice"
+	"github.com/contenox/harness/runtime/taskengine"
 	"github.com/stretchr/testify/require"
 )
 

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/localtools"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/localtools"
+	"github.com/contenox/harness/runtime/taskengine"
 	"github.com/getkin/kin-openapi/openapi3"
 )
 

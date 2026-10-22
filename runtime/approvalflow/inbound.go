@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/contenox/runtime/libacp"
+	"github.com/contenox/harness/libacp"
 )
 
 // This file is the INVERSE of BuildRequest: it projects an inbound ACP

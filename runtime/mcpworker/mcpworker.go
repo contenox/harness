@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/libbus"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/localtools"
-	"github.com/contenox/runtime/runtime/localtools/mcpoauth"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/libbus"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/localtools"
+	"github.com/contenox/harness/runtime/localtools/mcpoauth"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // SubjectExecute returns the NATS subject for tool execution on a named MCP server.

@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/vfs"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 // Op names the access being evaluated. Kept as a small vocabulary so callers can

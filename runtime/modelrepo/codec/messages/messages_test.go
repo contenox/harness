@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/contenox/runtime/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo"
 )
 
 func TestUnit_Build_SystemExtractionAndDefaults(t *testing.T) {

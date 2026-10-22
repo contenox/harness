@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/taskchainservice"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/taskchainservice"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 func AddTaskChainRoutes(mux *http.ServeMux, service taskchainservice.Service) {

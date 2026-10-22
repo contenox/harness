@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/contenox/runtime/runtime/errdefs"
-	"github.com/contenox/runtime/runtime/llmrepo"
+	"github.com/contenox/harness/runtime/errdefs"
+	"github.com/contenox/harness/runtime/llmrepo"
 	"github.com/google/uuid"
 )
 

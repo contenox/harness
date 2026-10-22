@@ -48,7 +48,7 @@ sh install.sh
 
 ```
 
-*Pre-built release downloads and source builds are also available on the [releases page](https://github.com/contenox/runtime/releases).*
+*Pre-built release downloads and source builds are also available on the [releases page](https://github.com/contenox/harness/releases).*
 
 ---
 
@@ -74,13 +74,11 @@ Inline autocomplete runs on a dedicated model separate from the main chat. This 
 contenox config set default-provider          openai
 contenox config set default-model             gpt-5-mini
 
-# Ghost text routed to a local model
-contenox config set default-autocomplete-provider llama
-contenox config set default-autocomplete-model    qwen3-coder-30b-a3b
+# Ghost text routed to a small, fast model
+contenox config set default-autocomplete-provider ollama
+contenox config set default-autocomplete-model    qwen2.5-coder:7b
 
 ```
-
-*To enable autocomplete in VS Code, run the command:* `Contenox: Enable Autocomplete`.
 
 ---
 
@@ -95,7 +93,7 @@ Contenox excels when workflows are specific, repeatable, and require explicit gu
 * **Inspecting Live Operations:** Query diagnostic dashboards, shell scripts, or Model Context Protocol (MCP) tools via tightly scoped policies rather than broad, persistent credentials.
 * **Edge Autocomplete:** Offload editor suggestions to local workstation models while maintaining high-powered reasoning in chat.
 
-The exact same Chain runs seamlessly across the **Terminal, VS Code, Zed, JetBrains, AionUi,** or any standard ACP client.
+The exact same Chain runs seamlessly across the **Terminal, Zed, JetBrains, AionUi,** or any standard ACP client.
 
 ---
 
@@ -172,7 +170,6 @@ Tool invocations render dynamically as interactive UI cards showing the underlyi
 
 ### Other Environments
 
-* **VS Code:** Install the official [Contenox Extension](https://marketplace.visualstudio.com/items?itemName=contenox.contenox-runtime) (`ext install contenox.contenox-runtime`).
 * **Web Interface:** Running `contenox serve` mounts your active sessions, chains, and backends locally inside **Beam**, the bundled web UI.
 
 *Step-by-step guides:* [Zed](https://contenox.com/docs/integrations/editors/zed/) | [JetBrains](https://contenox.com/docs/integrations/editors/jetbrains/) | [AionUi](https://contenox.com/docs/integrations/editors/aionui/).
@@ -194,32 +191,10 @@ contenox backend add anthropic --type anthropic --api-key-env ANTHROPIC_API_KEY
 contenox backend add gemini    --type gemini    --api-key-env GEMINI_API_KEY
 
 # Set global operational routing defaults
-contenox config set default-model     qwen3-8b
-contenox config set default-provider  llama
+contenox config set default-model     qwen2.5:7b
+contenox config set default-provider  ollama
 
 ```
-
-> **Note on Local Inference:** The native `llama` and `openvino` backends are driven by `modeld`, Contenox's local inference engine. `modeld` ships as its own per-platform package: `contenox setup` resolves, downloads, and checksum-verifies a compatible build automatically. To build it yourself instead, see the [modeld Source Build Guide](docs/development/modeld-source-build.md).
-
----
-
-## `modeld` System Architecture
-
-> **The North Star:** Routine tokens must be kept local, private, and cheap.
-
-`modeld` represents Contenox’s vision for local inference: an architecture defined by a single owner, an active local model, persistent work sessions, and zero-latency resident context optimized for consumer workstation hardware.
-
-Rather than treating context as an expensive prompt resent on every single turn, `modeld` optimizes for long-context execution via resident state:
-
-* **Dedicated Compute Allocation:** Device memory and KV budgets focus entirely on running a single model deep and fast, bypassing multi-tenant multiplexing penalties.
-* **Warm-Reuse Sessions:** Stably prefixed KV states are kept hot in memory. Only newly altered trailing suffixes are re-prefilled, radically dropping execution costs on massive repositories.
-* **Durable Snapshot & Restore:** Session graphs are branchable and persist across process restarts, letting code context outlive terminal sessions.
-* **Zero-Configuration Acceleration:** Automatic detection of hardware capability at runtime ensures optimal offloading ratios and context window bounds with zero manual tuning.
-
-### Architecture Deep-Dives
-
-* [Effective-Context Runtime Strategy](docs/development/blueprints/modeld/effective-context/README.md)
-* [modeld Local Inference Landscape](docs/development/modeld-local-inference-landscape.md)
 
 ---
 
@@ -228,22 +203,14 @@ Rather than treating context as an expensive prompt resent on every single turn,
 ### Prerequisites
 
 * **Go 1.25+**
-* C/C++ compiler toolchain (for local engine bindings)
 
 ```bash
 # Clone the repository
-git clone https://github.com/contenox/runtime
+git clone https://github.com/contenox/harness
 cd runtime
 
 # Build the main core CLI
 make build-contenox
-
-# Compile and run modeld with the llama.cpp backend
-CONTENOX_MODELD_BACKEND=llama make run-modeld
-
-# Compile and run modeld with the Intel OpenVINO backend
-make deps-modeld
-CONTENOX_MODELD_BACKEND=openvino make run-modeld
 
 ```
 
@@ -251,17 +218,7 @@ CONTENOX_MODELD_BACKEND=openvino make run-modeld
 
 ## Core Dependencies
 
-The `contenox` core CLI is written entirely in pure Go. Local inference runs out-of-process via the C/C++ `modeld` daemon, linking against the following upstream libraries:
-
-| Dependency | System Role | Licensing |
-| --- | --- | --- |
-| [llama.cpp](https://github.com/ggml-org/llama.cpp) | GGUF inference optimization across CPU, CUDA, HIP, and Metal | MIT |
-| [OpenVINO](https://github.com/openvinotoolkit/openvino) | Hardware-accelerated runtime for CPU, iGPU, and NPU chips | Apache-2.0 |
-| [OpenVINO GenAI](https://github.com/openvinotoolkit/openvino.genai) | LLM pipelines built over foundational OpenVINO runtimes | Apache-2.0 |
-| [OpenVINO Tokenizers](https://github.com/openvinotoolkit/openvino_tokenizers) | Specialized execution parsing for OpenVINO GenAI | Apache-2.0 |
-| [minja](https://github.com/google/minja) | Jinja-style chat template engine (bundled in GenAI) | MIT |
-
-*Upstream license notices accompany all compiled artifacts in the `/licenses` and `/LICENSES` directories inside modeld packages (llama.cpp + OpenVINO components + NVIDIA CUDA EULA when applicable). This ensures compliance for public distribution via VS Code, registries, and Windows Store. Go dependencies are maintained standardly in `go.mod`.*
+The `contenox` core CLI is written entirely in pure Go. Go dependencies are maintained standardly in `go.mod`.
 
 ---
 

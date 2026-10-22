@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/liblease"
+	"github.com/contenox/harness/liblease"
 )
 
 func leasePath(t *testing.T) string {

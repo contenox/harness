@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/runtime/presence"
+	"github.com/contenox/harness/runtime/presence"
 	"github.com/stretchr/testify/require"
 )
 

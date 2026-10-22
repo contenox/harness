@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/libtracker"
+	"github.com/contenox/harness/libtracker"
 )
 
 // BackendSpec is the runtime-independent input needed to talk to a model catalog.

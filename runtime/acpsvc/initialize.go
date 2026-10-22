@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/version"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/version"
 )
 
 func (t *Transport) Initialize(ctx context.Context, req libacp.InitializeRequest) (libacp.InitializeResponse, error) {

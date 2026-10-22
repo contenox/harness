@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/runtime/localtools"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/runtime/localtools"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 func TestUnit_LocalFSTools_Exec(t *testing.T) {

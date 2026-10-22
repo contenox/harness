@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libprocess"
+	"github.com/contenox/harness/libprocess"
 	"github.com/stretchr/testify/require"
 )
 

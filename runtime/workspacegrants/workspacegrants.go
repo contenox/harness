@@ -43,8 +43,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/internal/clikv"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/internal/clikv"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // ConfigKey is the clikv key the durable workspace-root grant list is stored

@@ -15,10 +15,10 @@ import (
 	"net/http"
 	"strings"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/runtime/accessview"
-	"github.com/contenox/runtime/runtime/internal/localfileapi"
-	"github.com/contenox/runtime/runtime/vfs"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/runtime/accessview"
+	"github.com/contenox/harness/runtime/internal/localfileapi"
+	"github.com/contenox/harness/runtime/vfs"
 )
 
 // maxBatchPaths bounds one request's path list. It is a defensive cap (a

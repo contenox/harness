@@ -10,14 +10,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/libkvstore"
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/backendservice"
-	"github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/modelrepo/modeldconn"
-	"github.com/contenox/runtime/runtime/runtimestate"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/libkvstore"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/backendservice"
+	"github.com/contenox/harness/runtime/runtimestate"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
@@ -117,12 +115,6 @@ func defaultBaseURLForType(typ string) (string, error) {
 		return "https://api.mistral.ai/v1", nil
 	case "gemini":
 		return "https://generativelanguage.googleapis.com", nil
-	case "modeld":
-		// "local" reaches the local daemon via its lease, not a stored
-		// address — the same one the llama/openvino rows already use. This
-		// makes `backend add <name> --type modeld` (no --url) the easy path
-		// for registering "this machine's modeld" alongside a remote node.
-		return modeldconn.LocalSentinel, nil
 	case "vertex-google":
 		return "", fmt.Errorf("--url is required for %s backends\n  Include project and location, e.g.:\n  --url \"https://us-central1-aiplatform.googleapis.com/v1/projects/$GOOGLE_CLOUD_PROJECT/locations/us-central1\"", typ)
 	case "bedrock":
@@ -272,13 +264,6 @@ If no backends are registered, prints a hint to run 'contenox backend add'.`,
 		for _, b := range backends {
 			url := b.BaseURL
 			typ := b.Type
-			if modelrepo.CanonicalBackendType(b.Type) == "modeld" {
-				if b.BaseURL == modeldconn.LocalSentinel || b.BaseURL == "" {
-					typ = "modeld (local)"
-				} else {
-					typ = "modeld (remote)"
-				}
-			}
 			fmt.Fprintf(w, "%s\t%s\t%s\n", b.Name, typ, url)
 		}
 		return w.Flush()

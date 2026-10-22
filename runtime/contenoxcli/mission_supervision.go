@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/missiontools"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/missiontools"
 )
 
 // missionSupervision is the composition-root adapter that gives a session which

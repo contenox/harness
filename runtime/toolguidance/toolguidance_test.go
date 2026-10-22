@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/taskengine"
-	"github.com/contenox/runtime/runtime/toolguidance"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/taskengine"
+	"github.com/contenox/harness/runtime/toolguidance"
 	"github.com/getkin/kin-openapi/openapi3"
 )
 

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	libacp "github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/shellsession"
+	libacp "github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/shellsession"
 )
 
 const (

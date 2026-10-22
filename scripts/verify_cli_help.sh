@@ -38,7 +38,6 @@ EXPECTED_CMDS=(
   "backend"
   "cache"
   "chat"
-  "code"
   "config"
   "doctor"
   "fleet"
@@ -46,7 +45,6 @@ EXPECTED_CMDS=(
   "mcp"
   "mission"
   "model"
-  "modeld"
   "run"
   "serve"
   "session"
@@ -55,7 +53,6 @@ EXPECTED_CMDS=(
   "tools"
   "update"
   "version"
-  "vscode-agent"
   "workspace"
 )
 

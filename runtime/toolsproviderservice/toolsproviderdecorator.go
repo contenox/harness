@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/getkin/kin-openapi/openapi3"
 )
 

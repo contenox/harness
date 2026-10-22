@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // SQLDialect selects the placeholder style used for the local_fs_reads table.

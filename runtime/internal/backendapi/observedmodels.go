@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/statetype"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 func sanitizeRuntimeStates(states []statetype.BackendRuntimeState) []statetype.BackendRuntimeState {

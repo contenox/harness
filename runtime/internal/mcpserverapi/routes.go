@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"net/http"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/apiframework/middleware"
-	"github.com/contenox/runtime/libbus"
-	"github.com/contenox/runtime/runtime/mcpserverservice"
-	"github.com/contenox/runtime/runtime/mcpworker"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/apiframework/middleware"
+	"github.com/contenox/harness/libbus"
+	"github.com/contenox/harness/runtime/mcpserverservice"
+	"github.com/contenox/harness/runtime/mcpworker"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 func AddMCPServerRoutes(mux *http.ServeMux, svc mcpserverservice.Service, messenger libbus.Messenger, auth middleware.AuthZReader) {

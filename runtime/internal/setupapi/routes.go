@@ -3,9 +3,9 @@ package setupapi
 import (
 	"net/http"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/apiframework/middleware"
-	"github.com/contenox/runtime/runtime/stateservice"
+	apiframework "github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/apiframework/middleware"
+	"github.com/contenox/harness/runtime/stateservice"
 )
 
 func AddSetupRoutes(mux *http.ServeMux, stateService stateservice.Service, auth middleware.AuthZReader) {

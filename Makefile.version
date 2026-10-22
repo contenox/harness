@@ -9,7 +9,7 @@ help:
 	@echo "Version file: runtime/version/version.txt (see tools/version/)"
 	@echo "  make -f Makefile.version set-version"
 	@echo "  make -f Makefile.version bump-patch | bump-minor | bump-major"
-	@echo "Bump targets sync VS Code package metadata, create a release commit, and tag it."
+	@echo "Bump targets update the version file, create a release commit, and tag it."
 
 set-version:
 	go run $(PROJECT_ROOT)/tools/version/main.go set

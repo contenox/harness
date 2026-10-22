@@ -3,9 +3,9 @@ package localfileapi
 import (
 	"context"
 
-	"github.com/contenox/runtime/runtime/agentview"
-	"github.com/contenox/runtime/runtime/hitlservice"
-	"github.com/contenox/runtime/runtime/localfileservice"
+	"github.com/contenox/harness/runtime/agentview"
+	"github.com/contenox/harness/runtime/hitlservice"
+	"github.com/contenox/harness/runtime/localfileservice"
 )
 
 // Entry is a /files list element: the raw filesystem entry plus optional,

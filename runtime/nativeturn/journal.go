@@ -3,7 +3,7 @@ package nativeturn
 import (
 	"context"
 
-	"github.com/contenox/runtime/libacp"
+	"github.com/contenox/harness/libacp"
 )
 
 // Event is one captured session/update tagged with a per-session MONOTONIC

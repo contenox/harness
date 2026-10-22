@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"strings"
 
-	libacp "github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/agentinstance"
-	"github.com/contenox/runtime/runtime/agentservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libacp "github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/agentinstance"
+	"github.com/contenox/harness/runtime/agentservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 // ADOPT — binding an ALREADY-RUNNING instance+session to a NEW upstream session.

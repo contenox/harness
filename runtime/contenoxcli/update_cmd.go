@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/internal/updatecheck"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/internal/updatecheck"
 	"github.com/spf13/cobra"
 )
 
@@ -122,7 +122,7 @@ func downloadAndReplace(ctx context.Context, cmd *cobra.Command, tag string) err
 		ext = ".exe"
 	}
 	asset := fmt.Sprintf("contenox-%s-%s%s", goruntime.GOOS, goruntime.GOARCH, ext)
-	url := fmt.Sprintf("https://github.com/contenox/runtime/releases/download/%s/%s", tag, asset)
+	url := fmt.Sprintf("https://github.com/contenox/harness/releases/download/%s/%s", tag, asset)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -135,7 +135,7 @@ func downloadAndReplace(ctx context.Context, cmd *cobra.Command, tag string) err
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download failed: server returned %d for %s\nPlease download manually from https://github.com/contenox/runtime/releases", resp.StatusCode, url)
+		return fmt.Errorf("download failed: server returned %d for %s\nPlease download manually from https://github.com/contenox/harness/releases", resp.StatusCode, url)
 	}
 
 	exe, err := os.Executable()
@@ -172,7 +172,7 @@ func downloadAndReplace(ctx context.Context, cmd *cobra.Command, tag string) err
 		old := exe + ".old"
 		_ = os.Remove(old) // discard any leftover from a previous update attempt
 		if err := os.Rename(exe, old); err != nil {
-			return fmt.Errorf("could not move existing binary (try running as Administrator): %w\nDownload manually from https://github.com/contenox/runtime/releases", err)
+			return fmt.Errorf("could not move existing binary (try running as Administrator): %w\nDownload manually from https://github.com/contenox/harness/releases", err)
 		}
 	}
 

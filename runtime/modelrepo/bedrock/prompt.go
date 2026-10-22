@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo"
 )
 
 type bedrockPromptClient struct{ bedrockClient }

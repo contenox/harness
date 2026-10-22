@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	libacp "github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/project"
-	"github.com/contenox/runtime/runtime/reasoning"
-	"github.com/contenox/runtime/runtime/statetype"
+	libacp "github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/project"
+	"github.com/contenox/harness/runtime/reasoning"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 const (

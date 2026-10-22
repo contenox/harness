@@ -15,7 +15,7 @@ describe('meaningfulTitle', () => {
 
 describe('workspaceLabel', () => {
   it('returns the basename of the cwd', () => {
-    expect(workspaceLabel('/home/naro/src/github.com/contenox/runtime')).toBe('runtime');
+    expect(workspaceLabel('/home/naro/src/github.com/contenox/harness')).toBe('runtime');
     expect(workspaceLabel('/home/naro/proj/')).toBe('proj'); // trailing slash tolerated
     expect(workspaceLabel('/single')).toBe('single');
   });

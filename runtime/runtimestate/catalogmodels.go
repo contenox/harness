@@ -3,8 +3,8 @@ package runtimestate
 import (
 	"strings"
 
-	"github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/statetype"
+	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 const observedDisplayNameMetaKey = "display_name"

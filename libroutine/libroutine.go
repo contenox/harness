@@ -40,10 +40,10 @@
 // StartSchedule on an arbitrary Schedule (interface-compatible with
 // robfig/cron/v3's cron.Schedule, so real cron syntax is a parser away
 // without libroutine depending on one), or SubscribeMessenger to react to a
-// github.com/contenox/runtime/libbus.Messenger subject.
+// github.com/contenox/harness/libbus.Messenger subject.
 //
 // Condition and Operation are plain funcs, so a Job can drive anything
-// (including github.com/contenox/runtime/libprocess), and every trigger
+// (including github.com/contenox/harness/libprocess), and every trigger
 // path runs through the same Routine — a chain that starts failing
 // repeatedly opens its circuit and backs off instead of being retried every
 // tick or event forever.

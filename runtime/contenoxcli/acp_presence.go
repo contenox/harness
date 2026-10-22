@@ -3,8 +3,8 @@ package contenoxcli
 import (
 	"context"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/presence"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/presence"
 )
 
 // presenceAgent decorates the ACP transport to feed the fleet-presence reporter

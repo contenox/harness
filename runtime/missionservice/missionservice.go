@@ -52,9 +52,9 @@ import (
 	"strings"
 	"time"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	apiframework "github.com/contenox/harness/apiframework"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"github.com/google/uuid"
 )
 

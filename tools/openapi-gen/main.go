@@ -16,7 +16,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/contenox/runtime/internal/openapigen"
+	"github.com/contenox/harness/internal/openapigen"
 )
 
 func main() {

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contenox/runtime/apiframework"
-	"github.com/contenox/runtime/libauth"
+	"github.com/contenox/harness/apiframework"
+	"github.com/contenox/harness/libauth"
 )
 
 // ExtractAndSetTokenMiddleware extracts a token from Authorization header or

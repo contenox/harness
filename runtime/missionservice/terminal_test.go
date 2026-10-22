@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	apiframework "github.com/contenox/runtime/apiframework"
-	libdb "github.com/contenox/runtime/libdbexec"
+	apiframework "github.com/contenox/harness/apiframework"
+	libdb "github.com/contenox/harness/libdbexec"
 	"github.com/stretchr/testify/require"
 )
 

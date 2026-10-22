@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contenox/runtime/libroutine"
+	"github.com/contenox/harness/libroutine"
 )
 
 func TestUnit_GroupAffinitySingleton(t *testing.T) {

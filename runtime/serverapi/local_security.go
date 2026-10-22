@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/contenox/runtime/apiframework"
+	"github.com/contenox/harness/apiframework"
 )
 
 func ValidateLocalServeSecurity(addr, token string) error {

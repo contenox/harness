@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/contenox/runtime/apiframework"
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/terminalstore"
+	"github.com/contenox/harness/apiframework"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/terminalstore"
 )
 
 type CreateRequest struct {

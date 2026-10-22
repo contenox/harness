@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/contenox/runtime/libtracker"
-	"github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/modelrepo/codec/chatcompletions"
+	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo/codec/chatcompletions"
 )
 
 const defaultBaseURL = "https://api.mistral.ai/v1"

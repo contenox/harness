@@ -107,7 +107,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/contenox/runtime/apiframework"
+	"github.com/contenox/harness/apiframework"
 )
 
 // OutPath is the repo-root-relative path of the generated spec — where the

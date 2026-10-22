@@ -2,21 +2,16 @@
 package setupcheck
 
 import (
-	"context"
 	"fmt"
 	"net/url"
-	"runtime"
 	"slices"
 	"sort"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/internal/llmresolver"
-	"github.com/contenox/runtime/runtime/internal/modeldinstall"
-	"github.com/contenox/runtime/runtime/internal/modeldprobe"
-	"github.com/contenox/runtime/runtime/modelrepo"
-	"github.com/contenox/runtime/runtime/modelrepo/modeldconn"
-	"github.com/contenox/runtime/runtime/runtimetypes"
-	"github.com/contenox/runtime/runtime/statetype"
+	"github.com/contenox/harness/runtime/internal/llmresolver"
+	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/runtimetypes"
+	"github.com/contenox/harness/runtime/statetype"
 )
 
 const (
@@ -685,15 +680,6 @@ func backendHint(backend runtimetypes.Backend, kind backendErrorKind) string {
 			return fmt.Sprintf("Verify that %s is running at %s.", providerDisplayName(backend.Type), backend.BaseURL)
 		case "vllm":
 			return fmt.Sprintf("Verify that %s is running at %s.", providerDisplayName(backend.Type), backend.BaseURL)
-		case "llama":
-			return fmt.Sprintf("Verify modeld is running in llama mode and the model directory contains GGUF artifacts. Installed files: contenox model local; live/loadable models: contenox model list. Directory: %s", backend.BaseURL)
-		case "openvino":
-			return fmt.Sprintf("Verify modeld is running in openvino mode and the model directory contains OpenVINO IR artifacts. Installed files: contenox model local; live/loadable models: contenox model list. Directory: %s", backend.BaseURL)
-		case "modeld":
-			if backend.BaseURL == modeldconn.LocalSentinel {
-				return fmt.Sprintf("Verify the local modeld daemon is running: contenox model status. Backend %q reaches it via the lease, not a stored address.", backend.Name)
-			}
-			return fmt.Sprintf("Verify a modeld daemon is running and reachable at %s (check network/firewall/tailnet). Backend %q dials it directly over gRPC.", backend.BaseURL, backend.Name)
 		default:
 			return fmt.Sprintf("Check connectivity and base URL for backend %q (%s).", backend.Name, backend.BaseURL)
 		}
@@ -831,30 +817,9 @@ func noChatModelsCommand(provider string) string {
 		return "contenox model list   # Gemini models from AI Studio metadata; set default-model to a gemini-* name"
 	case "bedrock":
 		return "Enable the model in the AWS Bedrock console (Model access), then: contenox model list   # Bedrock returns AccessDeniedException until the model is enabled for your account"
-	case "llama":
-		return localModeldHint("llama", "contenox model pull qwen3-4b   # then 'contenox model list' shows loadable models")
-	case "openvino":
-		return localModeldHint("openvino", "contenox model registry-list && contenox model pull <openvino-model>   # then 'contenox model list' shows loadable models")
 	default:
 		return "contenox model list   # if empty, pull a chat model (e.g. ollama pull " + DefaultOllamaSuggestModel + ")"
 	}
-}
-
-// localModeldHint points at the step that is actually missing for a local
-// modeld provider: the daemon when it is not serving this backend, otherwise
-// the first model pull.
-func localModeldHint(backend, pullHint string) string {
-	if modeldconn.Backend() == backend {
-		return pullHint
-	}
-	root := modeldprobe.DefaultDataRoot()
-	if inst, err := modeldinstall.FindCompatibleInstall(context.Background(), root, runtime.GOOS, runtime.GOARCH, backend); err == nil {
-		if backend == "openvino" {
-			return "CONTENOX_MODELD_BACKEND=openvino " + inst.LauncherPath + " serve   # start the local modeld daemon, then retry"
-		}
-		return inst.LauncherPath + " serve   # start the local modeld daemon, then retry"
-	}
-	return "contenox modeld install   # download the local modeld daemon; it prints how to start it"
 }
 
 func primaryDiagnosticCommand(provider string) string {

@@ -3,7 +3,7 @@ package serverapi
 import (
 	"net/http"
 
-	"github.com/contenox/runtime/apiframework"
+	"github.com/contenox/harness/apiframework"
 )
 
 type HealthResponse struct {

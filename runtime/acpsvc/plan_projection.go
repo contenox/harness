@@ -3,10 +3,10 @@ package acpsvc
 import (
 	"encoding/json"
 
-	"github.com/contenox/runtime/libacp"
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/missiontools"
-	"github.com/contenox/runtime/runtime/taskengine"
+	"github.com/contenox/harness/libacp"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/missiontools"
+	"github.com/contenox/harness/runtime/taskengine"
 )
 
 // planToolEventName is the fully-qualified tool name a mission_plan call carries

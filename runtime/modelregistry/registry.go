@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/modelregistryservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/modelregistryservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 var ErrNotFound = errors.New("model not found in registry")

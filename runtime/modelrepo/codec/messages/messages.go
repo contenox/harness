@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/contenox/runtime/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo"
 )
 
 // DefaultMaxTokens is used when the caller does not set ChatConfig.MaxTokens.

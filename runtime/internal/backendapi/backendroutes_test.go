@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	libdb "github.com/contenox/runtime/libdbexec"
-	"github.com/contenox/runtime/runtime/backendservice"
-	"github.com/contenox/runtime/runtime/internal/backendapi"
-	"github.com/contenox/runtime/runtime/internal/missionapi"
-	"github.com/contenox/runtime/runtime/missionservice"
-	"github.com/contenox/runtime/runtime/runtimetypes"
+	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/backendservice"
+	"github.com/contenox/harness/runtime/internal/backendapi"
+	"github.com/contenox/harness/runtime/internal/missionapi"
+	"github.com/contenox/harness/runtime/missionservice"
+	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 func TestCreateBackendDuplicateReturnsSanitizedConflict(t *testing.T) {
