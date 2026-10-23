@@ -11,24 +11,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnit_CatalogProvider_PaginatesListModels(t *testing.T) {
+// GET /models defines no pagination envelope, so a body carrying has_more and
+// last_id must not send the runtime after a second page.
+func TestUnit_CatalogProvider_ListModelsIgnoresUndefinedPagination(t *testing.T) {
 	calls := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "/models", r.URL.Path)
+		require.Empty(t, r.URL.RawQuery, "the vendor defines no after/limit query parameter")
 		calls++
 		w.Header().Set("Content-Type", "application/json")
-		if r.URL.Query().Get("after") == "" {
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"data":     []map[string]any{{"id": "gpt-5"}},
-				"has_more": true,
-				"last_id":  "gpt-5",
-			})
-		} else {
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"data":     []map[string]any{{"id": "gpt-4o"}},
-				"has_more": false,
-			})
-		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"object": "list",
+			"data": []map[string]any{
+				{"id": "gpt-5", "object": "model", "created": 1, "owned_by": "openai"},
+				{"id": "gpt-4o", "object": "model", "created": 2, "owned_by": "openai"},
+			},
+			"has_more": true,
+			"last_id":  "gpt-4o",
+		})
 	}))
 	defer srv.Close()
 
@@ -37,7 +37,7 @@ func TestUnit_CatalogProvider_PaginatesListModels(t *testing.T) {
 
 	models, err := catalog.ListModels(context.Background())
 	require.NoError(t, err)
-	require.Equal(t, 2, calls, "must have fetched two pages")
+	require.Equal(t, 1, calls, "the documented envelope is one page")
 	require.Len(t, models, 2)
 	names := []string{models[0].Name, models[1].Name}
 	require.Contains(t, names, "gpt-5")
@@ -75,7 +75,7 @@ func TestUnit_CatalogProvider_ListModels(t *testing.T) {
 	require.True(t, models[0].CanPrompt)
 	require.True(t, models[0].CanStream)
 	require.False(t, models[0].CanEmbed)
-	require.False(t, models[0].CanThink, "OpenAI /models does not expose reasoning capability metadata")
+	require.True(t, models[0].CanThink, "gpt-5 reasons (openai/facts.go)")
 	require.True(t, models[0].CanVision, "gpt-5 supports image input (maintained list)")
 	require.Equal(t, 128000, models[0].MaxOutputTokens)
 
@@ -88,14 +88,11 @@ func TestUnit_CatalogProvider_ListModels(t *testing.T) {
 	provider := catalog.ProviderFor(models[0])
 	require.Equal(t, "openai", provider.GetType())
 	require.Equal(t, "gpt-5", provider.ModelName())
-	require.False(t, provider.CanThink())
+	require.True(t, provider.CanThink())
 	require.True(t, provider.CanVision(), "gpt-5 vision flows through to the provider")
 }
 
-// TestUnit_CatalogProvider_VisionLandmines verifies the maintained OpenAI vision
-// list flows through ListModels for the tricky splits: base gpt-4 and the *-mini
-// reasoning models are text-only, gpt-4o/o4-mini have vision, and audio models
-// (which are not chat) never claim it.
+// Base gpt-4 and *-mini reasoning models are text-only; gpt-4o/o4-mini have vision; audio models never claim it.
 func TestUnit_CatalogProvider_VisionLandmines(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

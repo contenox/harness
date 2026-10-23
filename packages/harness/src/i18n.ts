@@ -458,7 +458,6 @@ const resources = {
         github: 'Github',
         home: 'Home',
         backends: 'Backends',
-        local_runtime_modeld: 'Modeld',
         settings: 'Settings',
         chat: 'Chat',
         chats: 'Chats',
@@ -1556,7 +1555,6 @@ const resources = {
       state: {
         title: 'Backend State',
         runtime_tab: 'Runtime state',
-        local_runtime_tab: 'Modeld',
         runtime_title: 'Runtime sync',
         runtime_intro:
           'Latest snapshot from the runtime backend refresh loop (reachability, observed models, sync errors). This is not a download queue.',
@@ -2739,7 +2737,6 @@ const resources = {
         github: 'Github',
         home: 'Startseite',
         backends: 'Backends',
-        local_runtime_modeld: 'Modeld',
         settings: 'Einstellungen',
         chat: 'Chat',
         chats: 'Chats',
@@ -3495,7 +3492,6 @@ const resources = {
       state: {
         title: 'Backend-Status',
         runtime_tab: 'Laufzeitstatus',
-        local_runtime_tab: 'Modeld',
         runtime_title: 'Laufzeit-Sync',
         runtime_intro:
           'Aktueller Stand aus der Backend-Aktualisierung der Laufzeit (Erreichbarkeit, beobachtete Modelle, Sync-Fehler). Keine Download-Warteschlange.',

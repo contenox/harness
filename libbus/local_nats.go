@@ -2,10 +2,12 @@ package libbus
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"time"
 
+	natsclient "github.com/nats-io/nats.go"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/nats"
 )
@@ -25,6 +27,8 @@ func quiet() func() {
 	}
 }
 
+// SetupNatsInstance starts a NATS container and returns its URL, the container,
+// and a cleanup func.
 func SetupNatsInstance(ctx context.Context) (string, testcontainers.Container, func(), error) {
 	defer quiet()()
 	cleanup := func() {}
@@ -41,6 +45,25 @@ func SetupNatsInstance(ctx context.Context) (string, testcontainers.Container, f
 	if err != nil {
 		return "", nil, cleanup, err
 	}
+	// The nats module's readiness wait can return before the server accepts
+	// connections (observed as a first-connect EOF under host load), so probe
+	// the URL here rather than leaking that race into every caller.
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		probe, cerr := natsclient.Connect(cons)
+		if cerr == nil {
+			probe.Close()
+			break
+		}
+		if time.Now().After(deadline) {
+			return "", nil, cleanup, fmt.Errorf("nats at %s never accepted a connection: %w", cons, cerr)
+		}
+		select {
+		case <-ctx.Done():
+			return "", nil, cleanup, ctx.Err()
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
 	return cons, natsContainer, cleanup, nil
 }
 
@@ -52,7 +75,6 @@ func NewTestPubSub() (Messenger, func(), error) {
 	if err != nil {
 		return nil, func() {}, err
 	}
-	// Optionally log container status if needed.
 	log.Printf("NATS container running: %v", container)
 
 	cfg := &Config{
@@ -74,7 +96,6 @@ func NewTestPubSub() (Messenger, func(), error) {
 		cleanup()
 		return nil, func() {}, err
 	}
-	// Return a cleanup function that closes PubSub and terminates the container.
 	return ps, func() {
 		_ = ps.Close()
 		cleanup()

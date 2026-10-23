@@ -85,13 +85,9 @@ func Build(ctx context.Context, db libdbexec.DBManager, cfg Config) (*Engine, er
 		tenantID = runtimetypes.LocalTenantID
 	}
 	config := &runtimestate.Config{
-		TenantID:   tenantID,
-		EmbedModel: cfg.DefaultModel,
-		TaskModel:  cfg.DefaultModel,
-		ChatModel:  cfg.DefaultModel,
-	}
-	if err := runtimestate.InitEmbeder(ctx, config, db, cfg.ContextLength, state); err != nil {
-		return nil, fmt.Errorf("failed to init embedder: %w", err)
+		TenantID:  tenantID,
+		TaskModel: cfg.DefaultModel,
+		ChatModel: cfg.DefaultModel,
 	}
 	if err := runtimestate.InitPromptExec(ctx, config, db, state, cfg.ContextLength); err != nil {
 		return nil, fmt.Errorf("failed to init prompt executor: %w", err)

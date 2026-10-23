@@ -10,45 +10,63 @@ import (
 )
 
 type OllamaProvider struct {
-	Name            string
-	ID              string
-	ContextLength   int
-	MaxOutputTokens int
-	SupportsChat    bool
-	SupportsEmbed   bool
-	SupportsStream  bool
-	SupportsPrompt  bool
-	SupportsThink   bool
-	SupportsVision  bool
-	apiKey          string
-	httpClient      *http.Client
-	Backends        []string
-	tracker         libtracker.ActivityTracker
+	SupportsAutocomplete   bool
+	SupportsNextEdit       bool
+	FIMFormat              string
+	NextEditFormat         string
+	Name                   string
+	ID                     string
+	ContextLength          int
+	MaxOutputTokens        int
+	SupportsChat           bool
+	SupportsEmbed          bool
+	SupportsStream         bool
+	SupportsPrompt         bool
+	SupportsThink          bool
+	SupportsVision         bool
+	SupportsAudio          bool
+	SupportsAudioExtension bool
+	SupportsSession        bool
+	// ThinkingTypes is the model's declared thinking controls, which decide
+	// which level a request may carry; nil means the endpoint declared none.
+	ThinkingTypes *modelrepo.ThinkingTypes
+	apiKey        string
+	httpClient    *http.Client
+	Backends      []string
+	tracker       libtracker.ActivityTracker
 }
 
 func NewOllamaProvider(name string, backends []string, httpClient *http.Client, caps modelrepo.CapabilityConfig, apiKey string, tracker libtracker.ActivityTracker) modelrepo.Provider {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = modelrepo.SharedHTTPClient
 	}
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
 	}
 
 	return &OllamaProvider{
-		Name:            name,
-		ID:              "ollama:" + name,
-		ContextLength:   caps.ContextLength,
-		MaxOutputTokens: caps.MaxOutputTokens,
-		SupportsChat:    caps.CanChat,
-		SupportsEmbed:   caps.CanEmbed,
-		SupportsStream:  caps.CanStream,
-		SupportsPrompt:  caps.CanPrompt,
-		SupportsThink:   caps.CanThink,
-		SupportsVision:  caps.CanVision,
-		apiKey:          apiKey,
-		Backends:        backends,
-		httpClient:      httpClient,
-		tracker:         tracker,
+		SupportsAutocomplete:   caps.CanAutocomplete,
+		SupportsNextEdit:       caps.CanNextEdit,
+		FIMFormat:              caps.FIMFormat,
+		NextEditFormat:         caps.NextEditFormat,
+		Name:                   name,
+		ID:                     "ollama:" + name,
+		ContextLength:          caps.ContextLength,
+		MaxOutputTokens:        caps.MaxOutputTokens,
+		SupportsChat:           caps.CanChat,
+		SupportsEmbed:          caps.CanEmbed,
+		SupportsStream:         caps.CanStream,
+		SupportsPrompt:         caps.CanPrompt,
+		SupportsThink:          caps.CanThink,
+		SupportsVision:         caps.CanVision,
+		SupportsAudio:          caps.CanAudio,
+		SupportsAudioExtension: caps.AudioExtension,
+		SupportsSession:        caps.SessionExtension,
+		ThinkingTypes:          caps.ThinkingTypes,
+		apiKey:                 apiKey,
+		Backends:               backends,
+		httpClient:             httpClient,
+		tracker:                tracker,
 	}
 }
 
@@ -95,6 +113,10 @@ func (p *OllamaProvider) CanVision() bool {
 	return p.SupportsVision
 }
 
+func (p *OllamaProvider) CanAudio() bool {
+	return p.SupportsAudio
+}
+
 func (p *OllamaProvider) GetChatConnection(ctx context.Context, backendID string) (modelrepo.LLMChatClient, error) {
 	if !p.CanChat() {
 		return nil, fmt.Errorf("provider %s (model %s) does not support chat", p.GetID(), p.ModelName())
@@ -105,12 +127,16 @@ func (p *OllamaProvider) GetChatConnection(ctx context.Context, backendID string
 	}
 
 	return &OllamaChatClient{
-		ollamaClient:    client,
-		modelName:       p.ModelName(),
-		backendURL:      backendID,
-		maxOutputTokens: p.MaxOutputTokens,
-		supportsThink:   p.SupportsThink,
-		tracker:         p.tracker,
+		ollamaClient:     client,
+		audioExtension:   p.SupportsAudioExtension,
+		sessionExtension: p.SupportsSession,
+		modelName:        p.ModelName(),
+		backendURL:       backendID,
+		maxOutputTokens:  p.MaxOutputTokens,
+		contextLength:    p.ContextLength,
+		thinking:         p.ThinkingTypes,
+		supportsThink:    p.SupportsThink,
+		tracker:          p.tracker,
 	}, nil
 }
 
@@ -145,6 +171,8 @@ func (p *OllamaProvider) GetPromptConnection(ctx context.Context, backendID stri
 		modelName:       p.ModelName(),
 		backendURL:      backendID,
 		maxOutputTokens: p.MaxOutputTokens,
+		contextLength:   p.ContextLength,
+		thinking:        p.ThinkingTypes,
 		supportsThink:   p.SupportsThink,
 		tracker:         p.tracker,
 	}, nil
@@ -159,11 +187,17 @@ func (p *OllamaProvider) GetStreamConnection(ctx context.Context, backendID stri
 		return nil, fmt.Errorf("invalid backend URL '%s' for provider %s: %w", backendID, p.GetID(), err)
 	}
 	return &OllamaStreamClient{
-		ollamaClient:    client,
-		modelName:       p.ModelName(),
-		backendURL:      backendID,
-		maxOutputTokens: p.MaxOutputTokens,
-		supportsThink:   p.SupportsThink,
-		tracker:         p.tracker,
+		ollamaClient:     client,
+		audioExtension:   p.SupportsAudioExtension,
+		sessionExtension: p.SupportsSession,
+		modelName:        p.ModelName(),
+		backendURL:       backendID,
+		maxOutputTokens:  p.MaxOutputTokens,
+		contextLength:    p.ContextLength,
+		thinking:         p.ThinkingTypes,
+		supportsThink:    p.SupportsThink,
+		tracker:          p.tracker,
 	}, nil
 }
+
+func (p *OllamaProvider) CanAutocomplete() bool { return p.SupportsAutocomplete }

@@ -13,14 +13,21 @@ type VLLMChatClient struct {
 	vLLMClient
 }
 
-func NewVLLMChatClient(ctx context.Context, baseURL, modelName string, contextLength, maxOutputTokens int, httpClient *http.Client, apiKey string, canThink bool, tracker libtracker.ActivityTracker) (modelrepo.LLMChatClient, error) {
+func NewVLLMChatClient(ctx context.Context, baseURL, modelName string, contextLength, maxOutputTokens int, httpClient *http.Client, apiKey string, canThink, canAudio bool, tracker libtracker.ActivityTracker) (modelrepo.LLMChatClient, error) {
+	if httpClient == nil {
+		httpClient = modelrepo.SharedHTTPClient
+	}
+	if tracker == nil {
+		tracker = libtracker.NoopTracker{}
+	}
 	client := &VLLMChatClient{
 		vLLMClient: vLLMClient{
-			baseURL:         baseURL,
+			baseURL:         normalizeBaseURL(baseURL),
 			httpClient:      httpClient,
 			modelName:       modelName,
 			maxOutputTokens: maxOutputTokens,
 			canThink:        canThink,
+			canAudio:        canAudio,
 			apiKey:          apiKey,
 			tracker:         tracker,
 		},
@@ -31,11 +38,15 @@ func NewVLLMChatClient(ctx context.Context, baseURL, modelName string, contextLe
 }
 
 func (c *VLLMChatClient) Chat(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (modelrepo.ChatResult, error) {
-	// Start tracking the operation
 	reportErr, reportChange, end := c.tracker.Start(ctx, "chat", "vllm", "model", c.modelName)
 	defer end()
 
-	request := buildChatRequest(c.modelName, messages, args, c.canThink)
+	if err := c.checkAudio(messages); err != nil {
+		reportErr(err)
+		return modelrepo.ChatResult{}, err
+	}
+
+	request, nameMap := buildChatRequest(c.modelName, messages, args, c.canThink)
 	c.clampChatRequest(&request)
 
 	var response chatResponse
@@ -53,23 +64,24 @@ func (c *VLLMChatClient) Chat(ctx context.Context, messages []modelrepo.Message,
 
 	choice := response.Choices[0]
 
-	// Convert to our format
 	message := modelrepo.Message{
 		Role:     choice.Message.Role,
 		Content:  choice.Message.Content,
 		Thinking: choice.Message.Thinking(),
 	}
 
-	// Convert tool calls
-	toolCalls := convertChatToolCalls(choice.Message.ToolCalls)
+	toolCalls := convertChatToolCalls(choice.Message.ToolCalls, nameMap)
 
 	result := modelrepo.ChatResult{
 		Message:   message,
 		ToolCalls: toolCalls,
+		Usage:     response.Usage.Usage(),
 	}
 
+	result.FinishReason = choice.FinishReason
 	switch choice.FinishReason {
-	case "stop", "tool_calls":
+	case "stop", "tool_calls", "length":
+		// "length" is a truncated success; partial content is real.
 		reportChange("chat_completed", map[string]any{
 			"finish_reason":    choice.FinishReason,
 			"content_length":   len(message.Content),
@@ -77,10 +89,6 @@ func (c *VLLMChatClient) Chat(ctx context.Context, messages []modelrepo.Message,
 			"tool_calls_count": len(toolCalls),
 		})
 		return result, nil
-	case "length":
-		err := fmt.Errorf("token limit reached")
-		reportErr(err)
-		return modelrepo.ChatResult{}, err
 	case "content_filter":
 		err := fmt.Errorf("content filtered")
 		reportErr(err)

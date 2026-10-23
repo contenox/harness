@@ -248,7 +248,7 @@
           },
           "pulledModels": {
             "items": {
-              "$ref": "#/components/schemas/statetype_ModelPullStatus"
+              "$ref": "#/components/schemas/runtimestate_ModelPullStatus"
             },
             "type": "array"
           },
@@ -288,7 +288,7 @@
           },
           "pulledModels": {
             "items": {
-              "$ref": "#/components/schemas/statetype_ModelPullStatus"
+              "$ref": "#/components/schemas/runtimestate_ModelPullStatus"
             },
             "type": "array"
           },
@@ -1094,6 +1094,43 @@
         },
         "type": "object"
       },
+      "modelrepo_PromptCacheContract": {
+        "properties": {
+          "fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ttls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "modelrepo_ThinkingTypes": {
+        "properties": {
+          "adaptive": {
+            "type": "boolean"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "effortLevels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "operatorinbox_Item": {
         "properties": {
           "agentName": {
@@ -1255,6 +1292,178 @@
         },
         "type": "object"
       },
+      "runtimestate_BackendRuntimeState": {
+        "properties": {
+          "backend": {
+            "$ref": "#/components/schemas/runtimetypes_Backend"
+          },
+          "discoveryError": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "liveEngine": {
+            "type": "string"
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pulledModels": {
+            "items": {
+              "$ref": "#/components/schemas/runtimestate_ModelPullStatus"
+            },
+            "type": "array"
+          },
+          "resolvedEndpoint": {
+            "type": "string"
+          },
+          "resolvedInstance": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "runtimestate_ModelDetails": {
+        "properties": {
+          "families": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "family": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "parameterSize": {
+            "type": "string"
+          },
+          "parentModel": {
+            "type": "string"
+          },
+          "quantizationLevel": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "runtimestate_ModelPullStatus": {
+        "properties": {
+          "adapterCapabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "advertisedCapabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "audioExtension": {
+            "type": "boolean"
+          },
+          "canAudio": {
+            "type": "boolean"
+          },
+          "canAutocomplete": {
+            "type": "boolean"
+          },
+          "canChat": {
+            "type": "boolean"
+          },
+          "canEmbed": {
+            "type": "boolean"
+          },
+          "canNextEdit": {
+            "type": "boolean"
+          },
+          "canPrompt": {
+            "type": "boolean"
+          },
+          "canStream": {
+            "type": "boolean"
+          },
+          "canThink": {
+            "type": "boolean"
+          },
+          "canVision": {
+            "type": "boolean"
+          },
+          "completionMode": {
+            "type": "string"
+          },
+          "contextLength": {
+            "type": "integer"
+          },
+          "declaredCapabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "details": {
+            "$ref": "#/components/schemas/runtimestate_ModelDetails"
+          },
+          "digest": {
+            "type": "string"
+          },
+          "fimFormat": {
+            "type": "string"
+          },
+          "maxOutputTokens": {
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nativeBackend": {
+            "type": "string"
+          },
+          "nextEditFormat": {
+            "type": "string"
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/runtimetypes_ModelPricing"
+          },
+          "promptCache": {
+            "$ref": "#/components/schemas/modelrepo_PromptCacheContract"
+          },
+          "registered": {
+            "type": "boolean"
+          },
+          "sessionExtension": {
+            "type": "boolean"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "thinkingTypes": {
+            "$ref": "#/components/schemas/modelrepo_ThinkingTypes"
+          }
+        },
+        "type": "object"
+      },
       "runtimetypes_Agent": {
         "properties": {
           "configJson": {},
@@ -1339,6 +1548,9 @@
           },
           "name": {
             "type": "string"
+          },
+          "revision": {
+            "type": "integer"
           },
           "type": {
             "type": "string"
@@ -1479,6 +1691,29 @@
           },
           "url": {
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "runtimetypes_ModelPricing": {
+        "properties": {
+          "cache_read_per_million": {
+            "type": "number"
+          },
+          "cache_write_per_million": {
+            "type": "number"
+          },
+          "input_per_million": {
+            "type": "number"
+          },
+          "output_per_million": {
+            "type": "number"
+          },
+          "per_audio_mebibyte": {
+            "type": "number"
+          },
+          "per_image": {
+            "type": "number"
           }
         },
         "type": "object"
@@ -1798,118 +2033,6 @@
         },
         "type": "object"
       },
-      "statetype_BackendRuntimeState": {
-        "properties": {
-          "backend": {
-            "$ref": "#/components/schemas/runtimetypes_Backend"
-          },
-          "error": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "liveEngine": {
-            "type": "string"
-          },
-          "models": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "name": {
-            "type": "string"
-          },
-          "pulledModels": {
-            "items": {
-              "$ref": "#/components/schemas/statetype_ModelPullStatus"
-            },
-            "type": "array"
-          },
-          "resolvedEndpoint": {
-            "type": "string"
-          },
-          "resolvedInstance": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "statetype_ModelDetails": {
-        "properties": {
-          "families": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "family": {
-            "type": "string"
-          },
-          "format": {
-            "type": "string"
-          },
-          "parameterSize": {
-            "type": "string"
-          },
-          "parentModel": {
-            "type": "string"
-          },
-          "quantizationLevel": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "statetype_ModelPullStatus": {
-        "properties": {
-          "canChat": {
-            "type": "boolean"
-          },
-          "canEmbed": {
-            "type": "boolean"
-          },
-          "canPrompt": {
-            "type": "boolean"
-          },
-          "canStream": {
-            "type": "boolean"
-          },
-          "canThink": {
-            "type": "boolean"
-          },
-          "canVision": {
-            "type": "boolean"
-          },
-          "contextLength": {
-            "type": "integer"
-          },
-          "details": {
-            "$ref": "#/components/schemas/statetype_ModelDetails"
-          },
-          "digest": {
-            "type": "string"
-          },
-          "maxOutputTokens": {
-            "type": "integer"
-          },
-          "model": {
-            "type": "string"
-          },
-          "modifiedAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "size": {
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
       "taskengine_CapturedStateUnit": {
         "properties": {
           "cancelled": {
@@ -1921,6 +2044,9 @@
           },
           "error": {
             "$ref": "#/components/schemas/taskengine_ErrorResponse"
+          },
+          "finishReason": {
+            "type": "string"
           },
           "input": {},
           "inputType": {
@@ -1941,6 +2067,9 @@
           },
           "retryIndex": {
             "type": "integer"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/taskengine_EventScope"
           },
           "taskHandler": {
             "type": "string"
@@ -1969,6 +2098,20 @@
       "taskengine_ErrorResponse": {
         "properties": {
           "error": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "taskengine_EventScope": {
+        "properties": {
+          "chain": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string"
+          },
+          "tool_call": {
             "type": "string"
           }
         },
@@ -2134,10 +2277,19 @@
       },
       "taskengine_TokenUsage": {
         "properties": {
+          "cacheRead": {
+            "type": "integer"
+          },
+          "cacheWrite": {
+            "type": "integer"
+          },
           "completion": {
             "type": "integer"
           },
           "prompt": {
+            "type": "integer"
+          },
+          "thinking": {
             "type": "integer"
           },
           "total": {
@@ -5719,7 +5871,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/statetype_BackendRuntimeState"
+                    "$ref": "#/components/schemas/runtimestate_BackendRuntimeState"
                   },
                   "type": "array"
                 }

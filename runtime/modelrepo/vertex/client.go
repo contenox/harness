@@ -11,7 +11,7 @@ import (
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
-	"github.com/contenox/harness/runtime/reasoning"
+	"github.com/contenox/harness/runtime/modelrepo/gemini"
 )
 
 type vertexClient struct {
@@ -20,14 +20,20 @@ type vertexClient struct {
 	modelName       string
 	contextLength   int
 	maxOutputTokens int
-	credJSON        string // service account JSON; empty → ADC
-	httpClient      *http.Client
-	canThink        bool
-	tracker         libtracker.ActivityTracker
-	tokenFn         func(context.Context) (string, error) // test tools; overrides credJSON when set
+	credJSON        string
+	// apiKey is an Agent Platform express mode API key: the request carries it
+	// instead of an OAuth bearer token and needs no project or location.
+	apiKey     string
+	httpClient *http.Client
+	canThink   bool
+	tracker    libtracker.ActivityTracker
+	tokenFn    func(context.Context) (string, error)
+	// quotaProject is the billing project a user credential must name on every
+	// request; empty means the credential is not a user credential and the
+	// vendor documents no quota project header for it.
+	quotaProject string
 }
 
-// endpoint builds the full Vertex AI API URL for a given method (e.g. "generateContent").
 func (c *vertexClient) endpoint(method string) string {
 	return strings.TrimRight(c.baseURL, "/") +
 		"/publishers/" + c.publisher +
@@ -35,9 +41,6 @@ func (c *vertexClient) endpoint(method string) string {
 		":" + method
 }
 
-// bearer returns an OAuth2 access token using the provider's cached source
-// (the per-call BearerTokenWithCreds fallback only fires in tests, where
-// tokenFn is unset).
 func (c *vertexClient) bearer(ctx context.Context) (string, error) {
 	tokenFn := c.tokenFn
 	if tokenFn == nil {
@@ -48,21 +51,10 @@ func (c *vertexClient) bearer(ctx context.Context) (string, error) {
 	return tokenFn(ctx)
 }
 
-// authHeaders sets the bearer token and the quota-project header on req.
 func (c *vertexClient) authHeaders(ctx context.Context, req *http.Request) error {
-	token, err := c.bearer(ctx)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	if project := extractProjectFromVertexURL(c.baseURL); project != "" {
-		req.Header.Set("x-goog-user-project", project)
-	}
-	return nil
+	return ApplyVertexAuth(ctx, req, c.apiKey, c.quotaProject, c.bearer)
 }
 
-// postJSON POSTs request as JSON to endpoint with ADC bearer auth and returns
-// the raw response body. Used by the Gemini path via sendRequest.
 func (c *vertexClient) postJSON(ctx context.Context, endpoint string, request any) ([]byte, error) {
 	reportErr, reportChange, end := c.tracker.Start(
 		ctx,
@@ -74,7 +66,7 @@ func (c *vertexClient) postJSON(ctx context.Context, endpoint string, request an
 	)
 	defer end()
 
-	var reqBody io.Reader
+	var payload []byte
 	if request != nil {
 		b, err := json.Marshal(request)
 		if err != nil {
@@ -82,22 +74,27 @@ func (c *vertexClient) postJSON(ctx context.Context, endpoint string, request an
 			reportErr(err)
 			return nil, err
 		}
-		reqBody = bytes.NewBuffer(b)
+		payload = b
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, reqBody)
-	if err != nil {
-		err = fmt.Errorf("failed to create request: %w", err)
-		reportErr(err)
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if err := c.authHeaders(ctx, req); err != nil {
-		reportErr(err)
-		return nil, err
-	}
-
-	resp, err := c.httpClient.Do(req)
+	// Bounded end-to-end; retried on 429/5xx with Retry-After honored.
+	ctx, cancel := modelrepo.NonStreamingContext(ctx)
+	defer cancel()
+	resp, err := modelrepo.DoWithRetry(ctx, c.httpClient, func() (*http.Request, error) {
+		var reqBody io.Reader
+		if payload != nil {
+			reqBody = bytes.NewReader(payload)
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, reqBody)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		if err := c.authHeaders(ctx, req); err != nil {
+			return nil, err
+		}
+		return req, nil
+	})
 	if err != nil {
 		err = fmt.Errorf("HTTP request failed for model %s: %w", c.modelName, err)
 		reportErr(err)
@@ -117,10 +114,12 @@ func (c *vertexClient) postJSON(ctx context.Context, endpoint string, request an
 		if jsonErr := json.Unmarshal(body, &eresp); jsonErr == nil && eresp.Error.Message != "" {
 			err = fmt.Errorf("vertex API error: %d %s - %s (model=%s url=%s)",
 				resp.StatusCode, eresp.Error.Status, eresp.Error.Message, c.modelName, endpoint)
+			err = modelrepo.ClassifyProviderError(err, resp.StatusCode, eresp.Error.Status, eresp.Error.Message)
 			reportErr(err)
 			return nil, err
 		}
 		err = fmt.Errorf("vertex API error: %d - %s (model=%s url=%s)", resp.StatusCode, string(body), c.modelName, endpoint)
+		err = modelrepo.ClassifyProviderError(err, resp.StatusCode, "", string(body))
 		reportErr(err)
 		return nil, err
 	}
@@ -129,8 +128,6 @@ func (c *vertexClient) postJSON(ctx context.Context, endpoint string, request an
 	return body, nil
 }
 
-// sendRequest POSTs to the given Vertex AI endpoint and decodes the JSON
-// response into response. Pattern mirrors gemini/client.go sendRequest.
 func (c *vertexClient) sendRequest(ctx context.Context, endpoint string, request interface{}, response interface{}) error {
 	body, err := c.postJSON(ctx, endpoint, request)
 	if err != nil {
@@ -144,9 +141,12 @@ func (c *vertexClient) sendRequest(ctx context.Context, endpoint string, request
 	return nil
 }
 
-// buildVertexRequest converts modelrepo messages and args to a vertexRequest.
-// Free function matching OpenAI/Gemini convention.
 func buildVertexRequest(modelName string, messages []modelrepo.Message, args []modelrepo.ChatArgument, canThink ...bool) (vertexRequest, error) {
+	// Raw-byte cap enforced under the generateContent 20 MB total-request limit before the wire.
+	if err := modelrepo.ValidateAudioParts("vertex", modelName, messages); err != nil {
+		return vertexRequest{}, err
+	}
+
 	cfg := &modelrepo.ChatConfig{}
 	for _, a := range args {
 		a.Apply(cfg)
@@ -173,14 +173,14 @@ func buildVertexRequest(modelName string, messages []modelrepo.Message, args []m
 			if t.Type != "function" || t.Function == nil {
 				continue
 			}
-			schema, err := sanitizeVertexSchema(t.Function.Parameters)
+			schema, err := vertexParameterSchema(t.Function.Parameters)
 			if err != nil {
 				return vertexRequest{}, err
 			}
 			decls = append(decls, vertexFunctionDeclaration{
-				Name:        t.Function.Name,
-				Description: t.Function.Description,
-				Parameters:  schema,
+				Name:                 t.Function.Name,
+				Description:          t.Function.Description,
+				ParametersJsonSchema: schema,
 			})
 		}
 		if len(decls) > 0 {
@@ -188,7 +188,8 @@ func buildVertexRequest(modelName string, messages []modelrepo.Message, args []m
 		}
 	}
 
-	contents := convertToVertexContents(filtered)
+	contents := convertToVertexContents(filtered, modelName)
+	contents = trimTrailingModelTurn(contents)
 	if len(contents) == 0 {
 		return vertexRequest{}, fmt.Errorf("vertex: refusing to send empty contents for model %s after filtering %d message(s); provide at least one non-empty user/model/tool message, tool call, or tool response", modelName, len(messages))
 	}
@@ -203,95 +204,62 @@ func buildVertexRequest(modelName string, messages []modelrepo.Message, args []m
 	req.GenerationConfig.TopP = cfg.TopP
 	req.GenerationConfig.MaxOutputTokens = cfg.MaxTokens
 	req.GenerationConfig.Seed = cfg.Seed
+	applyVertexResponseFormat(req.GenerationConfig, cfg.Format)
+
 	if vertexThinkingAllowed(canThink) {
-		req.GenerationConfig.ThinkingConfig = vertexThinkingConfigForModel(modelName, cfg.Think)
+		control, err := gemini.ThinkingControlFor(modelName, cfg.Think)
+		if err != nil {
+			return vertexRequest{}, err
+		}
+		if control != nil {
+			req.GenerationConfig.ThinkingConfig = &vertexThinkingConfig{
+				ThinkingBudget:  control.Budget,
+				ThinkingLevel:   control.Level,
+				IncludeThoughts: control.IncludeThoughts,
+			}
+		}
 	}
 
 	return req, nil
+}
+
+// applyVertexResponseFormat puts the neutral structured-output control on the
+// request: the vendor's responseMimeType selects JSON output and
+// responseJsonSchema carries the caller's schema whole. The text mode
+// constrains nothing and is left off the wire.
+func applyVertexResponseFormat(config *vertexGenerationConfig, format *modelrepo.ResponseFormat) {
+	if format == nil || format.Mode == modelrepo.ResponseFormatText {
+		return
+	}
+	config.ResponseMimeType = "application/json"
+	if format.Mode == modelrepo.ResponseFormatJSONSchema {
+		config.ResponseJsonSchema = format.Schema
+	}
+}
+
+// vertexParameterSchema renders a tool's declared parameters as the vendor's
+// documented JSON Schema member. A tool that declares none carries neither
+// member, which the vendor documents as optional.
+func vertexParameterSchema(parameters any) (json.RawMessage, error) {
+	if parameters == nil {
+		return nil, nil
+	}
+	raw, err := json.Marshal(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("vertex: encode tool parameter schema: %w", err)
+	}
+	return raw, nil
 }
 
 func vertexThinkingAllowed(canThink []bool) bool {
 	return len(canThink) == 0 || canThink[0]
 }
 
-func vertexThinkingConfigForModel(modelName string, think *string) *vertexThinkingConfig {
-	level, ok, err := reasoning.NormalizeOptional(vertexStringPtrValue(think))
-	if err != nil || !ok || level == reasoning.Auto {
-		return nil
-	}
-	if vertexUsesThinkingLevel(modelName) {
-		mapped := vertexThinkingLevel(modelName, level)
-		if mapped == "" {
-			return nil
-		}
-		return &vertexThinkingConfig{ThinkingLevel: mapped}
-	}
-	budget, ok := vertexThinkingBudget(level)
-	if !ok {
-		return nil
-	}
-	return &vertexThinkingConfig{ThinkingBudget: &budget}
-}
+// vertexThinkingAllowed reports whether the model's declaration says it
+// thinks; a model whose declaration says it does not is never sent a thinking
+// control.
 
-func vertexStringPtrValue(v *string) string {
-	if v == nil {
-		return ""
-	}
-	return *v
-}
-
-func vertexUsesThinkingLevel(modelName string) bool {
-	m := strings.ToLower(strings.TrimSpace(modelName))
-	return strings.Contains(m, "gemini-3")
-}
-
-func vertexThinkingLevel(modelName, level string) string {
-	m := strings.ToLower(modelName)
-	switch level {
-	case reasoning.Off:
-		if strings.Contains(m, "flash") {
-			return "minimal"
-		}
-		return "low"
-	case reasoning.Minimal:
-		if strings.Contains(m, "flash") {
-			return "minimal"
-		}
-		return "low"
-	case reasoning.Low:
-		return "low"
-	case reasoning.Medium:
-		if strings.Contains(m, "flash") {
-			return "medium"
-		}
-		return "high"
-	case reasoning.High, reasoning.XHigh:
-		return "high"
-	default:
-		return ""
-	}
-}
-
-func vertexThinkingBudget(level string) (int, bool) {
-	switch level {
-	case reasoning.Off:
-		return 0, true
-	case reasoning.Minimal, reasoning.Low:
-		return 1024, true
-	case reasoning.Medium:
-		return 8192, true
-	case reasoning.High:
-		return 24576, true
-	case reasoning.XHigh:
-		return -1, true
-	default:
-		return 0, false
-	}
-}
-
-// convertToVertexContents maps modelrepo messages to Vertex AI content format.
-// Mirrors convertToGeminiMessages in the gemini package.
-func convertToVertexContents(messages []modelrepo.Message) []vertexContent {
+func convertToVertexContents(messages []modelrepo.Message, modelName string) []vertexContent {
 	out := make([]vertexContent, 0, len(messages))
 	toolCallNameByID := make(map[string]string)
 
@@ -308,15 +276,27 @@ func convertToVertexContents(messages []modelrepo.Message) []vertexContent {
 			role = "user"
 		}
 
+		for _, tc := range m.ToolCalls {
+			if tc.ID != "" && tc.Function.Name != "" {
+				toolCallNameByID[tc.ID] = tc.Function.Name
+			}
+		}
+
+		if stored, ok := replayContinuation(m.Continuation, modelName); ok {
+			if len(out) > 0 && out[len(out)-1].Role == role {
+				out[len(out)-1].Parts = mergeVertexParts(out[len(out)-1].Parts, stored)
+			} else {
+				out = append(out, vertexContent{Role: role, Parts: stored})
+			}
+			continue
+		}
+
 		parts := make([]vertexPart, 0)
 
 		if m.Content != "" && m.Role != "tool" {
 			parts = append(parts, vertexPart{Text: m.Content})
 		}
 
-		// Image attachments: append one inlineData part per image, after the
-		// text part, mirroring the OpenAI content-parts ordering. The resolver
-		// only routes image-bearing requests to vision-capable providers.
 		for _, img := range m.Images {
 			parts = append(parts, vertexPart{
 				InlineData: &vertexInlineData{
@@ -326,11 +306,17 @@ func convertToVertexContents(messages []modelrepo.Message) []vertexContent {
 			})
 		}
 
+		for _, a := range m.Audio {
+			parts = append(parts, vertexPart{
+				InlineData: &vertexInlineData{
+					MimeType: a.MimeType,
+					Data:     a.Data,
+				},
+			})
+		}
+
 		if len(m.ToolCalls) > 0 {
 			for _, tc := range m.ToolCalls {
-				if tc.ID != "" && tc.Function.Name != "" {
-					toolCallNameByID[tc.ID] = tc.Function.Name
-				}
 				if tc.Function.Name == "" {
 					continue
 				}
@@ -345,10 +331,10 @@ func convertToVertexContents(messages []modelrepo.Message) []vertexContent {
 				part := vertexPart{
 					FunctionCall: &vertexFunctionCall{Name: tc.Function.Name, Args: args},
 				}
-				if sig, ok := tc.ProviderMeta["thought_signature"]; ok && sig != "" {
+				if sig := tc.ProviderMeta[thoughtSignatureMetaKey]; sig != "" {
 					part.ThoughtSignature = sig
 				} else {
-					part.ThoughtSignature = "skip_thought_signature_validator"
+					part.ThoughtSignature = skipThoughtSignatureValidator
 				}
 				parts = append(parts, part)
 			}
@@ -372,13 +358,53 @@ func convertToVertexContents(messages []modelrepo.Message) []vertexContent {
 		}
 
 		if len(out) > 0 && out[len(out)-1].Role == role {
-			out[len(out)-1].Parts = append(out[len(out)-1].Parts, parts...)
+			out[len(out)-1].Parts = mergeVertexParts(out[len(out)-1].Parts, parts)
 		} else {
 			out = append(out, vertexContent{Role: role, Parts: parts})
 		}
 	}
 
 	return out
+}
+
+// mergeVertexParts appends one message's parts to the parts of the turn of the
+// same role that precedes it, keeping every functionResponse after that turn's
+// prose and media. Vertex wants one user turn per function-call cycle — two
+// user-role contents in a row fail its alternation check — so a tool result and
+// the operator's next prompt share a turn; text placed after a functionResponse
+// is the shape Vertex answers with "Requests ending with a model turn are not
+// supported".
+func mergeVertexParts(existing, incoming []vertexPart) []vertexPart {
+	responses := make([]vertexPart, 0, len(incoming))
+	merged := make([]vertexPart, 0, len(existing)+len(incoming))
+	keep := func(parts []vertexPart) {
+		for _, p := range parts {
+			if p.FunctionResponse != nil {
+				responses = append(responses, p)
+				continue
+			}
+			merged = append(merged, p)
+		}
+	}
+	keep(existing)
+	keep(incoming)
+	return append(merged, responses...)
+}
+
+// trimTrailingModelTurn drops trailing model-role contents. Vertex rejects a
+// request whose last content is a model turn ("Requests ending with a model
+// turn are not supported"), and a model content that called a tool is no more
+// sendable when it trails: the functionResponse Vertex requires must follow its
+// functionCall, and nothing follows a trailing turn.
+func trimTrailingModelTurn(contents []vertexContent) []vertexContent {
+	last := len(contents) - 1
+	for last >= 0 && contents[last].Role == "model" {
+		last--
+	}
+	if last == len(contents)-1 {
+		return contents
+	}
+	return contents[:last+1]
 }
 
 func vertexToolResponseMap(content string) map[string]interface{} {
@@ -425,99 +451,4 @@ func vertexContainsSchemaReference(v any) bool {
 		}
 	}
 	return false
-}
-
-// sanitizeVertexSchema converts arbitrary JSON Schema to Vertex AI's accepted format.
-// Vertex AI uses the same schema constraints as Gemini AI Studio.
-func sanitizeVertexSchema(params any) (*vertexSchema, error) {
-	if params == nil {
-		return nil, nil
-	}
-	raw, err := json.Marshal(params)
-	if err != nil {
-		return nil, err
-	}
-	var schemaMap map[string]any
-	if err := json.Unmarshal(raw, &schemaMap); err != nil {
-		schemaMap = make(map[string]any)
-	}
-	cleaned := sanitizeSchemaMap(schemaMap)
-	cleanedRaw, err := json.Marshal(cleaned)
-	if err != nil {
-		return nil, err
-	}
-	var schema vertexSchema
-	if err := json.Unmarshal(cleanedRaw, &schema); err != nil {
-		return nil, err
-	}
-	return &schema, nil
-}
-
-func sanitizeSchemaMap(schema map[string]any) map[string]any {
-	if schema == nil {
-		return nil
-	}
-	result := make(map[string]any)
-
-	if typeVal, ok := schema["type"]; ok {
-		switch v := typeVal.(type) {
-		case string:
-			result["type"] = v
-		case []interface{}:
-			var typeStr string
-			nullable := false
-			for _, elem := range v {
-				if s, ok := elem.(string); ok {
-					if s == "null" {
-						nullable = true
-						continue
-					}
-					if typeStr == "" {
-						typeStr = s
-					}
-				}
-			}
-			if typeStr == "" {
-				typeStr = "string"
-			}
-			result["type"] = typeStr
-			if nullable {
-				result["nullable"] = true
-			}
-		}
-	}
-
-	for _, field := range []string{"description", "enum", "required"} {
-		if val, ok := schema[field]; ok {
-			result[field] = val
-		}
-	}
-
-	if items, ok := schema["items"]; ok {
-		if itemsMap, ok := items.(map[string]any); ok {
-			result["items"] = sanitizeSchemaMap(itemsMap)
-		}
-	}
-
-	if props, ok := schema["properties"]; ok {
-		if propsMap, ok := props.(map[string]any); ok {
-			cleanProps := make(map[string]any)
-			for k, v := range propsMap {
-				if subSchema, ok := v.(map[string]any); ok {
-					cleanProps[k] = sanitizeSchemaMap(subSchema)
-				} else {
-					cleanProps[k] = v
-				}
-			}
-			result["properties"] = cleanProps
-		}
-	}
-
-	if nullable, ok := schema["nullable"]; ok && nullable != nil {
-		if _, exists := result["nullable"]; !exists {
-			result["nullable"] = nullable
-		}
-	}
-
-	return result
 }

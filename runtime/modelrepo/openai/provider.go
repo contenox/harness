@@ -6,10 +6,16 @@ import (
 	"net/http"
 
 	"github.com/contenox/harness/libtracker"
+	"github.com/contenox/harness/runtime/modelcontract"
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
 type OpenAIProvider struct {
+	canAutocomplete bool
+	fimFormat       string
+	canNextEdit     bool
+	nextEditFormat  string
+	codex           *codexCatalog
 	id              string
 	apiKey          string
 	modelName       string
@@ -24,11 +30,20 @@ type OpenAIProvider struct {
 	canThink        bool
 	canVision       bool
 	tracker         libtracker.ActivityTracker
+	// thinking is the model's declared thinking controls; nil leaves the
+	// request with the vendor's own literal for the level the caller asked for.
+	thinking *modelrepo.ThinkingTypes
+	// dialect is the model's declared wire dialect; nil is the OpenAI defaults.
+	dialect modelrepo.ChatDialect
 }
 
+// NewOpenAIProvider constructs a provider whose requests are restated in the
+// wire dialect the capability declaration names. An unknown dialect is an error
+// rather than a silent fallback to the OpenAI defaults, which would send members
+// the vendor does not declare.
 func NewOpenAIProvider(apiKey, modelName string, backendURLs []string, capability modelrepo.CapabilityConfig, httpClient *http.Client, tracker libtracker.ActivityTracker) modelrepo.Provider {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = modelrepo.SharedHTTPClient
 	}
 	if len(backendURLs) == 0 {
 		backendURLs = []string{"https://api.openai.com/v1"}
@@ -42,6 +57,10 @@ func NewOpenAIProvider(apiKey, modelName string, backendURLs []string, capabilit
 	id := fmt.Sprintf("openai-%s", modelName)
 
 	return &OpenAIProvider{
+		canAutocomplete: capability.CanAutocomplete,
+		fimFormat:       capability.FIMFormat,
+		canNextEdit:     capability.CanNextEdit,
+		nextEditFormat:  capability.NextEditFormat,
 		id:              id,
 		apiKey:          apiKey,
 		modelName:       modelName,
@@ -56,6 +75,8 @@ func NewOpenAIProvider(apiKey, modelName string, backendURLs []string, capabilit
 		canThink:        capability.CanThink,
 		canVision:       capability.CanVision,
 		tracker:         tracker,
+		thinking:        openAIThinkingDeclaration(modelName, capability.ThinkingTypes),
+		dialect:         modelrepo.MustChatDialectFor(capability.Dialect),
 	}
 }
 
@@ -72,6 +93,9 @@ func (p *OpenAIProvider) GetID() string {
 }
 
 func (p *OpenAIProvider) GetType() string {
+	if p.codex != nil {
+		return p.codex.Type()
+	}
 	return "openai"
 }
 
@@ -102,12 +126,18 @@ func (p *OpenAIProvider) CanVision() bool {
 	return p.canVision
 }
 
+// CanAudio always reports false; audio input is refused, not dropped.
+func (p *OpenAIProvider) CanAudio() bool {
+	return false
+}
+
 func (p *OpenAIProvider) GetChatConnection(ctx context.Context, backendID string) (modelrepo.LLMChatClient, error) {
 	if !p.CanChat() {
 		return nil, fmt.Errorf("model %s does not support chat interactions", p.modelName)
 	}
 	return &OpenAIChatClient{
 		openAIClient: openAIClient{
+			codex:           p.codex,
 			baseURL:         p.baseURL,
 			apiKey:          p.apiKey,
 			httpClient:      p.httpClient,
@@ -116,6 +146,8 @@ func (p *OpenAIProvider) GetChatConnection(ctx context.Context, backendID string
 			maxOutputTokens: p.maxOutputTokens,
 			tracker:         p.tracker,
 			supportsThink:   p.CanThink(),
+			thinking:        p.thinking,
+			dialect:         p.dialect,
 		},
 	}, nil
 }
@@ -126,6 +158,7 @@ func (p *OpenAIProvider) GetPromptConnection(ctx context.Context, backendID stri
 	}
 	return &OpenAIPromptClient{
 		openAIClient: openAIClient{
+			codex:           p.codex,
 			baseURL:         p.baseURL,
 			apiKey:          p.apiKey,
 			httpClient:      p.httpClient,
@@ -134,6 +167,8 @@ func (p *OpenAIProvider) GetPromptConnection(ctx context.Context, backendID stri
 			maxOutputTokens: p.maxOutputTokens,
 			tracker:         p.tracker,
 			supportsThink:   p.CanThink(),
+			thinking:        p.thinking,
+			dialect:         p.dialect,
 		},
 	}, nil
 }
@@ -160,6 +195,7 @@ func (p *OpenAIProvider) GetStreamConnection(ctx context.Context, backendID stri
 	}
 	return &OpenAIStreamClient{
 		openAIClient: openAIClient{
+			codex:           p.codex,
 			baseURL:         p.baseURL,
 			apiKey:          p.apiKey,
 			httpClient:      p.httpClient,
@@ -168,6 +204,19 @@ func (p *OpenAIProvider) GetStreamConnection(ctx context.Context, backendID stri
 			maxOutputTokens: p.maxOutputTokens,
 			tracker:         p.tracker,
 			supportsThink:   p.CanThink(),
+			thinking:        p.thinking,
+			dialect:         p.dialect,
 		},
 	}, nil
+}
+
+func (p *OpenAIProvider) CanAutocomplete() bool { return p.codex == nil && p.canAutocomplete }
+
+// CanNextEdit reports the model's explicit independent edit capability.
+func (p *OpenAIProvider) CanNextEdit() bool {
+	if p.codex != nil || !p.canNextEdit {
+		return false
+	}
+	_, err := modelcontract.ResolveNextEdit(p.nextEditFormat)
+	return err == nil
 }

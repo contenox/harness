@@ -20,7 +20,7 @@ import (
 // while a text-only turn stays a bare-string content (unchanged wire shape).
 func TestUnit_BuildChatRequest_SerializesImageAsContentParts(t *testing.T) {
 	pngBytes := []byte{0x89, 0x50, 0x4e, 0x47}
-	req := buildChatRequest("vlm", []modelrepo.Message{
+	req, _ := buildChatRequest("vlm", []modelrepo.Message{
 		{Role: "user", Content: "just text"},
 		{Role: "user", Content: "describe this", Images: []modelrepo.ImagePart{
 			{Data: pngBytes, MimeType: "image/png"},
@@ -108,23 +108,35 @@ func TestUnit_BuildChatRequest_MapsThinkingLevels(t *testing.T) {
 		},
 	}
 
-	req := buildChatRequest("model", []modelrepo.Message{{Role: "user", Content: "hi"}}, []modelrepo.ChatArgument{
+	req, _ := buildChatRequest("model", []modelrepo.Message{{Role: "user", Content: "hi"}}, []modelrepo.ChatArgument{
 		modelrepo.WithTool(tool),
 		modelrepo.WithThink("xhigh"),
 	})
 	require.Len(t, req.Tools, 1)
-	assert.Equal(t, "high", req.ReasoningEffort)
+	assert.Equal(t, "xhigh", req.ReasoningEffort, "the vendor carries one literal per level")
 	require.NotNil(t, req.ChatTemplateKwargs)
 	assert.Equal(t, true, req.ChatTemplateKwargs["enable_thinking"])
 
-	req = buildChatRequest("model", []modelrepo.Message{{Role: "user", Content: "hi"}}, []modelrepo.ChatArgument{
+	// Every level the vendor publishes reaches the wire as itself.
+	for _, level := range []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"} {
+		mapped, _ := buildChatRequest("model", []modelrepo.Message{{Role: "user", Content: "hi"}}, []modelrepo.ChatArgument{
+			modelrepo.WithThink(level),
+		})
+		want := level
+		if level == "off" {
+			want = "none"
+		}
+		assert.Equal(t, want, mapped.ReasoningEffort)
+	}
+
+	req, _ = buildChatRequest("model", []modelrepo.Message{{Role: "user", Content: "hi"}}, []modelrepo.ChatArgument{
 		modelrepo.WithThink("none"),
 	})
 	assert.Equal(t, "none", req.ReasoningEffort)
 	require.NotNil(t, req.ChatTemplateKwargs)
 	assert.Equal(t, false, req.ChatTemplateKwargs["enable_thinking"])
 
-	req = buildChatRequest("model", []modelrepo.Message{{Role: "user", Content: "hi"}}, []modelrepo.ChatArgument{
+	req, _ = buildChatRequest("model", []modelrepo.Message{{Role: "user", Content: "hi"}}, []modelrepo.ChatArgument{
 		modelrepo.WithThink("high"),
 	}, false)
 	assert.Empty(t, req.ReasoningEffort, "provider with CanThink=false must omit vLLM reasoning effort")
@@ -134,7 +146,7 @@ func TestUnit_BuildChatRequest_MapsThinkingLevels(t *testing.T) {
 func TestUnit_VLLMClient_ClampsChatMaxTokens(t *testing.T) {
 	t.Parallel()
 
-	req := buildChatRequest("model", []modelrepo.Message{{Role: "user", Content: "hi"}}, []modelrepo.ChatArgument{
+	req, _ := buildChatRequest("model", []modelrepo.Message{{Role: "user", Content: "hi"}}, []modelrepo.ChatArgument{
 		modelrepo.WithMaxTokens(4096),
 	})
 	client := &vLLMClient{maxOutputTokens: 1024}
@@ -220,7 +232,7 @@ func TestUnit_VLLMPrompt_TracksReasoningAlias(t *testing.T) {
 		tracker:    tracker,
 	}
 
-	resp, err := client.Prompt(context.Background(), "sys", 0.3, "hello")
+	resp, _, err := client.Prompt(context.Background(), "sys", 0.3, "hello")
 	require.NoError(t, err)
 	assert.Equal(t, "final answer", resp)
 	require.NotNil(t, gotRequest.Temperature)
@@ -274,28 +286,16 @@ func TestUnit_VLLMStreamClient_UsesChatRequestParityAndStreamsThinking(t *testin
 
 	require.True(t, gotRequest.Stream)
 	require.Len(t, gotRequest.Tools, 1)
-	assert.Equal(t, "high", gotRequest.ReasoningEffort)
+	assert.Equal(t, "xhigh", gotRequest.ReasoningEffort)
 	require.NotNil(t, gotRequest.ChatTemplateKwargs)
 	assert.Equal(t, true, gotRequest.ChatTemplateKwargs["enable_thinking"])
 
-	var parcels []struct {
-		Data     string
-		Thinking string
-	}
+	asm := modelrepo.NewStreamAssembler("vllm", "test-model")
 	for parcel := range stream {
-		require.NoError(t, parcel.Error)
-		parcels = append(parcels, struct {
-			Data     string
-			Thinking string
-		}{
-			Data:     parcel.Data,
-			Thinking: parcel.Thinking,
-		})
+		require.NoError(t, asm.Consume(parcel))
 	}
-
-	require.Len(t, parcels, 2)
-	assert.Equal(t, "", parcels[0].Data)
-	assert.Equal(t, "trace", parcels[0].Thinking)
-	assert.Equal(t, "hello", parcels[1].Data)
-	assert.Equal(t, "", parcels[1].Thinking)
+	res, err := asm.Result()
+	require.NoError(t, err)
+	assert.Equal(t, "trace", res.Thinking)
+	assert.Equal(t, "hello", res.Content)
 }

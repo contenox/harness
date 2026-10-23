@@ -15,26 +15,10 @@ type GeminiChatClient struct {
 
 // Chat implements modelrepo.LLMChatClient
 func (c *GeminiChatClient) Chat(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (modelrepo.ChatResult, error) {
-	// Start tracking the operation
 	reportErr, reportChange, end := c.tracker.Start(ctx, "chat", "gemini", "model", c.modelName)
 	defer end()
 
-	// Pull out an optional system instruction
-	var systemInstruction *geminiSystemInstruction
-	filtered := make([]modelrepo.Message, 0, len(messages))
-	for _, m := range messages {
-		if m.Role == "system" {
-			if m.Content != "" {
-				systemInstruction = &geminiSystemInstruction{
-					Parts: []geminiPart{{Text: m.Content}},
-				}
-			}
-			continue
-		}
-		filtered = append(filtered, m)
-	}
-
-	req, err := buildGeminiRequest(c.modelName, filtered, systemInstruction, args, c.canThink)
+	req, err := buildGeminiRequest(c.modelName, messages, args, c.canThink)
 	if err != nil {
 		reportErr(err)
 		return modelrepo.ChatResult{}, err
@@ -72,10 +56,9 @@ func (c *GeminiChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 	}
 
 	var (
-		outText       string
-		thinkingText  string
-		toolCalls     []modelrepo.ToolCall
-		lastSignature string
+		outText      string
+		thinkingText string
+		toolCalls    []modelrepo.ToolCall
 	)
 	for _, p := range cand.Content.Parts {
 		switch {
@@ -85,14 +68,12 @@ func (c *GeminiChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 		case p.Text != "":
 			outText += p.Text
 		case p.FunctionCall != nil:
-			// Convert args (map[string]any) -> JSON string
 			argsJSON, err := json.Marshal(p.FunctionCall.Args)
 			if err != nil {
 				continue
 			}
-			id := uuid.NewString()
 			tc := modelrepo.ToolCall{
-				ID:   id,
+				ID:   uuid.NewString(),
 				Type: "function",
 				Function: struct {
 					Name      string `json:"name"`
@@ -102,35 +83,49 @@ func (c *GeminiChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 					Arguments: string(argsJSON),
 				},
 			}
-			// Gemini 3: thoughtSignature is at the Part level (p.ThoughtSignature),
-			// not inside functionCall. Propagate it to parallel calls in the same turn
-			// where Gemini may only set it once.
-			sig := p.ThoughtSignature
-			if sig == "" {
-				sig = p.FunctionCall.ThoughtSignature // fallback: older API placement
-			}
-			if sig == "" {
-				sig = lastSignature // propagate to parallel calls in same turn
-			}
-			if sig != "" {
-				lastSignature = sig
-				tc.ProviderMeta = map[string]string{"thought_signature": sig}
+			// A signature belongs to the part the API returned it on: the
+			// first of a parallel group carries one and the rest carry none, so
+			// one call's signature is never replayed as another's.
+			if p.ThoughtSignature != "" {
+				tc.ProviderMeta = map[string]string{thoughtSignatureMetaKey: p.ThoughtSignature}
 			}
 			toolCalls = append(toolCalls, tc)
 		}
 	}
 
 	if outText == "" && len(toolCalls) == 0 {
+		// MALFORMED_FUNCTION_CALL is a broken tool-call turn, not a degenerate
+		// end-of-turn: reported as success it lands in history as a completed
+		// reply and the caller's retry never fires. Thinking-only and
+		// signature-only turns on a normal finish stay tolerated.
+		if cand.FinishReason == "MALFORMED_FUNCTION_CALL" {
+			err := fmt.Errorf("empty content from Gemini model %s: finish reason (%s)", c.modelName, cand.FinishReason)
+			reportErr(err)
+			return modelrepo.ChatResult{}, err
+		}
 		empty := modelrepo.ChatResult{
-			Message: modelrepo.Message{Role: "assistant", Content: "", Thinking: thinkingText},
+			Message: modelrepo.Message{
+				Role:         "assistant",
+				Content:      "",
+				Thinking:     thinkingText,
+				Continuation: responseContinuation(c.modelName, cand.Content.Parts),
+			},
+			Usage: resp.UsageMetadata.neutralUsage(),
 		}
 		reportChange("chat_completed_empty", empty)
 		return empty, nil
 	}
 
 	result := modelrepo.ChatResult{
-		Message:   modelrepo.Message{Role: "assistant", Content: outText, Thinking: thinkingText},
-		ToolCalls: toolCalls,
+		Message: modelrepo.Message{
+			Role:         "assistant",
+			Content:      outText,
+			Thinking:     thinkingText,
+			Continuation: responseContinuation(c.modelName, cand.Content.Parts),
+		},
+		ToolCalls:    toolCalls,
+		Usage:        resp.UsageMetadata.neutralUsage(),
+		FinishReason: cand.FinishReason,
 	}
 
 	reportChange("chat_completed", result)

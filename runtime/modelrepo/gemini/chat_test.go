@@ -113,24 +113,63 @@ func TestUnit_BuildGeminiRequest_MapsThinkingConfig(t *testing.T) {
 	t.Parallel()
 	msgs := []modelrepo.Message{{Role: "user", Content: "hi"}}
 
-	req, err := buildGeminiRequest("gemini-2.5-pro", msgs, nil, []modelrepo.ChatArgument{modelrepo.WithThink("medium")})
+	req, err := buildGeminiRequest("gemini-2.5-pro", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("medium")})
 	require.NoError(t, err)
 	require.NotNil(t, req.GenerationConfig.ThinkingConfig)
 	require.NotNil(t, req.GenerationConfig.ThinkingConfig.ThinkingBudget)
 	assert.Equal(t, 8192, *req.GenerationConfig.ThinkingConfig.ThinkingBudget)
 	assert.Equal(t, "", req.GenerationConfig.ThinkingConfig.ThinkingLevel)
 
-	req, err = buildGeminiRequest("gemini-3-flash", msgs, nil, []modelrepo.ChatArgument{modelrepo.WithThink("off")})
-	require.NoError(t, err)
-	require.NotNil(t, req.GenerationConfig.ThinkingConfig)
-	require.Nil(t, req.GenerationConfig.ThinkingConfig.ThinkingBudget)
-	assert.Equal(t, "minimal", req.GenerationConfig.ThinkingConfig.ThinkingLevel)
-
-	req, err = buildGeminiRequest("gemini-3-pro", msgs, nil, []modelrepo.ChatArgument{modelrepo.WithThink("auto")})
+	// Gemini 3 documents thinking levels MINIMAL..HIGH and no way to turn
+	// thinking off, so the request carries no thinking control at all: the
+	// model's own default stays in place rather than being answered with a
+	// level the caller did not ask for.
+	req, err = buildGeminiRequest("gemini-3-flash", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("off")})
 	require.NoError(t, err)
 	require.Nil(t, req.GenerationConfig.ThinkingConfig)
 
-	req, err = buildGeminiRequest("gemini-2.5-pro", msgs, nil, []modelrepo.ChatArgument{modelrepo.WithThink("medium")}, false)
+	// Gemini 2.5 Flash documents thinkingBudget 0 as thinking off.
+	req, err = buildGeminiRequest("gemini-2.5-flash", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("off")})
+	require.NoError(t, err)
+	require.NotNil(t, req.GenerationConfig.ThinkingConfig)
+	require.NotNil(t, req.GenerationConfig.ThinkingConfig.ThinkingBudget)
+	assert.Equal(t, 0, *req.GenerationConfig.ThinkingConfig.ThinkingBudget)
+	assert.Equal(t, "", req.GenerationConfig.ThinkingConfig.ThinkingLevel)
+
+	// Gemini 2.5 Pro documents 128 as its smallest budget and no off, so it is
+	// never sent the 0 that the API rejects for it.
+	req, err = buildGeminiRequest("gemini-2.5-pro", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("off")})
+	require.NoError(t, err)
+	require.Nil(t, req.GenerationConfig.ThinkingConfig)
+
+	// The deepest level the vendor lists is what a request above it gets: the
+	// model has no dynamic-budget shortcut that would think less than high.
+	req, err = buildGeminiRequest("gemini-2.5-pro", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("xhigh")})
+	require.NoError(t, err)
+	require.NotNil(t, req.GenerationConfig.ThinkingConfig)
+	require.NotNil(t, req.GenerationConfig.ThinkingConfig.ThinkingBudget)
+	assert.Equal(t, 32768, *req.GenerationConfig.ThinkingConfig.ThinkingBudget)
+
+	req, err = buildGeminiRequest("gemini-3-flash", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("xhigh")})
+	require.NoError(t, err)
+	require.NotNil(t, req.GenerationConfig.ThinkingConfig)
+	assert.Equal(t, "HIGH", req.GenerationConfig.ThinkingConfig.ThinkingLevel)
+
+	// A model the vendor's pages carry no thinking control for is refused by
+	// name, not silently sent a request with no thinking at all.
+	_, err = buildGeminiRequest("gemini-test", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("medium")})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "publishes no thinking control")
+
+	// A level outside the runtime's vocabulary is refused rather than dropped.
+	_, err = buildGeminiRequest("gemini-3-flash", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("bogus")})
+	require.Error(t, err)
+
+	req, err = buildGeminiRequest("gemini-3-pro", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("auto")})
+	require.NoError(t, err)
+	require.Nil(t, req.GenerationConfig.ThinkingConfig)
+
+	req, err = buildGeminiRequest("gemini-2.5-pro", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("medium")}, false)
 	require.NoError(t, err)
 	require.Nil(t, req.GenerationConfig.ThinkingConfig, "provider with CanThink=false must omit Gemini thinking config")
 }
@@ -140,7 +179,6 @@ func TestUnit_BuildGeminiRequest_RejectsEmptyContents(t *testing.T) {
 
 	_, err := buildGeminiRequest("gemini-3.1-pro-preview",
 		[]modelrepo.Message{{Role: "system", Content: "system only"}},
-		&geminiSystemInstruction{Parts: []geminiPart{{Text: "system only"}}},
 		nil,
 	)
 	require.Error(t, err)
@@ -149,7 +187,6 @@ func TestUnit_BuildGeminiRequest_RejectsEmptyContents(t *testing.T) {
 
 	_, err = buildGeminiRequest("gemini-3.1-pro-preview",
 		[]modelrepo.Message{{Role: "user", Content: ""}},
-		nil,
 		nil,
 	)
 	require.Error(t, err)
@@ -175,7 +212,7 @@ func TestUnit_BuildGeminiRequest_WrapsSchemaLikeToolResultAsText(t *testing.T) {
 		{Role: "tool", ToolCallID: "call-1", Content: schemaResult},
 	}
 
-	req, err := buildGeminiRequest("gemini-3.1-pro-preview", msgs, nil, nil)
+	req, err := buildGeminiRequest("gemini-3.1-pro-preview", msgs, nil)
 	require.NoError(t, err)
 	require.Len(t, req.Contents, 2)
 	resp := req.Contents[1].Parts[0].FunctionResponse.Response
@@ -197,10 +234,9 @@ func TestUnit_BuildGeminiRequest_ImageInputAddsInlineDataPart(t *testing.T) {
 		},
 	}
 
-	req, err := buildGeminiRequest("gemini-2.5-pro", msgs, nil, nil)
+	req, err := buildGeminiRequest("gemini-2.5-pro", msgs, nil)
 	require.NoError(t, err)
 
-	// White-box: the user content carries a text part then an inlineData part.
 	require.Len(t, req.Contents, 1)
 	parts := req.Contents[0].Parts
 	require.Len(t, parts, 2)
@@ -209,8 +245,7 @@ func TestUnit_BuildGeminiRequest_ImageInputAddsInlineDataPart(t *testing.T) {
 	assert.Equal(t, "image/png", parts[1].InlineData.MimeType)
 	assert.Equal(t, imgBytes, parts[1].InlineData.Data)
 
-	// Wire shape: the marshaled JSON carries the inlineData part with the
-	// base64 payload and correct mime type.
+	// Wire shape: base64 payload and mime type round-trip in the marshaled JSON.
 	raw, err := json.Marshal(req)
 	require.NoError(t, err)
 	js := string(raw)
@@ -219,7 +254,7 @@ func TestUnit_BuildGeminiRequest_ImageInputAddsInlineDataPart(t *testing.T) {
 	assert.Contains(t, js, `"data":"`+wantB64+`"`)
 
 	// A text-only message keeps its prior single text-part shape (no inlineData).
-	textReq, err := buildGeminiRequest("gemini-2.5-pro", []modelrepo.Message{{Role: "user", Content: "hi"}}, nil, nil)
+	textReq, err := buildGeminiRequest("gemini-2.5-pro", []modelrepo.Message{{Role: "user", Content: "hi"}}, nil)
 	require.NoError(t, err)
 	require.Len(t, textReq.Contents, 1)
 	require.Len(t, textReq.Contents[0].Parts, 1)
@@ -248,7 +283,68 @@ func TestUnit_BuildGeminiRequest_KeepsNormalObjectToolResultStructured(t *testin
 		{Role: "tool", ToolCallID: "call-1", Content: `{"status":"ok"}`},
 	}
 
-	req, err := buildGeminiRequest("gemini-3.1-pro-preview", msgs, nil, nil)
+	req, err := buildGeminiRequest("gemini-3.1-pro-preview", msgs, nil)
 	require.NoError(t, err)
 	require.Equal(t, "ok", req.Contents[1].Parts[0].FunctionResponse.Response["status"])
+}
+
+// TestUnit_BuildGeminiRequest_TrimsTrailingModelTurn pins the guard the Vertex
+// provider already carries: a history that ends on the model's own reply — a
+// recovery or summarise turn, or any chain handoff — must not go out with that
+// trailing model turn, which Gemini answers with "Requests ending with a model
+// turn are not supported".
+func TestUnit_BuildGeminiRequest_TrimsTrailingModelTurn(t *testing.T) {
+	t.Parallel()
+
+	req, err := buildGeminiRequest("gemini-3.1-pro-preview", []modelrepo.Message{
+		{Role: "user", Content: "do the thing"},
+		{Role: "assistant", Content: "I already answered this turn; continuing now."},
+	}, nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, req.Contents)
+	require.Equal(t, "user", req.Contents[len(req.Contents)-1].Role,
+		"the request must not end with a model turn")
+
+	req, err = buildGeminiRequest("gemini-3.1-pro-preview", []modelrepo.Message{
+		{Role: "user", Content: "do the thing"},
+		{Role: "assistant", Content: "first answer"},
+		{Role: "assistant", Content: "second answer"},
+	}, nil)
+	require.NoError(t, err)
+	require.Equal(t, "user", req.Contents[len(req.Contents)-1].Role,
+		"a run of trailing model turns trims to the last non-model turn")
+}
+
+// TestUnit_BuildGeminiRequest_KeepsOperatorTextBeforeTheFunctionResponse pins the
+// resumed-session shape on the Gemini provider too: the tool result and the
+// operator's next prompt are one user turn — consecutive same-role contents fail
+// the provider's alternation check — with the text ahead of the functionResponse.
+func TestUnit_BuildGeminiRequest_KeepsOperatorTextBeforeTheFunctionResponse(t *testing.T) {
+	t.Parallel()
+
+	call := modelrepo.ToolCall{ID: "call-1", Type: "function"}
+	call.Function.Name = "local_fs.edit_file"
+	call.Function.Arguments = `{"path":"x.go"}`
+
+	req, err := buildGeminiRequest("gemini-3.1-pro-preview", []modelrepo.Message{
+		{Role: "user", Content: "start"},
+		{Role: "assistant", ToolCalls: []modelrepo.ToolCall{call}},
+		{Role: "tool", ToolCallID: "call-1", Content: `{"error":"tool call was interrupted before a result was recorded"}`},
+		{Role: "user", Content: "continue"},
+	}, nil)
+	require.NoError(t, err)
+
+	require.Len(t, req.Contents, 3)
+	for i := 1; i < len(req.Contents); i++ {
+		require.NotEqual(t, req.Contents[i-1].Role, req.Contents[i].Role,
+			"consecutive same-role contents fail the provider's alternation check")
+	}
+
+	last := req.Contents[len(req.Contents)-1]
+	require.Equal(t, "user", last.Role)
+	require.Len(t, last.Parts, 2)
+	require.Equal(t, "continue", last.Parts[0].Text,
+		"the operator's text must come before the function response")
+	require.NotNil(t, last.Parts[1].FunctionResponse,
+		"the function response must close the turn that carries it")
 }

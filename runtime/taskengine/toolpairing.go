@@ -6,23 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// interruptedToolCallResult is the stub content recorded for a tool call that
-// never received a result (interrupted execution, chain failure between the
-// call and its execution, or a history routed out of a failure state).
 const interruptedToolCallResult = "tool call was interrupted before a result was recorded"
 
-// repairToolCallPairing enforces the tool-call protocol invariant on a
-// transcript: every assistant tool call is answered by exactly one tool
-// result, and every tool result answers a preceding assistant tool call.
-// Providers with strict pairing (OpenAI Responses, Anthropic, Bedrock) reject
-// conversations that violate this with a 400, so any history that leaves the
-// engine — to a provider or to session persistence — must satisfy it.
-//
-// Repairs applied, in order:
-//   - tool results whose call ID matches no assistant tool call are dropped
-//   - duplicate tool results for the same call ID are dropped (first wins)
-//   - assistant tool calls with no result get a stub error result inserted
-//     directly after the contiguous tool-result block that follows them
 func repairToolCallPairing(msgs []Message) []Message {
 	callIDs := map[string]bool{}
 	for _, m := range msgs {
@@ -81,4 +66,25 @@ func repairToolCallPairing(msgs []Message) []Message {
 		return msgs
 	}
 	return out
+}
+
+func resumableToolCallBatch(msgs []Message) (assistantIdx int, answered map[string]bool) {
+	i := len(msgs) - 1
+	answered = map[string]bool{}
+	for i >= 0 && msgs[i].Role == "tool" {
+		if msgs[i].ToolCallID != "" {
+			answered[msgs[i].ToolCallID] = true
+		}
+		i--
+	}
+	if i < 0 || msgs[i].Role != "assistant" || len(msgs[i].CallTools) == 0 {
+		return -1, nil
+	}
+	for _, tc := range msgs[i].CallTools {
+		// An ID-less call can never be matched by a result, so it always counts as unanswered.
+		if tc.ID == "" || !answered[tc.ID] {
+			return i, answered
+		}
+	}
+	return -1, nil
 }

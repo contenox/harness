@@ -30,13 +30,6 @@ export const stateKeys = {
   inProgress: () => [...stateKeys.all, 'inprogress'],
 };
 
-export const modeldKeys = {
-  all: ['modeld'] as const,
-  status: () => [...modeldKeys.all, 'status'] as const,
-  models: () => [...modeldKeys.all, 'models'] as const,
-  capacity: (model: string) => [...modeldKeys.all, 'capacity', model] as const,
-};
-
 export const jobKeys = {
   all: ['jobs'] as const,
   pending: () => [...jobKeys.all, 'pending'],

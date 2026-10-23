@@ -7,16 +7,10 @@ import (
 	"time"
 )
 
-// terminalDetachedTimeout bounds the out-of-band calls (release, kill, output)
-// that RunTerminal must make on a context that is deliberately NOT the caller's.
-// Those calls happen precisely when the caller's context is already dead, so they
-// need a budget of their own; 5s is enough for a local peer to answer and short
-// enough that a wedged peer cannot pin the caller's goroutine.
 const terminalDetachedTimeout = 5 * time.Second
 
-// TerminalPeer is the subset of the ACP client side that RunTerminal drives.
-// *AgentSideConnection satisfies it; tests and alternative transports can supply
-// their own implementation.
+// TerminalPeer is the subset of the ACP client side that RunTerminal drives;
+// *AgentSideConnection satisfies it.
 type TerminalPeer interface {
 	CreateTerminal(context.Context, CreateTerminalRequest) (CreateTerminalResponse, error)
 	TerminalOutput(context.Context, TerminalOutputRequest) (TerminalOutputResponse, error)
@@ -28,13 +22,10 @@ type TerminalPeer interface {
 // Compile-time assertion: the real agent-side connection is a TerminalPeer.
 var _ TerminalPeer = (*AgentSideConnection)(nil)
 
-// TerminalResult is the reconciled outcome of one command run over a peer terminal.
-//
-// Cancelled and TimedOut are kept distinct on purpose: a deadline means the
-// command ran out of its time budget, while a plain cancellation means something
-// (usually session/cancel, i.e. the user) stopped the turn. Collapsing the two
-// into "timeout" hands the model and the user a wrong causal story about why the
-// command died. In both cases the terminal was killed before the result was read.
+// TerminalResult is the reconciled outcome of one command run over a peer
+// terminal; Cancelled and TimedOut are kept distinct (deadline vs. an
+// external stop, usually session/cancel), and either way the terminal was
+// killed before the result was read.
 type TerminalResult struct {
 	Output    string
 	Truncated bool
@@ -44,26 +35,9 @@ type TerminalResult struct {
 	TimedOut  bool // ctx hit its deadline; the terminal was killed
 }
 
-// RunTerminal creates a terminal on the peer, waits for it to exit, collects its
-// output and releases it, returning the reconciled result.
-//
-// onCreated, when non-nil, is invoked after the terminal exists but before the
-// wait begins. It is the seam for callers that need to surface the live terminal
-// (for example by attaching it to a tool call in a UI); RunTerminal itself stays
-// free of presentation concerns.
-//
-// The caller's ctx governs only the create and the wait. Release, kill and the
-// output fetch deliberately run on detached contexts: they are needed most when
-// ctx is already dead, and losing the output of a command that has already been
-// paid for is worse than a few extra seconds of work. The terminal is always
-// released before returning.
-//
-// A non-nil error means the run could not be completed as a protocol exchange
-// (create failed, the wait failed for a reason other than ctx, or the output
-// could not be read). Even then the returned result carries the Cancelled and
-// TimedOut flags that were established, so callers can still report why the
-// command stopped. Policy decisions — treating Truncated as a budget error,
-// formatting banners, mapping to exit statuses — belong to the caller.
+// RunTerminal creates a terminal on the peer, waits for it to exit, collects
+// its output, and always releases it before returning, invoking onCreated
+// (if non-nil) once the terminal exists but before the wait begins.
 func RunTerminal(ctx context.Context, p TerminalPeer, req CreateTerminalRequest, onCreated func(terminalID string)) (TerminalResult, error) {
 	createResp, err := p.CreateTerminal(ctx, req)
 	if err != nil {
@@ -94,8 +68,8 @@ func RunTerminal(ctx context.Context, p TerminalPeer, req CreateTerminalRequest,
 			res.ExitCode = -1
 			return res, fmt.Errorf("libacp terminal: wait: %w", waitErr)
 		}
-		// The wait ended early, so the process is still running. Kill it on a
-		// detached context before reading what it managed to produce.
+		// Wait ended early; the process is still running — kill it before
+		// reading what it produced.
 		kctx, kcancel := context.WithTimeout(context.WithoutCancel(ctx), terminalDetachedTimeout)
 		_, _ = p.KillTerminal(kctx, KillTerminalRequest{SessionID: req.SessionID, TerminalID: termID})
 		kcancel()
@@ -113,9 +87,8 @@ func RunTerminal(ctx context.Context, p TerminalPeer, req CreateTerminalRequest,
 	res.Truncated = outputResp.Truncated
 	res.Signal = exitResp.Signal
 
-	// The exit code has two possible carriers: the wait response, and the exit
-	// status attached to the output. Peers populate one or the other, so fall
-	// back rather than assuming either is authoritative.
+	// Peers populate either the wait response's exit code or the one attached
+	// to the output, not necessarily both — fall back rather than assume.
 	switch {
 	case exitResp.ExitCode != nil:
 		res.ExitCode = *exitResp.ExitCode

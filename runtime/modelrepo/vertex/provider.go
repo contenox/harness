@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"golang.org/x/oauth2"
@@ -17,7 +18,7 @@ type vertexProvider struct {
 	publisher       string
 	modelName       string
 	baseURL         string
-	credJSON        string // service account JSON; empty → ADC
+	credJSON        string
 	httpClient      *http.Client
 	contextLength   int
 	maxOutputTokens int
@@ -27,21 +28,24 @@ type vertexProvider struct {
 	canStream       bool
 	canThink        bool
 	canVision       bool
+	canAudio        bool
 	tracker         libtracker.ActivityTracker
+	// expressKey is an Agent Platform express mode API key; a backend that
+	// stores one authenticates with the key alone.
+	expressKey string
 
-	// Cached token source. Initialized once on first use and reused across all
-	// requests; oauth2 keeps the access token in memory until expiry, so
-	// steady-state requests don't hit the token endpoint at all.
-	tokenOnce sync.Once
-	tokenSrc  oauth2.TokenSource
-	tokenErr  error
+	tokenOnce    sync.Once
+	tokenSrc     oauth2.TokenSource
+	tokenErr     error
+	authOnce     sync.Once
+	quotaProject string
+	authErr      error
 }
 
-// NewVertexProvider returns a modelrepo.Provider for a Vertex AI model.
-// credJSON is the service account key JSON; empty string falls back to ADC.
+// NewVertexProvider returns a modelrepo.Provider for a Vertex AI model; credJSON is the service account key JSON, empty falls back to ADC.
 func NewVertexProvider(publisher, modelName string, baseURLs []string, cap modelrepo.CapabilityConfig, credJSON string, httpClient *http.Client, tracker libtracker.ActivityTracker) modelrepo.Provider {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = modelrepo.SharedHTTPClient
 	}
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
@@ -49,10 +53,6 @@ func NewVertexProvider(publisher, modelName string, baseURLs []string, cap model
 	baseURL := ""
 	if len(baseURLs) > 0 {
 		baseURL = baseURLs[0]
-	}
-	maxOut := cap.MaxOutputTokens
-	if maxOut <= 0 {
-		maxOut = 65536 // Vertex hard ceiling: exclusive upper bound is 65537
 	}
 	return &vertexProvider{
 		id:              fmt.Sprintf("vertex-%s:%s", publisher, modelName),
@@ -62,13 +62,14 @@ func NewVertexProvider(publisher, modelName string, baseURLs []string, cap model
 		credJSON:        credJSON,
 		httpClient:      httpClient,
 		contextLength:   cap.ContextLength,
-		maxOutputTokens: maxOut,
+		maxOutputTokens: cap.MaxOutputTokens,
 		canChat:         cap.CanChat,
 		canPrompt:       cap.CanPrompt,
 		canEmbed:        cap.CanEmbed,
 		canStream:       cap.CanStream,
 		canThink:        cap.CanThink,
 		canVision:       cap.CanVision,
+		canAudio:        cap.CanAudio,
 		tracker:         tracker,
 	}
 }
@@ -85,10 +86,8 @@ func (p *vertexProvider) CanStream() bool         { return p.canStream }
 func (p *vertexProvider) CanPrompt() bool         { return p.canPrompt }
 func (p *vertexProvider) CanThink() bool          { return p.canThink }
 func (p *vertexProvider) CanVision() bool         { return p.canVision }
+func (p *vertexProvider) CanAudio() bool          { return p.canAudio }
 
-// tokenFn returns an access token using the provider's cached oauth2 source.
-// The source is built once on first use (with context.Background so it
-// outlives the request that triggered initialization) and reused thereafter.
 func (p *vertexProvider) tokenFn(_ context.Context) (string, error) {
 	p.tokenOnce.Do(func() {
 		p.tokenSrc, p.tokenErr = NewTokenSource(context.Background(), p.credJSON)
@@ -103,7 +102,29 @@ func (p *vertexProvider) tokenFn(_ context.Context) (string, error) {
 	return tok.AccessToken, nil
 }
 
-func (p *vertexProvider) client() vertexClient {
+// resolveAuth classifies the stored secret once: express mode uses the key by
+// itself, and a user credential names the billing project, which a service
+// account does not.
+func (p *vertexProvider) resolveAuth() error {
+	p.authOnce.Do(func() {
+		if IsExpressAPIKey(p.credJSON) {
+			p.expressKey = strings.TrimSpace(p.credJSON)
+			return
+		}
+		project, err := QuotaProjectFor(context.Background(), p.credJSON, p.baseURL)
+		if err != nil {
+			p.authErr = err
+			return
+		}
+		p.quotaProject = project
+	})
+	return p.authErr
+}
+
+func (p *vertexProvider) client() (vertexClient, error) {
+	if err := p.resolveAuth(); err != nil {
+		return vertexClient{}, err
+	}
 	return vertexClient{
 		baseURL:         p.baseURL,
 		publisher:       p.publisher,
@@ -111,18 +132,23 @@ func (p *vertexProvider) client() vertexClient {
 		contextLength:   p.contextLength,
 		maxOutputTokens: p.maxOutputTokens,
 		credJSON:        p.credJSON,
+		apiKey:          p.expressKey,
+		quotaProject:    p.quotaProject,
 		httpClient:      p.httpClient,
 		canThink:        p.canThink,
 		tracker:         p.tracker,
 		tokenFn:         p.tokenFn,
-	}
+	}, nil
 }
 
 func (p *vertexProvider) GetChatConnection(_ context.Context, _ string) (modelrepo.LLMChatClient, error) {
 	if !p.CanChat() {
 		return nil, fmt.Errorf("model %s does not support chat interactions", p.modelName)
 	}
-	c := p.client()
+	c, err := p.client()
+	if err != nil {
+		return nil, err
+	}
 	return &vertexChatClient{vertexClient: c}, nil
 }
 
@@ -130,7 +156,10 @@ func (p *vertexProvider) GetPromptConnection(_ context.Context, _ string) (model
 	if !p.CanPrompt() {
 		return nil, fmt.Errorf("model %s does not support prompt interactions", p.modelName)
 	}
-	c := p.client()
+	c, err := p.client()
+	if err != nil {
+		return nil, err
+	}
 	return &vertexPromptClient{vertexClient: c}, nil
 }
 
@@ -138,12 +167,28 @@ func (p *vertexProvider) GetStreamConnection(_ context.Context, _ string) (model
 	if !p.CanStream() {
 		return nil, fmt.Errorf("model %s does not support streaming interactions", p.modelName)
 	}
-	c := p.client()
+	c, err := p.client()
+	if err != nil {
+		return nil, err
+	}
 	return &vertexStreamClient{vertexClient: c}, nil
 }
 
 func (p *vertexProvider) GetEmbedConnection(_ context.Context, _ string) (modelrepo.LLMEmbedClient, error) {
-	return nil, fmt.Errorf("model %s (vertex-%s) does not support embeddings", p.modelName, p.publisher)
+	if !p.CanEmbed() {
+		return nil, fmt.Errorf("model %s (vertex-%s) does not support embeddings; use a text-embedding model such as gemini-embedding-001", p.modelName, p.publisher)
+	}
+	c, err := p.client()
+	if err != nil {
+		return nil, err
+	}
+	return &vertexEmbedClient{vertexClient: c}, nil
 }
 
 var _ modelrepo.Provider = (*vertexProvider)(nil)
+
+func (p *vertexProvider) CanAutocomplete() bool { return false }
+
+func (p *vertexProvider) GetAutocompleteConnection(context.Context, string) (modelrepo.LLMAutocompleteClient, error) {
+	return nil, modelrepo.ErrAutocompleteUnsupported
+}

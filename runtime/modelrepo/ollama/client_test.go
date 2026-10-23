@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/contenox/harness/runtime/modelrepo"
-	"github.com/ollama/ollama/api"
 )
 
 // TestUnit_OllamaChat_SerializesImageInput asserts an image attachment reaches
@@ -105,7 +104,7 @@ func TestUnit_OllamaHTTPClient_GenerateStreamsNDJSON(t *testing.T) {
 	}
 
 	var chunks []string
-	err = client.Generate(context.Background(), &api.GenerateRequest{Model: "test"}, func(resp api.GenerateResponse) error {
+	err = client.Generate(context.Background(), &GenerateRequest{Model: "test"}, func(resp GenerateResponse) error {
 		chunks = append(chunks, resp.Response)
 		return nil
 	})
@@ -162,49 +161,109 @@ func TestUnit_OllamaChat_OmitsThinkWhenCapabilityIsFalse(t *testing.T) {
 
 func TestUnit_BuildOllamaThink_NormalizesLevels(t *testing.T) {
 	cfg := &modelrepo.ChatConfig{}
-	if got := buildOllamaThink(cfg); got != nil {
-		t.Fatalf("nil think config should omit Ollama think, got %#v", got)
+	if got, err := buildOllamaThink(cfg, nil); got != nil || err != nil {
+		t.Fatalf("nil think config should omit Ollama think, got %#v (%v)", got, err)
 	}
 
 	modelrepo.WithThink("auto").Apply(cfg)
-	if got := buildOllamaThink(cfg); got != nil {
-		t.Fatalf("auto should omit Ollama think, got %#v", got)
+	if got, err := buildOllamaThink(cfg, nil); got != nil || err != nil {
+		t.Fatalf("auto should omit Ollama think, got %#v (%v)", got, err)
 	}
 
 	cfg = &modelrepo.ChatConfig{}
 	modelrepo.WithThink("off").Apply(cfg)
-	got := buildOllamaThink(cfg)
+	got, err := buildOllamaThink(cfg, nil)
+	if err != nil {
+		t.Fatalf("off without a declaration: %v", err)
+	}
 	if got == nil || got.Value != false {
 		t.Fatalf("off = %#v, want bool false", got)
 	}
 
 	cfg = &modelrepo.ChatConfig{}
 	modelrepo.WithThink("minimal").Apply(cfg)
-	got = buildOllamaThink(cfg)
+	got, err = buildOllamaThink(cfg, nil)
+	if err != nil {
+		t.Fatalf("minimal without a declaration: %v", err)
+	}
 	if got == nil || got.Value != "low" {
 		t.Fatalf("minimal = %#v, want low", got)
 	}
 
 	cfg = &modelrepo.ChatConfig{}
 	modelrepo.WithThink("xhigh").Apply(cfg)
-	got = buildOllamaThink(cfg)
+	got, err = buildOllamaThink(cfg, nil)
+	if err != nil {
+		t.Fatalf("xhigh without a declaration: %v", err)
+	}
 	if got == nil || got.Value != "high" {
 		t.Fatalf("xhigh = %#v, want high", got)
+	}
+}
+
+// The model's own declaration decides which level may be sent, and `max` is one
+// of the vendor's levels: a request for it must reach the wire as itself.
+func TestUnit_BuildOllamaThink_UsesTheDeclaredLevels(t *testing.T) {
+	declared := &modelrepo.ThinkingTypes{Enabled: true, Disabled: true, EffortLevels: []string{"low", "medium", "high", "max"}}
+
+	cfg := &modelrepo.ChatConfig{}
+	modelrepo.WithThink("max").Apply(cfg)
+	got, err := buildOllamaThink(cfg, declared)
+	if err != nil {
+		t.Fatalf("max against a model that declares it: %v", err)
+	}
+	if got == nil || got.Value != "max" {
+		t.Fatalf("max = %#v, want max", got)
+	}
+
+	cfg = &modelrepo.ChatConfig{}
+	modelrepo.WithThink("high").Apply(cfg)
+	got, err = buildOllamaThink(cfg, &modelrepo.ThinkingTypes{Enabled: true, EffortLevels: []string{"low"}})
+	if err != nil {
+		t.Fatalf("high against a model declaring only low: %v", err)
+	}
+	if got == nil || got.Value != "low" {
+		t.Fatalf("high with only low declared = %#v, want low", got)
+	}
+
+	cfg = &modelrepo.ChatConfig{}
+	modelrepo.WithThink("off").Apply(cfg)
+	if _, err := buildOllamaThink(cfg, &modelrepo.ThinkingTypes{Enabled: true, EffortLevels: []string{"low"}}); err == nil {
+		t.Fatal("off against a model that advertises no thinking-off control must be refused")
+	}
+
+	cfg = &modelrepo.ChatConfig{}
+	modelrepo.WithThink("high").Apply(cfg)
+	if _, err := buildOllamaThink(cfg, &modelrepo.ThinkingTypes{EffortLevels: []string{"ultra"}}); err == nil {
+		t.Fatal("a level the declaration cannot express must be refused rather than defaulted")
 	}
 }
 
 func TestUnit_BuildOllamaOptions_ClampsPositiveNumPredictOnly(t *testing.T) {
 	cfg := &modelrepo.ChatConfig{}
 	modelrepo.WithMaxTokens(9000).Apply(cfg)
-	opts := buildOllamaOptions(cfg, 2048)
+	opts := buildOllamaOptions(cfg, 2048, 0)
 	if got := opts["num_predict"]; got != 2048 {
 		t.Fatalf("num_predict = %#v, want 2048", got)
+	}
+	if _, ok := opts["num_ctx"]; ok {
+		t.Fatalf("a model with no declared window must not be asked for one: %#v", opts)
 	}
 
 	negative := -1
 	cfg = &modelrepo.ChatConfig{MaxTokens: &negative}
-	opts = buildOllamaOptions(cfg, 2048)
+	opts = buildOllamaOptions(cfg, 2048, 0)
 	if got := opts["num_predict"]; got != -1 {
 		t.Fatalf("negative num_predict sentinel = %#v, want -1", got)
+	}
+}
+
+// The window a model declared in its own metadata is requested on every turn,
+// so a generation runs in the window the catalogue measured rather than in
+// whatever the Modelfile happened to set.
+func TestUnit_BuildOllamaOptions_RequestsTheDeclaredWindow(t *testing.T) {
+	opts := buildOllamaOptions(&modelrepo.ChatConfig{}, 0, 8192)
+	if got := opts["num_ctx"]; got != 8192 {
+		t.Fatalf("num_ctx = %#v, want 8192", got)
 	}
 }

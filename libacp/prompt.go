@@ -18,18 +18,9 @@ type PromptRequest struct {
 	Meta      json.RawMessage `json:"_meta,omitempty"`
 }
 
-// PromptResponse is the result of a "session/prompt" request. Per the ACP v1
-// schema it carries only stopReason and _meta — a prior revision added a
-// non-spec "usage" field (per-turn token counts) directly at the type's
-// root, which extensibility.mdx forbids: "Implementations MUST NOT add any
-// custom fields at the root of a type that's part of the specification."
-// It was removed rather than migrated into _meta because nothing in this
-// repo produced or consumed it: acpsvc never populated it, and the beam
-// client only ever destructured stopReason from the call result. Session
-// context/cost reporting already has a sanctioned, fully wired channel — the
-// "usage_update" SessionUpdate (see SessionUpdateUsageUpdate) — which is
-// where that data belongs and is already emitted (see acpsvc's
-// sendInitialUsageUpdate and its translateEvents usage_update path).
+// PromptResponse is the result of a "session/prompt" request; per the ACP v1
+// schema it carries only stopReason and _meta, with per-turn usage/cost
+// belonging on the "usage_update" SessionUpdate instead.
 type PromptResponse struct {
 	StopReason StopReason      `json:"stopReason"`
 	Meta       json.RawMessage `json:"_meta,omitempty"`
@@ -48,8 +39,29 @@ const (
 	SessionUpdateCurrentMode       SessionUpdateKind = "current_mode_update"
 	SessionUpdateConfigOption      SessionUpdateKind = "config_option_update"
 	SessionUpdateUsageUpdate       SessionUpdateKind = "usage_update"
+	SessionUpdateUsageStats        SessionUpdateKind = "usage_stats"
 	SessionUpdateSessionInfo       SessionUpdateKind = "session_info_update"
 )
+
+// AllSessionUpdateKinds returns every SessionUpdateKind the spec defines, in
+// declaration order, so a consumer's translation table can be tested for
+// completeness against the library.
+func AllSessionUpdateKinds() []SessionUpdateKind {
+	return []SessionUpdateKind{
+		SessionUpdateUserMessageChunk,
+		SessionUpdateAgentMessageChunk,
+		SessionUpdateAgentThoughtChunk,
+		SessionUpdateToolCall,
+		SessionUpdateToolCallUpdate,
+		SessionUpdatePlan,
+		SessionUpdateAvailableCommands,
+		SessionUpdateCurrentMode,
+		SessionUpdateConfigOption,
+		SessionUpdateUsageUpdate,
+		SessionUpdateUsageStats,
+		SessionUpdateSessionInfo,
+	}
+}
 
 type SessionUpdate struct {
 	SessionUpdate SessionUpdateKind `json:"sessionUpdate"`
@@ -73,13 +85,16 @@ type SessionUpdate struct {
 
 	ConfigOptions []SessionConfigOption `json:"configOptions,omitempty"`
 
-	// For usage_update (ACP session context indicator)
+	// Used, Size, Cost: usage_update fields (session context indicator).
 	Used int        `json:"used,omitempty"`
 	Size int        `json:"size,omitempty"`
 	Cost *UsageCost `json:"cost,omitempty"`
 
+	// Stats is the session-level usage record; only usage_stats carries it.
+	Stats *SessionStats `json:"stats,omitempty"`
+
 	// MessageID groups streamed chunks into messages: all chunks of one message
-	// share an id; a change marks a new message. Optional in the spec.
+	// share an id, and a change marks a new message.
 	MessageID string `json:"messageId,omitempty"`
 
 	// UpdatedAt is the session_info_update timestamp (ISO 8601); Title above is
@@ -104,23 +119,26 @@ type sessionUpdateWire struct {
 
 	Entries []PlanEntry `json:"entries,omitempty"`
 
-	// AvailableCommands is a pointer: the spec REQUIRES it on
-	// available_commands_update (an empty list must still reach the wire as
-	// `[]`, not be omitted — omitempty on a plain slice can't tell "empty" from
-	// "absent"), while every other update kind must omit it entirely.
+	// AvailableCommands is a pointer: required on available_commands_update
+	// (an empty list must reach the wire as `[]`, not be omitted — omitempty
+	// on a plain slice can't distinguish "empty" from "absent"), omitted
+	// entirely on every other update kind.
 	AvailableCommands *[]AvailableCommand `json:"availableCommands,omitempty"`
 
 	CurrentModeID string `json:"currentModeId,omitempty"`
 
-	// ConfigOptions is a pointer for the same reason as AvailableCommands
-	// above, required on config_option_update.
+	// ConfigOptions: same pointer reasoning as AvailableCommands, required on
+	// config_option_update.
 	ConfigOptions *[]SessionConfigOption `json:"configOptions,omitempty"`
 
-	// Pointers: the spec REQUIRES used and size on usage_update (zero values
-	// must reach the wire there), while every other update kind must omit them.
+	// Used/Size: pointers because usage_update requires them on the wire even
+	// when zero; every other update kind omits them.
 	Used *int       `json:"used,omitempty"`
 	Size *int       `json:"size,omitempty"`
 	Cost *UsageCost `json:"cost,omitempty"`
+
+	// Stats is the session usage record; only usage_stats carries it.
+	Stats *SessionStats `json:"stats,omitempty"`
 
 	MessageID string `json:"messageId,omitempty"`
 	UpdatedAt string `json:"updatedAt,omitempty"`
@@ -131,6 +149,47 @@ type sessionUpdateWire struct {
 type UsageCost struct {
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency"`
+}
+
+// SessionModelStats is one model's slice of a session usage record; Provider
+// names the backend that served the calls.
+type SessionModelStats struct {
+	Model    string `json:"model"`
+	Provider string `json:"provider,omitempty"`
+	Calls    int64  `json:"calls"`
+
+	InputTokens      int64 `json:"inputTokens"`
+	OutputTokens     int64 `json:"outputTokens"`
+	ThinkingTokens   int64 `json:"thinkingTokens"`
+	CacheReadTokens  int64 `json:"cacheReadTokens"`
+	CacheWriteTokens int64 `json:"cacheWriteTokens"`
+}
+
+// SessionStats is the session-level usage record a usage_stats update carries:
+// the same shape every client renders, derived server-side from engine events.
+// Token fields are provider-reported; times are milliseconds. TtftSamples and
+// TtftMs together give the average first-token latency (per sample), and
+// output throughput is OutputTokens/StreamMs.
+type SessionStats struct {
+	SessionID string `json:"sessionId"`
+
+	Turns      int64 `json:"turns"`
+	Steps      int64 `json:"steps"`
+	ModelCalls int64 `json:"modelCalls"`
+	LlmMs      int64 `json:"llmMs"`
+	ToolMs     int64 `json:"toolMs"`
+
+	TtftSamples int64 `json:"ttftSamples"`
+	TtftMs      int64 `json:"ttftMs"`
+	StreamMs    int64 `json:"streamMs"`
+
+	InputTokens      int64 `json:"inputTokens"`
+	OutputTokens     int64 `json:"outputTokens"`
+	ThinkingTokens   int64 `json:"thinkingTokens"`
+	CacheReadTokens  int64 `json:"cacheReadTokens"`
+	CacheWriteTokens int64 `json:"cacheWriteTokens"`
+
+	ByModel []SessionModelStats `json:"byModel,omitempty"`
 }
 
 func (u SessionUpdate) MarshalJSON() ([]byte, error) {
@@ -146,6 +205,7 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		Entries:       u.Entries,
 		CurrentModeID: u.CurrentModeID,
 		Cost:          u.Cost,
+		Stats:         u.Stats,
 		MessageID:     u.MessageID,
 		UpdatedAt:     u.UpdatedAt,
 		Meta:          u.Meta,
@@ -206,6 +266,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		Entries:       w.Entries,
 		CurrentModeID: w.CurrentModeID,
 		Cost:          w.Cost,
+		Stats:         w.Stats,
 		MessageID:     w.MessageID,
 		UpdatedAt:     w.UpdatedAt,
 		Meta:          w.Meta,
@@ -242,6 +303,28 @@ type SessionNotification struct {
 	SessionID SessionID       `json:"sessionId"`
 	Update    SessionUpdate   `json:"update"`
 	Meta      json.RawMessage `json:"_meta,omitempty"`
+}
+
+// EventSeqMetaKey is the `_meta` key under which a notification carries its
+// session-local monotonic sequence (the SSE resume cursor). Present on every
+// notification the runtime sends for a session that journals its events; a
+// reconnecting client names its last seen value as sinceSeq.
+const EventSeqMetaKey = "contenox.seq"
+
+// WithSeq returns a copy of the notification whose `_meta` records seq under
+// EventSeqMetaKey, preserving any existing `_meta` fields.
+func (n SessionNotification) WithSeq(seq uint64) SessionNotification {
+	meta := make(map[string]any)
+	if len(n.Meta) > 0 {
+		_ = json.Unmarshal(n.Meta, &meta)
+	}
+	if meta == nil {
+		meta = make(map[string]any)
+	}
+	meta[EventSeqMetaKey] = seq
+	encoded, _ := json.Marshal(meta)
+	n.Meta = encoded
+	return n
 }
 
 func NewAgentMessageChunk(text string) SessionUpdate {

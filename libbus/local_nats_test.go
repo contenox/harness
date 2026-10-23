@@ -7,9 +7,11 @@ import (
 	libbus "github.com/contenox/harness/libbus"
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
 )
 
 func TestUnit_StartupNATSCluster(t *testing.T) {
+	testcontainers.SkipIfProviderIsNotHealthy(t)
 	ctx := context.TODO()
 	url, container, cleanup, err := libbus.SetupNatsInstance(ctx)
 	defer cleanup()

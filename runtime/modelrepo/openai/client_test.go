@@ -18,43 +18,92 @@ func TestUnit_OpenAIReasoningEffort(t *testing.T) {
 		want  string
 	}{
 		{"gpt-5", ptr("true"), "high"},
-		{"gpt-5", ptr("minimal"), "low"},
+		{"gpt-5", ptr("minimal"), "minimal"},
 		{"gpt-5", ptr("none"), ""},
 		{"gpt-5.1", ptr("none"), "none"},
-		{"gpt-5.1", ptr("xhigh"), "high"},
 		{"gpt-5.4", ptr("none"), "none"},
-		{"gpt-5.4", ptr("minimal"), "minimal"},
 		{"gpt-5.4", ptr("xhigh"), "xhigh"},
-		{"gpt-5-pro", ptr("low"), "high"},
+		{"gpt-5.5", ptr("xhigh"), "xhigh"},
+		{"gpt-6-astra", ptr("max"), "max"},
 		{"o3-mini", ptr("false"), ""},
-		{"o3-mini", ptr("xhigh"), "high"},
+		{"o3-mini", ptr("xhigh"), "xhigh"},
 	}
 
 	for _, tc := range cases {
-		if got := openAIReasoningEffort(tc.model, tc.think); got != tc.want {
+		got, err := openAIReasoningEffort(tc.model, tc.think, nil)
+		if err != nil {
+			t.Errorf("openAIReasoningEffort(%q, %q) errored: %v", tc.model, *tc.think, err)
+			continue
+		}
+		if got != tc.want {
 			t.Errorf("openAIReasoningEffort(%q, %q) = %q, want %q", tc.model, *tc.think, got, tc.want)
 		}
 	}
 }
 
-func TestUnit_OpenAIGPT5AllowsSamplingParams(t *testing.T) {
+// A level the model's page does not name is refused, naming the documented
+// literals, rather than silently downgraded to a different effort.
+func TestUnit_OpenAIReasoningEffortRefusesUndocumentedLevel(t *testing.T) {
+	t.Parallel()
+
+	ptr := func(s string) *string { return &s }
+	cases := []struct {
+		model string
+		think *string
+	}{
+		{"gpt-5.1", ptr("xhigh")},
+		{"gpt-5.4", ptr("minimal")},
+		{"gpt-5-pro", ptr("low")},
+		{"gpt-6-astra", ptr("minimal")},
+	}
+	for _, tc := range cases {
+		if _, err := openAIReasoningEffort(tc.model, tc.think, nil); err == nil {
+			t.Errorf("openAIReasoningEffort(%q, %q) must refuse the level", tc.model, *tc.think)
+		}
+	}
+}
+
+// A model no vendor page covers takes the operator's own declaration.
+func TestUnit_OpenAIReasoningEffortUsesDeclaredControls(t *testing.T) {
+	t.Parallel()
+
+	ptr := func(s string) *string { return &s }
+	declared := &modelrepo.ThinkingTypes{Disabled: true, EffortLevels: []string{"low", "high"}}
+
+	got, err := openAIReasoningEffort("gpt-oss-120b", ptr("high"), declared)
+	if err != nil || got != "high" {
+		t.Fatalf("declared effort = %q, %v; want high", got, err)
+	}
+	if _, err := openAIReasoningEffort("gpt-oss-120b", ptr("xhigh"), declared); err == nil {
+		t.Fatal("a level outside the declaration must be refused")
+	}
+	off, err := openAIReasoningEffort("gpt-oss-120b", ptr("off"), declared)
+	if err != nil || off != "none" {
+		t.Fatalf("declared off = %q, %v; want none", off, err)
+	}
+}
+
+func TestUnit_OpenAISamplingParamGating(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		model     string
 		reasoning string
-		want      bool
+		omit      bool
 	}{
-		{"gpt-5", "", false},
-		{"openai/gpt-5", "", false},
-		{"gpt-5.1", "", true},
-		{"gpt-5.4", "none", true},
-		{"gpt-5.4", "high", false},
-		{"gpt-5-pro", "high", false},
-		{"gpt-4o", "", true},
+		{"gpt-5", "", true},
+		{"openai/gpt-5", "", true},
+		{"gpt-5.1", "", false},
+		{"gpt-5.4", "none", false},
+		{"gpt-5.4", "high", true},
+		{"gpt-5-pro", "high", true},
+		{"gpt-5-nano", "", true},
+		{"gpt-5-nano", "low", true},
+		{"o4-mini", "", true},
+		{"gpt-4o", "", false},
 	}
 	for _, tc := range cases {
-		if got := openAIGPT5AllowsSamplingParams(tc.model, tc.reasoning); got != tc.want {
-			t.Errorf("openAIGPT5AllowsSamplingParams(%q, %q) = %v, want %v", tc.model, tc.reasoning, got, tc.want)
+		if got := openAIShouldOmitSamplingParams(tc.model, tc.reasoning); got != tc.omit {
+			t.Errorf("openAIShouldOmitSamplingParams(%q, %q) = %v, want %v", tc.model, tc.reasoning, got, tc.omit)
 		}
 	}
 }
@@ -143,9 +192,12 @@ func TestUnit_OpenAIClient_ClampsChatAndResponsesMaxOutputTokens(t *testing.T) {
 		t.Fatalf("chat max_completion_tokens = %v, want 64", chatReq.MaxCompletionTokens)
 	}
 
-	responsesReq, _ := buildOpenAIResponsesRequestWithCapabilities("gpt-5", msgs, []modelrepo.ChatArgument{
+	responsesReq, _, err := buildOpenAIResponsesRequestWithCapabilities("gpt-5", msgs, []modelrepo.ChatArgument{
 		modelrepo.WithMaxTokens(128),
 	}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
 	client.clampResponsesMaxOutputTokens(&responsesReq)
 	if responsesReq.MaxOutputTokens == nil || *responsesReq.MaxOutputTokens != 64 {
 		t.Fatalf("responses max_output_tokens = %v, want 64", responsesReq.MaxOutputTokens)

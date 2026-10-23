@@ -120,7 +120,8 @@ func (c *orStreamClient) Stream(ctx context.Context, messages []modelrepo.Messag
 	cfg := chatConfigFromArgs(args)
 	req, nameMap := chatcompletions.Build(c.modelName, messages, cfg)
 	req.MaxTokens = modelrepo.ClampMaxOutputTokensPtr(req.MaxTokens, c.maxOutputTokens)
-	req.Stream = true
+	streamOn := true
+	req.Stream = &streamOn
 	dec := chatcompletions.NewStreamDecoder(nameMap)
 
 	reportErr, reportChange, end := c.tracker.Start(ctx, "stream", "openrouter", "model", c.modelName)
@@ -145,20 +146,31 @@ func (c *orStreamClient) Stream(ctx context.Context, messages []modelrepo.Messag
 				continue
 			}
 			payload := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-			if payload == "" || payload == "[DONE]" {
+			if payload == "" {
 				continue
 			}
-			p, derr := dec.DecodeLine([]byte(payload))
+			if payload == "[DONE]" {
+				dec.MarkTerminated()
+				continue
+			}
+			decoded, derr := dec.DecodeLine([]byte(payload))
 			if derr != nil {
 				continue
 			}
-			if p != nil {
+			for _, p := range decoded {
 				chunkCount++
 				select {
 				case parcels <- p:
 				case <-ctx.Done():
 					return
 				}
+			}
+		}
+		if terminal := dec.Finish(); terminal != nil {
+			select {
+			case parcels <- terminal:
+			case <-ctx.Done():
+				return
 			}
 		}
 		if err := sc.Err(); err != nil && err != io.EOF {
@@ -177,7 +189,7 @@ func (c *orStreamClient) Stream(ctx context.Context, messages []modelrepo.Messag
 // orPromptClient implements modelrepo.LLMPromptExecClient.
 type orPromptClient struct{ orClient }
 
-func (c *orPromptClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string) (string, error) {
+func (c *orPromptClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string, _ ...modelrepo.PromptArgument) (string, *modelrepo.TokenUsage, error) {
 	msgs := []modelrepo.Message{{Role: "user", Content: prompt}}
 	if s := strings.TrimSpace(systemInstruction); s != "" {
 		msgs = append([]modelrepo.Message{{Role: "system", Content: s}}, msgs...)
@@ -185,9 +197,9 @@ func (c *orPromptClient) Prompt(ctx context.Context, systemInstruction string, t
 	chat := &orChatClient{orClient: c.orClient}
 	res, err := chat.Chat(ctx, msgs, modelrepo.WithTemperature(float64(temperature)))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return res.Message.Content, nil
+	return res.Message.Content, res.Usage, nil
 }
 
 var (

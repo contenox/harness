@@ -30,7 +30,6 @@ const (
 
 // SetupVLLMLocalInstance creates a vLLM container for testing.
 func SetupVLLMLocalInstance(ctx context.Context, model string, tag string, toolParser string) (string, testcontainers.Container, func(), error) {
-	// Use default values if none are provided.
 	if model == "" {
 		model = defaultModel
 	}
@@ -38,14 +37,9 @@ func SetupVLLMLocalInstance(ctx context.Context, model string, tag string, toolP
 		tag = defaultTag
 	}
 
-	// Define a no-op cleanup function to start. This ensures we can always
-	// return a valid, non-nil function.
 	cleanup := func() {}
-	// Memory-bound the CPU backend so the container can start on a normally-loaded
-	// machine. vLLM-CPU reserves gpu-memory-utilization * total_RAM at startup and
-	// aborts if that exceeds what's free (default 0.92 ≈ all RAM); 0.3 keeps the
-	// target small. max-model-len must be a flag (the MAX_MODEL_LEN env is ignored
-	// by vLLM), and VLLM_CPU_KVCACHE_SPACE caps the KV cache (default 4 GiB).
+	// vLLM-CPU reserves gpu-memory-utilization * total_RAM at startup, so 0.3
+	// keeps the target small. max-model-len must be a flag, not an env var.
 	cmd := []string{
 		"--model", model,
 		"--max-model-len", defaultMaxModelLen,
@@ -54,7 +48,6 @@ func SetupVLLMLocalInstance(ctx context.Context, model string, tag string, toolP
 		"--enforce-eager",
 	}
 	if toolParser != "" && toolParser != "none" {
-		// deepseek_v3,granite-20b-fc,granite,hermes,internlm,jamba,llama4_pythonic,llama4_json,llama3_json,mistral,phi4_mini_json,pythonic
 		cmd = append(cmd, "--enable-auto-tool-choice", "--tool-call-parser", toolParser)
 	}
 	req := testcontainers.GenericContainerRequest{
@@ -99,7 +92,6 @@ func SetupVLLMLocalInstance(ctx context.Context, model string, tag string, toolP
 
 	apiBase := fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
 
-	// Perform a secondary, more reliable readiness check by polling the /v1/models endpoint.
 	if err := waitForModelsEndpoint(ctx, apiBase); err != nil {
 		return "", nil, cleanup, fmt.Errorf("vLLM server failed to become fully ready: %w", err)
 	}
@@ -107,13 +99,11 @@ func SetupVLLMLocalInstance(ctx context.Context, model string, tag string, toolP
 	return apiBase, container, cleanup, nil
 }
 
-// waitForModelsEndpoint polls the /v1/models endpoint to ensure the model is fully loaded.
 func waitForModelsEndpoint(ctx context.Context, apiBase string) error {
 	client := &http.Client{Timeout: 5 * time.Second}
 	modelsURL := apiBase + vllmModelsPath
 
 	for i := range readinessRetries {
-		// Create a new request with the parent context for cancellation propagation.
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, modelsURL, nil)
 		if err != nil {
 			return fmt.Errorf("failed to create models request: %w", err)
@@ -121,7 +111,6 @@ func waitForModelsEndpoint(ctx context.Context, apiBase string) error {
 
 		resp, err := client.Do(req)
 		if err == nil {
-			// Ensure the body is always closed and drained.
 			defer func() {
 				io.Copy(io.Discard, resp.Body)
 				resp.Body.Close()
@@ -138,17 +127,15 @@ func waitForModelsEndpoint(ctx context.Context, apiBase string) error {
 				resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 				log.Printf("vLLM instance is ready at %s", apiBase)
-				return nil // Success!
+				return nil
 			}
 			log.Printf("vLLM models check returned status %d (attempt %d/%d)", resp.StatusCode, i+1, readinessRetries)
 		} else {
 			log.Printf("vLLM models check failed (attempt %d/%d): %v", i+1, readinessRetries, err)
 		}
 
-		// Wait before retrying, but respect context cancellation.
 		select {
 		case <-time.After(pollInterval):
-			// Continue to next iteration.
 		case <-ctx.Done():
 			return ctx.Err()
 		}

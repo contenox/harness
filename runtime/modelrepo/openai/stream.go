@@ -11,76 +11,72 @@ import (
 	"strings"
 
 	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo/codec/chatcompletions"
 )
 
 type OpenAIStreamClient struct {
 	openAIClient
 }
 
-type openAIChatStreamResponseChunk struct {
-	ID      string `json:"id"`
-	Object  string `json:"object"`
-	Created int    `json:"created"`
-	Model   string `json:"model"`
-	Choices []struct {
-		Index int `json:"index"`
-		Delta struct {
-			Role             string `json:"role,omitempty"`
-			Content          string `json:"content,omitempty"`
-			ReasoningContent string `json:"reasoning_content,omitempty"`
-			ToolCalls        []struct {
-				ID       string `json:"id,omitempty"`
-				Type     string `json:"type,omitempty"`
-				Function struct {
-					Name      string `json:"name,omitempty"`
-					Arguments string `json:"arguments,omitempty"`
-				} `json:"function,omitempty"`
-			} `json:"tool_calls,omitempty"`
-		} `json:"delta"`
-		FinishReason string `json:"finish_reason"`
-	} `json:"choices"`
-}
-
+// Stream emits raw StreamParcel deltas as they arrive, ending in exactly one terminal parcel.
 func (c *OpenAIStreamClient) Stream(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (<-chan *modelrepo.StreamParcel, error) {
-	// Start tracking the operation
-	reportErr, reportChange, end := c.tracker.Start(ctx, "stream", "openai", "model", c.modelName)
-	// Note: We don't defer end() here because the stream is asynchronous
+	reportErr, reportChange, end := c.tracker.Start(ctx, "stream", c.providerType(), "model", c.modelName)
+	// end() is not deferred here; ownership passes to the goroutine below since the stream is asynchronous.
+
+	// No audio encoding on this wire format; refuse instead of dropping silently.
+	if err := modelrepo.RefuseAudioInput(c.providerType(), c.modelName, messages); err != nil {
+		reportErr(err)
+		end()
+		return nil, err
+	}
 
 	streamCh := make(chan *modelrepo.StreamParcel)
-	usesResponses := openAIUsesResponsesEndpoint(c.modelName)
+	usesResponses := c.codex != nil || openAIUsesResponsesEndpoint(c.modelName, chatArgsHaveTools(args))
 	endpoint := "/chat/completions"
 	var requestBody []byte
-	var responseNameMap map[string]string
+	var nameMap map[string]string
 	var err error
 
 	if usesResponses {
 		var req openAIResponsesRequest
-		req, responseNameMap = buildOpenAIResponsesRequestWithCapabilities(c.modelName, messages, args, c.supportsThink)
-		c.clampResponsesMaxOutputTokens(&req)
+		req, nameMap, err = c.buildResponsesRequest(messages, args)
+		if err != nil {
+			end()
+			return nil, err
+		}
 		req.Stream = true
 		requestBody, err = json.Marshal(req)
 		endpoint = "/responses"
 	} else {
 		var req openAIChatRequest
-		req, _ = buildOpenAIRequestWithCapabilities(c.modelName, messages, args, c.supportsThink)
+		req, nameMap, err = buildOpenAIRequestForDialect(c.dialect, c.modelName, messages, args, c.thinking, c.supportsThink)
+		if err != nil {
+			end()
+			return nil, err
+		}
 		req.Stream = true
+		req.StreamOptions = &openAIStreamOptions{IncludeUsage: true}
 		c.clampChatMaxOutputTokens(&req)
-		requestBody, err = json.Marshal(req)
+		requestBody, err = c.chatRequestBody(req, args)
 	}
 	if err != nil {
 		end()
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+endpoint, bytes.NewBuffer(requestBody))
-	if err != nil {
-		end()
-		return nil, fmt.Errorf("failed to create request: %w", err)
+	var resp *http.Response
+	if c.codex != nil {
+		resp, err = c.codex.request(ctx, http.MethodPost, endpoint, requestBody)
+	} else {
+		httpReq, createErr := http.NewRequestWithContext(ctx, "POST", c.baseURL+endpoint, bytes.NewBuffer(requestBody))
+		if createErr != nil {
+			end()
+			return nil, fmt.Errorf("failed to create request: %w", createErr)
+		}
+		httpReq.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+		resp, err = c.httpClient.Do(httpReq)
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
-
-	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		err = fmt.Errorf("HTTP request failed for model %s: %w", c.modelName, err)
 		reportErr(err)
@@ -88,12 +84,12 @@ func (c *OpenAIStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 		return nil, err
 	}
 
-	// Check response status
 	if resp.StatusCode != http.StatusOK {
 		defer resp.Body.Close()
 		body, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("OpenAI API returned non-200 status: %d - %s for model %s",
-			resp.StatusCode, string(body), c.modelName)
+		code, message := modelrepo.ProviderErrorDetail(body)
+		err = fmt.Errorf("%s API returned non-200 status: %d for model %s: %s", c.vendorLabel(), resp.StatusCode, c.modelName, message)
+		err = modelrepo.ClassifyProviderError(err, resp.StatusCode, code, message)
 		reportErr(err)
 		end()
 		return nil, err
@@ -102,64 +98,52 @@ func (c *OpenAIStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 	go func() {
 		defer close(streamCh)
 		defer resp.Body.Close()
-		defer end() // End tracking when the stream completes
+		defer end()
 
 		if usesResponses {
-			streamResponsesSSE(ctx, resp.Body, responseNameMap, streamCh, reportErr, reportChange)
+			streamResponsesSSE(ctx, resp.Body, nameMap, streamCh, reportErr, reportChange, c.responseContinuation)
 			return
 		}
 
-		// Create a scanner to read the response line by line
+		send := func(p *modelrepo.StreamParcel) bool {
+			select {
+			case streamCh <- p:
+				return true
+			case <-ctx.Done():
+				return false
+			}
+		}
+
+		dec := chatcompletions.NewStreamDecoder(nameMap)
 		scanner := bufio.NewScanner(resp.Body)
+		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 		var chunkCount int
-		var totalContent strings.Builder
 
 		for scanner.Scan() {
 			line := scanner.Text()
-
-			// Skip empty lines
-			if line == "" {
+			if !strings.HasPrefix(line, "data: ") {
 				continue
 			}
-
-			// SSE format starts with "data: "
-			if strings.HasPrefix(line, "data: ") {
-				jsonData := strings.TrimPrefix(line, "data: ")
-
-				// Skip [DONE] messages
-				if jsonData == "[DONE]" {
-					continue
+			jsonData := strings.TrimPrefix(line, "data: ")
+			if jsonData == "[DONE]" {
+				dec.MarkTerminated()
+				continue
+			}
+			parcels, derr := dec.DecodeLine([]byte(jsonData))
+			if derr != nil {
+				derr = fmt.Errorf("failed to decode SSE data: %w, raw: %s", derr, jsonData)
+				reportErr(derr)
+				send(&modelrepo.StreamParcel{Error: derr})
+				return
+			}
+			for _, p := range parcels {
+				chunkCount++
+				if !send(p) {
+					return
 				}
-
-				var chunk openAIChatStreamResponseChunk
-				if err := json.Unmarshal([]byte(jsonData), &chunk); err != nil {
-					select {
-					case streamCh <- &modelrepo.StreamParcel{
-						Error: fmt.Errorf("failed to decode SSE data: %w, raw: %s", err, jsonData),
-					}:
-					case <-ctx.Done():
-						return
-					}
-					continue
-				}
-
-				// Process the chunk
-				if len(chunk.Choices) > 0 {
-					delta := chunk.Choices[0].Delta
-					if delta.Content != "" || delta.ReasoningContent != "" {
-						if delta.Content != "" {
-							chunkCount++
-							totalContent.WriteString(delta.Content)
-						}
-						select {
-						case streamCh <- &modelrepo.StreamParcel{
-							Data:     delta.Content,
-							Thinking: delta.ReasoningContent,
-						}:
-						case <-ctx.Done():
-							return
-						}
-					}
+				if p.Error != nil {
+					reportErr(p.Error)
+					return
 				}
 			}
 		}
@@ -167,20 +151,14 @@ func (c *OpenAIStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 		if err := scanner.Err(); err != nil && err != io.EOF {
 			err = fmt.Errorf("stream scanning error: %w", err)
 			reportErr(err)
-			select {
-			case streamCh <- &modelrepo.StreamParcel{
-				Error: err,
-			}:
-			case <-ctx.Done():
-				return
-			}
+			send(&modelrepo.StreamParcel{Error: err})
+			return
 		}
 
-		reportChange("stream_completed", map[string]any{
-			"chunk_count":     chunkCount,
-			"total_length":    totalContent.Len(),
-			"content_preview": truncateString(totalContent.String(), 100),
-		})
+		if !send(dec.Finish()) {
+			return
+		}
+		reportChange("stream_completed", map[string]any{"chunk_count": chunkCount})
 	}()
 
 	return streamCh, nil
@@ -193,30 +171,21 @@ func truncateString(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-// responsesSSEEvent covers the subset of Responses API SSE event types we handle.
 type responsesSSEEvent struct {
-	Type string `json:"type"`
-	// response.output_text.delta
-	Delta string `json:"delta"`
-	// response.function_call_arguments.delta
-	CallID string `json:"call_id"`
-	// response.output_item.done — the finished item
-	Item *openAIResponseOutputItem `json:"item"`
-	// response.completed — the full response (reasoning summary lives here)
-	Response *openAIResponse `json:"response"`
-	// error — code/message are top-level per the Responses API spec, but some
-	// gateways nest them under an "error" object instead.
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Error   *struct {
+	Type        string                    `json:"type"`
+	Delta       string                    `json:"delta"`
+	OutputIndex int                       `json:"output_index"`
+	Item        *openAIResponseOutputItem `json:"item"`
+	Response    *openAIResponse           `json:"response"`
+	Code        string                    `json:"code"`
+	Message     string                    `json:"message"`
+	Error       *struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
 }
 
-// errorText resolves the error detail from either encoding, falling back to
-// the raw payload so a stream failure never surfaces as an empty error.
-func (ev responsesSSEEvent) errorText(rawPayload string) string {
+func (ev responsesSSEEvent) errorText() string {
 	code, msg := ev.Code, ev.Message
 	if ev.Error != nil {
 		if code == "" {
@@ -235,15 +204,14 @@ func (ev responsesSSEEvent) errorText(rawPayload string) string {
 		}
 	}
 	if code == "" && msg == "" {
-		return truncateString(rawPayload, 512)
+		if ev.Response != nil && ev.Response.IncompleteDetails != nil {
+			return ev.Response.IncompleteDetails.Reason
+		}
+		return "no provider error detail"
 	}
 	return code + ": " + msg
 }
 
-// streamResponsesSSE reads a Responses API SSE stream and forwards text parcels
-// to out. Tool call arguments are accumulated but not streamed (consistent with
-// the Chat Completions stream path). Reasoning summaries are emitted as thinking
-// parcels from the response.completed event.
 func streamResponsesSSE(
 	ctx context.Context,
 	body io.ReadCloser,
@@ -251,10 +219,22 @@ func streamResponsesSSE(
 	out chan<- *modelrepo.StreamParcel,
 	reportErr func(error),
 	reportChange func(string, any),
+	continuation func(*openAIResponse) *modelrepo.Continuation,
 ) {
 	sc := bufio.NewScanner(body)
 	sc.Buffer(make([]byte, 64*1024), 1024*1024)
 	var chunkCount int
+	var emittedReasoning bool
+	var refusalText strings.Builder
+
+	send := func(p *modelrepo.StreamParcel) bool {
+		select {
+		case out <- p:
+			return true
+		case <-ctx.Done():
+			return false
+		}
+	}
 
 	for sc.Scan() {
 		line := sc.Text()
@@ -268,7 +248,10 @@ func streamResponsesSSE(
 
 		var ev responsesSSEEvent
 		if err := json.Unmarshal([]byte(payload), &ev); err != nil {
-			continue
+			err := fmt.Errorf("responses: malformed stream event")
+			reportErr(err)
+			send(&modelrepo.StreamParcel{Error: err})
+			return
 		}
 
 		switch ev.Type {
@@ -277,62 +260,146 @@ func streamResponsesSSE(
 				continue
 			}
 			chunkCount++
-			select {
-			case out <- &modelrepo.StreamParcel{Data: ev.Delta}:
-			case <-ctx.Done():
+			if !send(&modelrepo.StreamParcel{Data: ev.Delta}) {
+				return
+			}
+
+		case "response.reasoning_summary_text.delta":
+			if ev.Delta == "" {
+				continue
+			}
+			emittedReasoning = true
+			if !send(&modelrepo.StreamParcel{Thinking: ev.Delta}) {
+				return
+			}
+
+		case "response.refusal.delta":
+			if ev.Delta == "" {
+				continue
+			}
+			refusalText.WriteString(ev.Delta)
+
+		case "response.output_item.added":
+			if ev.Item == nil || strings.ToLower(ev.Item.Type) != "function_call" {
+				continue
+			}
+			id := ev.Item.CallID
+			if id == "" {
+				id = ev.Item.ID
+			}
+			name := ev.Item.Name
+			if orig, ok := nameMap[name]; ok && orig != "" {
+				name = orig
+			}
+			if !send(&modelrepo.StreamParcel{ToolCall: &modelrepo.ToolCallDelta{
+				Index: ev.OutputIndex,
+				ID:    id,
+				Type:  "function",
+				Name:  name,
+			}}) {
 				return
 			}
 
 		case "response.function_call_arguments.delta":
-			// Tool call args are accumulated server-side; the final arguments
-			// appear in response.output_item.done. Nothing to emit here.
+			if ev.Delta == "" {
+				continue
+			}
+			if !send(&modelrepo.StreamParcel{ToolCall: &modelrepo.ToolCallDelta{
+				Index:        ev.OutputIndex,
+				ArgsFragment: ev.Delta,
+			}}) {
+				return
+			}
 
 		case "response.completed":
-			// Emit reasoning summary (if any) as a thinking parcel.
-			if ev.Response != nil && ev.Response.Reasoning.Summary != "" {
-				select {
-				case out <- &modelrepo.StreamParcel{Thinking: ev.Response.Reasoning.Summary}:
-				case <-ctx.Done():
-					return
+			if refusal := firstNonEmptyString(refusalText.String(), responsesRefusalText(ev.Response)); refusal != "" {
+				err := &modelrepo.RefusalError{Provider: "openai", Code: refusalFinishReason, Text: refusal}
+				reportErr(err)
+				send(&modelrepo.StreamParcel{Error: err})
+				return
+			}
+			if !emittedReasoning {
+				if summary := responsesReasoningSummaryText(ev.Response); summary != "" {
+					if !send(&modelrepo.StreamParcel{Thinking: summary}) {
+						return
+					}
 				}
 			}
-
-		case "error":
-			err := fmt.Errorf("responses stream error %s", ev.errorText(payload))
-			reportErr(err)
-			select {
-			case out <- &modelrepo.StreamParcel{Error: err}:
-			case <-ctx.Done():
+			term := &modelrepo.StreamTerminal{FinishReason: responsesFinishReason(ev.Response), Terminated: true}
+			if continuation != nil {
+				term.Continuation = continuation(ev.Response)
 			}
+			if ev.Response != nil {
+				term.Usage = ev.Response.Usage.neutralUsage()
+			}
+			if !send(&modelrepo.StreamParcel{Terminal: term}) {
+				return
+			}
+			reportChange("stream_completed", map[string]any{
+				"path":        "responses",
+				"chunk_count": chunkCount,
+			})
 			return
 
-		case "response.failed", "response.incomplete":
-			// Terminal non-success events: without this the stream would end
-			// silently and the caller would see an empty completion.
-			err := fmt.Errorf("responses stream %s %s", ev.Type, ev.errorText(payload))
-			reportErr(err)
-			select {
-			case out <- &modelrepo.StreamParcel{Error: err}:
-			case <-ctx.Done():
+		case "response.incomplete":
+			if refusal := firstNonEmptyString(refusalText.String(), responsesRefusalText(ev.Response)); refusal != "" {
+				err := &modelrepo.RefusalError{Provider: "openai", Code: refusalFinishReason, Text: refusal}
+				reportErr(err)
+				send(&modelrepo.StreamParcel{Error: err})
+				return
 			}
+			if !emittedReasoning {
+				if summary := responsesReasoningSummaryText(ev.Response); summary != "" {
+					if !send(&modelrepo.StreamParcel{Thinking: summary}) {
+						return
+					}
+				}
+			}
+			term := &modelrepo.StreamTerminal{FinishReason: responsesFinishReason(ev.Response), Terminated: true}
+			if continuation != nil {
+				term.Continuation = continuation(ev.Response)
+			}
+			if ev.Response != nil {
+				term.Usage = ev.Response.Usage.neutralUsage()
+			}
+			if !send(&modelrepo.StreamParcel{Terminal: term}) {
+				return
+			}
+			reportChange("stream_incomplete", map[string]any{
+				"path":        "responses",
+				"chunk_count": chunkCount,
+			})
+			return
+
+		case "error":
+			err := modelrepo.ClassifyProviderError(fmt.Errorf("responses stream error %s", ev.errorText()), 0, ev.errorText(), ev.errorText())
+			reportErr(err)
+			send(&modelrepo.StreamParcel{Error: err})
+			return
+
+		case "response.failed":
+			err := modelrepo.ClassifyProviderError(fmt.Errorf("responses stream %s %s", ev.Type, ev.errorText()), 0, ev.errorText(), ev.errorText())
+			reportErr(err)
+			send(&modelrepo.StreamParcel{Error: err})
 			return
 		}
 	}
 
+	if err := ctx.Err(); err != nil {
+		reportErr(err)
+		send(&modelrepo.StreamParcel{Error: err})
+		return
+	}
 	if err := sc.Err(); err != nil && err != io.EOF {
 		err = fmt.Errorf("responses: stream read: %w", err)
 		reportErr(err)
-		select {
-		case out <- &modelrepo.StreamParcel{Error: err}:
-		case <-ctx.Done():
-		}
+		send(&modelrepo.StreamParcel{Error: err})
 		return
 	}
 
-	reportChange("stream_completed", map[string]any{
-		"path":        "responses",
-		"chunk_count": chunkCount,
-	})
+	err := fmt.Errorf("responses: stream ended without response.completed")
+	reportErr(err)
+	send(&modelrepo.StreamParcel{Error: err})
 }
 
 var _ modelrepo.LLMStreamClient = (*OpenAIStreamClient)(nil)

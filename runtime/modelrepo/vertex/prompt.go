@@ -12,10 +12,13 @@ type vertexPromptClient struct {
 	vertexClient
 }
 
-// Prompt implements modelrepo.LLMPromptExecClient.
-func (c *vertexPromptClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string) (string, error) {
+func (c *vertexPromptClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string, promptArgs ...modelrepo.PromptArgument) (string, *modelrepo.TokenUsage, error) {
 	reportErr, reportChange, end := c.tracker.Start(ctx, "prompt", "vertex", "model", c.modelName)
 	defer end()
+	promptConfig, err := modelrepo.PromptConfigFromArgs(promptArgs...)
+	if err != nil {
+		return "", nil, err
+	}
 
 	messages := []modelrepo.Message{
 		{Role: "user", Content: prompt},
@@ -25,16 +28,20 @@ func (c *vertexPromptClient) Prompt(ctx context.Context, systemInstruction strin
 	}
 
 	chat := &vertexChatClient{vertexClient: c.vertexClient}
-	resp, err := chat.Chat(ctx, messages, modelrepo.WithTemperature(float64(temperature)))
+	chatArgs := []modelrepo.ChatArgument{modelrepo.WithTemperature(float64(temperature))}
+	if promptConfig.MaxTokens != nil {
+		chatArgs = append(chatArgs, modelrepo.WithMaxTokens(*promptConfig.MaxTokens))
+	}
+	resp, err := chat.Chat(ctx, messages, chatArgs...)
 	if err != nil {
 		reportErr(err)
-		return "", fmt.Errorf("vertex prompt execution failed: %w", err)
+		return "", nil, fmt.Errorf("vertex prompt execution failed: %w", err)
 	}
 
 	reportChange("prompt_completed", map[string]any{
 		"response_length": len(resp.Message.Content),
 	})
-	return resp.Message.Content, nil
+	return resp.Message.Content, resp.Usage, nil
 }
 
 var _ modelrepo.LLMPromptExecClient = (*vertexPromptClient)(nil)

@@ -2,26 +2,47 @@ package runtimestate
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
-	"os"
 	"strings"
 
+	"github.com/contenox/harness/libcipher"
+	"github.com/contenox/harness/libdbexec"
 	"github.com/contenox/harness/libkvstore"
+	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelcapability"
 	"github.com/contenox/harness/runtime/modelrepo"
 	"github.com/contenox/harness/runtime/runtimetypes"
-	"github.com/contenox/harness/runtime/statetype"
 )
 
-// observedModelCachePrefix is the KV key prefix under which each backend's
-// observed model list is cached (see loadObservedModelCache /
-// storeObservedModelCache). Distinct from ProviderKeyPrefix ("cloud-provider:").
 const observedModelCachePrefix = "prov:"
 
 func observedModelCacheKey(backendID string) string {
 	return observedModelCachePrefix + backendID
+}
+
+// RefreshProviderModels invalidates discovery caches for selected connections and refreshes only those providers.
+func (s *State) RefreshProviderModels(ctx context.Context, providers ...string) error {
+	backends, err := runtimetypes.New(s.dbInstance.WithoutTransaction()).ListBackends(ctx, nil, runtimetypes.MAXLIMIT)
+	if err != nil {
+		return err
+	}
+	for _, backend := range backends {
+		if !matchesProvider(backend, providers) {
+			continue
+		}
+		if s.kvStore != nil {
+			if err := InvalidateModelCache(ctx, s.kvStore, backend.ID); err != nil {
+				return err
+			}
+		}
+		s.providerCache.Delete(backend.ID)
+	}
+	return s.RunProviderCycle(ctx, providers...)
 }
 
 // InvalidateModelCache removes the cached observed-model list for one backend,
@@ -62,47 +83,60 @@ func ClearModelCache(ctx context.Context, kv libkvstore.KVManager) (int, error) 
 	return cleared, nil
 }
 
-func providerConfigKey(backendType string) (string, bool) {
+func takesCredential(backendType string) bool {
 	switch modelrepo.CanonicalBackendType(backendType) {
-	case "ollama":
-		return OllamaKey, true
-	case "openai":
-		return OpenaiKey, true
-	case "openrouter":
-		return OpenRouterKey, true
-	case "anthropic":
-		return AnthropicKey, true
-	case "mistral":
-		return MistralKey, true
-	case "bedrock":
-		return BedrockKey, true
-	case "gemini":
-		return GeminiKey, true
-	case "vllm":
-		// vLLM reuses the OpenAI-compatible bearer token configuration.
-		return OpenaiKey, true
-	case "vertex-google":
-		return VertexGoogleKey, true
-	default:
-		return "", false
+	case "ollama", "openai", "anthropic", "mistral", "deepseek", "bedrock", "gemini", "vllm", "vertex-google":
+		return true
 	}
+	return false
 }
 
-func (s *State) loadProviderAPIKey(ctx context.Context, backendType string) (string, error) {
-	key, ok := providerConfigKey(backendType)
-	if !ok {
+// BackendCredentialKey is where one connection's credential record lives. It is the only record a connection's credential is read from: no connection borrows another's, and no record is shared by every connection of an adapter type.
+func BackendCredentialKey(backendType, backendID string) string {
+	return ProviderKeyPrefix + strings.ToLower(backendType) + ":" + backendID
+}
+
+func (s *State) loadProviderAPIKey(ctx context.Context, backend *runtimetypes.Backend) (string, error) {
+	return loadProviderAPIKey(ctx, runtimetypes.New(s.dbInstance.WithoutTransaction()), backend)
+}
+
+// LoadProviderAPIKey reads the credential a connection's turns are sent with,
+// through the same lookup the resolver uses, so a caller reporting on a
+// connection reads the credential that connection actually presents.
+func LoadProviderAPIKey(ctx context.Context, db libdbexec.DBManager, backend runtimetypes.Backend) (string, error) {
+	return loadProviderAPIKey(ctx, runtimetypes.New(db.WithoutTransaction()), &backend)
+}
+
+func loadProviderAPIKey(ctx context.Context, store runtimetypes.Store, backend *runtimetypes.Backend) (string, error) {
+	if !takesCredential(backend.Type) {
 		return "", nil
 	}
-
-	cfg := ProviderConfig{}
-	store := runtimetypes.New(s.dbInstance.WithoutTransaction())
-	if err := store.GetKV(ctx, key, &cfg); err != nil {
+	var record ProviderConfig
+	err := store.GetKV(ctx, BackendCredentialKey(backend.Type, backend.ID), &record)
+	if errors.Is(err, libdbexec.ErrNotFound) && optionalCredential(backend.Type) {
+		return "", nil
+	}
+	if err != nil {
 		return "", err
 	}
-	if cfg.APIKey == "" && strings.TrimSpace(cfg.APIKeyEnv) != "" {
-		return os.Getenv(strings.TrimSpace(cfg.APIKeyEnv)), nil
+	credential, err := record.Credential(backend.Type)
+	var unset *EnvironmentUnsetError
+	switch {
+	case errors.As(err, &unset):
+		return "", fmt.Errorf("%w; connection %q takes its API key from it: set it for this runtime or save the connection with another credential source", unset, backend.Name)
+	case err != nil:
+		return "", fmt.Errorf("connection %q: %w", backend.Name, err)
 	}
-	return cfg.APIKey, nil
+	return credential, nil
+}
+
+// optionalCredential reports whether a connection type is complete without a credential record, as a local Ollama daemon or a self-hosted vLLM is.
+func optionalCredential(backendType string) bool {
+	switch modelrepo.CanonicalBackendType(backendType) {
+	case "ollama", "local", "modeld", "vllm":
+		return true
+	}
+	return false
 }
 
 func (s *State) newCatalogProvider(backend *runtimetypes.Backend, apiKey string) (modelrepo.CatalogProvider, error) {
@@ -112,42 +146,117 @@ func (s *State) newCatalogProvider(backend *runtimetypes.Backend, apiKey string)
 			BaseURL: backend.BaseURL,
 			APIKey:  apiKey,
 		},
-		modelrepo.WithCatalogHTTPClient(http.DefaultClient),
+		modelrepo.WithCatalogHTTPClient(modelrepo.SharedHTTPClient),
 	)
 }
 
-func (s *State) loadObservedModelCache(ctx context.Context, backendID, apiKey string) ([]modelrepo.ObservedModel, bool) {
-	if s.kvStore != nil {
-		if exec, err := s.kvStore.Executor(ctx); err == nil {
-			if raw, err := exec.Get(ctx, observedModelCacheKey(backendID)); err == nil {
-				var entry providerCacheEntry
-				if json.Unmarshal(raw, &entry) == nil && entry.APIKey == apiKey && len(entry.Models) > 0 {
-					return entry.Models, true
-				}
+// storedCacheEntry reads a persisted row; APIKey marks a legacy row that held the credential in plaintext and is deleted unread.
+type storedCacheEntry struct {
+	providerCacheEntry
+	APIKey *string `json:"api_key,omitempty"`
+}
+
+func (s *State) credentialHash(backendID, credential string) (string, error) {
+	sum, err := libcipher.NewHash(libcipher.GenerateHashArgs{Payload: []byte(credential), SigningKey: s.cacheHashKey, Salt: []byte(backendID)}, sha256.New)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(sum), nil
+}
+
+func (s *State) reportCacheFailure(ctx context.Context, backendID, operation string, err error) {
+	tracker := s.tracker
+	if tracker == nil {
+		tracker = libtracker.NoopTracker{}
+	}
+	reportErr, _, end := tracker.Start(ctx, operation, "model_cache", "backend", backendID)
+	reportErr(err)
+	end()
+}
+
+func (s *State) loadObservedModelCache(ctx context.Context, backendID, credential string) ([]modelrepo.ObservedModel, bool) {
+	hash, err := s.credentialHash(backendID, credential)
+	if err != nil {
+		s.reportCacheFailure(ctx, backendID, "read", err)
+		return nil, false
+	}
+	if s.kvStore == nil {
+		if cached, ok := s.providerCache.Load(backendID); ok {
+			if entry, ok := cached.(providerCacheEntry); ok && hmac.Equal([]byte(entry.CredentialHash), []byte(hash)) && len(entry.Models) > 0 {
+				return entry.Models, true
 			}
 		}
 		return nil, false
 	}
-
-	if cached, ok := s.providerCache.Load(backendID); ok {
-		if entry, ok := cached.(providerCacheEntry); ok && entry.APIKey == apiKey && len(entry.Models) > 0 {
-			return entry.Models, true
-		}
+	exec, err := s.kvStore.Executor(ctx)
+	if err != nil {
+		s.reportCacheFailure(ctx, backendID, "read", err)
+		return nil, false
 	}
-	return nil, false
+	key := observedModelCacheKey(backendID)
+	raw, err := exec.Get(ctx, key)
+	if err != nil {
+		if !errors.Is(err, libkvstore.ErrNotFound) {
+			s.reportCacheFailure(ctx, backendID, "read", err)
+		}
+		return nil, false
+	}
+	var entry storedCacheEntry
+	if err := json.Unmarshal(raw, &entry); err != nil {
+		s.reportCacheFailure(ctx, backendID, "read", err)
+		return nil, false
+	}
+	if entry.APIKey != nil {
+		if err := exec.Delete(ctx, key); err != nil {
+			s.reportCacheFailure(ctx, backendID, "drop_plaintext", err)
+		}
+		return nil, false
+	}
+	if !hmac.Equal([]byte(entry.CredentialHash), []byte(hash)) || len(entry.Models) == 0 {
+		return nil, false
+	}
+	return entry.Models, true
 }
 
-func (s *State) storeObservedModelCache(ctx context.Context, backendID, apiKey string, models []modelrepo.ObservedModel) {
-	entry := providerCacheEntry{Models: models, APIKey: apiKey}
-	if s.kvStore != nil {
-		if exec, err := s.kvStore.Executor(ctx); err == nil {
-			if data, err := json.Marshal(entry); err == nil {
-				_ = exec.SetWithTTL(ctx, observedModelCacheKey(backendID), data, ProviderCacheDuration)
-			}
+func (s *State) storeObservedModelCache(ctx context.Context, backendID, credential string, models []modelrepo.ObservedModel, catalog modelrepo.CatalogProvider) {
+	policy := modelrepo.ModelCachePolicy{}
+	if p, ok := catalog.(modelrepo.CachePolicyCatalog); ok {
+		policy = p.CachePolicy()
+	}
+	ttl := ProviderCacheDuration
+	if len(models) == 0 {
+		if policy.Empty < 0 {
+			return
 		}
+		if policy.Empty > 0 {
+			ttl = policy.Empty
+		}
+	} else if policy.Healthy > 0 {
+		ttl = policy.Healthy
+	}
+	hash, err := s.credentialHash(backendID, credential)
+	if err != nil {
+		s.reportCacheFailure(ctx, backendID, "write", err)
 		return
 	}
-	s.providerCache.Store(backendID, entry)
+	entry := providerCacheEntry{Models: models, CredentialHash: hash}
+	if s.kvStore == nil {
+		s.providerCache.Store(backendID, entry)
+		return
+	}
+	exec, err := s.kvStore.Executor(ctx)
+	if err != nil {
+		s.reportCacheFailure(ctx, backendID, "write", err)
+		return
+	}
+	data, err := json.Marshal(entry)
+	if err != nil {
+		s.reportCacheFailure(ctx, backendID, "write", err)
+		return
+	}
+	if err := exec.SetWithTTL(ctx, observedModelCacheKey(backendID), data, ttl); err != nil {
+		s.reportCacheFailure(ctx, backendID, "write", err)
+	}
 }
 
 func observedModelNames(models []modelrepo.ObservedModel) []string {
@@ -158,12 +267,43 @@ func observedModelNames(models []modelrepo.ObservedModel) []string {
 	return names
 }
 
-func (s *State) applyCapabilityOverrides(ctx context.Context, provider string, model statetype.ModelPullStatus) statetype.ModelPullStatus {
-	provider = modelrepo.CanonicalBackendType(provider)
-	name := strings.TrimSpace(model.Model)
-	if name == "" {
-		name = strings.TrimSpace(model.Name)
+func (s *State) applyDeclaredModel(ctx context.Context, backend *runtimetypes.Backend, declared *runtimetypes.Model, observed modelrepo.ObservedModel) ModelPullStatus {
+	model := pullStatusFromObservedModel(observed)
+	if declared != nil {
+		model = s.mergeDeclaredRow(ctx, declared, model)
 	}
+	return s.applyDeclarations(ctx, backend, model)
+}
+
+// mergeDeclaredRow never takes embedding capability from a declared row: only the catalog says a model embeds.
+func (s *State) mergeDeclaredRow(ctx context.Context, declared *runtimetypes.Model, model ModelPullStatus) ModelPullStatus {
+	if declared.ContextLength == 0 && model.ContextLength > 0 {
+		learned := *declared
+		learned.ContextLength = model.ContextLength
+		learned.CanChat = model.CanChat
+		learned.CanEmbed = model.CanEmbed
+		learned.CanPrompt = model.CanPrompt
+		learned.CanStream = model.CanStream
+		_ = runtimetypes.New(s.dbInstance.WithoutTransaction()).UpdateModel(ctx, &learned)
+	}
+	if declared.ContextLength > 0 {
+		model.ContextLength = declared.ContextLength
+	}
+	model.CanChat = model.CanChat || declared.CanChat
+	model.CanPrompt = model.CanPrompt || declared.CanPrompt
+	model.CanStream = model.CanStream || declared.CanStream
+	return model
+}
+
+func (s *State) applyDeclarations(ctx context.Context, backend *runtimetypes.Backend, model ModelPullStatus) ModelPullStatus {
+	model = s.applyCapabilityOverrides(ctx, backend.Type, model)
+	model = s.applyCapabilityOverrides(ctx, ConnectionSelector(backend.ID), model)
+	return s.applyModelFacts(ctx, backend.ID, model)
+}
+
+func (s *State) applyCapabilityOverrides(ctx context.Context, provider string, model ModelPullStatus) ModelPullStatus {
+	provider = modelrepo.CanonicalBackendType(provider)
+	name := declaredModelName(model)
 	if name == "" {
 		return model
 	}
@@ -177,15 +317,94 @@ func (s *State) applyCapabilityOverrides(ctx context.Context, provider string, m
 	if override.CanVision != nil {
 		model.CanVision = *override.CanVision
 	}
+	if override.CompletionMode != nil {
+		model.CompletionMode = *override.CompletionMode
+	}
 	return model
 }
 
+func (s *State) applyModelFacts(ctx context.Context, providerID string, model ModelPullStatus) ModelPullStatus {
+	name := declaredModelName(model)
+	if providerID == "" || name == "" {
+		return model
+	}
+	declared, err := runtimetypes.New(s.dbInstance.WithoutTransaction()).GetLLMProviderModelFacts(ctx, providerID)
+	if err != nil {
+		return model
+	}
+	facts, ok := declared[name]
+	if !ok || facts.IsZero() {
+		return model
+	}
+	if facts.ContextLength > 0 {
+		model.ContextLength = facts.ContextLength
+	}
+	if facts.MaxOutputTokens > 0 {
+		model.MaxOutputTokens = facts.MaxOutputTokens
+	}
+	if facts.CompletionMode != "" {
+		model.CompletionMode, model.FIMFormat = facts.CompletionMode, facts.FIMFormat
+	}
+	if len(facts.Capabilities) > 0 {
+		model.NextEditFormat = facts.NextEditFormat
+	}
+	if len(facts.Capabilities) > 0 {
+		model.DeclaredCapabilities = facts.Capabilities
+		applyDeclaredCapabilities(&model, facts.Capabilities)
+	}
+	if facts.Pricing != nil {
+		model.Pricing = facts.Pricing
+	}
+	return model
+}
+
+func declaredModelName(model ModelPullStatus) string {
+	if name := strings.TrimSpace(model.Model); name != "" {
+		return name
+	}
+	return strings.TrimSpace(model.Name)
+}
+
+func applyDeclaredCapabilities(model *ModelPullStatus, capabilities []string) {
+	model.CanAutocomplete = false
+	model.CanNextEdit = false
+	model.CanChat = false
+	model.CanEmbed = false
+	model.CanPrompt = false
+	model.CanStream = false
+	model.CanThink = false
+	model.CanVision = false
+	model.CanAudio = false
+	for _, capability := range capabilities {
+		switch capability {
+		case runtimetypes.CapabilityAutocomplete:
+			model.CanAutocomplete = true
+		case runtimetypes.CapabilityNextEdit:
+			model.CanNextEdit = true
+		case runtimetypes.CapabilityCompletion:
+			model.CanChat = true
+			model.CanPrompt = true
+			model.CanStream = true
+		case runtimetypes.CapabilityEmbedding:
+			model.CanEmbed = true
+		case runtimetypes.CapabilityTools:
+			model.CanChat = true
+		case runtimetypes.CapabilityVision:
+			model.CanVision = true
+		case runtimetypes.CapabilityThinking:
+			model.CanThink = true
+		case runtimetypes.CapabilityAudio:
+			model.CanAudio = true
+		}
+	}
+}
+
 func storeBackendError(state *State, backend *runtimetypes.Backend, apiKey string, err error, models []string) {
-	runtimeState := &statetype.BackendRuntimeState{
+	runtimeState := &BackendRuntimeState{
 		ID:           backend.ID,
 		Name:         backend.Name,
 		Models:       models,
-		PulledModels: []statetype.ModelPullStatus{},
+		PulledModels: []ModelPullStatus{},
 		Backend:      *backend,
 	}
 	if err != nil {
@@ -215,3 +434,7 @@ func declaredModelsUnavailableError(provider string, declaredModels map[string]*
 		available,
 	)
 }
+
+// OpenaiKey is the legacy KV key that stores the OpenAI provider credential.
+// Kept for callers written before provider credentials keyed by backend type.
+const OpenaiKey = ProviderKeyPrefix + "openai"

@@ -7,45 +7,57 @@ import (
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
-	"github.com/ollama/ollama/api"
 )
 
 type OllamaStreamClient struct {
-	ollamaClient    *ollamaHTTPClient
-	modelName       string
-	backendURL      string
-	maxOutputTokens int
-	supportsThink   bool
-	tracker         libtracker.ActivityTracker
+	ollamaClient     *ollamaHTTPClient
+	modelName        string
+	backendURL       string
+	maxOutputTokens  int
+	contextLength    int
+	thinking         *modelrepo.ThinkingTypes
+	supportsThink    bool
+	audioExtension   bool
+	sessionExtension bool
+	tracker          libtracker.ActivityTracker
 }
 
 func (c *OllamaStreamClient) Stream(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (<-chan *modelrepo.StreamParcel, error) {
 	reportErr, reportChange, end := c.tracker.Start(ctx, "stream", "ollama", "model", c.modelName)
 
-	apiMessages := make([]api.Message, 0, len(messages))
+	if err := checkAudio(c.modelName, c.audioExtension, messages); err != nil {
+		reportErr(err)
+		end()
+		return nil, err
+	}
+
+	apiMessages := make([]Message, 0, len(messages))
 	for _, msg := range messages {
-		var apiToolCalls []api.ToolCall
+		var apiToolCalls []ToolCall
 		if len(msg.ToolCalls) > 0 {
 			for _, tc := range msg.ToolCalls {
 				argsStr := tc.Function.Arguments
 				if argsStr == "" {
 					argsStr = "{}"
 				}
-				var tcArgs api.ToolCallFunctionArguments
+				var tcArgs ToolCallFunctionArguments
 				_ = json.Unmarshal([]byte(argsStr), &tcArgs)
-				apiToolCalls = append(apiToolCalls, api.ToolCall{
-					Function: api.ToolCallFunction{
+				apiToolCalls = append(apiToolCalls, ToolCall{
+					ID: tc.ID,
+					Function: ToolCallFunction{
 						Name:      tc.Function.Name,
 						Arguments: tcArgs,
 					},
 				})
 			}
 		}
-		apiMessages = append(apiMessages, api.Message{
-			Role:      msg.Role,
-			Content:   msg.Content,
-			Images:    toOllamaImages(msg.Images),
-			ToolCalls: apiToolCalls,
+		apiMessages = append(apiMessages, Message{
+			Role:       msg.Role,
+			Content:    msg.Content,
+			Images:     toOllamaImages(msg.Images),
+			Audios:     toOllamaAudios(msg.Audio),
+			ToolCalls:  apiToolCalls,
+			ToolCallID: msg.ToolCallID,
 		})
 	}
 
@@ -55,9 +67,23 @@ func (c *OllamaStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 	}
 
 	stream := true
-	var think *api.ThinkValue
+	var (
+		think *ThinkValue
+		err   error
+	)
 	if c.supportsThink {
-		think = buildOllamaThink(config)
+		think, err = buildOllamaThink(config, c.thinking)
+		if err != nil {
+			reportErr(err)
+			end()
+			return nil, err
+		}
+	}
+	format, err := ollamaFormat(config.Format)
+	if err != nil {
+		reportErr(err)
+		end()
+		return nil, err
 	}
 	apiTools, err := buildOllamaTools(config)
 	if err != nil {
@@ -65,13 +91,15 @@ func (c *OllamaStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 		end()
 		return nil, err
 	}
-	req := &api.ChatRequest{
-		Model:    c.modelName,
-		Messages: apiMessages,
-		Stream:   &stream,
-		Think:    think,
-		Options:  buildOllamaOptions(config, c.maxOutputTokens),
-		Tools:    apiTools,
+	req := &ChatRequest{
+		Model:     c.modelName,
+		Messages:  apiMessages,
+		Stream:    &stream,
+		Format:    format,
+		Think:     think,
+		Options:   buildOllamaOptions(config, c.maxOutputTokens, c.contextLength),
+		Tools:     apiTools,
+		KeepAlive: keepAlive(),
 	}
 	if config.Shift != nil {
 		req.Shift = config.Shift
@@ -79,39 +107,85 @@ func (c *OllamaStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 	if config.Truncate != nil {
 		req.Truncate = config.Truncate
 	}
+	req.Session = sessionOf(config, c.sessionExtension)
 
+	// Ollama delivers each tool call whole; each gets the next sequential index.
 	ch := make(chan *modelrepo.StreamParcel)
 	go func() {
 		defer close(ch)
 		defer end()
 
+		send := func(p *modelrepo.StreamParcel) bool {
+			select {
+			case ch <- p:
+				return true
+			case <-ctx.Done():
+				return false
+			}
+		}
+
 		var (
-			chunkCount int
-			totalLen   int
+			chunkCount    int
+			totalLen      int
+			toolCallIndex int
+			terminal      *modelrepo.StreamTerminal
 		)
-		err := c.ollamaClient.Chat(ctx, req, func(resp api.ChatResponse) error {
-			if resp.Message.Content != "" || resp.Message.Thinking != "" {
-				if resp.Message.Content != "" {
-					chunkCount++
-					totalLen += len(resp.Message.Content)
-				}
-				select {
-				case ch <- &modelrepo.StreamParcel{
-					Data:     resp.Message.Content,
-					Thinking: resp.Message.Thinking,
-				}:
-				case <-ctx.Done():
+		err := c.ollamaClient.Chat(ctx, req, func(resp ChatResponse) error {
+			if resp.Message.Content != "" {
+				chunkCount++
+				totalLen += len(resp.Message.Content)
+				if !send(&modelrepo.StreamParcel{Data: resp.Message.Content}) {
 					return ctx.Err()
+				}
+			}
+			if resp.Message.Thinking != "" {
+				if !send(&modelrepo.StreamParcel{Thinking: resp.Message.Thinking}) {
+					return ctx.Err()
+				}
+			}
+			for _, tc := range resp.Message.ToolCalls {
+				argsJSON, err := json.Marshal(tc.Function.Arguments)
+				if err != nil {
+					continue
+				}
+				// The id must survive: it is what a tool result quotes back, and
+				// an upstream that pairs calls to results by id refuses a turn
+				// whose result carries none. Ollama itself omits it, so an
+				// id-less call stays id-less for the caller to synthesise.
+				delta := &modelrepo.ToolCallDelta{
+					Index:        toolCallIndex,
+					ID:           tc.ID,
+					Type:         "function",
+					Name:         tc.Function.Name,
+					ArgsFragment: string(argsJSON),
+				}
+				toolCallIndex++
+				if !send(&modelrepo.StreamParcel{ToolCall: delta}) {
+					return ctx.Err()
+				}
+			}
+			if resp.Done {
+				terminal = &modelrepo.StreamTerminal{
+					FinishReason: resp.DoneReason,
+					Terminated:   true,
+					Usage:        resp.Metrics.Usage(),
 				}
 			}
 			return nil
 		})
 		if err != nil {
 			reportErr(err)
-			select {
-			case ch <- &modelrepo.StreamParcel{Error: fmt.Errorf("ollama stream request failed for model %s: %w", c.modelName, err)}:
-			case <-ctx.Done():
-			}
+			send(&modelrepo.StreamParcel{Error: fmt.Errorf("ollama stream request failed for model %s: %w", c.modelName, err)})
+			return
+		}
+		if terminal == nil {
+			// A truncated stream must not read as success.
+			err := fmt.Errorf("ollama stream for model %s ended without a done response", c.modelName)
+			reportErr(err)
+			send(&modelrepo.StreamParcel{Error: err})
+			return
+		}
+		if !send(&modelrepo.StreamParcel{Terminal: terminal}) {
 			return
 		}
 

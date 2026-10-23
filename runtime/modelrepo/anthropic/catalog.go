@@ -1,7 +1,6 @@
-// Package anthropic is a direct (non-Vertex) provider for the Anthropic API
-// (api.anthropic.com), which speaks the Messages API. It reuses the shared
-// messages codec; only the transport (x-api-key + anthropic-version header,
-// model in body, vendor base URL) is Anthropic-specific.
+// Package anthropic is a direct (non-Vertex) provider for the Anthropic API,
+// which speaks the Messages API. It reuses the shared messages codec; only the
+// transport is Anthropic-specific.
 package anthropic
 
 import (
@@ -15,6 +14,7 @@ import (
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/reasoning"
 )
 
 type catalogProvider struct {
@@ -27,7 +27,7 @@ func init() {
 	modelrepo.RegisterCatalogProvider("anthropic", func(spec modelrepo.BackendSpec, opts modelrepo.CatalogOptions) (modelrepo.CatalogProvider, error) {
 		client := opts.HTTPClient
 		if client == nil {
-			client = http.DefaultClient
+			client = modelrepo.SharedHTTPClient
 		}
 		return &catalogProvider{spec: spec, httpClient: client, tracker: opts.Tracker}, nil
 	})
@@ -43,6 +43,10 @@ func (p *catalogProvider) baseURL() string {
 }
 
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
+	// Catalog listing is a non-streaming call: bound it end-to-end.
+	ctx, cancel := modelrepo.NonStreamingContext(ctx)
+	defer cancel()
+
 	return p.listModels(ctx, "/v1/models")
 }
 
@@ -53,18 +57,23 @@ type modelListResponse struct {
 }
 
 type modelInfo struct {
-	ID              string             `json:"id"`
-	CreatedAt       string             `json:"created_at"`
-	MaxInputTokens  int                `json:"max_input_tokens"`
-	MaxOutputTokens int                `json:"max_output_tokens"`
-	MaxTokens       int                `json:"max_tokens"`
-	Capabilities    *modelCapabilities `json:"capabilities"`
+	ID             string `json:"id"`
+	DisplayName    string `json:"display_name"`
+	Lifecycle      string `json:"lifecycle"`
+	CreatedAt      string `json:"created_at"`
+	MaxInputTokens int    `json:"max_input_tokens"`
+	// MaxTokens is the largest max_tokens the model accepts; the Models API
+	// publishes no separate output-token ceiling.
+	MaxTokens    int                `json:"max_tokens"`
+	Capabilities *modelCapabilities `json:"capabilities"`
 }
 
 type modelCapabilities struct {
-	Thinking   thinkingCapability `json:"thinking"`
-	Effort     effortCapability   `json:"effort"`
-	ImageInput capabilitySupport  `json:"image_input"`
+	Thinking      thinkingCapability `json:"thinking"`
+	Effort        effortCapability   `json:"effort"`
+	ImageInput    capabilitySupport  `json:"image_input"`
+	StructuredOut capabilitySupport  `json:"structured_outputs"`
+	ContextManage capabilitySupport  `json:"context_management"`
 }
 
 type thinkingCapability struct {
@@ -75,6 +84,7 @@ type thinkingCapability struct {
 type thinkingTypes struct {
 	Adaptive capabilitySupport `json:"adaptive"`
 	Enabled  capabilitySupport `json:"enabled"`
+	Disabled capabilitySupport `json:"disabled"`
 }
 
 type effortCapability struct {
@@ -125,23 +135,22 @@ func (p *catalogProvider) listModels(ctx context.Context, path string) ([]modelr
 		}
 		for _, item := range payload.Data {
 			modifiedAt, _ := time.Parse(time.RFC3339, item.CreatedAt)
-			maxOutputTokens := item.MaxOutputTokens
-			if maxOutputTokens <= 0 {
-				maxOutputTokens = item.MaxTokens
-			}
+			thinking := anthropicThinkingTypes(item.Capabilities)
 			all = append(all, modelrepo.ObservedModel{
 				Name:          item.ID,
 				ContextLength: item.MaxInputTokens,
 				ModifiedAt:    modifiedAt,
 				CapabilityConfig: modelrepo.CapabilityConfig{
 					ContextLength:   item.MaxInputTokens,
-					MaxOutputTokens: maxOutputTokens,
+					MaxOutputTokens: item.MaxTokens,
 					CanChat:         true,
 					CanStream:       true,
 					CanPrompt:       true,
-					CanThink:        anthropicCapabilitiesCanThink(item.Capabilities),
+					CanThink:        thinking != nil,
 					CanVision:       anthropicCapabilitiesCanVision(item.Capabilities),
+					ThinkingTypes:   thinking,
 				},
+				Meta: anthropicModelMeta(item),
 			})
 		}
 		if !payload.HasMore {
@@ -152,27 +161,60 @@ func (p *catalogProvider) listModels(ctx context.Context, path string) ([]modelr
 	return all, nil
 }
 
-func anthropicCapabilitiesCanThink(caps *modelCapabilities) bool {
+// anthropicThinkingTypes reads the model's own declaration of its thinking
+// controls. A model the vendor lists without a capabilities object declares
+// none, which is a declaration and not a gap: it is what keeps the runtime from
+// guessing a control from the model's name.
+func anthropicThinkingTypes(caps *modelCapabilities) *modelrepo.ThinkingTypes {
 	if caps == nil {
-		return false
+		return nil
 	}
-	thinking := caps.Thinking
-	if thinking.Supported || thinking.Types.Adaptive.Supported || thinking.Types.Enabled.Supported {
-		return true
+	types := &modelrepo.ThinkingTypes{
+		Adaptive: caps.Thinking.Types.Adaptive.Supported,
+		Enabled:  caps.Thinking.Types.Enabled.Supported,
+		Disabled: caps.Thinking.Types.Disabled.Supported,
 	}
-	effort := caps.Effort
-	return effort.Supported || effort.Low.Supported || effort.Medium.Supported || effort.High.Supported || effort.XHigh.Supported || effort.Max.Supported
+	for _, level := range []struct {
+		name      string
+		supported bool
+	}{
+		{reasoning.Low, caps.Effort.Low.Supported},
+		{reasoning.Medium, caps.Effort.Medium.Supported},
+		{reasoning.High, caps.Effort.High.Supported},
+		{reasoning.XHigh, caps.Effort.XHigh.Supported},
+		{reasoning.Max, caps.Effort.Max.Supported},
+	} {
+		if level.supported {
+			types.EffortLevels = append(types.EffortLevels, level.name)
+		}
+	}
+	if err := types.Validate(); err != nil {
+		return nil
+	}
+	return types
 }
 
-// anthropicCapabilitiesCanVision reports whether the model accepts image input,
-// read from the model resource's capabilities.image_input.supported field
-// returned by GET /v1/models (documented as "Whether the model accepts image
-// content blocks").
 func anthropicCapabilitiesCanVision(caps *modelCapabilities) bool {
 	if caps == nil {
 		return false
 	}
 	return caps.ImageInput.Supported
+}
+
+// anthropicModelMeta carries the catalogue facts that are not capabilities, so a
+// surface can name a model the way the vendor does without re-deriving it.
+func anthropicModelMeta(item modelInfo) map[string]string {
+	meta := map[string]string{}
+	if strings.TrimSpace(item.DisplayName) != "" && item.DisplayName != item.ID {
+		meta["display_name"] = item.DisplayName
+	}
+	if strings.TrimSpace(item.Lifecycle) != "" {
+		meta["lifecycle"] = item.Lifecycle
+	}
+	if len(meta) == 0 {
+		return nil
+	}
+	return meta
 }
 
 func (p *catalogProvider) ProviderFor(model modelrepo.ObservedModel) modelrepo.Provider {

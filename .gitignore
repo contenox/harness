@@ -136,3 +136,8 @@ version
 packages/harness/e2e/screenshots/
 packages/harness/test-results/
 packages/harness/playwright-report/
+runtime/_v0/
+.scan/
+
+tools/contenox-e2e/target/
+tools/contenox-e2e/Cargo.lock

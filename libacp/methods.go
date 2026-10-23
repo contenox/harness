@@ -24,18 +24,15 @@ const (
 	MethodSessionUpdate          = "session/update"
 	MethodSessionSetMode         = "session/set_mode"
 	MethodSessionSetConfigOption = "session/set_config_option"
-	// MethodSessionSetModel is the UNSTABLE Zed model-picker method: switch a
-	// session's active model (see SetSessionModelRequest / SessionModelState). The
-	// client-side driver surfaces it as `unstable_setSessionModel`; it is dispatched
-	// over this `session/set_model` method name. This is an experimental extension,
-	// NOT part of the stable ACP spec, and MAY change or be removed.
+	// MethodSessionSetModel is the UNSTABLE, experimental model-picker method:
+	// switch a session's active model (see SetSessionModelRequest / SessionModelState).
 	MethodSessionSetModel = "session/set_model"
 
 	MethodSessionRequestPermission = "session/request_permission"
 
 	// MethodCancelRequest is the protocol-level "$/cancel_request"
 	// notification: either side may signal it no longer awaits the response to
-	// an in-flight request. "$/"-prefixed methods are always safe to ignore.
+	// an in-flight request; "$/"-prefixed methods are always safe to ignore.
 	MethodCancelRequest = "$/cancel_request"
 
 	MethodFSReadTextFile  = "fs/read_text_file"
@@ -46,13 +43,13 @@ const (
 	MethodTerminalWaitForExit = "terminal/wait_for_exit"
 	MethodTerminalKill        = "terminal/kill"
 	MethodTerminalRelease     = "terminal/release"
+
+	MethodMCPMessage = "mcp/message"
 )
 
 // ExtensionMethodPrefix is the reserved namespace for custom "extension"
-// methods and notifications. Per extensibility.mdx: "The protocol reserves
-// any method name starting with an underscore (_) for custom extensions."
-// "$/"-prefixed methods (MethodCancelRequest) are a separate, protocol-owned
-// namespace and are never extension-eligible.
+// methods and notifications (any method name starting with underscore);
+// "$/"-prefixed methods (MethodCancelRequest) are never extension-eligible.
 const ExtensionMethodPrefix = "_"
 
 // IsExtensionMethod reports whether method is eligible for dispatch through
@@ -62,25 +59,11 @@ func IsExtensionMethod(method string) bool {
 	return strings.HasPrefix(method, ExtensionMethodPrefix)
 }
 
-// ExtRequestHandler handles an inbound extension request: a JSON-RPC request
-// whose method is not part of the core ACP method set but is extension-
-// eligible (IsExtensionMethod). params is the request's raw, unparsed params
-// exactly as received (nil if the request omitted them) — extension methods
-// define their own wire schema, so libacp does not attempt to interpret them.
-// A handler returns either a raw JSON result or an *Error, mirroring how a
-// core method handler returns (response, error): both are written back
-// through the same JSON-RPC result/error machinery, and the request
-// participates in "$/cancel_request" cancellation via ctx like any other
-// inbound request.
-//
-// See ExtRequest/ExtResponse in the ACP schema (v1) and protocol docs:
-// https://agentclientprotocol.com/protocol/extensibility
+// ExtRequestHandler handles an inbound extension request (method not in the
+// core ACP set but IsExtensionMethod), returning a raw JSON result or an
+// *Error.
 type ExtRequestHandler func(ctx context.Context, method string, params json.RawMessage) (json.RawMessage, *Error)
 
-// ExtNotificationHandler handles an inbound extension notification —
-// fire-and-forget, matching the spec's "implementations SHOULD ignore
-// unrecognized notifications" for anything it doesn't recognize itself.
-//
-// See ExtNotification in the ACP schema (v1) and protocol docs:
-// https://agentclientprotocol.com/protocol/extensibility
+// ExtNotificationHandler handles an inbound extension notification,
+// fire-and-forget.
 type ExtNotificationHandler func(ctx context.Context, method string, params json.RawMessage)

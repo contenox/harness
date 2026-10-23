@@ -13,7 +13,6 @@ import (
 // Config holds the configuration for the runtime state initializer.
 type Config struct {
 	DatabaseURL string `json:"database_url"`
-	EmbedModel  string `json:"embed_model"`
 	TaskModel   string `json:"task_model"`
 	ChatModel   string `json:"chat_model"`
 	TenantID    string `json:"tenant_id"`
@@ -26,28 +25,6 @@ const (
 	canPrompt
 	canChat
 )
-
-// InitEmbeder initializes the embedding group and its designated model.
-func InitEmbeder(ctx context.Context, config *Config, dbInstance libdb.DBManager, contextLen int, runtime *State) error {
-	tx, com, r, err := dbInstance.WithTransaction(ctx)
-	if err != nil {
-		return err
-	}
-	defer r()
-
-	group, err := initEmbedgroup(ctx, config, tx, false)
-	if err != nil {
-		return fmt.Errorf("init embed group: %w", err)
-	}
-	model, err := initEmbedModel(ctx, config, tx, contextLen)
-	if err != nil {
-		return fmt.Errorf("init embed model: %w", err)
-	}
-	if err = assignModelTogroup(ctx, config, tx, model, group); err != nil {
-		return fmt.Errorf("assign embed model to group: %w", err)
-	}
-	return com(ctx)
-}
 
 // InitPromptExec initializes the tasks group and its designated model.
 func InitPromptExec(ctx context.Context, config *Config, dbInstance libdb.DBManager, runtime *State, contextLen int) error {
@@ -93,25 +70,6 @@ func InitChatExec(ctx context.Context, config *Config, dbInstance libdb.DBManage
 	return com(ctx)
 }
 
-func initEmbedgroup(ctx context.Context, config *Config, tx libdb.Exec, created bool) (*runtimetypes.AffinityGroup, error) {
-	group, err := runtimetypes.New(tx).GetAffinityGroup(ctx, runtimetypes.EmbedgroupID)
-	if !created && errors.Is(err, libdb.ErrNotFound) {
-		err = runtimetypes.New(tx).CreateAffinityGroup(ctx, &runtimetypes.AffinityGroup{
-			ID:          runtimetypes.EmbedgroupID,
-			Name:        runtimetypes.EmbedgroupName,
-			PurposeType: "Internal Embeddings",
-		})
-		if err != nil {
-			return nil, err
-		}
-		return initEmbedgroup(ctx, config, tx, true)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return group, nil
-}
-
 func initTaskgroup(ctx context.Context, config *Config, tx libdb.Exec, created bool) (*runtimetypes.AffinityGroup, error) {
 	group, err := runtimetypes.New(tx).GetAffinityGroup(ctx, runtimetypes.TasksgroupID)
 	if !created && errors.Is(err, libdb.ErrNotFound) {
@@ -150,9 +108,6 @@ func initChatgroup(ctx context.Context, config *Config, tx libdb.Exec, created b
 	return group, nil
 }
 
-// initOrUpdateModel is a generic helper that handles the creation or update of a model.
-// It ensures a model is created if it doesn't exist or updated with a new capability if it does.
-// It returns an error if an existing model has a conflicting context length.
 func initOrUpdateModel(ctx context.Context, tx libdb.Exec, tenantID, modelName string, contextLength int, capability modelCapability) (*runtimetypes.Model, error) {
 	if modelName == "" {
 		return nil, errors.New("model name cannot be empty")
@@ -164,10 +119,9 @@ func initOrUpdateModel(ctx context.Context, tx libdb.Exec, tenantID, modelName s
 	modelID := uuid.NewSHA1(parsedTenantID, []byte(modelName))
 	storeInstance := runtimetypes.New(tx)
 
-	// Attempt to retrieve the model by its unique name
 	model, err := storeInstance.GetModelByName(ctx, modelName)
 
-	// Case 1: Model does not exist, so we create it.
+	// Case 1: model does not exist, so we create it.
 	if errors.Is(err, libdb.ErrNotFound) {
 		newModel := &runtimetypes.Model{
 			Model:         modelName,
@@ -188,14 +142,13 @@ func initOrUpdateModel(ctx context.Context, tx libdb.Exec, tenantID, modelName s
 		return newModel, nil
 	}
 
-	// Case 2: An unexpected database error occurred.
+	// Case 2: an unexpected database error occurred.
 	if err != nil {
 		return nil, fmt.Errorf("failed to get model '%s': %w", modelName, err)
 	}
 
-	// Case 3: Model exists. Update capabilities only — never overwrite context_length.
-	// Context length is set once at creation, then owned by the backend cycle or
-	// by an explicit user action ('contenox model set-context').
+	// Update capabilities only: context_length is set once at creation, then
+	// owned by the backend cycle or an explicit user action.
 	needsUpdate := false
 	switch capability {
 	case canEmbed:
@@ -224,10 +177,6 @@ func initOrUpdateModel(ctx context.Context, tx libdb.Exec, tenantID, modelName s
 	return model, nil
 }
 
-func initEmbedModel(ctx context.Context, config *Config, tx libdb.Exec, contextLength int) (*runtimetypes.Model, error) {
-	return initOrUpdateModel(ctx, tx, config.TenantID, config.EmbedModel, contextLength, canEmbed)
-}
-
 func initTaskModel(ctx context.Context, config *Config, tx libdb.Exec, contextLength int) (*runtimetypes.Model, error) {
 	return initOrUpdateModel(ctx, tx, config.TenantID, config.TaskModel, contextLength, canPrompt)
 }
@@ -247,7 +196,7 @@ type ExtraModelSpec struct {
 
 // EnsureModels ensures each given model exists in ollama_models with the specified context length and capabilities.
 // It is intended for contenox-cli so that extra models (e.g. qwen2.5:7b for the vibes chain) are declared and
-// get correct context/capabilities during backend sync. Call after InitEmbeder/InitPromptExec/InitChatExec and before RunBackendCycle.
+// get correct context/capabilities during backend sync. Call after InitPromptExec/InitChatExec and before RunBackendCycle.
 func EnsureModels(ctx context.Context, dbInstance libdb.DBManager, tenantID string, specs []ExtraModelSpec) error {
 	if len(specs) == 0 {
 		return nil

@@ -17,29 +17,30 @@ import (
 )
 
 const (
-	defaultBaseURL = "https://api.anthropic.com"
-	// anthropicAPIVersion is the direct-API version header value (Vertex uses a
-	// different value placed in the body; that path lives in the vertex package).
+	defaultBaseURL      = "https://api.anthropic.com"
 	anthropicAPIVersion = "2023-06-01"
 )
 
-// anthropicClient is the shared transport for the direct Anthropic API.
 type anthropicClient struct {
 	baseURL         string
 	apiKey          string
 	modelName       string
 	httpClient      *http.Client
 	canThink        bool
+	thinking        *modelrepo.ThinkingTypes
 	maxOutputTokens int
 	tracker         libtracker.ActivityTracker
 }
 
-func chatConfigFromArgs(args []modelrepo.ChatArgument) *modelrepo.ChatConfig {
+func chatConfigFromArgs(args []modelrepo.ChatArgument) (*modelrepo.ChatConfig, error) {
 	cfg := &modelrepo.ChatConfig{}
 	for _, a := range args {
 		a.Apply(cfg)
 	}
-	return cfg
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 func (c *anthropicClient) newRequest(ctx context.Context, path string, body []byte, stream bool) (*http.Request, error) {
@@ -63,20 +64,40 @@ func (c *anthropicClient) post(ctx context.Context, path string, request any) ([
 	if err != nil {
 		return nil, fmt.Errorf("anthropic: marshal request: %w", err)
 	}
-	req, err := c.newRequest(ctx, path, b, false)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := c.httpClient.Do(req)
+	// Bounded end-to-end; retried on 429/529 (overloaded)/5xx with Retry-After honored.
+	ctx, cancel := modelrepo.NonStreamingContext(ctx)
+	defer cancel()
+	resp, err := modelrepo.DoWithRetry(ctx, c.httpClient, func() (*http.Request, error) {
+		return c.newRequest(ctx, path, b, false)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("anthropic: request failed for model %s: %w", c.modelName, err)
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("anthropic API error: %d - %s (model=%s)", resp.StatusCode, strings.TrimSpace(string(body)), c.modelName)
+		return nil, anthropicAPIError(resp.StatusCode, body, c.modelName)
 	}
 	return body, nil
+}
+
+// anthropicAPIError classifies a non-2xx body. The vendor names the failure in
+// error.type, so that member is the code the shared classifier matches on and
+// the member a caller reads; the raw body stays the fallback for a body that
+// carries no envelope at all.
+func anthropicAPIError(status int, body []byte, modelName string) error {
+	var payload struct {
+		Error struct {
+			Type    string `json:"type"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	code, message := "", strings.TrimSpace(string(body))
+	if json.Unmarshal(body, &payload) == nil && payload.Error.Message != "" {
+		code, message = payload.Error.Type, payload.Error.Message
+	}
+	err := fmt.Errorf("anthropic API error: %d - %s (model=%s)", status, strings.TrimSpace(string(body)), modelName)
+	return modelrepo.ClassifyProviderError(err, status, code, message)
 }
 
 func (c *anthropicClient) openStream(ctx context.Context, path string, request any) (*http.Response, error) {
@@ -95,116 +116,151 @@ func (c *anthropicClient) openStream(ctx context.Context, path string, request a
 	if resp.StatusCode != http.StatusOK {
 		bd, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return nil, fmt.Errorf("anthropic API stream error: %d - %s", resp.StatusCode, strings.TrimSpace(string(bd)))
+		return nil, anthropicAPIError(resp.StatusCode, bd, c.modelName)
 	}
 	return resp, nil
 }
 
-func applyAnthropicThinking(req *msgcodec.Request, modelName string, cfg *modelrepo.ChatConfig) {
+// applyAnthropicThinking renders the requested reasoning level in the controls
+// the model's declaration says it accepts. A declared control is authoritative:
+// a model that does not accept a caller-set budget is never sent one, a model
+// that does not accept thinking turned off is never asked to turn it off, and a
+// level whose control the model does not declare is refused here rather than
+// sent as a request the vendor rejects. A provider constructed without any
+// declaration falls back to the extended-thinking control the older API
+// documents.
+func (c *anthropicClient) applyAnthropicThinking(req *msgcodec.Request, cfg *modelrepo.ChatConfig) error {
 	if req == nil || cfg == nil || cfg.Think == nil {
-		return
+		return nil
 	}
 	level, ok, err := reasoning.NormalizeOptional(*cfg.Think)
 	if err != nil || !ok || level == reasoning.Auto {
-		return
+		return err
 	}
+	declared := c.thinking
+
 	if level == reasoning.Off {
-		if !anthropicRequiresAdaptiveThinking(modelName) && !anthropicMythos(modelName) {
-			req.Thinking = &msgcodec.ThinkingConfig{Type: "disabled"}
+		if declared != nil && !declared.Disabled {
+			// The vendor documents a 400 for this model and value, and a request
+			// that omits the control keeps the model's own default in place, so
+			// nothing is sent and thinking stays as the model chose it.
+			return nil
 		}
-		return
+		req.Thinking = &msgcodec.ThinkingConfig{Type: "disabled"}
+		return nil
 	}
 
-	if anthropicUsesAdaptiveThinking(modelName) {
+	setEffort(req, c.effectiveEffort(level))
+	if declared == nil {
+		budget, err := anthropicThinkingBudget(level, req.MaxTokens)
+		if err != nil {
+			return fmt.Errorf("anthropic: model %s thinking level %q: %w", c.modelName, level, err)
+		}
+		req.Thinking = &msgcodec.ThinkingConfig{Type: "enabled", BudgetTokens: budget}
+		return nil
+	}
+	switch {
+	case declared.Adaptive:
 		req.Thinking = &msgcodec.ThinkingConfig{Type: "adaptive", Display: "summarized"}
-		if effort := anthropicEffort(modelName, level); effort != "" && effort != reasoning.High {
-			req.OutputConfig = &msgcodec.OutputConfig{Effort: effort}
-		} else if effort == reasoning.High {
-			// high is the API default; omit output_config to keep the payload smaller.
-			req.OutputConfig = nil
+	case declared.Enabled:
+		budget, err := anthropicThinkingBudget(level, req.MaxTokens)
+		if err != nil {
+			return fmt.Errorf("anthropic: model %s thinking level %q: %w", c.modelName, level, err)
 		}
-		return
+		req.Thinking = &msgcodec.ThinkingConfig{Type: "enabled", BudgetTokens: budget}
+	case declared.Controls():
+		// The model names thinking controls and the caller's level is none of
+		// them; effort was set above and the request runs on the model's default.
+	default:
+		return fmt.Errorf("anthropic: model %s declares no thinking control for level %q", c.modelName, level)
 	}
-
-	budget := anthropicThinkingBudget(level, req.MaxTokens)
-	if budget <= 0 {
-		return
-	}
-	req.Thinking = &msgcodec.ThinkingConfig{Type: "enabled", BudgetTokens: budget}
+	return nil
 }
 
-func anthropicThinkingBudget(level string, maxTokens int) int {
+// effectiveEffort resolves the requested level against the model's declared
+// effort levels, descending to the highest level the model accepts. A model
+// that declared no effort levels is sent none.
+func (c *anthropicClient) effectiveEffort(level string) string {
+	requested := anthropicEffort(level)
+	if requested == "" {
+		return ""
+	}
+	declared := c.thinking
+	if declared == nil || declared.SupportsEffort(requested) {
+		return requested
+	}
+	for _, candidate := range effortDescending(requested) {
+		if declared.SupportsEffort(candidate) {
+			return candidate
+		}
+	}
+	return ""
+}
+
+// effortDescending lists the effort levels at or below level, highest first.
+func effortDescending(level string) []string {
+	order := []string{reasoning.Max, reasoning.XHigh, reasoning.High, reasoning.Medium, reasoning.Low}
+	for i, candidate := range order {
+		if candidate == level {
+			return order[i:]
+		}
+	}
+	return nil
+}
+
+// setEffort writes the effort member without dropping an output format the
+// request already carries: both live in the vendor's one output_config object.
+func setEffort(req *msgcodec.Request, effort string) {
+	if effort == "" {
+		return
+	}
+	if req.OutputConfig == nil {
+		req.OutputConfig = &msgcodec.OutputConfig{}
+	}
+	req.OutputConfig.Effort = effort
+}
+
+// anthropicThinkingBudget maps a level onto a budget the API accepts:
+// budget_tokens is at least MinThinkingBudget and leaves room for the response
+// under max_tokens. A max_tokens that admits no valid budget is refused here
+// rather than sent as a value the API rejects.
+func anthropicThinkingBudget(level string, maxTokens int) (int, error) {
 	budget := 0
 	switch level {
 	case reasoning.Minimal, reasoning.Low:
-		budget = 1024
+		budget = msgcodec.MinThinkingBudget
 	case reasoning.Medium:
 		budget = 2048
 	case reasoning.High:
 		budget = 4096
-	case reasoning.XHigh:
+	case reasoning.XHigh, reasoning.Max:
 		budget = 8192
 	}
-	if maxTokens > 1 && budget >= maxTokens {
+	if budget < msgcodec.MinThinkingBudget {
+		return 0, fmt.Errorf("no thinking budget for level %q", level)
+	}
+	if maxTokens < msgcodec.MinThinkingBudget+1 {
+		return 0, fmt.Errorf("max_tokens %d leaves no room for a %d-token budget below it",
+			maxTokens, msgcodec.MinThinkingBudget)
+	}
+	if budget >= maxTokens {
 		budget = maxTokens - 1
 	}
-	return budget
+	return budget, nil
 }
 
-func anthropicEffort(modelName, level string) string {
+// anthropicEffort maps a level onto the vendor's effort vocabulary. The
+// runtime's minimal level is the vendor's lowest, and its ceiling is the
+// vendor's own max rather than a downgrade to high.
+func anthropicEffort(level string) string {
 	switch level {
 	case reasoning.Minimal:
 		return reasoning.Low
-	case reasoning.Low, reasoning.Medium, reasoning.High:
+	case reasoning.Low, reasoning.Medium, reasoning.High, reasoning.XHigh, reasoning.Max:
 		return level
-	case reasoning.XHigh:
-		if anthropicSupportsXHighEffort(modelName) {
-			return reasoning.XHigh
-		}
-		return reasoning.High
 	default:
 		return ""
 	}
-}
-
-func anthropicUsesAdaptiveThinking(modelName string) bool {
-	m := strings.ToLower(modelName)
-	return strings.Contains(m, "claude-opus-4-8") ||
-		strings.Contains(m, "claude-opus-4-7") ||
-		strings.Contains(m, "claude-opus-4-6") ||
-		strings.Contains(m, "claude-sonnet-4-6") ||
-		strings.Contains(m, "claude-fable-5") ||
-		strings.Contains(m, "claude-sonnet-5") ||
-		anthropicMythos(m)
-}
-
-func anthropicRequiresAdaptiveThinking(modelName string) bool {
-	m := strings.ToLower(modelName)
-	return strings.Contains(m, "claude-opus-4-8") ||
-		strings.Contains(m, "claude-opus-4-7") ||
-		strings.Contains(m, "claude-fable-5") ||
-		strings.Contains(m, "claude-sonnet-5") ||
-		anthropicMythos(m)
-}
-
-func anthropicSupportsXHighEffort(modelName string) bool {
-	m := strings.ToLower(modelName)
-	return strings.Contains(m, "claude-opus-4-8") ||
-		strings.Contains(m, "claude-opus-4-7") ||
-		strings.Contains(m, "claude-fable-5")
-}
-
-func anthropicStripsTemperatureParams(modelName string) bool {
-	m := strings.ToLower(modelName)
-	return strings.Contains(m, "claude-opus-4-7") ||
-		strings.Contains(m, "claude-opus-4-8") ||
-		strings.Contains(m, "claude-fable-5") ||
-		strings.Contains(m, "claude-sonnet-5") ||
-		anthropicMythos(m)
-}
-
-func anthropicMythos(modelName string) bool {
-	return strings.Contains(strings.ToLower(modelName), "mythos")
 }
 
 type anthropicChatClient struct{ anthropicClient }
@@ -213,17 +269,36 @@ func (c *anthropicChatClient) Chat(ctx context.Context, messages []modelrepo.Mes
 	reportErr, reportChange, end := c.tracker.Start(ctx, "chat", "anthropic", "model", c.modelName)
 	defer end()
 
-	cfg := chatConfigFromArgs(args)
-	req, nameMap := msgcodec.Build(messages, cfg)
-	req.Model = c.modelName // direct: model in body, version via header
-	if anthropicStripsTemperatureParams(c.modelName) {
-		req.Temperature = nil
-		req.TopP = nil
+	// No audio encoding on this wire format; refuse instead of dropping silently.
+	if err := modelrepo.RefuseAudioInput("anthropic", c.modelName, messages); err != nil {
+		reportErr(err)
+		return modelrepo.ChatResult{}, err
 	}
+
+	cfg, err := chatConfigFromArgs(args)
+	if err != nil {
+		reportErr(err)
+		return modelrepo.ChatResult{}, err
+	}
+	req, nameMap, err := msgcodec.Build(messages, cfg)
+	if err != nil {
+		reportErr(err)
+		return modelrepo.ChatResult{}, err
+	}
+	req.Model = c.modelName // direct: model in body, version via header
 	req.MaxTokens, _ = modelrepo.ClampMaxOutputTokens(req.MaxTokens, c.maxOutputTokens)
 	if c.canThink {
-		applyAnthropicThinking(&req, c.modelName, cfg)
+		if err := c.applyAnthropicThinking(&req, cfg); err != nil {
+			reportErr(err)
+			return modelrepo.ChatResult{}, err
+		}
 	}
+	c.applySamplingPolicy(&req)
+	if err := checkForcedToolUseWithManualThinking(&req); err != nil {
+		reportErr(err)
+		return modelrepo.ChatResult{}, err
+	}
+	stripThinkingUnlessEnabled(&req)
 
 	raw, err := c.post(ctx, "/v1/messages", req)
 	if err != nil {
@@ -239,20 +314,87 @@ func (c *anthropicChatClient) Chat(ctx context.Context, messages []modelrepo.Mes
 	return res, nil
 }
 
+// applySamplingPolicy drops the sampling parameters the request's thinking
+// control makes invalid. The vendor documents two rules: a model that rejects
+// non-default sampling on every request is sent neither temperature nor top_p,
+// and while thinking is on, temperature is incompatible and top_p is valid only
+// inside [0.95, 1].
+func (c *anthropicClient) applySamplingPolicy(req *msgcodec.Request) {
+	if AnthropicStripsSamplingParams(c.thinking) {
+		req.Temperature = nil
+		req.TopP = nil
+		return
+	}
+	if req.Thinking == nil || req.Thinking.Type == "disabled" {
+		return
+	}
+	req.Temperature = nil
+	if req.TopP != nil && (*req.TopP < samplingTopPFloor || *req.TopP > 1) {
+		req.TopP = nil
+	}
+}
+
+// samplingTopPFloor is the lowest top_p the vendor accepts while thinking is on.
+const samplingTopPFloor = 0.95
+
+// checkForcedToolUseWithManualThinking refuses a request the vendor documents as
+// a 400: forced tool use is incompatible with a caller-set thinking budget. The
+// same request is accepted with adaptive thinking, so the request's own controls
+// decide whether it is sendable.
+func checkForcedToolUseWithManualThinking(req *msgcodec.Request) error {
+	if req.Thinking == nil || req.Thinking.Type != "enabled" || req.ToolChoice == nil {
+		return nil
+	}
+	if req.ToolChoice.Type == "any" || req.ToolChoice.Type == "tool" {
+		return fmt.Errorf("anthropic: forced tool use (tool_choice %q) is incompatible with a caller-set thinking budget; request adaptive thinking or tool_choice auto", req.ToolChoice.Type)
+	}
+	return nil
+}
+
+// AnthropicStripsSamplingParams reports whether a declared capability places a
+// model among those the vendor documents as rejecting non-default sampling
+// parameters on every request: a model that accepts only the adaptive thinking
+// control is one of them. The vendor publishes that restriction as a model list
+// and the catalogue publishes no capability for it, so the declaration is the
+// closest fact the adapter holds.
+func AnthropicStripsSamplingParams(declared *modelrepo.ThinkingTypes) bool {
+	return declared != nil && declared.Adaptive && !declared.Enabled
+}
+
+func stripThinkingUnlessEnabled(req *msgcodec.Request) {
+	if req.Thinking == nil || req.Thinking.Type == "disabled" {
+		msgcodec.StripThinkingBlocks(req)
+	}
+}
+
 type anthropicStreamClient struct{ anthropicClient }
 
 func (c *anthropicStreamClient) Stream(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (<-chan *modelrepo.StreamParcel, error) {
-	cfg := chatConfigFromArgs(args)
-	req, nameMap := msgcodec.Build(messages, cfg)
-	req.Model = c.modelName
-	if anthropicStripsTemperatureParams(c.modelName) {
-		req.Temperature = nil
-		req.TopP = nil
+	// No audio encoding on this wire format; refuse instead of dropping silently.
+	if err := modelrepo.RefuseAudioInput("anthropic", c.modelName, messages); err != nil {
+		return nil, err
 	}
+
+	cfg, err := chatConfigFromArgs(args)
+	if err != nil {
+		return nil, err
+	}
+	req, nameMap, err := msgcodec.Build(messages, cfg)
+	if err != nil {
+		return nil, err
+	}
+	req.Model = c.modelName
 	req.MaxTokens, _ = modelrepo.ClampMaxOutputTokens(req.MaxTokens, c.maxOutputTokens)
 	if c.canThink {
-		applyAnthropicThinking(&req, c.modelName, cfg)
+		if err := c.applyAnthropicThinking(&req, cfg); err != nil {
+			return nil, err
+		}
 	}
+	c.applySamplingPolicy(&req)
+	if err := checkForcedToolUseWithManualThinking(&req); err != nil {
+		return nil, err
+	}
+	stripThinkingUnlessEnabled(&req)
 	req.Stream = true
 	dec := msgcodec.NewStreamDecoder(nameMap)
 
@@ -269,6 +411,16 @@ func (c *anthropicStreamClient) Stream(ctx context.Context, messages []modelrepo
 		defer close(parcels)
 		defer resp.Body.Close()
 		defer end()
+
+		send := func(p *modelrepo.StreamParcel) bool {
+			select {
+			case parcels <- p:
+				return true
+			case <-ctx.Done():
+				return false
+			}
+		}
+
 		sc := bufio.NewScanner(resp.Body)
 		sc.Buffer(make([]byte, 64*1024), 1024*1024)
 		var chunkCount int
@@ -281,25 +433,37 @@ func (c *anthropicStreamClient) Stream(ctx context.Context, messages []modelrepo
 			if payload == "" || payload == "[DONE]" {
 				continue
 			}
-			p, derr := dec.DecodeLine([]byte(payload))
+			ps, derr := dec.DecodeLine([]byte(payload))
 			if derr != nil {
-				continue
+				// In-stream `error` events (overloaded_error etc.) surface here; don't swallow them.
+				derr = fmt.Errorf("anthropic stream failed for model %s: %w", c.modelName, derr)
+				reportErr(derr)
+				send(&modelrepo.StreamParcel{Error: derr})
+				return
 			}
-			if p != nil {
+			for _, p := range ps {
 				chunkCount++
-				select {
-				case parcels <- p:
-				case <-ctx.Done():
+				if !send(p) {
 					return
 				}
 			}
 		}
 		if err := sc.Err(); err != nil && err != io.EOF {
 			reportErr(err)
-			select {
-			case parcels <- &modelrepo.StreamParcel{Error: fmt.Errorf("anthropic: stream read: %w", err)}:
-			case <-ctx.Done():
-			}
+			send(&modelrepo.StreamParcel{Error: fmt.Errorf("anthropic: stream read: %w", err)})
+			return
+		}
+		// A refusal is the vendor's outcome, delivered as a normal terminal
+		// event; the assembler reports the turn and the refusal is what the
+		// caller is told, so partial output is never presented as an answer.
+		term := dec.Finish()
+		if !send(term) {
+			return
+		}
+		if term.Terminal != nil && term.Terminal.FinishReason == "refusal" {
+			err := &modelrepo.RefusalError{Provider: "anthropic", Text: term.Terminal.Refusal}
+			reportErr(err)
+			send(&modelrepo.StreamParcel{Error: err})
 			return
 		}
 		reportChange("stream_completed", map[string]any{"chunk_count": chunkCount})
@@ -309,21 +473,28 @@ func (c *anthropicStreamClient) Stream(ctx context.Context, messages []modelrepo
 
 type anthropicPromptClient struct{ anthropicClient }
 
-func (c *anthropicPromptClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string) (string, error) {
+func (c *anthropicPromptClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string, promptArgs ...modelrepo.PromptArgument) (string, *modelrepo.TokenUsage, error) {
+	promptConfig, err := modelrepo.PromptConfigFromArgs(promptArgs...)
+	if err != nil {
+		return "", nil, err
+	}
 	msgs := []modelrepo.Message{{Role: "user", Content: prompt}}
 	if s := strings.TrimSpace(systemInstruction); s != "" {
 		msgs = append([]modelrepo.Message{{Role: "system", Content: s}}, msgs...)
 	}
 	chat := &anthropicChatClient{anthropicClient: c.anthropicClient}
 	var chatArgs []modelrepo.ChatArgument
-	if !anthropicStripsTemperatureParams(c.modelName) {
+	if !AnthropicStripsSamplingParams(c.thinking) {
 		chatArgs = append(chatArgs, modelrepo.WithTemperature(float64(temperature)))
+	}
+	if promptConfig.MaxTokens != nil {
+		chatArgs = append(chatArgs, modelrepo.WithMaxTokens(*promptConfig.MaxTokens))
 	}
 	res, err := chat.Chat(ctx, msgs, chatArgs...)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return res.Message.Content, nil
+	return res.Message.Content, res.Usage, nil
 }
 
 var (

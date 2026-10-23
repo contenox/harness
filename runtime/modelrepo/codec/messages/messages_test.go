@@ -1,11 +1,13 @@
-package messages
+package messages_test
 
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/contenox/harness/runtime/modelrepo"
+	msgcodec "github.com/contenox/harness/runtime/modelrepo/codec/messages"
 )
 
 func TestUnit_Build_SystemExtractionAndDefaults(t *testing.T) {
@@ -13,15 +15,18 @@ func TestUnit_Build_SystemExtractionAndDefaults(t *testing.T) {
 		{Role: "system", Content: "be terse"},
 		{Role: "user", Content: "hi"},
 	}
-	req, _ := Build(msgs, nil)
+	req, _, err := msgcodec.Build(msgs, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if req.System != "be terse" {
 		t.Fatalf("system not extracted: %q", req.System)
 	}
-	if req.MaxTokens != DefaultMaxTokens {
+	if req.MaxTokens != msgcodec.DefaultMaxTokens {
 		t.Fatalf("max_tokens default not applied: %d", req.MaxTokens)
 	}
-	if req.Model != "" || req.AnthropicVersion != "" {
-		t.Fatalf("codec must not set model/version (transport does)")
+	if req.Model != "" {
+		t.Fatalf("codec must not set model (transport does)")
 	}
 	if len(req.Messages) != 1 || req.Messages[0].Role != "user" {
 		t.Fatalf("system message must be lifted out of messages: %+v", req.Messages)
@@ -43,7 +48,10 @@ func TestUnit_Build_ToolUseAndToolResultRoundTrip(t *testing.T) {
 		{Role: "assistant", ToolCalls: []modelrepo.ToolCall{tc("toolu_1", "fs.list", `{"path":"/tmp"}`)}},
 		{Role: "tool", ToolCallID: "toolu_1", Content: `{"files":["a"]}`},
 	}
-	req, nameMap := Build(msgs, cfg)
+	req, nameMap, err := msgcodec.Build(msgs, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(req.Messages) != 3 {
 		t.Fatalf("expected 3 messages, got %d", len(req.Messages))
 	}
@@ -75,7 +83,7 @@ func TestUnit_DecodeResponse_TextThinkingToolUse(t *testing.T) {
 		{"type":"text","text":"on it"},
 		{"type":"tool_use","id":"toolu_9","name":"fs.list","input":{"path":"/x"}}
 	]}`)
-	res, err := DecodeResponse(raw, nil)
+	res, err := msgcodec.DecodeResponse(raw, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,10 +106,12 @@ func TestUnit_DecodeResponse_TextThinkingToolUse(t *testing.T) {
 	}
 }
 
+// The decoder only translates the wire; assembly happens once in modelrepo.StreamAssembler.
 func TestUnit_StreamDecoder_NamedEventsAndInputJSONDelta(t *testing.T) {
-	d := NewStreamDecoder(nil)
+	d := msgcodec.NewStreamDecoder(nil)
+	asm := modelrepo.NewStreamAssembler("anthropic", "test-model")
 	lines := []string{
-		`{"type":"message_start","message":{"role":"assistant"}}`,
+		`{"type":"message_start","message":{"role":"assistant","usage":{"input_tokens":21}}}`,
 		`{"type":"content_block_start","index":0,"content_block":{"type":"text"}}`,
 		`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hel"}}`,
 		`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"lo"}}`,
@@ -110,37 +120,62 @@ func TestUnit_StreamDecoder_NamedEventsAndInputJSONDelta(t *testing.T) {
 		`{"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"pa"}}`,
 		`{"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"th\":\"/x\"}"}}`,
 		`{"type":"content_block_stop","index":1}`,
-		`{"type":"message_delta","delta":{"stop_reason":"tool_use"}}`,
+		`{"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"output_tokens":9}}`,
 		`{"type":"message_stop"}`,
 	}
-	var text string
 	for _, l := range lines {
-		p, err := d.DecodeLine([]byte(l))
+		parcels, err := d.DecodeLine([]byte(l))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if p != nil {
-			text += p.Data
+		for _, p := range parcels {
+			if err := asm.Consume(p); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
-	if text != "Hello" {
-		t.Fatalf("assembled text: %q", text)
+	if err := asm.Consume(d.Finish()); err != nil {
+		t.Fatal(err)
 	}
-	tcs := d.ToolCalls()
-	if len(tcs) != 1 {
-		t.Fatalf("expected 1 tool call, got %d", len(tcs))
+	res, err := asm.Result()
+	if err != nil {
+		t.Fatal(err)
 	}
-	if tcs[0].ID != "toolu_1" || tcs[0].Function.Name != "fs.list" {
-		t.Fatalf("tool call id/name: %+v", tcs[0])
+	if res.Content != "Hello" {
+		t.Fatalf("assembled text: %q", res.Content)
 	}
-	if tcs[0].Function.Arguments != `{"path":"/x"}` {
-		t.Fatalf("assembled args: %q", tcs[0].Function.Arguments)
+	if len(res.ToolCalls) != 1 {
+		t.Fatalf("expected 1 tool call, got %d", len(res.ToolCalls))
+	}
+	if res.ToolCalls[0].ID != "toolu_1" || res.ToolCalls[0].Function.Name != "fs.list" {
+		t.Fatalf("tool call id/name: %+v", res.ToolCalls[0])
+	}
+	if res.ToolCalls[0].Function.Arguments != `{"path":"/x"}` {
+		t.Fatalf("assembled args: %q", res.ToolCalls[0].Function.Arguments)
+	}
+	if res.FinishReason != "tool_use" {
+		t.Fatalf("finish reason: %q", res.FinishReason)
+	}
+	if res.Usage == nil || res.Usage.PromptTokens != 21 || res.Usage.CompletionTokens != 9 {
+		t.Fatalf("usage: %+v", res.Usage)
+	}
+}
+
+// An in-stream `error` SSE event is a hard decode error, not swallowed.
+func TestUnit_StreamDecoder_ErrorEventSurfaces(t *testing.T) {
+	d := msgcodec.NewStreamDecoder(nil)
+	_, err := d.DecodeLine([]byte(`{"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}`))
+	if err == nil {
+		t.Fatal("expected an error for the in-stream error event")
+	}
+	if !strings.Contains(err.Error(), "overloaded_error") || !strings.Contains(err.Error(), "Overloaded") {
+		t.Fatalf("error should carry the API's type and message: %v", err)
 	}
 }
 
 func TestUnit_DecodeResponse_RefusalReturnsErrRefused(t *testing.T) {
 	raw := []byte(`{"role":"assistant","stop_reason":"refusal","content":[]}`)
-	_, err := DecodeResponse(raw, nil)
+	_, err := msgcodec.DecodeResponse(raw, nil)
 	if !errors.Is(err, modelrepo.ErrRefused) {
 		t.Fatalf("expected ErrRefused, got: %v", err)
 	}
@@ -151,4 +186,24 @@ func tc(id, name, args string) modelrepo.ToolCall {
 	t.Function.Name = name
 	t.Function.Arguments = args
 	return t
+}
+
+func TestUnit_DecodeResponse_RefusalCarriesStopDetails(t *testing.T) {
+	raw := []byte(`{"role":"assistant","stop_reason":"refusal","content":[],
+		"stop_details":{"type":"refusal","category":"cyber","explanation":"This request was declined."}}`)
+
+	_, err := msgcodec.DecodeResponse(raw, nil)
+	if !errors.Is(err, modelrepo.ErrRefused) {
+		t.Fatalf("expected ErrRefused, got: %v", err)
+	}
+	var refusal *modelrepo.RefusalError
+	if !errors.As(err, &refusal) {
+		t.Fatalf("expected a RefusalError, got %T", err)
+	}
+	if refusal.Code != "cyber" {
+		t.Fatalf("refusal category lost: %+v", refusal)
+	}
+	if !strings.Contains(refusal.Text, "declined") {
+		t.Fatalf("refusal explanation lost: %+v", refusal)
+	}
 }

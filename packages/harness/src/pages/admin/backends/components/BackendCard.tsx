@@ -3,11 +3,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Backend } from '../../../../lib/types';
 import { ModelStatusDisplay } from './ModelStatusDisplay';
-import { PushModelPanel } from './PushModelPanel';
-
-// Matches the runtime's own accepted types for POST /backends/{id}/models/push
-// (see runtime/internal/backendapi/pushroutes.go).
-const PUSHABLE_TYPES = new Set(['modeld', 'llama', 'openvino']);
 
 type BackendCardProps = {
   backend: Backend;
@@ -88,7 +83,6 @@ export function BackendCard({ backend, onEdit, onDelete }: BackendCardProps) {
         </div>
       )}
 
-      {PUSHABLE_TYPES.has(backend.type) && <PushModelPanel backendId={backend.id} />}
     </ResourceCard>
   );
 }

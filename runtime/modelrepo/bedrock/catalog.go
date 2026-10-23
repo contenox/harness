@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/bedrock"
 	"github.com/aws/aws-sdk-go-v2/service/bedrock/types"
 	"github.com/contenox/harness/libtracker"
@@ -24,12 +24,17 @@ func init() {
 	modelrepo.RegisterCatalogProvider("bedrock", func(spec modelrepo.BackendSpec, opts modelrepo.CatalogOptions) (modelrepo.CatalogProvider, error) {
 		return &catalogProvider{spec: spec, httpClient: opts.HTTPClient, tracker: opts.Tracker}, nil
 	})
+	modelrepo.RegisterThinkDeclarationRefusal("bedrock", thinkDeclarationRefusal())
 }
 
 func (p *catalogProvider) Type() string { return "bedrock" }
 
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(regionFromURL(p.spec.BaseURL)))
+	// Catalog listing is a non-streaming call: bound it end-to-end.
+	ctx, cancel := modelrepo.NonStreamingContext(ctx)
+	defer cancel()
+
+	cfg, err := loadAWSConfig(ctx, regionFromURL(p.spec.BaseURL), p.spec.APIKey, p.httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -41,44 +46,107 @@ func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedM
 		return nil, fmt.Errorf("failed to list foundation models: %w", err)
 	}
 
+	// Newer models are invocable only through a cross-region inference profile.
+	// Listing is best-effort: without permission, profile-only models are omitted.
+	profileIDs, _ := listInferenceProfileIDs(ctx, client)
+
 	var models []modelrepo.ObservedModel
 	for _, summary := range output.ModelSummaries {
-		models = append(models, observedFromSummary(summary))
+		invokeID, ok := resolveInvocableModelID(aws.ToString(summary.ModelId), summary.InferenceTypesSupported, profileIDs)
+		if !ok {
+			continue
+		}
+		models = append(models, observedFromSummary(summary, invokeID))
 	}
 
 	return models, nil
 }
 
-// observedFromSummary maps a Bedrock ListFoundationModels result entry into an
-// ObservedModel. It is a pure function (no AWS calls) so the capability mapping
-// can be unit-tested without live credentials.
-//
-// CanVision is detected from the API rather than a hardcoded model list: the
-// FoundationModelSummary.InputModalities field reports which input modalities
-// the model accepts, and a model that lists ModelModalityImage ("IMAGE") among
-// them accepts image input.
-func observedFromSummary(summary types.FoundationModelSummary) modelrepo.ObservedModel {
-	modelID := aws.ToString(summary.ModelId)
-	isEmbed := strings.Contains(strings.ToLower(modelID), "embed")
-
-	canVision := false
-	for _, m := range summary.InputModalities {
-		if strings.EqualFold(string(m), string(types.ModelModalityImage)) {
-			canVision = true
-			break
+func listInferenceProfileIDs(ctx context.Context, client *bedrock.Client) ([]string, error) {
+	var ids []string
+	var nextToken *string
+	for {
+		out, err := client.ListInferenceProfiles(ctx, &bedrock.ListInferenceProfilesInput{
+			NextToken:  nextToken,
+			TypeEquals: types.InferenceProfileTypeSystemDefined,
+		})
+		if err != nil {
+			return nil, err
 		}
+		for _, s := range out.InferenceProfileSummaries {
+			if id := aws.ToString(s.InferenceProfileId); id != "" {
+				ids = append(ids, id)
+			}
+		}
+		if out.NextToken == nil || *out.NextToken == "" {
+			return ids, nil
+		}
+		nextToken = out.NextToken
+	}
+}
+
+func resolveInvocableModelID(modelID string, inferenceTypes []types.InferenceType, profileIDs []string) (string, bool) {
+	for _, t := range inferenceTypes {
+		if t == types.InferenceTypeOnDemand {
+			return modelID, true
+		}
+	}
+	suffix := "." + modelID
+	var matches []string
+	for _, pid := range profileIDs {
+		if strings.HasSuffix(pid, suffix) {
+			matches = append(matches, pid)
+		}
+	}
+	if len(matches) == 0 {
+		return "", false
+	}
+	// Non-global profiles first, then stable order.
+	sort.SliceStable(matches, func(i, j int) bool {
+		gi := strings.HasPrefix(matches[i], "global.")
+		gj := strings.HasPrefix(matches[j], "global.")
+		return !gi && gj
+	})
+	return matches[0], true
+}
+
+// observedFromSummary restates one vendor model summary as the model the runtime
+// routes to. Every capability below is a member of that summary — its input and
+// output modalities and the vendor's own streaming flag — because a model the
+// vendor does not describe is not given a capability it never declared. The
+// vendor publishes neither reasoning support nor the prompt-cache checkpoint
+// contract for a foundation model, so neither is derived here: both are
+// capability declarations an operator states on the model.
+func observedFromSummary(summary types.FoundationModelSummary, invokeID string) modelrepo.ObservedModel {
+	inputs := bedrockModalities(summary.InputModalities)
+	outputs := bedrockModalities(summary.OutputModalities)
+	text := inputs[types.ModelModalityText] && outputs[types.ModelModalityText]
+	embedding := inputs[types.ModelModalityEmbedding] || outputs[types.ModelModalityEmbedding]
+	conversational := text && !embedding
+
+	meta := map[string]string{}
+	if name := aws.ToString(summary.ModelName); name != "" {
+		meta[modelrepo.ObservedDisplayNameMetaKey] = name
 	}
 
 	return modelrepo.ObservedModel{
-		Name: modelID,
+		Name: invokeID,
 		CapabilityConfig: modelrepo.CapabilityConfig{
-			CanChat:   !isEmbed,
-			CanStream: !isEmbed,
-			CanPrompt: !isEmbed,
-			CanEmbed:  isEmbed,
-			CanVision: canVision,
+			CanChat:   conversational,
+			CanStream: conversational && aws.ToBool(summary.ResponseStreamingSupported),
+			CanPrompt: conversational,
+			CanVision: inputs[types.ModelModalityImage],
 		},
+		Meta: meta,
 	}
+}
+
+func bedrockModalities(modalities []types.ModelModality) map[types.ModelModality]bool {
+	set := make(map[types.ModelModality]bool, len(modalities))
+	for _, modality := range modalities {
+		set[types.ModelModality(strings.ToUpper(string(modality)))] = true
+	}
+	return set
 }
 
 func (p *catalogProvider) ProviderFor(model modelrepo.ObservedModel) modelrepo.Provider {

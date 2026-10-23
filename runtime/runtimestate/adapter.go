@@ -2,16 +2,20 @@ package runtimestate
 
 import (
 	"context"
-	"net/http"
+	"strings"
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
-	"github.com/contenox/harness/runtime/statetype"
 )
 
-// LocalProviderAdapter creates providers for self-hosted backends (Ollama, vLLM)
-func LocalProviderAdapter(ctx context.Context, tracker libtracker.ActivityTracker, runtime map[string]statetype.BackendRuntimeState) ProviderFromRuntimeState {
-	providersByType := make(map[string][]modelrepo.Provider)
+// LocalProviderAdapter creates providers for self-hosted backends (Ollama, vLLM).
+func LocalProviderAdapter(ctx context.Context, tracker libtracker.ActivityTracker, runtime map[string]BackendRuntimeState) ProviderFromRuntimeState {
+	// One flat list of providers, one per model per backend, reachable under the
+	// backend's implementation type and under the name it is registered with: a
+	// configured provider role states either, and a registered name need not
+	// equal the type it runs as.
+	providersByKey := make(map[string][]modelrepo.Provider)
+	var all []modelrepo.Provider
 
 	for _, state := range runtime {
 		if state.Error != "" {
@@ -25,25 +29,35 @@ func LocalProviderAdapter(ctx context.Context, tracker libtracker.ActivityTracke
 				BaseURL: state.Backend.BaseURL,
 				APIKey:  state.GetAPIKey(),
 			},
-			modelrepo.WithCatalogHTTPClient(http.DefaultClient),
+			modelrepo.WithCatalogHTTPClient(modelrepo.SharedHTTPClient),
 			modelrepo.WithCatalogTracker(tracker),
+			modelrepo.WithCatalogAuthorizer(state.authorize),
 		)
 		if err != nil {
 			continue
 		}
-		if _, ok := providersByType[backendType]; !ok {
-			providersByType[backendType] = []modelrepo.Provider{}
+
+		keys := []string{backendType, ConnectionSelector(state.Backend.ID)}
+		if name := strings.ToLower(strings.TrimSpace(state.Backend.Name)); name != "" && name != backendType {
+			keys = append(keys, name)
 		}
 
 		for _, model := range state.PulledModels {
-			providersByType[backendType] = append(
-				providersByType[backendType],
-				catalog.ProviderFor(observedModelFromPullStatus(model)),
-			)
+			p := catalog.ProviderFor(observedModelFromPullStatus(model))
+			if p == nil {
+				// A catalog that cannot build an execution provider for one of
+				// its own observed models must not poison the candidate list.
+				continue
+			}
+			all = append(all, p)
+			for _, key := range keys {
+				providersByKey[key] = append(providersByKey[key], p)
+			}
 		}
 	}
 
 	return func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error) {
+		// No specific backend types requested: return providers from every type.
 		hasNonEmpty := false
 		for _, bt := range backendTypes {
 			if bt != "" {
@@ -52,18 +66,17 @@ func LocalProviderAdapter(ctx context.Context, tracker libtracker.ActivityTracke
 			}
 		}
 		if !hasNonEmpty {
-			var all []modelrepo.Provider
-			for _, providers := range providersByType {
-				all = append(all, providers...)
-			}
 			return all, nil
 		}
 		var providers []modelrepo.Provider
+		seen := make(map[string]bool, len(backendTypes))
 		for _, backendType := range backendTypes {
 			backendType = modelrepo.CanonicalBackendType(backendType)
-			if typeProviders, ok := providersByType[backendType]; ok {
-				providers = append(providers, typeProviders...)
+			if backendType == "" || seen[backendType] {
+				continue
 			}
+			seen[backendType] = true
+			providers = append(providers, providersByKey[backendType]...)
 		}
 		return providers, nil
 	}

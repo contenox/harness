@@ -2,6 +2,7 @@ package libdbexec
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -12,33 +13,38 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// sqliteDBManager implements the DBManager interface for SQLite.
-// Use for local single-process mode (Contenox Local); the server keeps using Postgres.
 type sqliteDBManager struct {
 	dbInstance *sql.DB
 }
 
-// NewSQLiteDBManager creates a new DBManager for SQLite.
-// path is the database file path (e.g. "./.contenox/local.db" or "file:local.db").
-// The parent directory is created if missing. schema is applied on open (e.g. runtimetypes.SchemaSQLite).
+// NewSQLiteDBManager creates a DBManager for the SQLite database at path,
+// creating the parent directory if missing and applying schema on open. The
+// path ":memory:" yields a private in-memory database that every connection of
+// the returned manager shares.
 func NewSQLiteDBManager(ctx context.Context, path string, schema string) (DBManager, error) {
+	return NewSQLiteDBManagerWithOptions(ctx, path, schema, SQLiteOptions{})
+}
+
+// NewSQLiteDBManagerWithOptions creates a DBManager for SQLite tuned by opts,
+// which is validated before anything is opened. A zero opts is equivalent to
+// NewSQLiteDBManager.
+func NewSQLiteDBManagerWithOptions(ctx context.Context, path string, schema string, opts SQLiteOptions) (DBManager, error) {
+	if err := opts.validate(); err != nil {
+		return nil, err
+	}
 	if err := ensureSQLiteParentDir(path); err != nil {
 		return nil, fmt.Errorf("sqlite parent dir: %w", err)
 	}
-	// Append WAL mode, busy timeout and foreign_keys to the DSN so ALL connections
-	// spawned from the pool inherit them.  Previously foreign_keys was set via a
-	// single db.ExecContext call which only applied to one leased connection.
-	dsn := path
-	if !strings.Contains(dsn, "?") {
-		dsn += "?"
-	} else {
-		dsn += "&"
+	dsnPath := path
+	if path == ":memory:" {
+		dsnPath = "file:libdbexec-" + rand.Text() + "?mode=memory&cache=shared"
 	}
-	dsn += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"
+	dsn := buildSQLiteDSN(dsnPath, opts)
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sqlite database: %w", translateSQLiteError(err))
 	}
+	applySQLitePool(db, opts)
 
 	if err = db.PingContext(ctx); err != nil {
 		_ = db.Close()
@@ -46,15 +52,12 @@ func NewSQLiteDBManager(ctx context.Context, path string, schema string) (DBMana
 	}
 
 	if schema != "" {
-		// Execute statements one-by-one so that an ALTER TABLE failing because a
-		// column already exists (on an upgraded DB) only skips that one statement —
-		// subsequent migrations still run.  The old single-shot ExecContext halted at
-		// the first error, leaving any columns added after the failing ALTER missing.
+		// One statement at a time so an already-applied ALTER TABLE skips only itself.
 		for _, stmt := range splitSQLStatements(schema) {
 			if _, err = db.ExecContext(ctx, stmt); err != nil {
 				msg := err.Error()
 				if strings.Contains(msg, "duplicate column name") || strings.Contains(msg, "already exists") {
-					continue // idempotent: column was added by a previous run
+					continue
 				}
 				_ = db.Close()
 				return nil, fmt.Errorf("failed to initialize sqlite schema (stmt: %q): %w", stmt, translateSQLiteError(err))
@@ -148,9 +151,32 @@ func (sm *sqliteDBManager) WithoutTransaction() Exec {
 
 // WithTransaction starts a SQLite transaction and returns executor, commit, and release.
 func (sm *sqliteDBManager) WithTransaction(ctx context.Context, onRollback ...func()) (Exec, CommitTx, ReleaseTx, error) {
-	tx, err := sm.dbInstance.BeginTx(ctx, nil)
+	return sm.WithTransactionOptions(ctx, nil, onRollback...)
+}
+
+// WithTransactionOptions starts a SQLite transaction with opts and returns executor, commit, and release. The driver ignores sql.TxOptions.ReadOnly, so a read-only transaction is enforced with PRAGMA query_only for its duration.
+func (sm *sqliteDBManager) WithTransactionOptions(ctx context.Context, opts *sql.TxOptions, onRollback ...func()) (Exec, CommitTx, ReleaseTx, error) {
+	tx, err := sm.dbInstance.BeginTx(ctx, opts)
 	if err != nil {
 		return nil, nil, func() error { return nil }, fmt.Errorf("%w: begin transaction failed: %w", ErrTxFailed, translateSQLiteError(err))
+	}
+
+	readOnly := opts != nil && opts.ReadOnly
+	if readOnly {
+		if _, err := tx.ExecContext(ctx, "PRAGMA query_only = ON"); err != nil {
+			_ = tx.Rollback()
+			return nil, nil, func() error { return nil }, fmt.Errorf("%w: read-only mode failed: %w", ErrTxFailed, translateSQLiteError(err))
+		}
+	}
+	restoreWrites := func() error {
+		if !readOnly {
+			return nil
+		}
+		readOnly = false
+		if _, err := tx.ExecContext(context.WithoutCancel(ctx), "PRAGMA query_only = OFF"); err != nil {
+			return fmt.Errorf("%w: restoring write mode failed: %w", ErrTxFailed, translateSQLiteError(err))
+		}
+		return nil
 	}
 
 	store := &txAwareDB{tx: tx, errTranslate: translateSQLiteError, driverName: "sqlite"}
@@ -170,6 +196,9 @@ func (sm *sqliteDBManager) WithTransaction(ctx context.Context, onRollback ...fu
 		if ctxErr := commitCtx.Err(); ctxErr != nil {
 			return fmt.Errorf("%w: context error before commit: %w", ErrTxFailed, ctxErr)
 		}
+		if err := restoreWrites(); err != nil {
+			return err
+		}
 		if err := tx.Commit(); err != nil {
 			return fmt.Errorf("%w: commit failed: %w", ErrTxFailed, translateSQLiteError(err))
 		}
@@ -178,10 +207,17 @@ func (sm *sqliteDBManager) WithTransaction(ctx context.Context, onRollback ...fu
 	}
 
 	releaseFn := func() error {
+		var restoreErr error
+		if !finalized {
+			restoreErr = restoreWrites()
+		}
 		rollbackErr := tx.Rollback()
 		if !finalized {
 			finalized = true
 			fireRollback()
+		}
+		if restoreErr != nil {
+			return restoreErr
 		}
 		if rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
 			return fmt.Errorf("%w: rollback failed: %w", ErrTxFailed, translateSQLiteError(rollbackErr))

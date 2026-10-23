@@ -12,7 +12,6 @@ import (
 	libdb "github.com/contenox/harness/libdbexec"
 	"github.com/contenox/harness/runtime/modelcapability"
 	"github.com/contenox/harness/runtime/runtimetypes"
-	"github.com/contenox/harness/runtime/statetype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,7 +30,7 @@ func TestUnit_ApplyCapabilityOverrides_ManualTrueWins(t *testing.T) {
 	_, err := modelcapability.New(store).SetThink(ctx, "OpenAI", "gpt-5", true)
 	require.NoError(t, err)
 
-	got := state.applyCapabilityOverrides(ctx, "openai", statetype.ModelPullStatus{Model: "gpt-5"})
+	got := state.applyCapabilityOverrides(ctx, "openai", ModelPullStatus{Model: "gpt-5"})
 	require.True(t, got.CanThink)
 }
 
@@ -40,7 +39,7 @@ func TestUnit_ApplyCapabilityOverrides_ManualFalseSuppressesProviderTrue(t *test
 	_, err := modelcapability.New(store).SetThink(ctx, "vllm", "Qwen/Qwen3-32B", false)
 	require.NoError(t, err)
 
-	got := state.applyCapabilityOverrides(ctx, "vllm", statetype.ModelPullStatus{
+	got := state.applyCapabilityOverrides(ctx, "vllm", ModelPullStatus{
 		Model:    "Qwen/Qwen3-32B",
 		CanThink: true,
 	})
@@ -73,7 +72,7 @@ func TestUnit_RunBackendCycle_AppliesOpenAIManualThinkOverride(t *testing.T) {
 	}))
 	data, err := json.Marshal(ProviderConfig{APIKey: "test-key", Type: "openai"})
 	require.NoError(t, err)
-	require.NoError(t, store.SetKV(ctx, OpenaiKey, data))
+	require.NoError(t, store.SetKV(ctx, BackendCredentialKey("openai", "openai-backend"), data))
 	_, err = modelcapability.New(store).SetThink(ctx, "openai", "gpt-5", true)
 	require.NoError(t, err)
 

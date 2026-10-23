@@ -50,16 +50,16 @@ CONTENOX_DEV_URL ?= http://$(CONTENOX_DEV_ADDR):$(CONTENOX_DEV_PORT)
 	\
 	test test-all test-unit test-api test-ui test-vllm test-system test-contenox-verbose test-contenox-help \
 	tool-eval \
-	acp-conformance acp-client-e2e acp-host-e2e \
+	acp-conformance acp-host-e2e rust-e2e \
 	verify-ui-embed visual
 
 help:
 	@echo "build-*    build-contenox build-contenox-windows build-ui"
 	@echo "test-*     test test-all test-unit test-api test-ui test-vllm test-system test-contenox-verbose test-contenox-help"
-	@echo "           (test-all = the one-command release gate: builds ui/cli/website, then unit, ui, cli-help, api, acp-conformance, acp-client-e2e, acp-host-e2e, full go test)"
+	@echo "           (test-all = the one-command release gate: builds ui/cli/website, then unit, ui, cli-help, api, acp-conformance, acp-host-e2e, full go test)"
 	@echo "tool-eval  gated per-model tool-eval matrix (opt-in; CONTENOX_RUN_TOOL_EVALS=1; see comment above the target)"
-	@echo "acp-conformance  validate libacp's agent-side wire dispatch against Rust reference ACP clients (needs ACP_VALIDATOR_BIN, see Makefile comment)"
-	@echo "acp-client-e2e   validate libacp's client-side wire dispatch against the Rust reference testy agent over a real subprocess (needs ACP_TESTY_BIN, see Makefile comment)"
+	@echo "acp-conformance  drive the shipped 'contenox acp' agent with the Rust acp-validator conformance client (needs ACP_VALIDATOR_BIN)"
+	@echo "rust-e2e         black-box ACP/session/scripted-backend cases from tools/contenox-e2e (needs cargo)"
 	@echo "acp-host-e2e     validate the composed registry→host path (runtime/agenthost) end to end: contenox self-loopback always; testy/claude too when ACP_TESTY_BIN/ACP_CLAUDE_ACP_BIN are set (see Makefile comment)"
 	@echo "dev-*      dev-harness dev-web-proxy dev-install dev-link dev-unlink"
 	@echo "deps-*     deps-ui"
@@ -101,7 +101,6 @@ test-all: build-ui build-contenox build-website
 	$(MAKE) --no-print-directory test-contenox-help
 	$(MAKE) --no-print-directory test-api
 	$(MAKE) --no-print-directory acp-conformance
-	$(MAKE) --no-print-directory acp-client-e2e
 	$(MAKE) --no-print-directory acp-host-e2e
 	$(MAKE) --no-print-directory test
 	@echo "==> test-all: all gates green"
@@ -160,36 +159,33 @@ test-contenox-help: build-contenox
 	@chmod +x $(PROJECT_ROOT)/scripts/verify_cli_help.sh
 	@CONTENOX_BIN=$(PROJECT_ROOT)/bin/contenox $(PROJECT_ROOT)/scripts/verify_cli_help.sh
 
-# ACP conformance harness (Slice 6): validates libacp's agent-side wire dispatch
-# (conn.go/agent.go — NewAgentSideConnection's initialize/session/prompt/cancel
-# handling) against the Rust reference ACP client implementations, driving the
-# hermetic libacp/cmd/acp-stub-agent instead of a real LLM backend. Both tests
-# skip with a clear message when their env var is unset.
+# ACP conformance, the Rust way: drive the shipped agent with the reference
+# conformance client instead of a Go stub. acp-validator (tools/acp-validator)
+# is an ACP client built on the agent-client-protocol crate; it spawns
+# `contenox acp --auto` over stdio and reports PASS/FAIL/SKIP per check. The
+# fixture is a deterministic noop chain (scripts/acp_conformance.sh), so no
+# model, backend, GPU, or network is involved. This replaces the deleted
+# libacp/agentconformance_test.go + libacp/cmd/acp-stub-agent harness; the
+# client-side coverage it shared lives in acp-host-e2e below, which drives the
+# Rust reference testy agent through the composed host path.
 # ACP_VALIDATOR_BIN: build the acp-validator crate vendored at
-#   tools/acp-validator (see its README: it needs a sibling checkout of the
-#   agentclientprotocol rust-sdk); the build lands at
+#   tools/acp-validator (`cargo build` there; it pins agent-client-protocol
+#   from crates.io, so no rust-sdk checkout is needed); the build lands at
 #   <crate dir>/target/debug/acp-validator.
-# ACP_YOPO_BIN: build the `yopo` binary from the agentclientprotocol rust-sdk
-#   (src/yopo); e.g. <rust-sdk checkout>/target/debug/yopo.
-# Default every ACP peer to its in-repo build when that binary exists, so the
-# conformance targets run with zero manual env on a checkout that has built
-# them (tools/acp-validator README, rust-sdk at tools/rust-sdk). Explicit env
-# still overrides; a missing binary leaves the var empty and the target keeps
-# its clear set-this-var failure/skip behavior.
 ACP_VALIDATOR_BIN ?= $(wildcard $(PROJECT_ROOT)tools/acp-validator/target/debug/acp-validator)
-ACP_YOPO_BIN ?= $(wildcard $(PROJECT_ROOT)tools/rust-sdk/target/debug/yopo)
 
-acp-conformance:
-	@test -n "$(ACP_VALIDATOR_BIN)" || { echo "set ACP_VALIDATOR_BIN=/path/to/acp-validator (see Makefile comment above test-contenox-help)"; exit 1; }
-	ACP_VALIDATOR_BIN=$(ACP_VALIDATOR_BIN) ACP_YOPO_BIN=$(ACP_YOPO_BIN) ACP_STUB_ADVERTISE_MODES=1 go test -C $(PROJECT_ROOT) -run '^TestConformance_' -v ./libacp/...
+acp-conformance: build-contenox
+	@test -n "$(ACP_VALIDATOR_BIN)" || { echo "set ACP_VALIDATOR_BIN=/path/to/acp-validator (see the comment above acp-conformance)"; exit 1; }
+	@CONTENOX_BIN=$(PROJECT_ROOT)/bin/contenox ACP_VALIDATOR_BIN=$(ACP_VALIDATOR_BIN) $(PROJECT_ROOT)/scripts/acp_conformance.sh
 
-# ACP client e2e harness (Slice 3): validates libacp's client-side wire
-# dispatch (client.go/clientconn.go — ClientSideConnection's outbound
-# initialize/session/prompt calls and its handling of agent-initiated
-# requests + session/update) against testy, the Rust reference SDK's
-# deterministic test agent, spoken to over a real subprocess
-# (libacp/acpexec). Gated on ACP_TESTY_BIN; the MCP pass-down test is
-# additionally gated on ACP_MCP_ECHO_BIN and skips on its own if unset.
+# Black-box end-to-end cases: a Rust crate that spawns the shipped binary and
+# asserts on what a surface exposes. TMPDIR is pinned outside the checkout so
+# the harness does not refuse a scratch home that inherits a workspace marker.
+rust-e2e: build-contenox
+	@tmp=$$(mktemp -d /tmp/contenox-e2e.XXXXXX); trap 'rm -rf "$$tmp"' EXIT; \
+		cd $(PROJECT_ROOT)/tools/contenox-e2e && TMPDIR=$$tmp cargo test -- --test-threads=1
+
+# ACP peer binaries for acp-host-e2e below.
 # ACP_TESTY_BIN: build the `testy` binary from the agentclientprotocol
 #   rust-sdk (src/agent-client-protocol-test); e.g. a local checkout builds it
 #   at <checkout>/target/debug/testy.
@@ -198,18 +194,14 @@ acp-conformance:
 ACP_TESTY_BIN ?= $(wildcard $(PROJECT_ROOT)tools/rust-sdk/target/debug/testy)
 ACP_MCP_ECHO_BIN ?= $(wildcard $(PROJECT_ROOT)tools/rust-sdk/target/debug/mcp-echo-server)
 
-acp-client-e2e:
-	@test -n "$(ACP_TESTY_BIN)" || { echo "set ACP_TESTY_BIN=/path/to/testy (see Makefile comment above acp-client-e2e)"; exit 1; }
-	ACP_TESTY_BIN=$(ACP_TESTY_BIN) ACP_MCP_ECHO_BIN=$(ACP_MCP_ECHO_BIN) go test -C $(PROJECT_ROOT) -run '^TestTesty_' -v ./libacp/acpexec/...
-
 # ACP host e2e harness: validates the composed client-host path one layer above
-# acp-client-e2e — registry row → resolve → runtime/agenthost spawn →
+# acp-conformance — registry row → resolve → runtime/agenthost spawn →
 # initialize → session/new → session/prompt → teardown (see
 # docs/development/blueprints/acp/agent-servers-and-client-e2e.md). Servers:
 #   - contenox self-loopback: builds the contenox binary in-test and drives a
 #     deterministic no-model chain fixture; always runs (no env var needed).
 #   - ACP_TESTY_BIN: additionally drives the Rust reference testy agent through
-#     the composed path (build it as documented above acp-client-e2e); those
+#     the composed path (build it as documented above acp-host-e2e); those
 #     tests skip cleanly when unset.
 #   - ACP_CLAUDE_ACP_BIN: additionally drives a real Claude Code agent over ACP —
 #     point it at an executable serving it, e.g. a wrapper script:

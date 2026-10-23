@@ -63,9 +63,10 @@ reference tools cover, so we don't confuse them:
 
 ## The e2e shape (extend what exists, don't reinvent)
 
-`make acp-client-e2e` already drives `testy` through `libacp/acpexec`, gated on
-`ACP_TESTY_BIN`, skipping cleanly when unset. Extend that one layer up — from
-"libacp client dispatch" to "the composed registry+host":
+`make acp-host-e2e` already drives `testy` through `runtime/agenthost` (the
+composed registry+host path), gated on `ACP_TESTY_BIN`, skipping cleanly when
+unset. The libacp-level `acp-client-e2e` harness is gone; the same coverage now
+runs one layer up in `runtime/agenthost` (`TestHostE2E_Testy_*`).
 
 1. **Register** the target as an `agents` row via the *manual* path
    (`contenox agent add <name> -- <command …>`), so the e2e needs no network
@@ -83,5 +84,5 @@ Gate each server's e2e on its binary env var (`ACP_TESTY_BIN`; the loopback need
 the freshly built `contenox` binary; the stub builds itself), matching the
 existing conformance/client-e2e convention. Home is most naturally a new
 `runtime/agenthost` e2e (it is the integration point that composes
-registry + host), with a `make` target beside `acp-client-e2e`.
+registry + host), with a `make` target beside `acp-conformance`.
 

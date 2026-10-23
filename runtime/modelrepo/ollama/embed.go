@@ -6,7 +6,6 @@ import (
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
-	"github.com/ollama/ollama/api"
 )
 
 type OllamaEmbedClient struct {
@@ -17,13 +16,13 @@ type OllamaEmbedClient struct {
 }
 
 func (c *OllamaEmbedClient) Embed(ctx context.Context, text string) ([]float64, error) {
-	// Start tracking the operation
 	reportErr, reportChange, end := c.tracker.Start(ctx, "embed", "ollama", "model", c.modelName)
 	defer end()
 
-	resp, err := c.ollamaClient.Embed(ctx, &api.EmbedRequest{
-		Model: c.modelName,
-		Input: text,
+	resp, err := c.ollamaClient.Embed(ctx, &EmbedRequest{
+		Model:     c.modelName,
+		Input:     text,
+		KeepAlive: keepAlive(),
 	})
 	if err != nil {
 		reportErr(err)

@@ -1,5 +1,4 @@
 import {
-  Cpu,
   Database,
   Folder,
   Inbox,
@@ -96,26 +95,11 @@ const adminRouteDefinitions: AdminRouteDefinition[] = [
 ];
 
 /** Admin destinations for the control-plane menu and hub; route paths unchanged. */
-export const adminNavItems: AdminNavItem[] = adminRouteDefinitions
-  .map(({ path, labelKey, Icon }) => {
-    const item = {
-      path,
-      label: i18n.t(labelKey),
-      icon: <Icon className="h-[1em] w-[1em]" />,
-    };
-    if (path !== '/backends') {
-      return [item];
-    }
-    return [
-      item,
-      {
-        path: '/backends?tab=local-runtime',
-        label: i18n.t('navbar.local_runtime_modeld'),
-        icon: <Cpu className="h-[1em] w-[1em]" />,
-      },
-    ];
-  })
-  .flat();
+export const adminNavItems: AdminNavItem[] = adminRouteDefinitions.map(({ path, labelKey, Icon }) => ({
+  path,
+  label: i18n.t(labelKey),
+  icon: <Icon className="h-[1em] w-[1em]" />,
+}));
 
 const adminRoutes: RouteConfig[] = adminRouteDefinitions.map(def => ({
   path: def.path,

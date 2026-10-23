@@ -13,17 +13,25 @@ import (
 
 func TestUnit_CatalogProvider_ListModels(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "/v1/models", r.URL.Path)
 		require.Equal(t, http.MethodGet, r.Method)
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"data": []map[string]any{
-				{
-					"id":            "qwen3:32b",
-					"max_model_len": 32768,
+		switch r.URL.Path {
+		case "/health":
+			w.WriteHeader(http.StatusOK)
+		case "/openapi.json":
+			_, _ = w.Write([]byte(`{"paths":{"/v1/chat/completions":{},"/v1/completions":{}}}`))
+		case "/v1/models":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": []map[string]any{
+					{
+						"id":            "qwen3:32b",
+						"max_model_len": 32768,
+					},
 				},
-			},
-		})
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
 	}))
 	defer server.Close()
 

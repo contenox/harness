@@ -7,25 +7,13 @@ import (
 	"fmt"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// MacroEnv is a transparent decorator around EnvExecutor that expands
-// special macros in task templates before execution. Supported macros:
-//
-//   - {{toolservice:list}}              -> JSON map of tools name -> tool names
-//   - {{toolservice:tools}}             -> JSON array of tools names
-//   - {{toolservice:tools <tools_name>}} -> JSON array of tool names for that tools
-//   - {{var:<name>}}                    -> value from context template vars (set by caller via WithTemplateVars; engine never reads env); errors if key is missing
-//   - {{var:<name>|<fallback>}}         -> value from context template vars, or fallback when the var is missing or empty
-//   - {{var:<name>|var:<fallback-name>}} -> value from context template vars, or another template var when the first is missing or empty
-//   - {{date}} or {{date:<layout>}}     -> current local date (default 2006-01-02)
-//   - {{now}} or {{now:<layout>}}       -> current time (default RFC3339; layout e.g. 2006-01-02)
-//   - {{chain:id}}                      -> chain ID of the chain being executed
-//
-// The engine does not expand any env:VAR-style macro; var:* is populated only by the caller.
+// MacroEnv is a transparent decorator around EnvExecutor that expands macros (toolservice, var, date, now, chain) in task templates before execution.
 type MacroEnv struct {
 	inner         EnvExecutor
 	toolsProvider ToolsRepo
@@ -52,13 +40,11 @@ func (m *MacroEnv) ExecEnv(
 		return nil, DataTypeAny, nil, fmt.Errorf("chain is nil")
 	}
 
-	// Shallow copy the chain, deep copy tasks so we don't mutate the original.
+	// Deep-copy tasks and pointer fields so macro expansion never mutates the chain definition, which may be shared across goroutines.
 	clone := *chain
 	clone.Tasks = make([]TaskDefinition, len(chain.Tasks))
 	copy(clone.Tasks, chain.Tasks)
 
-	// deep-copy pointer fields so macro expansion never mutates the
-	// globally-cached chain definition that may be shared across goroutines.
 	for i := range clone.Tasks {
 		if clone.Tasks[i].ExecuteConfig != nil {
 			ec := *clone.Tasks[i].ExecuteConfig
@@ -70,11 +56,9 @@ func (m *MacroEnv) ExecEnv(
 		}
 	}
 
-	// Expand macros in all relevant string fields of each task.
 	for i := range clone.Tasks {
 		t := &clone.Tasks[i]
 
-		// Determine the allowlist for this specific task.
 		var allowlist []string
 		if t.ExecuteConfig != nil {
 			allowlist = t.ExecuteConfig.Tools
@@ -82,81 +66,56 @@ func (m *MacroEnv) ExecEnv(
 
 		var err error
 		if t.PromptTemplate != "" {
-			t.PromptTemplate, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.PromptTemplate)
+			t.PromptTemplate, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.PromptTemplate, false)
 			if err != nil {
 				return nil, DataTypeAny, nil, fmt.Errorf("task %s: prompt_template macro error: %w", t.ID, err)
 			}
 		}
 		if t.Print != "" {
-			t.Print, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.Print)
+			t.Print, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.Print, false)
 			if err != nil {
 				return nil, DataTypeAny, nil, fmt.Errorf("task %s: print macro error: %w", t.ID, err)
 			}
 		}
 		if t.OutputTemplate != "" {
-			t.OutputTemplate, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.OutputTemplate)
+			t.OutputTemplate, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.OutputTemplate, false)
 			if err != nil {
 				return nil, DataTypeAny, nil, fmt.Errorf("task %s: output_template macro error: %w", t.ID, err)
 			}
 		}
 		if t.SystemInstruction != "" {
-			t.SystemInstruction, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.SystemInstruction)
+			// SystemInstruction is the provider cache's stable prefix, so it expands with stablePrefix=true (wall-clock macros degrade to day granularity).
+			t.SystemInstruction, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.SystemInstruction, true)
 			if err != nil {
 				return nil, DataTypeAny, nil, fmt.Errorf("task %s: system_instruction macro error: %w", t.ID, err)
 			}
 
-			// Resolve the allowlist once — both auto-injections below need it.
-			var allowed []string
-			if len(allowlist) > 0 {
-				allowed, _ = resolveToolsNames(ctx, allowlist, m.toolsProvider)
-			}
-
-			// Auto-append tools summary if tools are available and not already mentioned
-			if len(allowed) > 0 && !strings.Contains(t.SystemInstruction, "Available tools") && !strings.Contains(t.SystemInstruction, "tool") {
-				summary, _ := m.renderToolsAndToolsJSON(ctx, allowed)
-				if summary != "" {
-					t.SystemInstruction += "\n\nAvailable tools (tools -> function names):\n" + summary
-				}
-			}
-
-			// Auto-append a preference nudge when both file-touching tool groups
-			// are available. local_fs enforces a read-before-write contract,
-			// sandbox boundaries, and size limits that local_shell does not, so
-			// when both are exposed we steer the model toward local_fs for file
-			// ops. Chain authors who want different behaviour exclude one of the
-			// groups from the task's tools allowlist.
-			if containsAll(allowed, "local_fs", "local_shell") {
-				t.SystemInstruction += "\n\nTOOL PREFERENCE: For inspecting or modifying files in the project, prefer the local_fs.* tools over their local_shell equivalents (cat / head / tail / grep / sed against files). local_fs enforces sandbox boundaries, output-size limits, denied-path policies, and a read-before-write contract that local_shell does not. Use local_shell only for genuine shell operations: running tests, builds, git, environment inspection."
-			}
-
-			if !strings.Contains(t.SystemInstruction, "Host: os=") {
-				t.SystemInstruction += fmt.Sprintf("\n\nHost: os=%s arch=%s", runtime.GOOS, runtime.GOARCH)
-			}
 		}
 
-		// Expand {{var:*}} in execute_config fields so chains can use caller
-		// payload values without callers doing manual string replacement.
 		if t.ExecuteConfig != nil {
 			if t.ExecuteConfig.Model != "" {
-				t.ExecuteConfig.Model, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.ExecuteConfig.Model)
+				if strings.Contains(t.ExecuteConfig.Model, "{{var:alt_model}}") || strings.Contains(t.ExecuteConfig.Model, "{{var:alt_model|") {
+					t.ExecuteConfig.ModelRole = "alternative"
+				}
+				t.ExecuteConfig.Model, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.ExecuteConfig.Model, false)
 				if err != nil {
 					return nil, DataTypeAny, nil, fmt.Errorf("task %s: execute_config.model macro error: %w", t.ID, err)
 				}
 			}
 			if t.ExecuteConfig.Provider != "" {
-				t.ExecuteConfig.Provider, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.ExecuteConfig.Provider)
+				t.ExecuteConfig.Provider, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.ExecuteConfig.Provider, false)
 				if err != nil {
 					return nil, DataTypeAny, nil, fmt.Errorf("task %s: execute_config.provider macro error: %w", t.ID, err)
 				}
 			}
 			if t.ExecuteConfig.Think != "" {
-				t.ExecuteConfig.Think, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.ExecuteConfig.Think)
+				t.ExecuteConfig.Think, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.ExecuteConfig.Think, false)
 				if err != nil {
 					return nil, DataTypeAny, nil, fmt.Errorf("task %s: execute_config.think macro error: %w", t.ID, err)
 				}
 			}
 			if t.ExecuteConfig.MaxTokensTemplate != "" {
-				expanded, err := m.expandSpecialTemplates(ctx, &clone, allowlist, t.ExecuteConfig.MaxTokensTemplate)
+				expanded, err := m.expandSpecialTemplates(ctx, &clone, allowlist, t.ExecuteConfig.MaxTokensTemplate, false)
 				if err != nil {
 					return nil, DataTypeAny, nil, fmt.Errorf("task %s: execute_config.max_tokens macro error: %w", t.ID, err)
 				}
@@ -170,14 +129,12 @@ func (m *MacroEnv) ExecEnv(
 		}
 	}
 
-	// Delegate to the real EnvExecutor with the rewritten chain.
 	return m.inner.ExecEnv(ctx, &clone, input, dataType)
 }
 
-// unified macro: {{namespace}} or {{namespace:payload}}
 var macroRe = regexp.MustCompile(`\{\{([a-zA-Z0-9_]+)(?::([^}]*))?\}\}`)
 
-func (m *MacroEnv) expandSpecialTemplates(ctx context.Context, chain *TaskChainDefinition, allowlist []string, in string) (string, error) {
+func (m *MacroEnv) expandSpecialTemplates(ctx context.Context, chain *TaskChainDefinition, allowlist []string, in string, stablePrefix bool) (string, error) {
 	matches := macroRe.FindAllStringSubmatchIndex(in, -1)
 	if len(matches) == 0 {
 		return in, nil
@@ -199,7 +156,7 @@ func (m *MacroEnv) expandSpecialTemplates(ctx context.Context, chain *TaskChainD
 			payload = strings.TrimSpace(in[payloadStart:payloadEnd])
 		}
 
-		replacement, err := m.expandOne(ctx, chain, allowlist, namespace, payload, in[start:end])
+		replacement, err := m.expandOne(ctx, chain, allowlist, namespace, payload, in[start:end], stablePrefix)
 		if err != nil {
 			return "", err
 		}
@@ -211,7 +168,7 @@ func (m *MacroEnv) expandSpecialTemplates(ctx context.Context, chain *TaskChainD
 	return buf.String(), nil
 }
 
-func (m *MacroEnv) expandOne(ctx context.Context, chain *TaskChainDefinition, allowlist []string, namespace, payload, original string) (string, error) {
+func (m *MacroEnv) expandOne(ctx context.Context, chain *TaskChainDefinition, allowlist []string, namespace, payload, original string, stablePrefix bool) (string, error) {
 	switch namespace {
 	case "toolservice":
 		if m.toolsProvider == nil {
@@ -254,6 +211,15 @@ func (m *MacroEnv) expandOne(ctx context.Context, chain *TaskChainDefinition, al
 			return resolveVarFallback(vars, fallback)
 		}
 		return "", fmt.Errorf("template var %q is not set", name)
+	case "tools":
+		if m.toolsProvider == nil || payload != "" {
+			return original, nil
+		}
+		allowed, err := resolveToolsNames(ctx, allowlist, m.toolsProvider)
+		if err != nil || len(allowed) == 0 {
+			return "{}", nil
+		}
+		return m.renderToolsAndToolsJSON(ctx, allowed)
 	case "host":
 		switch payload {
 		case "os":
@@ -274,8 +240,13 @@ func (m *MacroEnv) expandOne(ctx context.Context, chain *TaskChainDefinition, al
 		return time.Now().Format(layout), nil
 	case "now":
 		layout := time.RFC3339
-		if payload != "" {
+		switch {
+		case payload != "":
+			// An explicit layout is always respected, even in the stable prefix — a deliberate trade of cache reuse for precision.
 			layout = payload
+		case stablePrefix:
+			// Provider prefix caches key on exact system-instruction bytes; the default layout degrades to day granularity here to avoid cold-starting the cache every request.
+			layout = "2006-01-02"
 		}
 		return time.Now().Format(layout), nil
 	case "chain":
@@ -349,25 +320,15 @@ func parseMacroInt(field, value string) (*int, error) {
 	return &n, nil
 }
 
-// containsAll reports whether names contains every required entry.
-func containsAll(names []string, required ...string) bool {
-	if len(required) == 0 {
-		return true
-	}
-	have := make(map[string]struct{}, len(names))
-	for _, n := range names {
-		have[n] = struct{}{}
-	}
-	for _, r := range required {
-		if _, ok := have[r]; !ok {
-			return false
-		}
-	}
-	return true
+func sortedCopy(names []string) []string {
+	out := make([]string, len(names))
+	copy(out, names)
+	sort.Strings(out)
+	return out
 }
 
 func (m *MacroEnv) renderToolsNamesJSON(names []string) (string, error) {
-	b, err := json.Marshal(names)
+	b, err := json.Marshal(sortedCopy(names))
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal tools names: %w", err)
 	}
@@ -378,14 +339,15 @@ func (m *MacroEnv) renderToolsAndToolsJSON(ctx context.Context, names []string) 
 	result := make(map[string][]string, len(names))
 	for _, name := range names {
 		tools, err := m.toolsProvider.GetToolsForToolsByName(ctx, name)
-		if err != nil {
-			// Skip broken tools; you can also choose to fail hard here.
+		if err != nil || len(tools) == 0 {
 			continue
 		}
 		fnNames := make([]string, 0, len(tools))
 		for _, t := range tools {
 			fnNames = append(fnNames, t.Function.Name)
 		}
+		// Pin inner arrays too: map keys sort automatically but per-tools lists don't, and must stay stable across requests.
+		sort.Strings(fnNames)
 		result[name] = fnNames
 	}
 
@@ -397,7 +359,6 @@ func (m *MacroEnv) renderToolsAndToolsJSON(ctx context.Context, names []string) 
 }
 
 func (m *MacroEnv) renderToolsForToolsJSON(ctx context.Context, allowed []string, toolsName string) (string, error) {
-	// Respect the allowlist: only expose tools if the tools is allowed.
 	permitted := false
 	for _, a := range allowed {
 		if a == toolsName {
@@ -417,6 +378,8 @@ func (m *MacroEnv) renderToolsForToolsJSON(ctx context.Context, allowed []string
 	for _, t := range tools {
 		names = append(names, t.Function.Name)
 	}
+	// Stable prompt bytes regardless of registry enumeration order.
+	sort.Strings(names)
 	b, err := json.Marshal(names)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal tools for tools %s: %w", toolsName, err)

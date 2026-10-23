@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/contenox/harness/libtracker"
-	"github.com/contenox/harness/runtime/modelregistry"
+
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
@@ -36,54 +36,51 @@ func (p *catalogProvider) Type() string {
 }
 
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
+	// Catalog listing is a non-streaming call: bound it end-to-end.
+	ctx, cancel := modelrepo.NonStreamingContext(ctx)
+	defer cancel()
+
+	// GET /models returns one page of {id, created, object, owned_by,
+	// shutdown_date} and defines neither a pagination envelope nor a capability
+	// member, so neither is read here.
 	type modelItem struct {
 		ID string `json:"id"`
 	}
 	type modelsPage struct {
-		Data    []modelItem `json:"data"`
-		HasMore bool        `json:"has_more"`
-		LastID  string      `json:"last_id"`
+		Data []modelItem `json:"data"`
 	}
 
-	var all []modelrepo.ObservedModel
-	afterID := ""
-	for {
-		url := strings.TrimRight(p.baseURL(), "/") + "/models"
-		if afterID != "" {
-			url += "?after=" + afterID
-		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			return nil, err
-		}
-		if p.spec.APIKey != "" {
-			req.Header.Set("Authorization", "Bearer "+p.spec.APIKey)
-		}
+	url := strings.TrimRight(p.baseURL(), "/") + "/models"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	if p.spec.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+p.spec.APIKey)
+	}
 
-		resp, err := p.httpClient.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			return nil, err
-		}
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("OpenAI catalog returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
-		}
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		code, message := modelrepo.ProviderErrorDetail(body)
+		return nil, modelrepo.ClassifyProviderError(
+			fmt.Errorf("OpenAI catalog returned %d: %s", resp.StatusCode, message), resp.StatusCode, code, message)
+	}
 
-		var page modelsPage
-		if err := json.Unmarshal(body, &page); err != nil {
-			return nil, fmt.Errorf("decode OpenAI catalog response: %w", err)
-		}
-		for _, item := range page.Data {
-			all = append(all, inferObservedModel(item.ID))
-		}
-		if !page.HasMore {
-			break
-		}
-		afterID = page.LastID
+	var page modelsPage
+	if err := json.Unmarshal(body, &page); err != nil {
+		return nil, fmt.Errorf("decode OpenAI catalog response: %w", err)
+	}
+	all := make([]modelrepo.ObservedModel, 0, len(page.Data))
+	for _, item := range page.Data {
+		all = append(all, inferObservedModel(item.ID))
 	}
 	return all, nil
 }
@@ -113,7 +110,7 @@ func inferObservedModel(id string) modelrepo.ObservedModel {
 		Name:          id,
 		ContextLength: 0, // unknown; resolver treats 0 as "do not filter on context"
 	}
-	observed.MaxOutputTokens = inferOpenAIMaxOutputTokens(id)
+	observed.MaxOutputTokens = openAIMaxOutputTokens(id)
 
 	switch {
 	case strings.HasPrefix(lower, "text-embedding-"):
@@ -150,30 +147,14 @@ func inferObservedModel(id string) modelrepo.ObservedModel {
 		observed.CanStream = true
 	}
 
-	// OpenAI's model API reports no modality, so vision is a maintained list;
-	// gated on CanChat so audio/embedding/image-gen models never claim it.
-	observed.CanVision = observed.CanChat && modelregistry.OpenAIModelSupportsVision(id)
+	// OpenAI's model API reports no modality, so the vendor's own model pages
+	// are the source; gated on CanChat so audio/embedding/image-gen models never
+	// claim it.
+	observed.CanVision = observed.CanChat && openAIModelSupportsVision(id)
+	observed.CanThink = observed.CanChat && openAIModelReasons(id)
+	if observed.CanThink {
+		observed.ThinkingTypes = openAIThinkingTypes(id)
+	}
 
 	return observed
-}
-
-func inferOpenAIMaxOutputTokens(id string) int {
-	lower := strings.ToLower(strings.TrimSpace(id))
-	switch {
-	case lower == "gpt-5-chat-latest" || strings.HasPrefix(lower, "gpt-5-chat-"):
-		return 16384
-	case lower == "gpt-5-pro" || strings.HasPrefix(lower, "gpt-5-pro-"):
-		return 272000
-	case lower == "gpt-5" ||
-		strings.HasPrefix(lower, "gpt-5-202") ||
-		strings.HasPrefix(lower, "gpt-5-mini") ||
-		strings.HasPrefix(lower, "gpt-5-nano") ||
-		strings.HasPrefix(lower, "gpt-5.1") ||
-		strings.HasPrefix(lower, "gpt-5.2") ||
-		strings.HasPrefix(lower, "gpt-5.4") ||
-		strings.HasPrefix(lower, "gpt-5.5"):
-		return 128000
-	default:
-		return 0
-	}
 }

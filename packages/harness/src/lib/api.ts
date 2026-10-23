@@ -22,15 +22,9 @@ import {
   MissionChangesResponse,
   MissionFileDiff,
   MissionReport,
-  ModeldCapacityResponse,
   ModelDescriptor,
-  ModeldLoadResponse,
-  ModeldLocalModel,
-  ModeldStatusResponse,
-  ModeldUnloadResponse,
   ModelRegistryEntry,
   OperatorInboxItem,
-  PushModelResult,
   RemoteHook,
   SetupStatus,
   ShellEnvResponse,
@@ -312,25 +306,6 @@ export const api = {
   updateBackend: (id: string, data: Partial<Backend>) =>
     apiFetch<Backend>(`/api/backends/${id}`, options('PUT', data)),
   deleteBackend: (id: string) => apiFetch<void>(`/api/backends/${id}`, options('DELETE')),
-  /**
-   * Streams a local GGUF file to a modeld backend's model store (local or
-   * remote) — the HTTP twin of `contenox model push`. The file is sent as
-   * the raw request body (not multipart/form-data or JSON) so it streams
-   * straight through instead of being buffered in memory; timeoutMs is
-   * disabled since a multi-gigabyte upload can run far longer than the
-   * default API timeout.
-   */
-  pushModel: (backendId: string, name: string, file: File) =>
-    apiFetch<PushModelResult>(
-      `/api/backends/${backendId}/models/push?${new URLSearchParams({ name }).toString()}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/octet-stream' },
-        body: file,
-        timeoutMs: null,
-      },
-    ),
-
   getSetupStatus: async (): Promise<SetupStatus> =>
     normalizeSetupStatus(await apiFetch<SetupStatus>('/api/setup-status')),
   refreshSetupStatus: async (): Promise<SetupStatus> =>
@@ -366,22 +341,6 @@ export const api = {
 
   /** Runtime sync snapshot per backend (OSS backend refresh loop; not a managed download queue). */
   getRuntimeBackendState: () => apiFetch<BackendRuntimeState[]>('/api/state'),
-
-  /** Local modeld daemon state exposed by contenox serve, not a direct browser daemon client. */
-  getModeldStatus: () => apiFetch<ModeldStatusResponse>('/api/modeld/status'),
-  getModeldModels: () => apiFetch<ModeldLocalModel[]>('/api/modeld/models'),
-  getModeldCapacity: (model: string) =>
-    apiFetch<ModeldCapacityResponse>(`/api/modeld/capacity?model=${encodeURIComponent(model)}`),
-  loadModeld: (model: string, expectedGeneration?: number) =>
-    apiFetch<ModeldLoadResponse>(
-      '/api/modeld/load',
-      options('POST', {
-        model,
-        ...(expectedGeneration === undefined ? {} : { expectedGeneration }),
-      }),
-    ),
-  unloadModeld: (expectedGeneration: number) =>
-    apiFetch<ModeldUnloadResponse>('/api/modeld/unload', options('POST', { expectedGeneration })),
 
   taskEvents(requestId: string): EventSource {
     // Must be root-absolute: on routes like /chat/:id, a relative "api/..." resolves to

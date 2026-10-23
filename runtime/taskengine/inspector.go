@@ -15,6 +15,8 @@ type StackTrace interface {
 }
 
 type CapturedStateUnit struct {
+	// Scope is the unit's hierarchical address (chain + task), matching the address contract TaskEvent carries.
+	Scope       EventScope    `json:"scope,omitzero"`
 	TaskID      string        `json:"taskID" example:"validate_input"`
 	TaskHandler string        `json:"taskHandler" example:"chat_completion"`
 	InputType   DataType      `json:"inputType" example:"string" openapi_include_type:"string"`
@@ -33,12 +35,19 @@ type CapturedStateUnit struct {
 	ModelName    string      `json:"modelName,omitempty"`
 	ToolNames    []string    `json:"toolNames,omitempty"`
 	TokenUsage   *TokenUsage `json:"tokenUsage,omitempty"`
+	// FinishReason is the provider's verbatim finish reason for the model call this step captured, when the output was a chat history.
+	FinishReason string `json:"finishReason,omitempty"`
 }
 
 type TokenUsage struct {
 	Prompt     int `json:"prompt"`
 	Completion int `json:"completion"`
+	Thinking   int `json:"thinking,omitempty"`
 	Total      int `json:"total"`
+	// CacheRead and CacheWrite are prompt tokens the provider served from or
+	// wrote to its prefix cache; zero where the provider does not report them.
+	CacheRead  int `json:"cacheRead,omitempty"`
+	CacheWrite int `json:"cacheWrite,omitempty"`
 }
 
 type ErrorResponse struct {

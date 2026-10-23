@@ -1,34 +1,34 @@
-// Package mistral is a direct (non-Vertex) provider for the Mistral API
-// (api.mistral.ai), which speaks the OpenAI-compatible chat/completions format.
-// It reuses the shared chatcompletions codec; only the transport (API-key auth,
-// vendor base URL) is Mistral-specific.
 package mistral
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/contenox/harness/runtime/runtimetypes"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
+const defaultBaseURL = "https://api.mistral.ai/v1"
+
 type catalogProvider struct {
-	spec       modelrepo.BackendSpec
-	httpClient *http.Client
-	tracker    libtracker.ActivityTracker
+	spec    modelrepo.BackendSpec
+	client  *http.Client
+	tracker libtracker.ActivityTracker
 }
 
 func init() {
 	modelrepo.RegisterCatalogProvider("mistral", func(spec modelrepo.BackendSpec, opts modelrepo.CatalogOptions) (modelrepo.CatalogProvider, error) {
 		client := opts.HTTPClient
 		if client == nil {
-			client = http.DefaultClient
+			client = modelrepo.SharedHTTPClient
 		}
-		return &catalogProvider{spec: spec, httpClient: client, tracker: opts.Tracker}, nil
+		return &catalogProvider{spec: spec, client: client, tracker: opts.Tracker}, nil
 	})
 }
 
@@ -36,77 +36,111 @@ func (p *catalogProvider) Type() string { return "mistral" }
 
 func (p *catalogProvider) baseURL() string {
 	if base := strings.TrimSpace(p.spec.BaseURL); base != "" {
-		return base
+		return strings.TrimRight(base, "/")
 	}
 	return defaultBaseURL
 }
 
+// modelCard is what Mistral's own model list publishes about one model: the
+// capabilities it executes and the sampling bounds its endpoints enforce. Every
+// declared capability below is a field of that response, never an inference from
+// the model id.
+type modelCard struct {
+	ID               string `json:"id"`
+	MaxContextLength int    `json:"max_context_length"`
+	Capabilities     struct {
+		Chat            bool `json:"completion_chat"`
+		FIM             bool `json:"completion_fim"`
+		FunctionCalling bool `json:"function_calling"`
+		Vision          bool `json:"vision"`
+		Classification  bool `json:"classification"`
+		Moderation      bool `json:"moderation"`
+	} `json:"capabilities"`
+}
+
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(p.baseURL(), "/")+"/models", nil)
+	ctx, cancel := modelrepo.NonStreamingContext(ctx)
+	defer cancel()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, p.baseURL()+"/models", nil)
 	if err != nil {
 		return nil, err
 	}
 	if p.spec.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+p.spec.APIKey)
+		request.Header.Set("Authorization", "Bearer "+p.spec.APIKey)
 	}
-	resp, err := p.httpClient.Do(req)
+	response, err := p.client.Do(request)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("mistral catalog returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	if response.StatusCode != http.StatusOK {
+		return nil, modelrepo.ClassifyProviderError(fmt.Errorf("mistral catalog returned %d: %s", response.StatusCode, strings.TrimSpace(string(body))), response.StatusCode, "", strings.TrimSpace(string(body)))
 	}
 	var payload struct {
-		Data []struct {
-			ID              string `json:"id"`
-			MaxOutputTokens int    `json:"max_output_tokens"`
-			MaxTokens       int    `json:"max_tokens"`
-			// Capabilities mirrors Mistral's per-model capability object from
-			// GET /v1/models. Only the fields we consume are decoded; Mistral
-			// reports the rest (completion_fim, function_calling, fine_tuning,
-			// ocr, classification, ...) which we ignore here.
-			Capabilities struct {
-				// Vision reports whether the model accepts image input. This is
-				// the authoritative source for CanVision; never infer it from the
-				// model name.
-				Vision bool `json:"vision"`
-			} `json:"capabilities"`
-		} `json:"data"`
+		Data []modelCard `json:"data"`
 	}
 	if err := json.Unmarshal(body, &payload); err != nil {
-		return nil, fmt.Errorf("decode mistral catalog response: %w", err)
+		return nil, fmt.Errorf("decode Mistral catalog response: %w", err)
 	}
 	models := make([]modelrepo.ObservedModel, 0, len(payload.Data))
 	for _, item := range payload.Data {
-		model := inferObservedModel(item.ID)
-		model.MaxOutputTokens = item.MaxOutputTokens
-		if model.MaxOutputTokens <= 0 {
-			model.MaxOutputTokens = item.MaxTokens
-		}
-		// CanVision comes straight from Mistral's API capability object.
-		model.CanVision = item.Capabilities.Vision
-		models = append(models, model)
+		models = append(models, modelrepo.ObservedModel{
+			Name:             item.ID,
+			ContextLength:    item.MaxContextLength,
+			CapabilityConfig: capabilityFor(item),
+			Meta:             modelFacts(item),
+		})
 	}
 	return models, nil
 }
 
-func (p *catalogProvider) ProviderFor(model modelrepo.ObservedModel) modelrepo.Provider {
-	return NewMistralProvider(p.spec.APIKey, model.Name, []string{p.baseURL()}, model.CapabilityConfig, p.httpClient, p.tracker)
+// capabilityFor restates one model card as the capabilities the runtime routes
+// on. The card declares which models serve chat and native FIM; it declares no
+// embedding, prompt-completion, reasoning or tool-calling flag, so those stay
+// undeclared rather than claimed, and the two the vendor does publish beyond the
+// runtime's list travel as model facts.
+func capabilityFor(item modelCard) modelrepo.CapabilityConfig {
+	return modelrepo.CapabilityConfig{
+		Dialect:         dialectName,
+		ContextLength:   item.MaxContextLength,
+		CanChat:         item.Capabilities.Chat,
+		CanStream:       item.Capabilities.Chat,
+		CanAutocomplete: item.Capabilities.FIM,
+		CompletionMode:  completionMode(item.Capabilities.FIM),
+		FIMFormat:       fimFormat(item.Capabilities.FIM),
+		CanVision:       item.Capabilities.Vision,
+	}
 }
 
-func inferObservedModel(id string) modelrepo.ObservedModel {
-	om := modelrepo.ObservedModel{Name: id}
-	if strings.Contains(strings.ToLower(id), "embed") {
-		om.CanEmbed = true
-		return om
+func completionMode(supported bool) string {
+	if supported {
+		return runtimetypes.CompletionModeFIM
 	}
-	om.CanChat = true
-	om.CanPrompt = true
-	om.CanStream = true
-	return om
+	return ""
+}
+
+// modelFacts carries what the vendor publishes about a model beyond the
+// runtime's capability list, so a consumer reads the vendor's own declaration
+// instead of inferring it from the chat capability.
+func modelFacts(item modelCard) map[string]string {
+	facts := map[string]string{
+		modelrepo.ObservedFunctionCallingMetaKey: strconv.FormatBool(item.Capabilities.FunctionCalling),
+		modelrepo.ObservedDisplayNameMetaKey:     item.ID,
+	}
+	return facts
+}
+
+func fimFormat(supported bool) string {
+	if supported {
+		return "mistral-fim"
+	}
+	return ""
+}
+
+func (p *catalogProvider) ProviderFor(model modelrepo.ObservedModel) modelrepo.Provider {
+	return newProvider(p.spec.APIKey, model.Name, p.baseURL(), model.CapabilityConfig, p.client, p.tracker)
 }

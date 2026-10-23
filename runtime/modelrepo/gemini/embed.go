@@ -23,12 +23,11 @@ type geminiEmbedContentResponse struct {
 }
 
 func (c *GeminiEmbedClient) Embed(ctx context.Context, prompt string) ([]float64, error) {
-	// Start tracking the operation
 	reportErr, reportChange, end := c.tracker.Start(ctx, "embed", "gemini", "model", c.modelName)
 	defer end()
 
 	request := geminiEmbedContentRequest{
-		Model: "models/" + c.modelName,
+		Model: modelrepo.ModelResourcePrefix + c.modelName,
 		Content: geminiContent{
 			Parts: []geminiPart{{Text: prompt}},
 		},

@@ -8,21 +8,25 @@ import (
 	"strings"
 
 	libdb "github.com/contenox/harness/libdbexec"
+	"github.com/contenox/harness/runtime/modelrepo"
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
 const KeyPrefix = "model-capability:"
 
 type Override struct {
-	Provider  string `json:"provider"`
-	Model     string `json:"model"`
-	CanThink  *bool  `json:"canThink,omitempty"`
-	CanVision *bool  `json:"canVision,omitempty"`
+	// CompletionMode is the operator-declared code-completion execution contract.
+	CompletionMode *string `json:"completionMode,omitempty"`
+	Provider       string  `json:"provider"`
+	Model          string  `json:"model"`
+	CanThink       *bool   `json:"canThink,omitempty"`
+	CanVision      *bool   `json:"canVision,omitempty"`
 }
 
 type storedOverride struct {
-	CanThink  *bool `json:"canThink"`
-	CanVision *bool `json:"canVision,omitempty"`
+	CompletionMode *string `json:"completionMode,omitempty"`
+	CanThink       *bool   `json:"canThink"`
+	CanVision      *bool   `json:"canVision,omitempty"`
 }
 
 type Service struct {
@@ -53,8 +57,14 @@ func (s Service) SetVision(ctx context.Context, provider, model string, canVisio
 	return s.set(ctx, provider, model, func(v *storedOverride) { v.CanVision = &canVision })
 }
 
-// set merges one capability change into the stored override so setting think
-// and vision independently never clobbers the other.
+// SetCompletion declares an explicit chat-chain or prompt completion operation, or disables completion with an empty mode.
+func (s Service) SetCompletion(ctx context.Context, provider, model, mode string) (*Override, error) {
+	if mode != "" && mode != "instruct" && mode != "prompt" {
+		return nil, fmt.Errorf("unsupported code-completion mode %q", mode)
+	}
+	return s.set(ctx, provider, model, func(value *storedOverride) { value.CompletionMode = &mode })
+}
+
 func (s Service) set(ctx context.Context, provider, model string, apply func(*storedOverride)) (*Override, error) {
 	if s.store == nil {
 		return nil, fmt.Errorf("store is required")
@@ -63,8 +73,8 @@ func (s Service) set(ctx context.Context, provider, model string, apply func(*st
 	if err != nil {
 		return nil, err
 	}
-	var v storedOverride
-	if err := s.store.GetKV(ctx, key, &v); err != nil && !errors.Is(err, libdb.ErrNotFound) {
+	v, _, err := s.read(ctx, key, alternateKey(p, m))
+	if err != nil {
 		return nil, err
 	}
 	apply(&v)
@@ -75,9 +85,10 @@ func (s Service) set(ctx context.Context, provider, model string, apply func(*st
 	if err := s.store.SetKV(ctx, key, json.RawMessage(data)); err != nil {
 		return nil, err
 	}
-	return &Override{Provider: p, Model: m, CanThink: v.CanThink, CanVision: v.CanVision}, nil
+	return &Override{Provider: p, Model: m, CanThink: v.CanThink, CanVision: v.CanVision, CompletionMode: v.CompletionMode}, nil
 }
 
+// Get returns the override stored for a model under either spelling of its id.
 func (s Service) Get(ctx context.Context, provider, model string) (*Override, bool, error) {
 	if s.store == nil {
 		return nil, false, fmt.Errorf("store is required")
@@ -86,29 +97,52 @@ func (s Service) Get(ctx context.Context, provider, model string) (*Override, bo
 	if err != nil {
 		return nil, false, err
 	}
-	var v storedOverride
-	if err := s.store.GetKV(ctx, key, &v); err != nil {
-		if errors.Is(err, libdb.ErrNotFound) {
-			return nil, false, nil
-		}
+	v, found, err := s.read(ctx, key, alternateKey(p, m))
+	if err != nil || !found {
 		return nil, false, err
 	}
-	return &Override{Provider: p, Model: m, CanThink: v.CanThink, CanVision: v.CanVision}, true, nil
+	return &Override{Provider: p, Model: m, CanThink: v.CanThink, CanVision: v.CanVision, CompletionMode: v.CompletionMode}, true, nil
 }
 
+// Unset removes the override stored for a model under either spelling of its id and reports whether one existed.
 func (s Service) Unset(ctx context.Context, provider, model string) (bool, error) {
 	if s.store == nil {
 		return false, fmt.Errorf("store is required")
 	}
-	key, _, _, err := Key(provider, model)
+	key, p, m, err := Key(provider, model)
 	if err != nil {
 		return false, err
 	}
-	if err := s.store.DeleteKV(ctx, key); err != nil {
-		if errors.Is(err, libdb.ErrNotFound) {
-			return false, nil
+	removed := false
+	for _, candidate := range []string{key, alternateKey(p, m)} {
+		if err := s.store.DeleteKV(ctx, candidate); err != nil {
+			if errors.Is(err, libdb.ErrNotFound) {
+				continue
+			}
+			return false, err
 		}
-		return false, err
+		removed = true
 	}
-	return true, nil
+	return removed, nil
+}
+
+func (s Service) read(ctx context.Context, keys ...string) (storedOverride, bool, error) {
+	for _, key := range keys {
+		var v storedOverride
+		err := s.store.GetKV(ctx, key, &v)
+		if err == nil {
+			return v, true, nil
+		}
+		if !errors.Is(err, libdb.ErrNotFound) {
+			return storedOverride{}, false, err
+		}
+	}
+	return storedOverride{}, false, nil
+}
+
+func alternateKey(provider, model string) string {
+	if bare := modelrepo.ModelID(model); bare != model {
+		return KeyPrefix + provider + ":" + bare
+	}
+	return KeyPrefix + provider + ":" + modelrepo.ModelResourcePrefix + model
 }

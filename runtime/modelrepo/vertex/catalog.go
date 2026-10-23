@@ -8,32 +8,77 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/contenox/harness/libtracker"
-	"github.com/contenox/harness/runtime/modelregistry"
+
 	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo/gemini"
 )
 
 func init() {
 	modelrepo.RegisterCatalogProvider("vertex-google", newGoogleCatalog)
 }
 
-// googleCatalogProvider lists models via the Vertex AI publisher Model Garden API
-// (same regional host as the backend URL; ADC or stored service account JSON as for inference).
 type googleCatalogProvider struct {
 	spec       modelrepo.BackendSpec
 	httpClient *http.Client
 	tracker    libtracker.ActivityTracker
-	tokenFn    func(context.Context) (string, error) // test tools; nil → BearerTokenWithCreds
+	tokenFn    func(context.Context) (string, error)
+	authOnce   sync.Once
+	resolved   vertexAuth
+	authErr    error
+}
+
+// vertexAuth is the authentication one vertex-google request carries: an
+// express mode API key when the backend stores one, otherwise a bearer token
+// and the quota project a user credential must name.
+type vertexAuth struct {
+	apiKey       string
+	quotaProject string
+	bearer       func(context.Context) (string, error)
+}
+
+func (a vertexAuth) apply(ctx context.Context, req *http.Request) error {
+	return ApplyVertexAuth(ctx, req, a.apiKey, a.quotaProject, a.bearer)
+}
+
+// auth resolves the backend's credential once: an express mode key is used
+// alone, a user credential names the billing project, and a service account is
+// billed to its own project, which the vendor documents the quota project
+// header as not applying to.
+func (p *googleCatalogProvider) auth(ctx context.Context) (vertexAuth, error) {
+	p.authOnce.Do(func() {
+		if IsExpressAPIKey(p.spec.APIKey) {
+			p.resolved = vertexAuth{apiKey: strings.TrimSpace(p.spec.APIKey)}
+			return
+		}
+		bearer := p.tokenFn
+		if bearer == nil {
+			bearer = func(ctx context.Context) (string, error) {
+				return BearerTokenWithCreds(ctx, p.spec.APIKey)
+			}
+		}
+		project, err := QuotaProjectFor(ctx, p.spec.APIKey, p.spec.BaseURL)
+		if err != nil {
+			p.authErr = err
+			return
+		}
+		p.resolved = vertexAuth{bearer: bearer, quotaProject: project}
+	})
+	if p.authErr != nil {
+		return vertexAuth{}, p.authErr
+	}
+	return p.resolved, nil
 }
 
 func newGoogleCatalog(spec modelrepo.BackendSpec, opts modelrepo.CatalogOptions) (modelrepo.CatalogProvider, error) {
 	if spec.BaseURL == "" {
-		return nil, fmt.Errorf("vertex-google backend requires --url with project and location, e.g. https://us-central1-aiplatform.googleapis.com/v1/projects/MY_PROJECT/locations/us-central1")
+		return nil, fmt.Errorf("vertex-google backend requires --url: the regional endpoint with project and location (https://us-central1-aiplatform.googleapis.com/v1/projects/MY_PROJECT/locations/us-central1), or the express mode global endpoint (https://aiplatform.googleapis.com/v1)")
 	}
 	client := opts.HTTPClient
 	if client == nil {
-		client = http.DefaultClient
+		client = modelrepo.SharedHTTPClient
 	}
 	return &googleCatalogProvider{
 		spec:       spec,
@@ -45,17 +90,19 @@ func newGoogleCatalog(spec modelrepo.BackendSpec, opts modelrepo.CatalogOptions)
 func (p *googleCatalogProvider) Type() string { return "vertex-google" }
 
 func (p *googleCatalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
+	// Catalog listing is a non-streaming call: bound it end-to-end.
+	ctx, cancel := modelrepo.NonStreamingContext(ctx)
+	defer cancel()
+
 	return p.listGoogleModelsFromVertexPublisher(ctx)
 }
 
 func (p *googleCatalogProvider) listGoogleModelsFromVertexPublisher(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	tokenFn := p.tokenFn
-	if tokenFn == nil {
-		tokenFn = func(ctx context.Context) (string, error) {
-			return BearerTokenWithCreds(ctx, p.spec.APIKey)
-		}
+	auth, err := p.auth(ctx)
+	if err != nil {
+		return nil, err
 	}
-	names, err := listVertexPublisherModelNames(ctx, p.spec.BaseURL, "google", p.httpClient, tokenFn)
+	names, err := listVertexPublisherModelNames(ctx, p.spec.BaseURL, "google", p.httpClient, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -66,31 +113,34 @@ func (p *googleCatalogProvider) listGoogleModelsFromVertexPublisher(ctx context.
 	return out, nil
 }
 
-// enrichGooglePublisherModel sets coarse capabilities when only the publisher model ID is known.
 func enrichGooglePublisherModel(name string) modelrepo.ObservedModel {
 	n := strings.ToLower(name)
 	om := modelrepo.ObservedModel{Name: name}
+	// The publisher list publishes no token limits, so the vendor's model pages
+	// are the source for the families they cover; an uncovered family declares
+	// none rather than inheriting another family's ceiling.
+	if fact, documented := gemini.ModelFactsFor(name); documented {
+		om.ContextLength = fact.ContextLength
+		om.MaxOutputTokens = fact.MaxOutputTokens
+	}
 	switch {
 	case strings.Contains(n, "embed"):
 		om.CanEmbed = true
 	case strings.Contains(n, "imagen") || strings.Contains(n, "veo-") || strings.Contains(n, "tts") ||
 		strings.Contains(n, "lyria") || strings.Contains(n, "nano-banana") || strings.Contains(n, "aqa"):
-		// Media / non-chat; leave capabilities off — user can register overrides.
 	default:
 		om.CanChat = true
 		om.CanPrompt = true
 		om.CanStream = true
-		// The Vertex publisher API reports no input modalities, so vision comes
-		// from the hand-maintained Google allowlist rather than runtime detection.
-		om.CanVision = modelregistry.GeminiModelSupportsVision(name)
+		// The Vertex publisher API reports no input modalities; vision/audio come from hand-maintained allowlists.
+		om.CanVision = modelrepo.GeminiModelSupportsVision(name)
+		om.CanAudio = modelrepo.GeminiModelSupportsAudio(name)
+		om.ThinkingTypes = gemini.ThinkingDeclarationFor(name)
+		om.CanThink = om.ThinkingTypes != nil
 	}
 	return om
 }
 
-// vertexRegionalPublisherListURL builds the REST URL for listing Model Garden publisher models.
-// The API is GET https://{service-endpoint}/v1beta1/publishers/{publisher}/models (regional host
-// such as us-central1-aiplatform.googleapis.com), not under .../v1/projects/.../locations/...
-// (that path is for inference and returns 404 for list).
 func vertexRegionalPublisherListURL(vertexLocationBaseURL, publisher string) (string, error) {
 	base := strings.TrimSpace(vertexLocationBaseURL)
 	if base == "" {
@@ -110,17 +160,8 @@ func vertexRegionalPublisherListURL(vertexLocationBaseURL, publisher string) (st
 	return fmt.Sprintf("%s://%s/v1beta1/publishers/%s/models", scheme, u.Host, publisher), nil
 }
 
-// vertexPublisherModel is one entry from the Vertex Model Garden publisher list.
-// listVertexPublisherModelNames returns model IDs from the Vertex AI publisher
-// list using the regional hostname from the backend URL (same host used for
-// generateContent).
-func listVertexPublisherModelNames(ctx context.Context, vertexLocationBaseURL, publisher string, httpClient *http.Client, tokenFn func(context.Context) (string, error)) ([]string, error) {
+func listVertexPublisherModelNames(ctx context.Context, vertexLocationBaseURL, publisher string, httpClient *http.Client, auth vertexAuth) ([]string, error) {
 	listURLPrefix, err := vertexRegionalPublisherListURL(vertexLocationBaseURL, publisher)
-	if err != nil {
-		return nil, fmt.Errorf("vertex-%s list models: %w", publisher, err)
-	}
-
-	token, err := tokenFn(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("vertex-%s list models: %w", publisher, err)
 	}
@@ -138,9 +179,8 @@ func listVertexPublisherModelNames(ctx context.Context, vertexLocationBaseURL, p
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("Authorization", "Bearer "+token)
-		if project := extractProjectFromVertexURL(vertexLocationBaseURL); project != "" {
-			req.Header.Set("x-goog-user-project", project)
+		if err := auth.apply(ctx, req); err != nil {
+			return nil, fmt.Errorf("vertex-%s list models: %w", publisher, err)
 		}
 
 		resp, err := httpClient.Do(req)

@@ -14,20 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// This file is the shared conformance suite for the Messenger interface.
-//
-// Every backend (InMem, SQLiteBus, NATS) runs the SAME matrix of behavioural
-// tests, because callers treat the backends as interchangeable. Anything the
-// suite asserts is a guarantee the Messenger doc comment makes for all
-// backends; anything that legitimately differs lives in the divergence
-// section at the bottom, where the *expected difference* is asserted per
-// backend so the documentation cannot silently rot.
-//
-// InMem and SQLiteBus always run. NATS needs a container and is SKIPPED (never
-// silently passed) when Docker is unavailable; set LIBBUS_REQUIRE_NATS=1 to
-// turn that skip into a hard failure in CI.
-
-// ── backend registry ───────────────────────────────────────────────────────
+// This file is the shared conformance suite for the Messenger interface: every
+// backend runs the same matrix, with legitimate differences asserted per backend
+// in the divergence section at the bottom. NATS is skipped when Docker is
+// unavailable; set LIBBUS_REQUIRE_NATS=1 to turn that skip into a failure.
 
 // newBusFunc builds a fresh Messenger. It registers its own cleanup on t and
 // skips the test if the backend's infrastructure is unavailable.
@@ -95,8 +85,6 @@ func uniqueSubject(t *testing.T) string {
 	return fmt.Sprintf("conformance.s%d", subjectCounter.Add(1))
 }
 
-// ── shared NATS container ──────────────────────────────────────────────────
-
 var (
 	natsOnce    sync.Once
 	natsURL     string
@@ -134,8 +122,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
 // receive waits for one message, failing the test rather than hanging forever.
 func receive(t *testing.T, ch <-chan []byte, within time.Duration) []byte {
 	t.Helper()
@@ -160,8 +146,6 @@ func expectNoMessage(t *testing.T, ch <-chan []byte, within time.Duration) {
 }
 
 const settle = 250 * time.Millisecond
-
-// ── the matrix ─────────────────────────────────────────────────────────────
 
 func TestConformance_PublishStreamDelivery(t *testing.T) {
 	runConformance(t, "publish_is_delivered_to_subscriber", func(t *testing.T, newBus newBusFunc) {
@@ -574,7 +558,6 @@ func TestConformance_CloseIsIdempotent(t *testing.T) {
 	})
 }
 
-// ── documented divergences ─────────────────────────────────────────────────
 //
 // These assert the differences documented on the Messenger interface. They
 // exist so that a backend which quietly changes behaviour breaks a test
@@ -609,6 +592,8 @@ func TestConformanceDivergence_LateHandler(t *testing.T) {
 			}
 			require.ErrorIs(t, err, libbus.ErrRequestTimeout,
 				"%s is documented to fail fast when no handler is registered yet", be.name)
+			require.ErrorIs(t, err, libbus.ErrNoResponders,
+				"%s must report a missing handler as ErrNoResponders, which is what lets a caller retry the request without risking a second execution", be.name)
 		})
 	}
 }
@@ -641,4 +626,45 @@ func TestConformanceDivergence_UnsubscribeDrain(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConformance_TwoHandlersOnOneSubjectBothSurvive(t *testing.T) {
+	runConformance(t, "second_handler_joins_rather_than_replaces", func(t *testing.T, newBus newBusFunc) {
+		ctx := t.Context()
+		bus := newBus(t)
+		subject := uniqueSubject(t)
+
+		asked := func(bus libbus.Messenger) error {
+			reqCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			_, err := bus.Request(reqCtx, subject, nil)
+			return err
+		}
+		served := func(bus libbus.Messenger) bool {
+			if err := asked(bus); err == nil {
+				return true
+			}
+			// A backend whose Reply can be delivered before its handler is
+			// visible to Request needs a second try; the durable one documents
+			// that as waitsForLateHandler.
+			require.Eventually(t, func() bool { return asked(bus) == nil }, 3*time.Second, 50*time.Millisecond)
+			return false
+		}
+
+		first, err := bus.Serve(ctx, subject, func(_ context.Context, _ []byte) ([]byte, error) {
+			return []byte("first"), nil
+		})
+		require.NoError(t, err)
+		second, err := bus.Serve(ctx, subject, func(_ context.Context, _ []byte) ([]byte, error) {
+			return []byte("second"), nil
+		})
+		require.NoError(t, err)
+
+		require.True(t, served(bus), "a subject with two handlers must still answer")
+
+		// The older subscription stops: the newer one is still serving.
+		require.NoError(t, first.Unsubscribe())
+		require.True(t, served(bus), "unsubscribing the shadowed handler must not silence the one serving")
+		require.NoError(t, second.Unsubscribe())
+	})
 }

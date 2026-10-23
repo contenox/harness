@@ -8,24 +8,59 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// request payloads and response parsing for the OpenAI Responses API.
-
+// openAIResponsesRequest always disables server-side response storage.
 type openAIResponsesRequest struct {
+	Include         []string                  `json:"include,omitempty"`
 	Model           string                    `json:"model"`
 	Input           []openAIResponseInput     `json:"input"`
-	Instructions    string                    `json:"instructions,omitempty"`
+	Instructions    string                    `json:"instructions"`
 	MaxOutputTokens *int                      `json:"max_output_tokens,omitempty"`
 	Temperature     *float64                  `json:"temperature,omitempty"`
 	TopP            *float64                  `json:"top_p,omitempty"`
-	Seed            *int                      `json:"seed,omitempty"`
 	Reasoning       *openAIResponsesReasoning `json:"reasoning,omitempty"`
 	Tools           []openAIResponsesTool     `json:"tools,omitempty"`
-	ToolChoice      string                    `json:"tool_choice,omitempty"`
-	Stream          bool                      `json:"stream,omitempty"`
+	// ToolChoice is the documented union: the string form (none, auto, required)
+	// or the named-function object, which no single Go member can carry.
+	ToolChoice        any   `json:"tool_choice,omitempty"`
+	ParallelToolCalls *bool `json:"parallel_tool_calls,omitempty"`
+	// Text carries the structured-output constraint, which this endpoint places
+	// under text.format rather than at the request's top level.
+	Text           *openAIResponsesText `json:"text,omitempty"`
+	Stream         bool                 `json:"stream,omitempty"`
+	Store          *bool                `json:"store,omitempty"`
+	PromptCacheKey string               `json:"prompt_cache_key,omitempty"`
+	// PromptCacheRetention is the documented cache lifetime policy: 24h keeps a
+	// cached prefix active for up to a day. Sent only when a cache hint asks for
+	// a lifetime of at least a day.
+	PromptCacheRetention string `json:"prompt_cache_retention,omitempty"`
+}
+
+// openAIResponsesText is the endpoint's text configuration, whose only neutral
+// member is the response format.
+type openAIResponsesText struct {
+	Format *openAIResponsesTextFormat `json:"format,omitempty"`
+}
+
+// openAIResponsesTextFormat is the Responses API's structured-output shape: the
+// schema members sit beside the type rather than inside a json_schema object,
+// which is where the chat/completions endpoint nests them.
+type openAIResponsesTextFormat struct {
+	Type   string `json:"type"`
+	Name   string `json:"name,omitempty"`
+	Schema any    `json:"schema,omitempty"`
+	Strict *bool  `json:"strict,omitempty"`
+}
+
+// openAIResponsesToolChoiceName names one function in the object form of
+// tool_choice, which this endpoint spells flat.
+type openAIResponsesToolChoiceName struct {
+	Type string `json:"type"`
+	Name string `json:"name"`
 }
 
 type openAIResponsesReasoning struct {
-	Effort string `json:"effort,omitempty"`
+	Effort  string `json:"effort,omitempty"`
+	Summary string `json:"summary,omitempty"`
 }
 
 type openAIResponsesTool struct {
@@ -37,62 +72,109 @@ type openAIResponsesTool struct {
 }
 
 type openAIResponseInput struct {
-	Type string `json:"type"`
-	// message fields
-	Role    string `json:"role,omitempty"`
-	Content any    `json:"content,omitempty"`
-	// function_call fields (assistant tool-call history)
-	CallID    string `json:"call_id,omitempty"`
-	Name      string `json:"name,omitempty"`
-	Arguments string `json:"arguments,omitempty"`
-	// function_call_output fields (tool result)
-	Output string `json:"output,omitempty"`
+	raw              json.RawMessage
+	ID               string                   `json:"id,omitempty"`
+	EncryptedContent string                   `json:"encrypted_content,omitempty"`
+	Summary          *[]openAIResponseContent `json:"summary,omitempty"`
+	Type             string                   `json:"type"`
+	Role             string                   `json:"role,omitempty"`
+	Content          any                      `json:"content,omitempty"`
+	CallID           string                   `json:"call_id,omitempty"`
+	Name             string                   `json:"name,omitempty"`
+	Arguments        string                   `json:"arguments,omitempty"`
+	Output           *string                  `json:"output,omitempty"`
+}
+
+func (item openAIResponseInput) MarshalJSON() ([]byte, error) {
+	if item.raw != nil {
+		return item.raw, nil
+	}
+	type wire openAIResponseInput
+	return json.Marshal(wire(item))
 }
 
 type openAIResponse struct {
-	Output    []openAIResponseOutputItem `json:"output"`
-	Reasoning struct {
-		Effort  string `json:"effort"`
-		Summary string `json:"summary"`
-	} `json:"reasoning"`
-	// Error is set on response.failed / response.incomplete stream events.
-	Error *struct {
+	Output []openAIResponseOutputItem `json:"output"`
+	Usage  *openAIResponsesUsage      `json:"usage"`
+	Error  *struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
+	Status            string `json:"status"`
+	IncompleteDetails *struct {
+		Reason string `json:"reason"`
+	} `json:"incomplete_details"`
+}
+
+type openAIResponsesUsage struct {
+	InputTokens        int `json:"input_tokens"`
+	OutputTokens       int `json:"output_tokens"`
+	TotalTokens        int `json:"total_tokens"`
+	InputTokensDetails struct {
+		CachedTokens     int `json:"cached_tokens"`
+		CacheWriteTokens int `json:"cache_write_tokens"`
+	} `json:"input_tokens_details"`
+	OutputTokensDetails struct {
+		ReasoningTokens int `json:"reasoning_tokens"`
+	} `json:"output_tokens_details"`
+}
+
+func (u *openAIResponsesUsage) neutralUsage() *modelrepo.TokenUsage {
+	if u == nil {
+		return nil
+	}
+	total := u.TotalTokens
+	if total == 0 {
+		total = u.InputTokens + u.OutputTokens
+	}
+	return &modelrepo.TokenUsage{
+		PromptTokens:     u.InputTokens,
+		CompletionTokens: u.OutputTokens,
+		ThinkingTokens:   u.OutputTokensDetails.ReasoningTokens,
+		TotalTokens:      total,
+		CacheReadTokens:  u.InputTokensDetails.CachedTokens,
+		CacheWriteTokens: u.InputTokensDetails.CacheWriteTokens,
+	}
 }
 
 type openAIResponseOutputItem struct {
-	Type      string                  `json:"type"`
-	ID        string                  `json:"id"`
-	Role      string                  `json:"role"`
-	CallID    string                  `json:"call_id"`
-	Name      string                  `json:"name"`
-	Arguments string                  `json:"arguments"`
-	Content   []openAIResponseContent `json:"content"`
-	Status    string                  `json:"status"`
-	Phase     string                  `json:"phase"`
+	raw              json.RawMessage
+	EncryptedContent string                  `json:"encrypted_content,omitempty"`
+	Type             string                  `json:"type"`
+	ID               string                  `json:"id"`
+	Role             string                  `json:"role"`
+	CallID           string                  `json:"call_id"`
+	Name             string                  `json:"name"`
+	Arguments        string                  `json:"arguments"`
+	Content          []openAIResponseContent `json:"content"`
+	Summary          []openAIResponseContent `json:"summary"`
+	Status           string                  `json:"status"`
+	Phase            string                  `json:"phase"`
+}
+
+func (item *openAIResponseOutputItem) UnmarshalJSON(data []byte) error {
+	type wire openAIResponseOutputItem
+	var decoded wire
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*item = openAIResponseOutputItem(decoded)
+	item.raw = append(json.RawMessage(nil), data...)
+	return nil
 }
 
 type openAIResponseContent struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
+	Type    string `json:"type"`
+	Text    string `json:"text"`
+	Refusal string `json:"refusal"`
 }
 
-// openAIResponseInputContent is one element of a Responses input message's
-// content-parts array, used only when the message carries image attachments.
-// The Responses API names the parts input_text / input_image, and image_url is
-// a bare data-URI string (not the nested {url} object the Chat Completions API
-// uses).
 type openAIResponseInputContent struct {
 	Type     string `json:"type"`
 	Text     string `json:"text,omitempty"`
 	ImageURL string `json:"image_url,omitempty"`
 }
 
-// openAIResponsesImageContent renders a message's text plus its image
-// attachments as the Responses content-parts array: a leading input_text part
-// (when present) then one input_image part per image, in attachment order.
 func openAIResponsesImageContent(msg modelrepo.Message) []openAIResponseInputContent {
 	parts := make([]openAIResponseInputContent, 0, len(msg.Images)+1)
 	if msg.Content != "" {
@@ -107,27 +189,50 @@ func openAIResponsesImageContent(msg modelrepo.Message) []openAIResponseInputCon
 	return parts
 }
 
-func buildOpenAIResponsesRequestWithCapabilities(modelName string, messages []modelrepo.Message, args []modelrepo.ChatArgument, supportsThink bool) (openAIResponsesRequest, map[string]string) {
+func buildOpenAIResponsesRequestWithCapabilities(modelName string, messages []modelrepo.Message, args []modelrepo.ChatArgument, supportsThink bool) (openAIResponsesRequest, map[string]string, error) {
+	return buildOpenAIResponsesRequestWithContinuation(modelName, messages, args, supportsThink, nil)
+}
+
+func buildOpenAIResponsesRequestWithContinuation(modelName string, messages []modelrepo.Message, args []modelrepo.ChatArgument, supportsThink bool, continuations map[int][]openAIResponseInput) (openAIResponsesRequest, map[string]string, error) {
 	req := openAIResponsesRequest{
 		Model: modelName,
 	}
+	storeFalse := false
+	req.Store = &storeFalse
 
 	cfg := &modelrepo.ChatConfig{}
 	for _, a := range args {
+		if a == nil {
+			continue
+		}
 		a.Apply(cfg)
+	}
+	if err := cfg.Validate(); err != nil {
+		return openAIResponsesRequest{}, nil, err
 	}
 
 	req.Temperature = cfg.Temperature
 	req.MaxOutputTokens = cfg.MaxTokens
 	req.TopP = cfg.TopP
-	req.Seed = cfg.Seed
+	req.ParallelToolCalls = cfg.ParallelToolCalls
+	req.Text = responsesText(cfg.Format)
+	req.ToolChoice = responsesToolChoice(cfg.ToolChoice, nil)
+
+	cfgCacheKey, cfgCacheRetention := cacheControls(cfg.CacheHints)
+	req.PromptCacheKey, req.PromptCacheRetention = cfgCacheKey, cfgCacheRetention
 
 	if supportsThink {
-		reasoningEffort := openAIReasoningEffort(modelName, cfg.Think)
-		if reasoningEffort != "" {
+		reasoningEffort, err := openAIReasoningEffort(modelName, cfg.Think, nil)
+		if err != nil {
+			return openAIResponsesRequest{}, nil, err
+		}
+		if reasoningEffort != "" && reasoningEffort != reasoningOffLiteral {
 			req.Reasoning = &openAIResponsesReasoning{
-				Effort: reasoningEffort,
+				Effort:  reasoningEffort,
+				Summary: "auto",
 			}
+		} else if reasoningEffort == reasoningOffLiteral {
+			req.Reasoning = &openAIResponsesReasoning{Effort: reasoningEffort}
 		}
 	}
 
@@ -170,8 +275,10 @@ func buildOpenAIResponsesRequestWithCapabilities(modelName string, messages []mo
 			req.Tools = tools
 		}
 	}
+	// A named tool selection resolves after the list, so it names the sanitized
+	// function the request actually declares.
+	req.ToolChoice = responsesToolChoice(cfg.ToolChoice, origToSanitized)
 
-	// Hoist system messages into the top-level instructions field.
 	var systemParts []string
 	for _, msg := range messages {
 		if strings.TrimSpace(msg.Role) == "system" && msg.Content != "" {
@@ -183,25 +290,26 @@ func buildOpenAIResponsesRequestWithCapabilities(modelName string, messages []mo
 	}
 
 	input := make([]openAIResponseInput, 0, len(messages))
-	for _, msg := range messages {
+	for i, msg := range messages {
 		role := strings.TrimSpace(msg.Role)
+		input = append(input, continuations[i]...)
+		if len(continuations[i]) > 0 && continuations[i][0].raw != nil {
+			continue
+		}
 
 		switch role {
 		case "system":
-			// Already hoisted to Instructions above.
 			continue
 
 		case "tool":
-			// Tool result → function_call_output item, correlated by call_id.
 			input = append(input, openAIResponseInput{
 				Type:   "function_call_output",
 				CallID: msg.ToolCallID,
-				Output: msg.Content,
+				Output: &msg.Content,
 			})
 			continue
 
 		case "assistant", "model":
-			// If there is text, emit it as a regular assistant message first.
 			if msg.Content != "" {
 				input = append(input, openAIResponseInput{
 					Type:    "message",
@@ -209,8 +317,6 @@ func buildOpenAIResponsesRequestWithCapabilities(modelName string, messages []mo
 					Content: msg.Content,
 				})
 			}
-			// Each tool call becomes a function_call item so the model can
-			// correlate it with the following function_call_output items.
 			for _, tc := range msg.ToolCalls {
 				name := tc.Function.Name
 				if san, ok := origToSanitized[name]; ok && san != "" {
@@ -254,7 +360,185 @@ func buildOpenAIResponsesRequestWithCapabilities(modelName string, messages []mo
 	}
 	req.Input = input
 
-	return req, nameMap
+	return req, nameMap, nil
+}
+
+func (c *openAIClient) buildResponsesRequest(messages []modelrepo.Message, args []modelrepo.ChatArgument) (openAIResponsesRequest, map[string]string, error) {
+	continuations := make(map[int][]openAIResponseInput)
+	for i, m := range messages {
+		if m.Continuation == nil || m.Role != "assistant" || m.Continuation.Provider != c.providerType() || m.Continuation.Model != c.modelName {
+			continue
+		}
+		items, err := decodeResponseContinuation(m.Continuation.Items)
+		if err != nil {
+			return openAIResponsesRequest{}, nil, err
+		}
+		continuations[i] = items
+	}
+	req, names, err := buildOpenAIResponsesRequestWithContinuation(c.modelName, messages, args, c.supportsThink, continuations)
+	if err != nil {
+		return openAIResponsesRequest{}, nil, err
+	}
+	c.clampResponsesMaxOutputTokens(&req)
+	// A reasoning model replays the encrypted reasoning items the vendor returns
+	// with tool calls; without them the next turn restarts its reasoning, which
+	// the vendor documents as degraded function calling.
+	if c.codex != nil || openAIModelReasons(c.modelName) {
+		req.Include = []string{"reasoning.encrypted_content"}
+	}
+	if c.codex != nil {
+		req.MaxOutputTokens, req.Temperature, req.TopP = nil, nil, nil
+		for i := range req.Input {
+			item := &req.Input[i]
+			if text, ok := item.Content.(string); ok {
+				typ := "input_text"
+				if item.Role == "assistant" {
+					typ = "output_text"
+				}
+				item.Content = []openAIResponseContent{{Type: typ, Text: text}}
+			}
+		}
+	}
+	return req, names, nil
+}
+
+type responseContinuation struct {
+	Output []json.RawMessage `json:"output"`
+}
+
+func decodeResponseContinuation(raw json.RawMessage) ([]openAIResponseInput, error) {
+	var replay responseContinuation
+	if len(raw) > 0 && strings.HasPrefix(strings.TrimSpace(string(raw)), "[") {
+		var items []openAIResponseInput
+		if err := json.Unmarshal(raw, &items); err != nil {
+			return nil, fmt.Errorf("invalid ChatGPT continuation: %w", err)
+		}
+		for _, item := range items {
+			if item.Type != "reasoning" || item.EncryptedContent == "" {
+				return nil, fmt.Errorf("invalid ChatGPT reasoning item")
+			}
+		}
+		return items, nil
+	}
+	if err := json.Unmarshal(raw, &replay); err != nil {
+		return nil, fmt.Errorf("invalid ChatGPT continuation: %w", err)
+	}
+	if len(replay.Output) == 0 {
+		return nil, fmt.Errorf("invalid ChatGPT continuation: missing output")
+	}
+	items := make([]openAIResponseInput, len(replay.Output))
+	for i, raw := range replay.Output {
+		var item openAIResponseInput
+		if err := json.Unmarshal(raw, &item); err != nil {
+			return nil, fmt.Errorf("invalid ChatGPT continuation item: %w", err)
+		}
+		switch item.Type {
+		case "reasoning", "message", "function_call":
+		default:
+			return nil, fmt.Errorf("unsupported ChatGPT continuation item type %q", item.Type)
+		}
+		item.raw = raw
+		items[i] = item
+	}
+	return items, nil
+}
+
+// responseContinuation is the vendor's own output items, replayed verbatim on the
+// next turn. A reasoning model requires its reasoning items back with the tool
+// outputs, which is what the encrypted content carries; a turn with no reasoning
+// item is already fully represented by the neutral message.
+func (c *openAIClient) responseContinuation(response *openAIResponse) *modelrepo.Continuation {
+	if response == nil || len(response.Output) == 0 {
+		return nil
+	}
+	if c.codex == nil && !responsesHaveReasoningItem(response) {
+		return nil
+	}
+	output := make([]json.RawMessage, 0, len(response.Output))
+	for _, item := range response.Output {
+		output = append(output, item.raw)
+	}
+	raw, err := json.Marshal(responseContinuation{Output: output})
+	if err != nil {
+		return nil
+	}
+	return &modelrepo.Continuation{Provider: c.providerType(), Model: c.modelName, Items: raw}
+}
+
+// responsesHaveReasoningItem reports whether the vendor returned a reasoning item
+// that has to be replayed with the tool outputs.
+func responsesHaveReasoningItem(response *openAIResponse) bool {
+	for _, item := range response.Output {
+		if strings.EqualFold(item.Type, "reasoning") {
+			return true
+		}
+	}
+	return false
+}
+
+// responsesRefusalText is the refusal the vendor put in an output message, which
+// is how a declined turn is reported beside the streamed refusal deltas.
+func responsesRefusalText(response *openAIResponse) string {
+	if response == nil {
+		return ""
+	}
+	var b strings.Builder
+	for _, item := range response.Output {
+		if !strings.EqualFold(item.Type, "message") {
+			continue
+		}
+		for _, part := range item.Content {
+			if part.Type == "refusal" && part.Refusal != "" {
+				if b.Len() > 0 {
+					b.WriteString("\n\n")
+				}
+				b.WriteString(part.Refusal)
+			}
+		}
+	}
+	return b.String()
+}
+
+// responsesFinishReason is the terminal finish reason of a finished response:
+// the reason the vendor reported for an incomplete one, which is a length or
+// content-filter class value the caller acts on, and the ordinary completion
+// otherwise.
+func responsesFinishReason(response *openAIResponse) string {
+	if response != nil && response.IncompleteDetails != nil && response.IncompleteDetails.Reason != "" {
+		return response.IncompleteDetails.Reason
+	}
+	return "stop"
+}
+
+// firstNonEmptyString returns the first non-empty argument.
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func responsesReasoningSummaryText(resp *openAIResponse) string {
+	if resp == nil {
+		return ""
+	}
+	var b strings.Builder
+	for _, item := range resp.Output {
+		if strings.ToLower(item.Type) != "reasoning" {
+			continue
+		}
+		for _, part := range item.Summary {
+			if part.Type == "summary_text" && part.Text != "" {
+				if b.Len() > 0 {
+					b.WriteString("\n\n")
+				}
+				b.WriteString(part.Text)
+			}
+		}
+	}
+	return b.String()
 }
 
 func openAIResponsesToolParameters(params any) any {
@@ -280,18 +564,32 @@ func parseOpenAIResponsesResponseFromObject(nameMap map[string]string, response 
 	}
 
 	var textBuilder strings.Builder
+	var thinkingBuilder strings.Builder
+	var refusalBuilder strings.Builder
 	var toolCalls []modelrepo.ToolCall
 	role := "assistant"
 
 	for _, item := range resp.Output {
 		switch strings.ToLower(item.Type) {
+		case "reasoning":
+			for _, part := range item.Summary {
+				if part.Type == "summary_text" && part.Text != "" {
+					if thinkingBuilder.Len() > 0 {
+						thinkingBuilder.WriteString("\n\n")
+					}
+					thinkingBuilder.WriteString(part.Text)
+				}
+			}
 		case "message":
 			if item.Role != "" {
 				role = item.Role
 			}
 			for _, chunk := range item.Content {
-				if chunk.Type == "output_text" && chunk.Text != "" {
+				switch chunk.Type {
+				case "output_text":
 					textBuilder.WriteString(chunk.Text)
+				case "refusal":
+					refusalBuilder.WriteString(chunk.Refusal)
 				}
 			}
 		case "function_call":
@@ -321,16 +619,34 @@ func parseOpenAIResponsesResponseFromObject(nameMap map[string]string, response 
 		}
 	}
 
+	if refusal := refusalBuilder.String(); refusal != "" {
+		return modelrepo.ChatResult{}, &modelrepo.RefusalError{Provider: "openai", Code: refusalFinishReason, Text: refusal}
+	}
+	if resp.Status == "failed" {
+		code, message := "", ""
+		if resp.Error != nil {
+			code, message = resp.Error.Code, resp.Error.Message
+		}
+		return modelrepo.ChatResult{}, modelrepo.ClassifyProviderError(
+			fmt.Errorf("responses: response failed: %s", message), 0, code, message)
+	}
 	if textBuilder.Len() == 0 && len(toolCalls) == 0 {
 		return modelrepo.ChatResult{}, fmt.Errorf("responses: empty output")
+	}
+
+	finishReason := ""
+	if resp.Status == "incomplete" && resp.IncompleteDetails != nil {
+		finishReason = resp.IncompleteDetails.Reason
 	}
 
 	return modelrepo.ChatResult{
 		Message: modelrepo.Message{
 			Role:     role,
 			Content:  textBuilder.String(),
-			Thinking: strings.TrimSpace(resp.Reasoning.Summary),
+			Thinking: strings.TrimSpace(thinkingBuilder.String()),
 		},
-		ToolCalls: toolCalls,
+		ToolCalls:    toolCalls,
+		Usage:        resp.Usage.neutralUsage(),
+		FinishReason: finishReason,
 	}, nil
 }

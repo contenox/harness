@@ -13,10 +13,13 @@ type GeminiPromptClient struct {
 }
 
 // Prompt implements the LLMPromptExecClient interface for a single-turn, non-chat request.
-func (c *GeminiPromptClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string) (string, error) {
-	// Start tracking the operation
+func (c *GeminiPromptClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string, promptArgs ...modelrepo.PromptArgument) (string, *modelrepo.TokenUsage, error) {
 	reportErr, reportChange, end := c.tracker.Start(ctx, "prompt", "gemini", "model", c.modelName)
 	defer end()
+	promptConfig, err := modelrepo.PromptConfigFromArgs(promptArgs...)
+	if err != nil {
+		return "", nil, err
+	}
 
 	messages := []modelrepo.Message{
 		{Role: "user", Content: prompt},
@@ -27,16 +30,20 @@ func (c *GeminiPromptClient) Prompt(ctx context.Context, systemInstruction strin
 	}
 
 	chat := &GeminiChatClient{geminiClient: c.geminiClient}
-	resp, err := chat.Chat(ctx, messages, modelrepo.WithTemperature(float64(temperature)))
+	chatArgs := []modelrepo.ChatArgument{modelrepo.WithTemperature(float64(temperature))}
+	if promptConfig.MaxTokens != nil {
+		chatArgs = append(chatArgs, modelrepo.WithMaxTokens(*promptConfig.MaxTokens))
+	}
+	resp, err := chat.Chat(ctx, messages, chatArgs...)
 	if err != nil {
 		reportErr(err)
-		return "", fmt.Errorf("Gemini prompt execution failed: %w", err)
+		return "", nil, fmt.Errorf("gemini prompt execution failed: %w", err)
 	}
 
 	reportChange("prompt_completed", map[string]any{
 		"response_length": len(resp.Message.Content),
 	})
-	return resp.Message.Content, nil
+	return resp.Message.Content, resp.Usage, nil
 }
 
 var _ modelrepo.LLMPromptExecClient = (*GeminiPromptClient)(nil)

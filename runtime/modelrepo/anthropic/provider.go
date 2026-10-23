@@ -22,13 +22,14 @@ type anthropicProvider struct {
 	canStream       bool
 	canThink        bool
 	canVision       bool
+	thinking        *modelrepo.ThinkingTypes
 	tracker         libtracker.ActivityTracker
 }
 
 // NewAnthropicProvider returns a modelrepo.Provider for the direct Anthropic API.
 func NewAnthropicProvider(apiKey, modelName string, backendURLs []string, capability modelrepo.CapabilityConfig, httpClient *http.Client, tracker libtracker.ActivityTracker) modelrepo.Provider {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = modelrepo.SharedHTTPClient
 	}
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
@@ -50,6 +51,7 @@ func NewAnthropicProvider(apiKey, modelName string, backendURLs []string, capabi
 		canStream:       capability.CanStream,
 		canThink:        capability.CanThink,
 		canVision:       capability.CanVision,
+		thinking:        capability.ThinkingTypes,
 		tracker:         tracker,
 	}
 }
@@ -67,6 +69,8 @@ func (p *anthropicProvider) CanPrompt() bool         { return p.canPrompt }
 func (p *anthropicProvider) CanThink() bool          { return p.canThink }
 func (p *anthropicProvider) CanVision() bool         { return p.canVision }
 
+func (p *anthropicProvider) CanAudio() bool { return false }
+
 func (p *anthropicProvider) base() anthropicClient {
 	return anthropicClient{
 		baseURL:         p.baseURL,
@@ -74,6 +78,7 @@ func (p *anthropicProvider) base() anthropicClient {
 		modelName:       p.modelName,
 		httpClient:      p.httpClient,
 		canThink:        p.canThink,
+		thinking:        p.thinking,
 		maxOutputTokens: p.maxOutputTokens,
 		tracker:         p.tracker,
 	}
@@ -105,3 +110,9 @@ func (p *anthropicProvider) GetEmbedConnection(_ context.Context, _ string) (mod
 }
 
 var _ modelrepo.Provider = (*anthropicProvider)(nil)
+
+func (p *anthropicProvider) CanAutocomplete() bool { return false }
+
+func (p *anthropicProvider) GetAutocompleteConnection(context.Context, string) (modelrepo.LLMAutocompleteClient, error) {
+	return nil, modelrepo.ErrAutocompleteUnsupported
+}

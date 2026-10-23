@@ -2,6 +2,7 @@ package openrouter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -66,6 +67,9 @@ func (p *orProvider) CanStream() bool         { return p.canStream }
 func (p *orProvider) CanPrompt() bool         { return p.canPrompt }
 func (p *orProvider) CanThink() bool          { return p.canThink }
 func (p *orProvider) CanVision() bool         { return p.canVision }
+func (p *orProvider) CanAudio() bool          { return false }
+func (p *orProvider) CanAutocomplete() bool   { return false }
+func (p *orProvider) CanNextEdit() bool       { return false }
 
 func (p *orProvider) base() orClient {
 	return orClient{
@@ -97,6 +101,14 @@ func (p *orProvider) GetPromptConnection(_ context.Context, _ string) (modelrepo
 		return nil, fmt.Errorf("model %s does not support prompt interactions", p.modelName)
 	}
 	return &orPromptClient{orClient: p.base()}, nil
+}
+
+func (p *orProvider) GetAutocompleteConnection(context.Context, string) (modelrepo.LLMAutocompleteClient, error) {
+	return nil, errors.New("openrouter: autocomplete is not supported")
+}
+
+func (p *orProvider) GetNextEditConnection(context.Context, string) (modelrepo.LLMNextEditClient, error) {
+	return nil, errors.New("openrouter: next edit is not supported")
 }
 
 func (p *orProvider) GetEmbedConnection(_ context.Context, _ string) (modelrepo.LLMEmbedClient, error) {

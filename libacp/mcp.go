@@ -21,17 +21,19 @@ const (
 	McpServerKindStdio McpServerKind = ""
 	McpServerKindHTTP  McpServerKind = "http"
 	McpServerKindSSE   McpServerKind = "sse"
+	McpServerKindACP   McpServerKind = "acp"
 )
 
 type McpServer struct {
-	Type    string          `json:"type,omitempty"`
-	Name    string          `json:"name"`
-	Command string          `json:"command,omitempty"`
-	Args    []string        `json:"args,omitempty"`
-	Env     []EnvVariable   `json:"env,omitempty"`
-	URL     string          `json:"url,omitempty"`
-	Headers []HttpHeader    `json:"headers,omitempty"`
-	Meta    json.RawMessage `json:"_meta,omitempty"`
+	Type     string          `json:"type,omitempty"`
+	Name     string          `json:"name"`
+	Command  string          `json:"command,omitempty"`
+	Args     []string        `json:"args,omitempty"`
+	Env      []EnvVariable   `json:"env,omitempty"`
+	URL      string          `json:"url,omitempty"`
+	Headers  []HttpHeader    `json:"headers,omitempty"`
+	ServerID string          `json:"serverId,omitempty"`
+	Meta     json.RawMessage `json:"_meta,omitempty"`
 }
 
 func (m McpServer) Kind() McpServerKind {
@@ -40,15 +42,13 @@ func (m McpServer) Kind() McpServerKind {
 		return McpServerKindHTTP
 	case "sse":
 		return McpServerKindSSE
+	case "acp":
+		return McpServerKindACP
 	default:
 		return McpServerKindStdio
 	}
 }
 
-// mcpServerHttpWire and mcpServerStdioWire are McpServer's two wire shapes for
-// MarshalJSON: unlike McpServer itself, args/env and headers have no
-// omitempty, because the spec requires them always present (even as `[]`)
-// for their respective transport.
 type mcpServerHttpWire struct {
 	Type    string          `json:"type,omitempty"`
 	Name    string          `json:"name"`
@@ -65,15 +65,20 @@ type mcpServerStdioWire struct {
 	Meta    json.RawMessage `json:"_meta,omitempty"`
 }
 
-// MarshalJSON forces args/env (McpServerStdio) and headers (McpServerHttp/
-// McpServerSse) onto the wire as `[]` rather than omitting them when empty:
-// the spec (and the reference Rust implementation) declares these fields as
-// plain, always-serialized arrays with no default, so a strict receiver
-// rejects a payload missing them. omitempty alone cannot express this on the
-// flattened McpServer struct — it treats a zero-length slice as absent
-// regardless of nil-ness — hence the two per-transport wire shapes below.
+type mcpServerACPWire struct {
+	Type     string          `json:"type"`
+	Name     string          `json:"name"`
+	ServerID string          `json:"serverId"`
+	Meta     json.RawMessage `json:"_meta,omitempty"`
+}
+
+// MarshalJSON forces args/env (stdio) and headers (http/sse) onto the wire as
+// `[]` rather than omitting them when empty, since the spec requires them
+// always present.
 func (m McpServer) MarshalJSON() ([]byte, error) {
 	switch m.Kind() {
+	case McpServerKindACP:
+		return json.Marshal(mcpServerACPWire{Type: "acp", Name: m.Name, ServerID: m.ServerID, Meta: m.Meta})
 	case McpServerKindHTTP, McpServerKindSSE:
 		headers := m.Headers
 		if headers == nil {
@@ -106,6 +111,10 @@ func (m McpServer) MarshalJSON() ([]byte, error) {
 
 func (m McpServer) Validate() error {
 	switch m.Kind() {
+	case McpServerKindACP:
+		if m.ServerID == "" {
+			return fmt.Errorf("libacp: acp mcp server %q missing serverId", m.Name)
+		}
 	case McpServerKindStdio:
 		if m.Command == "" {
 			return fmt.Errorf("libacp: stdio mcp server %q missing command", m.Name)
@@ -114,6 +123,42 @@ func (m McpServer) Validate() error {
 		if m.URL == "" {
 			return fmt.Errorf("libacp: %s mcp server %q missing url", m.Type, m.Name)
 		}
+	}
+	return nil
+}
+
+// MessageMCPRequest identifies one MCP request carried over ACP.
+type MessageMCPRequest struct {
+	ServerID  string          `json:"serverId"`
+	RequestID string          `json:"requestId"`
+	Method    string          `json:"method"`
+	Params    json.RawMessage `json:"params,omitempty"`
+	Meta      json.RawMessage `json:"_meta,omitempty"`
+}
+
+// MCPError is an inner MCP protocol error returned through mcp/message.
+type MCPError struct {
+	Code    int64           `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data,omitempty"`
+}
+
+// MessageMCPResponse carries exactly one inner MCP result or error.
+type MessageMCPResponse struct {
+	Result json.RawMessage `json:"result,omitempty"`
+	Error  *MCPError       `json:"error,omitempty"`
+	Meta   json.RawMessage `json:"_meta,omitempty"`
+}
+
+// Validate rejects ambiguous or incomplete MCP-over-ACP responses.
+func (r MessageMCPResponse) Validate() error {
+	hasResult := r.Result != nil
+	hasError := r.Error != nil
+	if hasResult == hasError {
+		return fmt.Errorf("libacp: mcp/message response must contain exactly one of result or error")
+	}
+	if hasError && r.Error.Message == "" {
+		return fmt.Errorf("libacp: mcp/message error missing message")
 	}
 	return nil
 }

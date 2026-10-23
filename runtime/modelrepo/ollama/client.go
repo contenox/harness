@@ -9,11 +9,11 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/contenox/harness/runtime/modelrepo"
 	"github.com/contenox/harness/runtime/reasoning"
-	"github.com/ollama/ollama/api"
 )
 
 const ollamaMaxStreamBuffer = 8 * 1024 * 1024
@@ -26,7 +26,7 @@ type ollamaHTTPClient struct {
 
 func newOllamaHTTPClient(baseURL, apiKey string, httpClient *http.Client) (*ollamaHTTPClient, error) {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = modelrepo.SharedHTTPClient
 	}
 	u, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil {
@@ -130,6 +130,9 @@ func (c *ollamaHTTPClient) stream(ctx context.Context, method, endpoint string, 
 		if len(bytes.TrimSpace(line)) == 0 {
 			continue
 		}
+		if err := ollamaStreamError(line); err != nil {
+			return err
+		}
 		if err := onChunk(line); err != nil {
 			return err
 		}
@@ -140,9 +143,34 @@ func (c *ollamaHTTPClient) stream(ctx context.Context, method, endpoint string, 
 	return nil
 }
 
-func (c *ollamaHTTPClient) Chat(ctx context.Context, req *api.ChatRequest, fn func(api.ChatResponse) error) error {
+// ollamaStreamError reports the error a response frame carries in band. A
+// generation that fails after the response headers is delivered as a 200 whose
+// JSON line is the vendor's error object, so a decoder that only knows the
+// success shape loses the diagnosis and reports the truncated stream instead.
+func ollamaStreamError(line []byte) error {
+	var frame struct {
+		Error json.RawMessage `json:"error"`
+	}
+	if err := json.Unmarshal(line, &frame); err != nil || len(frame.Error) == 0 {
+		return nil
+	}
+	raw := strings.TrimSpace(string(frame.Error))
+	if raw == "" || raw == "null" {
+		return nil
+	}
+	var message string
+	if err := json.Unmarshal(frame.Error, &message); err != nil {
+		message = raw
+	}
+	if message == "" {
+		message = raw
+	}
+	return modelrepo.ClassifyProviderError(fmt.Errorf("ollama API returned an error: %s", message), 0, "", message)
+}
+
+func (c *ollamaHTTPClient) Chat(ctx context.Context, req *ChatRequest, fn func(ChatResponse) error) error {
 	return c.stream(ctx, http.MethodPost, "/chat", req, func(line []byte) error {
-		var resp api.ChatResponse
+		var resp ChatResponse
 		if err := json.Unmarshal(line, &resp); err != nil {
 			return err
 		}
@@ -150,9 +178,9 @@ func (c *ollamaHTTPClient) Chat(ctx context.Context, req *api.ChatRequest, fn fu
 	})
 }
 
-func (c *ollamaHTTPClient) Generate(ctx context.Context, req *api.GenerateRequest, fn func(api.GenerateResponse) error) error {
+func (c *ollamaHTTPClient) Generate(ctx context.Context, req *GenerateRequest, fn func(GenerateResponse) error) error {
 	return c.stream(ctx, http.MethodPost, "/generate", req, func(line []byte) error {
-		var resp api.GenerateResponse
+		var resp GenerateResponse
 		if err := json.Unmarshal(line, &resp); err != nil {
 			return err
 		}
@@ -160,31 +188,39 @@ func (c *ollamaHTTPClient) Generate(ctx context.Context, req *api.GenerateReques
 	})
 }
 
-func (c *ollamaHTTPClient) Embed(ctx context.Context, req *api.EmbedRequest) (*api.EmbedResponse, error) {
-	var resp api.EmbedResponse
+func (c *ollamaHTTPClient) Embed(ctx context.Context, req *EmbedRequest) (*EmbedResponse, error) {
+	var resp EmbedResponse
 	if err := c.do(ctx, http.MethodPost, "/embed", req, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
 }
 
-func (c *ollamaHTTPClient) List(ctx context.Context) (*api.ListResponse, error) {
-	var resp api.ListResponse
+func (c *ollamaHTTPClient) Contenox(ctx context.Context) (*ContenoxResponse, error) {
+	var resp ContenoxResponse
+	if err := c.do(ctx, http.MethodGet, contenoxRoute, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *ollamaHTTPClient) List(ctx context.Context) (*ListResponse, error) {
+	var resp ListResponse
 	if err := c.do(ctx, http.MethodGet, "/tags", nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
 }
 
-func (c *ollamaHTTPClient) Show(ctx context.Context, req *api.ShowRequest) (*api.ShowResponse, error) {
-	var resp api.ShowResponse
+func (c *ollamaHTTPClient) Show(ctx context.Context, req *ShowRequest) (*ShowResponse, error) {
+	var resp ShowResponse
 	if err := c.do(ctx, http.MethodPost, "/show", req, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
 }
 
-func (c *ollamaHTTPClient) Delete(ctx context.Context, req *api.DeleteRequest) error {
+func (c *ollamaHTTPClient) Delete(ctx context.Context, req *DeleteRequest) error {
 	return c.do(ctx, http.MethodDelete, "/delete", req, nil)
 }
 
@@ -209,10 +245,14 @@ func ollamaAPIError(status int, raw []byte) error {
 	if body.SigninURL != "" {
 		msg = fmt.Sprintf("%s (signin: %s)", msg, body.SigninURL)
 	}
-	return fmt.Errorf("ollama API returned %d: %s", status, msg)
+	return modelrepo.ClassifyProviderError(fmt.Errorf("ollama API returned %d: %s", status, msg), status, "", msg)
 }
 
-func buildOllamaOptions(config *modelrepo.ChatConfig, maxOutputTokens int) map[string]any {
+// buildOllamaOptions renders the neutral generation settings as the vendor's
+// `options` object. contextLength is the window the model's own metadata
+// declares; a model that declared none is asked with the server default rather
+// than with a window nobody stated.
+func buildOllamaOptions(config *modelrepo.ChatConfig, maxOutputTokens, contextLength int) map[string]any {
 	opts := make(map[string]any)
 	if config.Temperature != nil {
 		opts["temperature"] = *config.Temperature
@@ -227,42 +267,118 @@ func buildOllamaOptions(config *modelrepo.ChatConfig, maxOutputTokens int) map[s
 	if config.Seed != nil {
 		opts["seed"] = *config.Seed
 	}
+	if contextLength > 0 {
+		opts["num_ctx"] = contextLength
+	}
 	return opts
 }
 
-func buildOllamaThink(config *modelrepo.ChatConfig) *api.ThinkValue {
+// ollamaLegacyThinkLevels are the level names the vendor's own validator accepts
+// for a model that publishes no thinking descriptor.
+var ollamaLegacyThinkLevels = []string{reasoning.Low, reasoning.Medium, reasoning.High, reasoning.Max}
+
+// ollamaThinkLevel picks the level to send: the most effort the model declares
+// up to the level the caller asked for, the least it declares when the caller
+// asked for less than any of them, and empty when the declaration names no
+// level the runtime vocabulary knows.
+func ollamaThinkLevel(requested string, declared []string) string {
+	candidates := declared
+	if len(candidates) == 0 {
+		candidates = ollamaLegacyThinkLevels
+	}
+	want := slices.Index(reasoning.Levels, requested)
+	best, bestRank := "", -1
+	lowest, lowestRank := "", len(reasoning.Levels)
+	for _, candidate := range candidates {
+		rank := slices.Index(reasoning.Levels, candidate)
+		if rank < 0 {
+			continue
+		}
+		if rank <= want && rank > bestRank {
+			best, bestRank = candidate, rank
+		}
+		if rank < lowestRank {
+			lowest, lowestRank = candidate, rank
+		}
+	}
+	if best != "" {
+		return best
+	}
+	return lowest
+}
+
+// buildOllamaThink renders the caller's thinking level as the vendor's `think`
+// member: a boolean, or a level the model's own descriptor advertises. A level
+// the declaration cannot express is an error, because sending one the server
+// would resolve to its default leaves the caller's request silently ungranted.
+func buildOllamaThink(config *modelrepo.ChatConfig, declared *modelrepo.ThinkingTypes) (*ThinkValue, error) {
 	if config == nil || config.Think == nil {
-		return nil
+		return nil, nil
 	}
 	level, ok, err := reasoning.NormalizeOptional(*config.Think)
 	if err != nil || !ok || level == reasoning.Auto {
-		return nil
+		return nil, nil
+	}
+	if declared == nil {
+		declared = &modelrepo.ThinkingTypes{}
 	}
 	if level == reasoning.Off {
-		return &api.ThinkValue{Value: false}
+		if declared.Controls() && !declared.Disabled {
+			return nil, fmt.Errorf("ollama model declares no thinking-off control: %s", ollamaThinkingDeclaration(declared))
+		}
+		return &ThinkValue{Value: false}, nil
 	}
-	mapped := level
-	if mapped == reasoning.Minimal {
-		mapped = reasoning.Low
+	chosen := ollamaThinkLevel(level, declared.EffortLevels)
+	if chosen == "" {
+		if declared.Enabled {
+			return &ThinkValue{Value: true}, nil
+		}
+		return nil, fmt.Errorf("ollama model declares no level for %q: %s", level, ollamaThinkingDeclaration(declared))
 	}
-	if mapped == reasoning.XHigh {
-		mapped = reasoning.High
-	}
-	return &api.ThinkValue{Value: mapped}
+	return &ThinkValue{Value: chosen}, nil
 }
 
-func buildOllamaTools(config *modelrepo.ChatConfig) (api.Tools, error) {
+// ollamaThinkingDeclaration names what a model declared, for a diagnostic that
+// has to say why a requested level could not be sent.
+func ollamaThinkingDeclaration(declared *modelrepo.ThinkingTypes) string {
+	if declared == nil {
+		return "no thinking declaration"
+	}
+	return fmt.Sprintf("levels %v, enabled %t, disabled %t", declared.EffortLevels, declared.Enabled, declared.Disabled)
+}
+
+// ollamaFormat renders the neutral structured-output control as the vendor's
+// `format` member: the literal "json", or a JSON schema document.
+func ollamaFormat(format *modelrepo.ResponseFormat) (json.RawMessage, error) {
+	if format == nil || format.Mode == modelrepo.ResponseFormatText {
+		return nil, nil
+	}
+	switch format.Mode {
+	case modelrepo.ResponseFormatJSONObject:
+		return json.RawMessage(`"json"`), nil
+	case modelrepo.ResponseFormatJSONSchema:
+		schema, err := json.Marshal(format.Schema)
+		if err != nil {
+			return nil, fmt.Errorf("encode response schema: %w", err)
+		}
+		return schema, nil
+	default:
+		return nil, fmt.Errorf("ollama has no wire form for response format %q", format.Mode)
+	}
+}
+
+func buildOllamaTools(config *modelrepo.ChatConfig) (Tools, error) {
 	if len(config.Tools) == 0 {
 		return nil, nil
 	}
 
-	apiTools := make(api.Tools, 0, len(config.Tools))
+	apiTools := make(Tools, 0, len(config.Tools))
 	for _, tool := range config.Tools {
 		if tool.Type == "" || tool.Function == nil || tool.Function.Name == "" {
 			continue
 		}
 
-		var params api.ToolFunctionParameters
+		var params ToolFunctionParameters
 		if tool.Function.Parameters != nil {
 			raw, err := json.Marshal(tool.Function.Parameters)
 			if err != nil {
@@ -273,9 +389,9 @@ func buildOllamaTools(config *modelrepo.ChatConfig) (api.Tools, error) {
 			}
 		}
 
-		apiTools = append(apiTools, api.Tool{
+		apiTools = append(apiTools, Tool{
 			Type: tool.Type,
-			Function: api.ToolFunction{
+			Function: ToolFunction{
 				Name:        tool.Function.Name,
 				Description: tool.Function.Description,
 				Parameters:  params,

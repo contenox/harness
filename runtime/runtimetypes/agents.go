@@ -131,6 +131,11 @@ type ChainConfig struct {
 	// through it, and an edit that changes the file's id leaves this stale
 	// until the next discovery pass rewrites it. Optional.
 	ChainID string `json:"chainId,omitempty" example:"agent-reviewer"`
+
+	// Refused is why discovery holds the agent disabled: the declaration it
+	// compiles from was refused. Discovery sets it and clears it; it never
+	// enables the agent again, so a fixed declaration needs 'agent enable'.
+	Refused string `json:"refused,omitempty" example:"/home/user/.contenox/agents/reviewer.md has no YAML frontmatter block"`
 }
 
 // Validate checks a ChainConfig in isolation, in the same spirit as

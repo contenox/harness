@@ -1,23 +1,20 @@
-// Package acpexec spawns a subprocess and wires its stdin/stdout together as
-// a single io.ReadWriteCloser, the transport shape libacp.NewAgentSideConnection
-// and libacp.NewClientSideConnection both expect. It exists so an ACP peer
-// (an editor driving a real agent binary, or a test driving the Rust
-// reference agent/client binaries) can be reached over stdio without any
-// caller having to hand-roll pipe plumbing and shutdown bookkeeping.
+// Package acpexec spawns a subprocess and wires its stdin/stdout together as a
+// single io.ReadWriteCloser, the transport shape libacp's connections expect.
 package acpexec
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
-// defaultKillGrace is how long Close waits, after closing the subprocess's
-// stdin, for it to exit on its own before escalating to Process.Kill.
 const defaultKillGrace = 5 * time.Second
 
 // Option configures Spawn. See WithStderr and WithKillGrace.
@@ -29,25 +26,21 @@ type config struct {
 }
 
 // WithStderr forwards the subprocess's stderr to w as it's written, instead
-// of the default (io.Discard). Passing a *LockedBuffer lets a caller recover
-// the subprocess's stderr for a failure message even though it is written
-// from a different goroutine than the one that later reads it.
+// of the default (io.Discard); use a *LockedBuffer if the caller reads w's
+// contents from a different goroutine than the one writing it.
 func WithStderr(w io.Writer) Option {
 	return func(c *config) { c.stderr = w }
 }
 
 // WithKillGrace overrides how long Close waits for the subprocess to exit on
-// its own (after closing its stdin) before it escalates to Process.Kill.
-// The default is 5 seconds.
+// its own (after closing its stdin) before it escalates to Process.Kill; the
+// default is 5 seconds.
 func WithKillGrace(d time.Duration) Option {
 	return func(c *config) { c.killGrace = d }
 }
 
-// Process is a spawned subprocess wired up as an io.ReadWriteCloser: Read
-// pulls from its stdout, Write pushes to its stdin, and Close begins its
-// shutdown sequence (see Close). It is the concrete type Spawn returns,
-// rather than a bare io.ReadWriteCloser, so callers that need it (tests,
-// mainly) can still reach Wait's exit error without a type assertion.
+// Process is a spawned subprocess wired up as an io.ReadWriteCloser: Read pulls
+// from its stdout, Write pushes to its stdin, Close begins shutdown.
 type Process struct {
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
@@ -57,46 +50,45 @@ type Process struct {
 	waitDone chan struct{}
 	waitErr  error
 
-	closeOnce sync.Once
-	closeErr  error
+	stdoutClosed atomic.Bool
+	closeOnce    sync.Once
+	closeErr     error
 }
 
 var _ io.ReadWriteCloser = (*Process)(nil)
 
-// Spawn starts cmd and returns it as a Process. cmd's Stdin/Stdout are
-// claimed via exec.Cmd.StdinPipe/StdoutPipe — callers must not have set them
-// already. Stderr is discarded unless WithStderr overrides it.
-//
-// If ctx is cancelled before the subprocess exits on its own, Spawn closes
-// it down exactly as Close would (grace period, then kill) rather than
-// leaking a running process past the caller's context.
-//
-// Spawn's own error (a pipe-setup or Start failure) always means no process
-// was left running; the caller has nothing to clean up in that case.
+// Spawn starts cmd, claiming its Stdin and Stdout, which callers must leave
+// unset. It owns the process group so Close can kill descendants holding the
+// pipes open. It tears the process down exactly as Close would if ctx is
+// cancelled before the subprocess exits.
 func Spawn(ctx context.Context, cmd *exec.Cmd, opts ...Option) (*Process, error) {
 	cfg := config{stderr: io.Discard, killGrace: defaultKillGrace}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
 
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return nil, fmt.Errorf("acpexec: stdin pipe: %w", err)
+	if cmd.Stdout != nil {
+		return nil, fmt.Errorf("acpexec: stdout pipe: exec: Stdout already set")
 	}
-	stdout, err := cmd.StdoutPipe()
+	stdout, childStdout, err := os.Pipe()
 	if err != nil {
 		return nil, fmt.Errorf("acpexec: stdout pipe: %w", err)
 	}
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		_ = stdout.Close()
+		_ = childStdout.Close()
+		return nil, fmt.Errorf("acpexec: stdin pipe: %w", err)
+	}
+	cmd.Stdout = childStdout
 	cmd.Stderr = cfg.stderr
 
-	// Own process group (unix), so Close's kill escalation can take down not
-	// just the direct child but any children it forked — npx/uvx-style
-	// wrapper commands, a first-class registration method for external
-	// agents, put the real agent a fork or two down, and a surviving
-	// grandchild would both leak and hold our pipes open (blocking Wait).
 	setProcessGroup(cmd)
 
 	if err := cmd.Start(); err != nil {
+		_ = stdin.Close()
+		_ = stdout.Close()
+		_ = childStdout.Close()
 		return nil, fmt.Errorf("acpexec: start %s: %w", cmd.Path, err)
 	}
 
@@ -108,17 +100,14 @@ func Spawn(ctx context.Context, cmd *exec.Cmd, opts ...Option) (*Process, error)
 		waitDone: make(chan struct{}),
 	}
 
-	// Reap the process as soon as it exits, whoever causes that (it exiting
-	// on its own, or Close/ctx cancellation killing it). This goroutine, not
-	// Close, owns the only call to cmd.Wait: per exec.Cmd's contract, Wait
-	// closes the pipes once the process exits, so calling it is only safe
-	// once nothing further will read from them without also observing that
-	// close — a single, always-running Wait satisfies that for every caller
-	// (Read draining stdout, Close waiting on waitDone) at once.
 	go func() {
 		p.waitErr = cmd.Wait()
 		close(p.waitDone)
 	}()
+
+	if err := childStdout.Close(); err != nil {
+		return nil, errors.Join(fmt.Errorf("acpexec: close parent stdout writer: %w", err), p.Close())
+	}
 
 	if ctx != nil {
 		go func() {
@@ -133,31 +122,25 @@ func Spawn(ctx context.Context, cmd *exec.Cmd, opts ...Option) (*Process, error)
 	return p, nil
 }
 
-// Read reads from the subprocess's stdout. Once the subprocess exits (on its
-// own, or via Close/ctx cancellation), Read returns io.EOF like any closed
-// pipe.
-func (p *Process) Read(b []byte) (int, error) { return p.stdout.Read(b) }
+// Read reads from the subprocess's stdout, returning io.EOF like any closed
+// pipe once the subprocess exits (on its own, or via Close/ctx cancellation).
+// Natural exit preserves remaining stdout until Read drains it or Close is called.
+func (p *Process) Read(b []byte) (int, error) {
+	n, err := p.stdout.Read(b)
+	if errors.Is(err, os.ErrClosed) && p.stdoutClosed.Load() {
+		return n, io.EOF
+	}
+	return n, err
+}
 
 // Write writes to the subprocess's stdin.
 func (p *Process) Write(b []byte) (int, error) { return p.stdin.Write(b) }
 
-// Close begins graceful shutdown: it closes the subprocess's stdin (many
-// well-behaved stdio agents/clients treat that as "no more requests" and
-// exit on their own), waits up to the configured grace period (default 5s,
-// see WithKillGrace) for it to do so, and kills it if it hasn't. Close
-// always waits for the process to actually be reaped before returning.
-//
-// Close is idempotent: it runs this sequence exactly once (via sync.Once)
-// and every call, including ones after the process already exited on its
-// own, returns the same result — the subprocess's exit error, or nil for a
-// clean exit.
-// killReapTimeout bounds how long Close waits, after killing the process
-// group, for the Wait reaper to come back. Wait can outlive the kill when
-// something outside the group still holds the subprocess's stderr pipe (a
-// double-forked daemon); better to return a loud error than block a caller
-// forever on a process we cannot reach.
 const killReapTimeout = 5 * time.Second
 
+// Close closes stdin, waits for exit, and closes stdout. It kills the process
+// group if the grace period elapses and suppresses only that kill's exit status.
+// Repeated calls return the same result.
 func (p *Process) Close() error {
 	p.closeOnce.Do(func() {
 		_ = p.stdin.Close()
@@ -171,22 +154,15 @@ func (p *Process) Close() error {
 			select {
 			case <-p.waitDone:
 			case <-time.After(killReapTimeout):
-				_ = p.stdout.Close()
+				p.closeStdout()
 				p.closeErr = fmt.Errorf("acpexec: subprocess %s not reaped %s after kill (a descendant outside its process group may be holding its pipes)", p.cmd.Path, killReapTimeout)
 				return
 			}
 		}
 
-		_ = p.stdout.Close()
+		p.closeStdout()
 		p.closeErr = p.waitErr
 
-		// A persistent agent that ignores stdin-close (testy, most editor
-		// adapters) and had to be killed took the escalation tail of this
-		// method's own documented shutdown sequence — the kill-induced exit
-		// status is not a failure of Close. Only a death this method's own
-		// kill can have caused is suppressed (see exitFromKill): a process
-		// that died with a bad exit status on its own still surfaces that
-		// error, even if the kill branch happened to run.
 		if killed && exitFromKill(p.waitErr) {
 			p.closeErr = nil
 		}
@@ -194,11 +170,14 @@ func (p *Process) Close() error {
 	return p.closeErr
 }
 
-// LockedBuffer is a concurrency-safe io.Writer around a bytes.Buffer, meant
-// for WithStderr: a subprocess writes to it from its own reader goroutine
-// (installed by Spawn) while the caller reads String() later, typically only
-// once something has already gone wrong and the process's stderr is wanted
-// for a failure message.
+func (p *Process) closeStdout() {
+	p.stdoutClosed.Store(true)
+	_ = p.stdout.Close()
+}
+
+// LockedBuffer is a concurrency-safe io.Writer around a bytes.Buffer, for use
+// with WithStderr when a caller's String() read races the subprocess reader
+// goroutine's writes.
 type LockedBuffer struct {
 	mu  sync.Mutex
 	buf bytes.Buffer

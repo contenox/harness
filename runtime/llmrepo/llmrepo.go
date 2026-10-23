@@ -4,45 +4,123 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/internal/llmresolver"
+	"github.com/contenox/harness/runtime/internal/models/ollamatokenizer"
 	libmodelprovider "github.com/contenox/harness/runtime/modelrepo"
-	"github.com/contenox/harness/runtime/ollamatokenizer"
 	"github.com/contenox/harness/runtime/runtimestate"
 )
 
 var _ ModelRepo = (*modelManager)(nil)
 
-// Unified Request type for all operations
+// Request is the unified request type for all operations.
 type Request struct {
+	WorkerRole    string
 	ProviderTypes []string // Optional: if empty, uses all default providers
 	ModelNames    []string // Optional: if empty, any model is considered
 	ContextLength int      // Minimum required context length
-	Tracker       libtracker.ActivityTracker
+	// FitContextToModel marks ContextLength as a preference the resolver may
+	// fit to the capacity of an otherwise capable model instead of refusing.
+	// The executor sets it when the number carries an output reserve it added
+	// on top of the input, because a model cannot be asked for a window larger
+	// than it has. A caller that names a context window as a requirement
+	// leaves it false, and a shortfall keeps its refusal.
+	FitContextToModel bool
+	// SessionKey is an opaque per-session cache-affinity key (derive it with
+	// DeriveSessionKey); non-empty pins the session to one provider/backend.
+	SessionKey string
+	// CacheHints declares where the stable/volatile boundary of this request
+	// lies; nil changes nothing.
+	CacheHints *CacheHints
+	Tracker    libtracker.ActivityTracker
+	// BackendHealth is the caller's view of which backends may be asked; nil
+	// asks every candidate. It is consulted for each candidate in turn, so a
+	// backend the caller has taken out of service is skipped rather than tried.
+	BackendHealth BackendHealth
+}
+
+func (e *modelManager) backendAllowedByHealth(ctx context.Context, req Request, endpoint string) bool {
+	if req.BackendHealth == nil || endpoint == "" {
+		return true
+	}
+	return req.BackendHealth(e.backendIDForEndpoint(ctx, endpoint))
+}
+
+func (e *modelManager) healthyResolver(ctx context.Context, health BackendHealth) func([]libmodelprovider.Provider) (libmodelprovider.Provider, string, error) {
+	if health == nil {
+		return llmresolver.Randomly
+	}
+	allowed := func(endpoint string) bool {
+		return health(e.backendIDForEndpoint(ctx, endpoint))
+	}
+	return func(candidates []libmodelprovider.Provider) (libmodelprovider.Provider, string, error) {
+		healthy := make([]libmodelprovider.Provider, 0, len(candidates))
+		for _, p := range candidates {
+			endpoint := ""
+			if ids := p.GetBackendIDs(); len(ids) > 0 {
+				endpoint = ids[0]
+			}
+			// The resolver names a candidate by its endpoint; a caller tracks a
+			// backend by its id, so the id is resolved first — the same mapping
+			// the chat path's per-candidate check uses.
+			if allowed(endpoint) {
+				healthy = append(healthy, p)
+			}
+		}
+		if len(healthy) == 0 {
+			return nil, "", fmt.Errorf("embedding: no candidate backend is in service: %w", llmresolver.ErrNoSatisfactoryModel)
+		}
+		return llmresolver.Randomly(healthy)
+	}
+}
+
+func (e *modelManager) backendIDForEndpoint(ctx context.Context, endpoint string) string {
+	if e.runtime == nil {
+		return endpoint
+	}
+	for _, state := range e.runtime.Get(ctx) {
+		if state.Backend.BaseURL == endpoint || state.ID == endpoint || state.Backend.ID == endpoint {
+			if state.Backend.ID != "" {
+				return state.Backend.ID
+			}
+			return state.ID
+		}
+	}
+	return endpoint
 }
 
 type EmbedRequest struct {
-	ModelName    string
-	ProviderType string
-	Tracker      libtracker.ActivityTracker
+	ModelName     string
+	ProviderType  string
+	Tracker       libtracker.ActivityTracker
+	BackendHealth BackendHealth
 }
 
 type Meta struct {
 	ModelName    string `json:"model_name"`
 	ProviderType string `json:"provider_type"`
 	BackendID    string `json:"backend_id"`
+	// Usage is the provider-reported token accounting for the call, when the
+	// operation carries no other channel for it (PromptExecute); nil means unreported.
+	Usage *libmodelprovider.TokenUsage `json:"usage,omitempty"`
 }
 
 type ModelRepo interface {
+	Autocomplete(context.Context, Request, libmodelprovider.AutocompleteRequest) (libmodelprovider.AutocompleteResult, Meta, error)
+	// NextEdit invokes the independent next-edit model operation.
+	NextEdit(context.Context, Request, libmodelprovider.NextEditRequest) (libmodelprovider.NextEditResult, Meta, error)
 	Tokenize(ctx context.Context, modelName string, prompt string) ([]int, error)
 	CountTokens(ctx context.Context, modelName string, prompt string) (int, error)
 	PromptExecute(
 		ctx context.Context,
 		req Request,
 		systeminstruction string, temperature float32, prompt string,
+		args ...libmodelprovider.PromptArgument,
 	) (string, Meta, error)
 	Chat(
 		ctx context.Context,
@@ -76,38 +154,56 @@ type modelManager struct {
 	mu        sync.RWMutex
 	tracker   libtracker.ActivityTracker
 
-	// reconcileMu serializes the resolution self-heal cycle and lastReconcileAt
-	// debounces it; see reconcileForResolution.
-	reconcileMu     sync.Mutex
-	lastReconcileAt time.Time
+	reconcileMu sync.Mutex
+	refreshes   map[string]*resolutionRefresh
 }
 
-// minResolveReconcileInterval debounces the resolution-failure backend cycle so a
-// burst of failing requests coalesces into a single re-scan.
 const minResolveReconcileInterval = 5 * time.Second
 
-// reconcileForResolution self-heals a runtime that resolved its model state
-// before a backend was reachable. The runtime reconciles backends at startup and
-// on explicit refresh only (no periodic loop), so a backend that comes up
-// afterwards — most commonly modeld being (re)started after the runtime — stays
-// invisible and every request for its models fails with "no models found in
-// runtime state". When resolution fails for that reason this runs one debounced
-// backend cycle and reports whether the caller should retry resolution. It fires
-// only for the resolver's no-models / no-match errors so genuine downstream
-// failures are never retried.
-func (e *modelManager) reconcileForResolution(ctx context.Context, resolveErr error) bool {
+type resolutionRefresh struct {
+	done chan struct{}
+	at   time.Time
+	err  error
+}
+
+func (e *modelManager) reconcileForResolution(ctx context.Context, resolveErr error, providers ...string) bool {
 	if !errors.Is(resolveErr, llmresolver.ErrNoAvailableModels) && !errors.Is(resolveErr, llmresolver.ErrNoSatisfactoryModel) {
 		return false
 	}
-	e.reconcileMu.Lock()
-	defer e.reconcileMu.Unlock()
-	// A very recent cycle already refreshed state (e.g. a concurrent failing
-	// request); retry against it instead of re-scanning every backend again.
-	if !e.lastReconcileAt.IsZero() && time.Since(e.lastReconcileAt) < minResolveReconcileInterval {
-		return true
+	keys := make([]string, 0, len(providers))
+	for _, provider := range providers {
+		if key := libmodelprovider.CanonicalBackendType(provider); key != "" {
+			keys = append(keys, key)
+		}
 	}
-	err := e.runtime.RunBackendCycle(ctx)
-	e.lastReconcileAt = time.Now()
+	slices.Sort(keys)
+	key := strings.Join(slices.Compact(keys), "\x00")
+	e.reconcileMu.Lock()
+	if refresh := e.refreshes[key]; refresh != nil && (refresh.at.IsZero() || (refresh.err == nil && time.Since(refresh.at) < minResolveReconcileInterval)) {
+		e.reconcileMu.Unlock()
+		select {
+		case <-ctx.Done():
+			return false
+		case <-refresh.done:
+			return refresh.err == nil
+		}
+	}
+	refresh := &resolutionRefresh{done: make(chan struct{})}
+	if e.refreshes == nil {
+		e.refreshes = make(map[string]*resolutionRefresh)
+	}
+	e.refreshes[key] = refresh
+	e.reconcileMu.Unlock()
+	err := e.runtime.RunProviderCycle(ctx, providers...)
+	e.reconcileMu.Lock()
+	refresh.err, refresh.at = err, time.Now()
+	close(refresh.done)
+	e.reconcileMu.Unlock()
+	if err != nil && e.tracker != nil {
+		reportErr, _, end := e.tracker.Start(ctx, "reconcile", "model_resolution")
+		reportErr(err)
+		end()
+	}
 	return err == nil
 }
 
@@ -117,9 +213,26 @@ type ModelConfig struct {
 }
 
 type ModelManagerConfig struct {
+	// EmbeddingDefault resolves the current persistent embedding assignment.
+	EmbeddingDefault      func(context.Context) (ModelConfig, error)
 	DefaultPromptModel    ModelConfig
 	DefaultEmbeddingModel ModelConfig
 	DefaultChatModel      ModelConfig
+	// DefaultAudioModel is the model preferred for audio-bearing chat/stream
+	// requests that name no model themselves; unset falls back to DefaultChatModel.
+	DefaultAudioModel ModelConfig
+}
+
+func (e *modelManager) applyAudioDefault(req *Request, messages []libmodelprovider.Message) {
+	if !libmodelprovider.MessagesHaveAudio(messages) {
+		return
+	}
+	if len(req.ModelNames) == 0 && e.config.DefaultAudioModel.Name != "" {
+		req.ModelNames = []string{e.config.DefaultAudioModel.Name}
+		if len(req.ProviderTypes) == 0 && e.config.DefaultAudioModel.Provider != "" {
+			req.ProviderTypes = []string{e.config.DefaultAudioModel.Provider}
+		}
+	}
 }
 
 func NewModelManager(runtime *runtimestate.State, tokenizer ollamatokenizer.Tokenizer, config ModelManagerConfig, tracker libtracker.ActivityTracker) (*modelManager, error) {
@@ -180,14 +293,19 @@ func (e *modelManager) PromptExecute(
 	ctx context.Context,
 	req Request,
 	systemInstruction string, temperature float32, prompt string,
+	args ...libmodelprovider.PromptArgument,
 ) (string, Meta, error) {
+	if req.WorkerRole != "" {
+	}
 	if err := validateRequest(req); err != nil {
 		return "", Meta{}, fmt.Errorf("invalid request: %w", err)
+	}
+	if _, err := libmodelprovider.PromptConfigFromArgs(args...); err != nil {
+		return "", Meta{}, fmt.Errorf("invalid prompt settings: %w", err)
 	}
 
 	runtimeStateResolution := e.GetRuntime(ctx)
 
-	// Apply defaults if not provided
 	if len(req.ModelNames) == 0 {
 		req.ModelNames = []string{e.config.DefaultPromptModel.Name}
 	}
@@ -196,34 +314,29 @@ func (e *modelManager) PromptExecute(
 	}
 
 	resolverReq := e.convertToResolverRequest(req, nil)
-	client, provider, backend, err := llmresolver.PromptExecute(ctx,
+	// Session-sticky resolution: a session key pins to one provider/backend so
+	// its prefix cache stays warm; empty key == Randomly.
+	policy := llmresolver.StickyOrRandom(effectiveSessionKey(ctx, req))
+	selections, err := llmresolver.PromptExecuteSelections(ctx,
 		resolverReq,
 		runtimeStateResolution,
-		llmresolver.Randomly,
+		policy,
 	)
-	if err != nil && e.reconcileForResolution(ctx, err) {
-		client, provider, backend, err = llmresolver.PromptExecute(ctx,
+	if err != nil && e.reconcileForResolution(ctx, err, req.ProviderTypes...) {
+		selections, err = llmresolver.PromptExecuteSelections(ctx,
 			resolverReq,
 			e.GetRuntime(ctx),
-			llmresolver.Randomly,
+			policy,
 		)
 	}
 	if err != nil {
 		return "", Meta{}, fmt.Errorf("prompt execute: client resolution failed: %w", err)
 	}
-	defer safeClose(client)
 
-	result, err := client.Prompt(ctx, systemInstruction, temperature, prompt)
-	if err != nil {
-		return "", Meta{}, fmt.Errorf("prompt execution failed: %w", err)
-	}
-
-	meta := Meta{
-		ModelName:    provider.ModelName(),
-		ProviderType: provider.GetType(),
-		BackendID:    backend,
-	}
-	return result, meta, nil
+	// Bounds enforcement and the provider call run per selection: a backend
+	// whose refusal is terminal for it alone is excluded and the next capable
+	// backend tried (see failover.go).
+	return e.runPromptSelections(ctx, req, selections, systemInstruction, temperature, prompt, args)
 }
 
 func (e *modelManager) Chat(
@@ -231,17 +344,21 @@ func (e *modelManager) Chat(
 	req Request,
 	messages []libmodelprovider.Message, opts ...libmodelprovider.ChatArgument,
 ) (libmodelprovider.ChatResult, Meta, error) {
+	if req.WorkerRole != "" {
+	}
 	if err := validateRequest(req); err != nil {
 		return libmodelprovider.ChatResult{}, Meta{}, fmt.Errorf("invalid request: %w", err)
 	}
 
 	if len(messages) == 0 {
-		return libmodelprovider.ChatResult{}, Meta{}, errors.New("messages cannot be empty")
+		return libmodelprovider.ChatResult{}, Meta{}, fmt.Errorf("%w: messages cannot be empty", ErrInvalidRequest)
 	}
 
 	runtimeStateResolution := e.GetRuntime(ctx)
 
-	// Apply defaults if not provided
+	// The audio role outranks the chat default for audio-bearing requests;
+	// explicit model names outrank both.
+	e.applyAudioDefault(&req, messages)
 	if len(req.ModelNames) == 0 {
 		req.ModelNames = []string{e.config.DefaultChatModel.Name}
 	}
@@ -250,34 +367,29 @@ func (e *modelManager) Chat(
 	}
 
 	resolverReq := e.convertToResolverRequest(req, messages)
-	client, provider, backend, err := llmresolver.Chat(ctx,
+	// Session-sticky resolution; empty key == Randomly.
+	sessionKey := effectiveSessionKey(ctx, req)
+	policy := llmresolver.StickyOrRandom(sessionKey)
+	selections, err := llmresolver.ChatSelections(ctx,
 		resolverReq,
 		runtimeStateResolution,
-		llmresolver.Randomly,
+		policy,
 	)
-	if err != nil && e.reconcileForResolution(ctx, err) {
-		client, provider, backend, err = llmresolver.Chat(ctx,
+	if err != nil && e.reconcileForResolution(ctx, err, req.ProviderTypes...) {
+		selections, err = llmresolver.ChatSelections(ctx,
 			resolverReq,
 			e.GetRuntime(ctx),
-			llmresolver.Randomly,
+			policy,
 		)
 	}
 	if err != nil {
 		return libmodelprovider.ChatResult{}, Meta{}, fmt.Errorf("chat: client resolution failed: %w", err)
 	}
-	defer safeClose(client)
 
-	response, err := client.Chat(ctx, messages, opts...)
-	if err != nil {
-		return libmodelprovider.ChatResult{}, Meta{}, fmt.Errorf("chat execution failed: %w", err)
-	}
-
-	meta := Meta{
-		ModelName:    provider.ModelName(),
-		ProviderType: provider.GetType(),
-		BackendID:    backend,
-	}
-	return response, meta, nil
+	// Bounds enforcement and the provider call run per selection: a backend
+	// whose refusal is terminal for it alone is excluded and the next capable
+	// backend tried (see failover.go).
+	return e.runChatSelections(ctx, req, selections, sessionKey, messages, opts)
 }
 
 func (e *modelManager) Embed(
@@ -286,30 +398,42 @@ func (e *modelManager) Embed(
 	prompt string,
 ) ([]float64, Meta, error) {
 	if prompt == "" {
-		return nil, Meta{}, errors.New("prompt cannot be empty")
+		return nil, Meta{}, fmt.Errorf("%w: prompt cannot be empty", ErrInvalidRequest)
 	}
 
 	runtimeStateResolution := e.GetRuntime(ctx)
 
-	// Apply defaults if not provided
 	if embedReq.ModelName == "" {
-		embedReq.ModelName = e.config.DefaultEmbeddingModel.Name
+		selected := e.config.DefaultEmbeddingModel
+		if e.config.EmbeddingDefault != nil {
+			var err error
+			selected, err = e.config.EmbeddingDefault(ctx)
+			if err != nil {
+				return nil, Meta{}, err
+			}
+		}
+		embedReq.ModelName = selected.Name
+		if embedReq.ProviderType == "" {
+			embedReq.ProviderType = selected.Provider
+		}
 	}
 	if embedReq.ProviderType == "" {
 		embedReq.ProviderType = e.config.DefaultEmbeddingModel.Provider
 	}
 
 	resolverReq := e.convertToResolverEmbedRequest(embedReq)
+	// Embedding stays on Randomly deliberately: EmbedRequest carries no
+	// session identity and embeddings gain nothing from prefix caches.
 	client, provider, backend, err := llmresolver.Embed(ctx,
 		resolverReq,
 		runtimeStateResolution,
-		llmresolver.Randomly,
+		e.healthyResolver(ctx, embedReq.BackendHealth),
 	)
-	if err != nil && e.reconcileForResolution(ctx, err) {
+	if err != nil && e.reconcileForResolution(ctx, err, embedReq.ProviderType) {
 		client, provider, backend, err = llmresolver.Embed(ctx,
 			resolverReq,
 			e.GetRuntime(ctx),
-			llmresolver.Randomly,
+			e.healthyResolver(ctx, embedReq.BackendHealth),
 		)
 	}
 	if err != nil {
@@ -317,15 +441,19 @@ func (e *modelManager) Embed(
 	}
 	defer safeClose(client)
 
-	embeddings, err := client.Embed(ctx, prompt)
-	if err != nil {
-		return nil, Meta{}, fmt.Errorf("embedding generation failed: %w", err)
-	}
-
 	meta := Meta{
 		ModelName:    provider.ModelName(),
 		ProviderType: provider.GetType(),
 		BackendID:    backend,
+	}
+
+	if err := e.enforceResolutionBounds(ctx, "embed", provider, backend); err != nil {
+		return nil, meta, err
+	}
+
+	embeddings, err := client.Embed(ctx, prompt)
+	if err != nil {
+		return nil, meta, fmt.Errorf("embedding generation failed: %w", err)
 	}
 	return embeddings, meta, nil
 }
@@ -336,8 +464,10 @@ func (e *modelManager) Stream(
 	messages []libmodelprovider.Message,
 	opts ...libmodelprovider.ChatArgument,
 ) (<-chan *libmodelprovider.StreamParcel, Meta, error) {
+	if req.WorkerRole != "" {
+	}
 	if len(messages) == 0 {
-		return nil, Meta{}, errors.New("messages cannot be empty")
+		return nil, Meta{}, fmt.Errorf("%w: messages cannot be empty", ErrInvalidRequest)
 	}
 
 	if err := validateRequest(req); err != nil {
@@ -346,7 +476,9 @@ func (e *modelManager) Stream(
 
 	runtimeStateResolution := e.GetRuntime(ctx)
 
-	// Apply defaults if not provided
+	// The audio role outranks the chat default for audio-bearing requests;
+	// explicit model names outrank both.
+	e.applyAudioDefault(&req, messages)
 	if len(req.ModelNames) == 0 && e.config.DefaultChatModel.Name != "" {
 		req.ModelNames = []string{e.config.DefaultChatModel.Name}
 	}
@@ -355,53 +487,64 @@ func (e *modelManager) Stream(
 	}
 
 	resolverReq := e.convertToResolverRequest(req, messages)
-	client, provider, backend, err := llmresolver.Stream(ctx,
+	// Session-sticky resolution; empty key == Randomly.
+	sessionKey := effectiveSessionKey(ctx, req)
+	policy := llmresolver.StickyOrRandom(sessionKey)
+	selections, err := llmresolver.StreamSelections(ctx,
 		resolverReq,
 		runtimeStateResolution,
-		llmresolver.Randomly,
+		policy,
 	)
-	if err != nil && e.reconcileForResolution(ctx, err) {
-		client, provider, backend, err = llmresolver.Stream(ctx,
+	if err != nil && e.reconcileForResolution(ctx, err, req.ProviderTypes...) {
+		selections, err = llmresolver.StreamSelections(ctx,
 			resolverReq,
 			e.GetRuntime(ctx),
-			llmresolver.Randomly,
+			policy,
 		)
 	}
 	if err != nil {
 		return nil, Meta{}, fmt.Errorf("stream: client resolution failed: %w", err)
 	}
 
-	stream, err := client.Stream(ctx, messages, opts...)
-	if err != nil {
-		safeClose(client)
-		return nil, Meta{}, fmt.Errorf("stream initialization failed: %w", err)
+	// Bounds enforcement, stream setup, and the first-parcel failover peek run
+	// per selection: a backend whose refusal is terminal for it alone is
+	// excluded and the next capable backend tried (see failover.go).
+	return e.runStreamSelections(ctx, req, selections, sessionKey, messages, opts)
+}
+
+func mergeTokenUsage(dst *libmodelprovider.TokenUsage, src *libmodelprovider.TokenUsage) {
+	dst.Merge(src)
+}
+
+func (e *modelManager) reportTokenUsage(ctx context.Context, req Request, meta Meta, usage libmodelprovider.TokenUsage) {
+	tracker := req.Tracker
+	if tracker == nil {
+		tracker = e.tracker
 	}
-
-	// Wrap the stream to close the client when done
-	wrappedStream := make(chan *libmodelprovider.StreamParcel)
-	go func() {
-		defer close(wrappedStream)
-		defer safeClose(client)
-
-		for parcel := range stream {
-			wrappedStream <- parcel
-			if parcel.Error != nil {
-				break
-			}
-		}
-	}()
-
-	meta := Meta{
-		ModelName:    provider.ModelName(),
-		ProviderType: provider.GetType(),
-		BackendID:    backend,
+	if tracker == nil {
+		return
 	}
-	return wrappedStream, meta, nil
+	// The stream often ends on consumer cancellation; the usage record must still land.
+	ctx = context.WithoutCancel(ctx)
+	_, reportChange, end := tracker.Start(ctx, "report", "token_usage",
+		"model", meta.ModelName,
+		"provider_type", meta.ProviderType,
+		"backend_id", meta.BackendID,
+	)
+	defer end()
+	reportChange("token_usage", map[string]any{
+		"prompt_tokens":     usage.PromptTokens,
+		"completion_tokens": usage.CompletionTokens,
+		"total_tokens":      usage.TotalTokens,
+		// Cache accounting: prompt_tokens is the TOTAL prompt count, so warm
+		// hit rate is cache_read / (prompt_tokens - cache_write).
+		"cache_read":  usage.CacheReadTokens,
+		"cache_write": usage.CacheWriteTokens,
+	})
 }
 
 func (e *modelManager) GetRuntime(ctx context.Context) runtimestate.ProviderFromRuntimeState {
-	state := e.runtime.Get(ctx)
-	return runtimestate.LocalProviderAdapter(ctx, e.tracker, state)
+	return e.runtime.ExecutionProviders(e.tracker)
 }
 
 func (e *modelManager) GetTokenizer(ctx context.Context, modelName string) (Tokenizer, error) {
@@ -409,29 +552,26 @@ func (e *modelManager) GetTokenizer(ctx context.Context, modelName string) (Toke
 		return nil, errors.New("tokenizer not initialized")
 	}
 
-	// Get the optimal model for tokenization
 	modelForTokenization, err := e.tokenizer.OptimalModel(ctx, modelName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get optimal tokenizer model: %w", err)
 	}
 
-	// Return an adapter that uses the optimal model
 	return &tokenizerAdapter{
 		tokenizer: e.tokenizer,
 		modelName: modelForTokenization,
 	}, nil
 }
 
-// convertToResolverRequest builds the resolver request, deriving the vision
-// requirement from the messages so callers cannot forget to set it: any image
-// attachment restricts resolution to vision-capable providers.
 func (e *modelManager) convertToResolverRequest(req Request, messages []libmodelprovider.Message) llmresolver.Request {
 	return llmresolver.Request{
-		ProviderTypes:  req.ProviderTypes,
-		ModelNames:     req.ModelNames,
-		ContextLength:  req.ContextLength,
-		RequiresVision: libmodelprovider.MessagesHaveImages(messages),
-		Tracker:        req.Tracker,
+		ProviderTypes:     req.ProviderTypes,
+		ModelNames:        req.ModelNames,
+		ContextLength:     req.ContextLength,
+		FitContextToModel: req.FitContextToModel,
+		RequiresVision:    libmodelprovider.MessagesHaveImages(messages),
+		RequiresAudio:     libmodelprovider.MessagesHaveAudio(messages),
+		Tracker:           req.Tracker,
 	}
 }
 
@@ -445,7 +585,7 @@ func (e *modelManager) convertToResolverEmbedRequest(req EmbedRequest) llmresolv
 
 func validateRequest(req Request) error {
 	if req.ContextLength < 0 {
-		return errors.New("context length must be non-negative")
+		return fmt.Errorf("%w: context length must be non-negative", ErrInvalidRequest)
 	}
 	return nil
 }
@@ -455,7 +595,6 @@ func safeClose(closer interface{}) {
 		return
 	}
 
-	// Type switch for different client types that might have Close methods
 	switch c := closer.(type) {
 	case interface{ Close() error }:
 		_ = c.Close()

@@ -8,16 +8,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
-	"github.com/contenox/harness/runtime/reasoning"
 )
 
 type openAIClient struct {
+	codex           *codexCatalog
 	baseURL         string
 	apiKey          string
 	httpClient      *http.Client
@@ -26,6 +24,41 @@ type openAIClient struct {
 	maxOutputTokens int
 	tracker         libtracker.ActivityTracker
 	supportsThink   bool
+	// thinking is the model's declared thinking controls; nil leaves the request
+	// with the vendor's own literal for the level the caller asked for.
+	thinking *modelrepo.ThinkingTypes
+	// dialect restates the request body in a vendor's own spelling of the
+	// OpenAI-compatible wire format; nil keeps the OpenAI defaults.
+	dialect modelrepo.ChatDialect
+}
+
+// newDialectRequest is what a dialect sees of the neutral request when it
+// restates the body and decides how a reasoning trace comes back. A model the
+// catalog does not declare able to think carries no level, so a dialect sends
+// no reasoning member for it, the same as the OpenAI mapping.
+func newDialectRequest(cfg *modelrepo.ChatConfig, thinking *modelrepo.ThinkingTypes, supportsThink bool) modelrepo.DialectRequest {
+	req := modelrepo.DialectRequest{Thinking: thinking, Tools: len(cfg.Tools) > 0, CacheHints: cfg.CacheHints}
+	if supportsThink {
+		req.Think = cfg.Think
+	}
+	return req
+}
+
+// vendorLabel names the vendor whose endpoint answered a request, so a
+// diagnostic names the vendor the operator configured rather than the shared
+// OpenAI-compatible client that happens to carry the dialect.
+func (c *openAIClient) vendorLabel() string {
+	if c.dialect != nil {
+		return c.dialect.Name()
+	}
+	return "OpenAI"
+}
+
+func (c *openAIClient) providerType() string {
+	if c.codex != nil {
+		return c.codex.Type()
+	}
+	return "openai"
 }
 
 type openAIChatRequest struct {
@@ -36,26 +69,41 @@ type openAIChatRequest struct {
 	TopP                *float64         `json:"top_p,omitempty"`
 	Seed                *int             `json:"seed,omitempty"`
 	Stream              bool             `json:"stream,omitempty"`
-	Tools               []openAITool     `json:"tools,omitempty"`
-	// ReasoningEffort maps the existing modelrepo.WithThink values onto OpenAI's
-	// chat-completions `reasoning_effort` parameter without widening the public
-	// package API. Supported values are model-dependent.
+	// StreamOptions requests the trailing usage chunk; only set when Stream is true.
+	StreamOptions *openAIStreamOptions `json:"stream_options,omitempty"`
+	Tools         []openAITool         `json:"tools,omitempty"`
+	// Stop bounds generation at the provider; chat completions accepts a string
+	// or at most four sequences, and a longer list is refused before the wire.
+	Stop []string `json:"stop,omitempty"`
+	// ToolChoice is the documented union: the string form (auto, none, required)
+	// or the named-function object, which no single Go member can carry.
+	ToolChoice        any   `json:"tool_choice,omitempty"`
+	ParallelToolCalls *bool `json:"parallel_tool_calls,omitempty"`
+	ResponseFormat    any   `json:"response_format,omitempty"`
+	// ReasoningEffort maps modelrepo.WithThink onto OpenAI's chat-completions
+	// `reasoning_effort` parameter; the literals are model-dependent.
 	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+	// PromptCacheKey routes requests with the same key to the same cache shard
+	// (OpenAI's documented alternative to the deprecated `user` field). Cache
+	// metadata only, never model-visible.
+	PromptCacheKey string `json:"prompt_cache_key,omitempty"`
+	// PromptCacheRetention is the documented cache lifetime policy: 24h keeps a
+	// cached prefix active for up to a day, in_memory lets the organisation's
+	// default evict it sooner. Sent only when a cache hint asks for one.
+	PromptCacheRetention string `json:"prompt_cache_retention,omitempty"`
 }
 
-// apiChatMessage is the wire-format message sent to the OpenAI REST API.
-// Content is `any` so it can carry a plain string (with null for tool-only
-// assistant messages), or the content-parts array when the message has image
-// attachments.
 type apiChatMessage struct {
 	Role       string           `json:"role"`
 	Content    any              `json:"content"`
 	ToolCallID string           `json:"tool_call_id,omitempty"`
 	ToolCalls  []apiToolCallReq `json:"tool_calls,omitempty"`
+	// ReasoningContent replays a reasoning model's own trace when the vendor's
+	// request reference documents that member and requires it back; empty on
+	// every dialect where replaying it would be invention.
+	ReasoningContent string `json:"reasoning_content,omitempty"`
 }
 
-// apiContentPart is one element of the chat/completions content-parts array,
-// used only when a message carries image attachments.
 type apiContentPart struct {
 	Type     string       `json:"type"`
 	Text     string       `json:"text,omitempty"`
@@ -77,22 +125,46 @@ type openAIFunction2 struct {
 	Arguments string `json:"arguments"`
 }
 
+type openAIStreamOptions struct {
+	IncludeUsage bool `json:"include_usage"`
+}
+
 type openAITool struct {
 	Type     string         `json:"type"` // must be "function"
 	Function openAIFunction `json:"function"`
 }
 
 type openAIFunction struct {
-	Name        string `json:"name"`                  // ^[a-zA-Z0-9_-]+$
-	Description string `json:"description,omitempty"` // optional
-	Parameters  any    `json:"parameters,omitempty"`  // JSON Schema
+	Name        string `json:"name"` // ^[a-zA-Z0-9_-]+$
+	Description string `json:"description,omitempty"`
+	Parameters  any    `json:"parameters,omitempty"` // JSON Schema
+}
+
+// chatRequestBody serialises a chat request and lets the model's wire dialect
+// restate it in the vendor's own spelling before it reaches the wire.
+func (c *openAIClient) chatRequestBody(req openAIChatRequest, args []modelrepo.ChatArgument) ([]byte, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+	if c.dialect == nil {
+		return body, nil
+	}
+	cfg := &modelrepo.ChatConfig{}
+	for _, a := range args {
+		if a == nil {
+			continue
+		}
+		a.Apply(cfg)
+	}
+	return modelrepo.RewriteChatBody(c.dialect, body, newDialectRequest(cfg, c.thinking, c.supportsThink))
 }
 
 func (c *openAIClient) sendRequest(ctx context.Context, endpoint string, request any, response any) error {
 	url := c.baseURL + endpoint
 
 	tracker := c.tracker
-	// Never log API key material (even a prefix) in activity telemetry — trace logs are not secret-safe.
+	// Never log API key material in activity telemetry; trace logs are not secret-safe.
 	auth := "none"
 	if c.apiKey != "" {
 		auth = "bearer_set"
@@ -109,7 +181,11 @@ func (c *openAIClient) sendRequest(ctx context.Context, endpoint string, request
 	defer end()
 
 	var body []byte
-	if request != nil {
+	switch encoded := request.(type) {
+	case nil:
+	case []byte:
+		body = encoded
+	default:
 		var err error
 		body, err = json.Marshal(request)
 		if err != nil {
@@ -119,115 +195,62 @@ func (c *openAIClient) sendRequest(ctx context.Context, endpoint string, request
 		}
 	}
 
-	const maxRateLimitRetries = 1
-	for attempt := 0; attempt <= maxRateLimitRetries; attempt++ {
+	// Bounded end-to-end; retried on 429/529/5xx with Retry-After honored.
+	ctx, cancel := modelrepo.NonStreamingContext(ctx)
+	defer cancel()
+
+	resp, err := modelrepo.DoWithRetry(ctx, c.httpClient, func() (*http.Request, error) {
 		var reqBody io.Reader
 		if body != nil {
-			reqBody = bytes.NewBuffer(body)
+			reqBody = bytes.NewReader(body)
 		}
-
 		req, err := http.NewRequestWithContext(ctx, "POST", url, reqBody)
 		if err != nil {
-			err = fmt.Errorf("failed to create request: %w", err)
-			reportErr(err)
-			return err
+			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+		return req, nil
+	})
+	if err != nil {
+		err = fmt.Errorf("HTTP request failed for model %s: %w", c.modelName, err)
+		reportErr(err)
+		return err
+	}
+	defer resp.Body.Close()
 
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			err = fmt.Errorf("HTTP request failed for model %s: %w", c.modelName, err)
+	reportChange("http_response", map[string]any{
+		"status_code": resp.StatusCode,
+		"headers":     resp.Header,
+	})
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		code, message := modelrepo.ProviderErrorDetail(bodyBytes)
+		err = fmt.Errorf("%s API returned non-200 status: %d for model %s: %s", c.vendorLabel(), resp.StatusCode, c.modelName, message)
+		err = modelrepo.ClassifyProviderError(err, resp.StatusCode, code, message)
+		reportErr(err)
+		return err
+	}
+
+	if response != nil {
+		if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
+			err = fmt.Errorf("failed to decode response for model %s: %w", c.modelName, err)
 			reportErr(err)
 			return err
 		}
-
-		reportChange("http_response", map[string]any{
-			"status_code": resp.StatusCode,
-			"headers":     resp.Header,
-		})
-
-		if resp.StatusCode == http.StatusTooManyRequests && attempt < maxRateLimitRetries {
-			wait := parseRetryAfterMs(resp.Header)
-			resp.Body.Close()
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(wait):
-			}
-			continue
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			var errorResponse struct {
-				Error struct {
-					Message string `json:"message"`
-					Type    string `json:"type"`
-					Code    any    `json:"code"`
-				} `json:"error"`
-			}
-			bodyBytes, readErr := io.ReadAll(resp.Body)
-			resp.Body.Close()
-			if readErr == nil {
-				if jsonErr := json.Unmarshal(bodyBytes, &errorResponse); jsonErr == nil && errorResponse.Error.Message != "" {
-					err = fmt.Errorf("OpenAI API returned non-200 status: %d, Type: %s, Code: %v, Message: %s for model %s",
-						resp.StatusCode, errorResponse.Error.Type, errorResponse.Error.Code, errorResponse.Error.Message, c.modelName)
-					reportErr(err)
-					return err
-				}
-				err = fmt.Errorf("OpenAI API returned non-200 status: %d, body: %s for model %s",
-					resp.StatusCode, string(bodyBytes), c.modelName)
-				reportErr(err)
-				return err
-			}
-			err = fmt.Errorf("OpenAI API returned non-200 status: %d for model %s", resp.StatusCode, c.modelName)
-			reportErr(err)
-			return err
-		}
-
-		if response != nil {
-			if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
-				resp.Body.Close()
-				err = fmt.Errorf("failed to decode response for model %s: %w", c.modelName, err)
-				reportErr(err)
-				return err
-			}
-		}
-		resp.Body.Close()
-
-		reportChange("request_completed", nil)
-		return nil
 	}
-	return fmt.Errorf("OpenAI API rate limit exceeded for model %s", c.modelName)
+
+	reportChange("request_completed", nil)
+	return nil
 }
 
-// parseRetryAfterMs reads Retry-After-Ms (milliseconds) or Retry-After (seconds)
-// from the response headers. Falls back to 2 seconds if neither is present.
-func parseRetryAfterMs(h http.Header) time.Duration {
-	if ms := h.Get("Retry-After-Ms"); ms != "" {
-		if n, err := strconv.ParseInt(ms, 10, 64); err == nil && n > 0 {
-			return time.Duration(n) * time.Millisecond
-		}
-	}
-	if s := h.Get("Retry-After"); s != "" {
-		if n, err := strconv.ParseInt(s, 10, 64); err == nil && n > 0 {
-			return time.Duration(n) * time.Second
-		}
-	}
-	return 2 * time.Second
-}
-
-// buildOpenAIRequest builds a compliant request and sanitizes tool names per
-// OpenAI's pattern (^[a-zA-Z0-9_-]+$). It ALSO returns a map from
-// sanitized->original so callers can translate tool-call names back.
-//
-// Critically, it also sanitizes tool_calls[].function.name in the message
-// history: the taskengine qualifies tool names as "toolsName.toolName"
-// (e.g. "filesystem.list_directory"). The dot violates OpenAI's pattern,
-// so any prior-turn assistant messages must have their tool call names
-// sanitized before being forwarded to the API.
 func buildOpenAIRequest(modelName string, messages []modelrepo.Message, args []modelrepo.ChatArgument) (openAIChatRequest, map[string]string) {
-	return buildOpenAIRequestWithCapabilities(modelName, messages, args, true)
+	req, nameMap, err := buildOpenAIRequestForDialect(nil, modelName, messages, args, nil, true)
+	if err != nil {
+		return openAIChatRequest{}, nil
+	}
+	return req, nameMap
 }
 
 func (c *openAIClient) clampChatMaxOutputTokens(req *openAIChatRequest) {
@@ -245,30 +268,50 @@ func (c *openAIClient) clampResponsesMaxOutputTokens(req *openAIResponsesRequest
 }
 
 func buildOpenAIRequestWithCapabilities(modelName string, messages []modelrepo.Message, args []modelrepo.ChatArgument, supportsThink bool) (openAIChatRequest, map[string]string) {
+	req, nameMap, err := buildOpenAIRequestForDialect(nil, modelName, messages, args, nil, supportsThink)
+	if err != nil {
+		return openAIChatRequest{}, nil
+	}
+	return req, nameMap
+}
+
+// chatArgsHaveTools reports whether a request carries a tool list, which is what
+// decides the endpoint for a model whose function-calling guide serves tools from
+// the Responses API alone.
+func chatArgsHaveTools(args []modelrepo.ChatArgument) bool {
+	cfg := &modelrepo.ChatConfig{}
+	for _, a := range args {
+		if a == nil {
+			continue
+		}
+		a.Apply(cfg)
+	}
+	return len(cfg.Tools) > 0
+}
+
+func buildOpenAIRequestForDialect(dialect modelrepo.ChatDialect, modelName string, messages []modelrepo.Message, args []modelrepo.ChatArgument, thinking *modelrepo.ThinkingTypes, supportsThink bool) (openAIChatRequest, map[string]string, error) {
 	req := openAIChatRequest{
 		Model: modelName,
 	}
 
-	// Apply chat args
 	cfg := &modelrepo.ChatConfig{}
 	for _, a := range args {
+		if a == nil {
+			continue
+		}
 		a.Apply(cfg)
 	}
-	req.Temperature = cfg.Temperature
-	req.MaxCompletionTokens = cfg.MaxTokens
-	req.TopP = cfg.TopP
-	req.Seed = cfg.Seed
-
-	if supportsThink {
-		req.ReasoningEffort = openAIReasoningEffort(modelName, cfg.Think)
+	if err := cfg.Validate(); err != nil {
+		return openAIChatRequest{}, nil, err
 	}
 
-	// OpenAI's sampling parameter support depends on both model family and
-	// reasoning mode. Keep this logic internal and driven by the existing Think
-	// abstraction so callers do not need provider-specific branches.
-	if openAIShouldOmitSamplingParams(modelName, req.ReasoningEffort) {
-		req.Temperature = nil
-		req.TopP = nil
+	thinkingMember := ""
+	if dialect != nil {
+		thinkingMember = dialect.ThinkingMember(newDialectRequest(cfg, thinking, supportsThink))
+	}
+
+	if err := applyOpenAIChatControls(&req, modelName, cfg, thinking, supportsThink && !dialectOwnsReasoning(dialect)); err != nil {
+		return openAIChatRequest{}, nil, err
 	}
 
 	// Convert tools to OpenAI tools with sanitized/unique function names.
@@ -301,16 +344,15 @@ func buildOpenAIRequestWithCapabilities(modelName string, messages []modelrepo.M
 		}
 	}
 
-	// Build reverse map: original tool name -> sanitized name, for rewriting history.
+	// Reverse map: original tool name -> sanitized name, for rewriting history.
 	origToSanitized := make(map[string]string, len(nameMap))
 	for san, orig := range nameMap {
 		origToSanitized[orig] = san
 	}
+	// A named tool selection resolves after the list, so it names the sanitized
+	// function the request actually declares.
+	req.ToolChoice = chatToolChoice(cfg.ToolChoice, origToSanitized)
 
-	// Convert messages to the explicit wire format.
-	// • Content is *string so assistant messages with tool_calls can have a null body.
-	// • ToolCalls in assistant messages have their names sanitized via origToSanitized.
-	// • tool_call_id is preserved on tool-role messages.
 	apiMsgs := make([]apiChatMessage, 0, len(messages))
 	for _, msg := range messages {
 		apiMsg := apiChatMessage{
@@ -326,6 +368,19 @@ func buildOpenAIRequestWithCapabilities(modelName string, messages []modelrepo.M
 			apiMsg.Content = nil
 		default:
 			apiMsg.Content = msg.Content
+		}
+
+		if thinkingMember != "" && msg.Role == "assistant" && msg.Thinking != "" {
+			apiMsg.ReasoningContent = msg.Thinking
+		}
+		if dialect != nil && msg.Thinking != "" && len(msg.Images) == 0 {
+			content, err := dialect.WireAssistantMessage(msg.Content, msg.Thinking)
+			if err != nil {
+				return openAIChatRequest{}, nil, fmt.Errorf("dialect %s: restate assistant turn: %w", dialect.Name(), err)
+			}
+			if content != nil {
+				apiMsg.Content = content
+			}
 		}
 
 		if len(msg.ToolCalls) > 0 {
@@ -351,12 +406,17 @@ func buildOpenAIRequestWithCapabilities(modelName string, messages []modelrepo.M
 	}
 	req.Messages = apiMsgs
 
-	return req, nameMap
+	return req, nameMap, nil
 }
 
-// openAIImageContent renders a message's text plus its image attachments as the
-// chat/completions content-parts array: a leading text part (when present) then
-// one image_url part per image, each an inline base64 data URI.
+// dialectOwnsReasoning reports whether a dialect restates the reasoning
+// controls itself. The shared builder maps the runtime's level through a
+// model-family table, which is another vendor's vocabulary; a dialect that
+// speaks its own would otherwise send a level its reference does not list.
+func dialectOwnsReasoning(dialect modelrepo.ChatDialect) bool {
+	return dialect != nil && dialect.OwnsReasoning()
+}
+
 func openAIImageContent(msg modelrepo.Message) []apiContentPart {
 	parts := make([]apiContentPart, 0, len(msg.Images)+1)
 	if msg.Content != "" {
@@ -371,8 +431,6 @@ func openAIImageContent(msg modelrepo.Message) []apiContentPart {
 	return parts
 }
 
-// imageDataURI builds the data:<mime>;base64,<payload> URI OpenAI accepts for
-// inline image bytes; shared by the chat/completions and Responses builders.
 func imageDataURI(mimeType string, data []byte) string {
 	if mimeType == "" {
 		mimeType = "application/octet-stream"
@@ -380,8 +438,6 @@ func imageDataURI(mimeType string, data []byte) string {
 	return "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(data)
 }
 
-// openAIAPIBaseModelID returns the model id segment OpenAI expects, without provider/namespace
-// prefixes (e.g. "openai/gpt-5" -> "gpt-5"). Runtime state may store namespaced ids.
 func openAIAPIBaseModelID(model string) string {
 	m := strings.ToLower(strings.TrimSpace(model))
 	if i := strings.LastIndex(m, "/"); i >= 0 {
@@ -390,111 +446,6 @@ func openAIAPIBaseModelID(model string) string {
 	return m
 }
 
-// openAIUsesResponsesEndpoint indicates whether this model requires
-// the OpenAI Responses API (POST /v1/responses).
-//
-// OpenAI chat-completions is the older API surface, while the newer
-// reasoning-capable models now reject it for request routing. In practice,
-// this repo routes GPT-5 family models to /responses.
-func openAIUsesResponsesEndpoint(model string) bool {
-	base := openAIAPIBaseModelID(model)
-	return strings.HasPrefix(base, "gpt-5")
-}
-
-func openAIReasoningEffort(model string, think *string) string {
-	if think == nil {
-		return ""
-	}
-
-	level, ok, err := reasoning.NormalizeOptional(*think)
-	if err != nil || !ok || level == reasoning.Auto {
-		return ""
-	}
-	if level == reasoning.Off {
-		if openAIModelSupportsNoneReasoning(model) {
-			return "none"
-		}
-		return ""
-	}
-
-	switch level {
-	case reasoning.Minimal:
-		if openAIModelSupportsMinimalReasoning(model) {
-			return "minimal"
-		}
-		return "low"
-	case reasoning.Low, reasoning.Medium:
-		if openAIModelOnlyHighReasoning(model) {
-			return "high"
-		}
-		return level
-	case reasoning.High:
-		return "high"
-	case reasoning.XHigh:
-		if openAIModelSupportsXHighReasoning(model) {
-			return "xhigh"
-		}
-		return "high"
-	default:
-		return ""
-	}
-}
-
-func openAIShouldOmitSamplingParams(model, reasoningEffort string) bool {
-	base := openAIAPIBaseModelID(model)
-	switch {
-	case strings.HasPrefix(base, "o"):
-		return reasoningEffort != ""
-	case strings.HasPrefix(base, "gpt-5"):
-		return !openAIGPT5AllowsSamplingParams(model, reasoningEffort)
-	default:
-		return false
-	}
-}
-
-func openAIGPT5AllowsSamplingParams(model, reasoningEffort string) bool {
-	if !strings.HasPrefix(openAIAPIBaseModelID(model), "gpt-5") {
-		return true
-	}
-	return openAIModelSupportsNoneReasoning(model) && (reasoningEffort == "" || reasoningEffort == "none")
-}
-
-func openAIModelOnlyHighReasoning(model string) bool {
-	base := openAIAPIBaseModelID(model)
-	return base == "gpt-5-pro" || strings.HasPrefix(base, "gpt-5-pro-")
-}
-
-func openAIModelSupportsNoneReasoning(model string) bool {
-	base := openAIAPIBaseModelID(model)
-	if openAIModelOnlyHighReasoning(base) {
-		return false
-	}
-	return strings.HasPrefix(base, "gpt-5.1") ||
-		strings.HasPrefix(base, "gpt-5.2") ||
-		strings.HasPrefix(base, "gpt-5.3") ||
-		strings.HasPrefix(base, "gpt-5.4")
-}
-
-func openAIModelSupportsMinimalReasoning(model string) bool {
-	base := openAIAPIBaseModelID(model)
-	if strings.HasPrefix(base, "gpt-5") {
-		return openAIModelSupportsNoneReasoning(model) && !strings.HasPrefix(base, "gpt-5.1")
-	}
-	return false
-}
-
-func openAIModelSupportsXHighReasoning(model string) bool {
-	base := openAIAPIBaseModelID(model)
-	if openAIModelOnlyHighReasoning(model) {
-		return false
-	}
-	return strings.HasPrefix(base, "gpt-5.2") ||
-		strings.HasPrefix(base, "gpt-5.3") ||
-		strings.HasPrefix(base, "gpt-5.4")
-}
-
-// sanitizeToolName replaces invalid characters with '_' and trims leading/trailing separators.
-// Allowed: letters, digits, underscore, hyphen.
 func sanitizeToolName(in string) string {
 	if in == "" {
 		return ""
@@ -511,18 +462,15 @@ func sanitizeToolName(in string) string {
 		}
 	}
 	s := b.String()
-	// avoid leading/trailing separators
 	s = strings.Trim(s, "_-")
 	return s
 }
 
-// uniquifyToolName ensures we don't send duplicate names (OpenAI recommends unique names)
 func uniquifyToolName(seen map[string]int, name string) string {
 	if _, ok := seen[name]; !ok {
 		seen[name] = 1
 		return name
 	}
-	// append an incrementing suffix until unique
 	i := seen[name]
 	for {
 		candidate := fmt.Sprintf("%s_%d", name, i)

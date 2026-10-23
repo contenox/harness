@@ -3,66 +3,60 @@ package libdbexec
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-	"log"
 
 	"github.com/lib/pq"
 )
 
-// postgresDBManager implements the DBManager interface for PostgreSQL.
 type postgresDBManager struct {
 	dbInstance *sql.DB
 }
 
-// NewPostgresDBManager creates a new DBManager for PostgreSQL.
-// It opens a connection group using the provided DSN, pings the database
-// to verify connectivity, and optionally executes an initial schema setup query.
-// Note: For production schema management, using dedicated migration tools is recommended
-// over passing a simple schema string here.
+// NewPostgresDBManager creates a DBManager for PostgreSQL, opening a connection
+// group for dsn, pinging it, and optionally applying schema.
 func NewPostgresDBManager(ctx context.Context, dsn string, schema string) (DBManager, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		// Use translateError directly on the raw error
-		return nil, fmt.Errorf("failed to open database: %w", translateError(err))
+		return nil, fmt.Errorf("failed to open database: %w", translatePostgresError(err))
 	}
 
 	if err = db.PingContext(ctx); err != nil {
 		_ = db.Close() // Attempt to close if ping fails
-		return nil, fmt.Errorf("database connection failed: %w", translateError(err))
+		return nil, fmt.Errorf("database connection failed: %w", translatePostgresError(err))
 	}
 
-	// Only execute schema if provided
 	if schema != "" {
 		if _, err = db.ExecContext(ctx, schema); err != nil {
 			_ = db.Close() // Attempt to close if schema fails
-			// Use translateError directly on the raw error
-			return nil, fmt.Errorf("failed to initialize schema: %w", translateError(err))
+			return nil, fmt.Errorf("failed to initialize schema: %w", translatePostgresError(err))
 		}
 	}
 
-	// log.Println("Database connection established and schema verified")
 	return &postgresDBManager{dbInstance: db}, nil
 }
 
-// WithoutTransaction returns an executor that operates directly on the connection group.
+// WithoutTransaction returns an executor operating directly on the connection group.
 func (sm *postgresDBManager) WithoutTransaction() Exec {
-	return &txAwareDB{db: sm.dbInstance, errTranslate: translateError, driverName: "postgres"}
+	return &txAwareDB{db: sm.dbInstance, errTranslate: translatePostgresError, driverName: "postgres"}
 }
 
 // WithTransaction starts a PostgreSQL transaction and returns the associated
 // executor, commit function, and release function.
 func (sm *postgresDBManager) WithTransaction(ctx context.Context, onRollback ...func()) (Exec, CommitTx, ReleaseTx, error) {
-	// Use default transaction options. Could allow passing sql.TxOptions if needed.
-	tx, err := sm.dbInstance.BeginTx(ctx, nil)
+	return sm.WithTransactionOptions(ctx, nil, onRollback...)
+}
+
+// WithTransactionOptions starts a PostgreSQL transaction with opts and returns
+// the associated executor, commit function, and release function.
+func (sm *postgresDBManager) WithTransactionOptions(ctx context.Context, opts *sql.TxOptions, onRollback ...func()) (Exec, CommitTx, ReleaseTx, error) {
+	tx, err := sm.dbInstance.BeginTx(ctx, opts)
 	if err != nil {
-		// Use translateError on the raw error, wrap with ErrTxFailed context
-		return nil, nil, func() error { return nil }, fmt.Errorf("%w: begin transaction failed: %w", ErrTxFailed, translateError(err))
+		return nil, nil, func() error { return nil }, fmt.Errorf("%w: begin transaction failed: %w", ErrTxFailed, translatePostgresError(err))
 	}
 
-	// Executor bound to the transaction
-	store := &txAwareDB{tx: tx, errTranslate: translateError, driverName: "postgres"}
-	// finalized guards against double-execution of onRollback hooks when
-	// releaseFn is deferred and commit also failed (both paths ran rollback logic).
+	store := &txAwareDB{tx: tx, errTranslate: translatePostgresError, driverName: "postgres"}
+	// Guards against double-execution of onRollback hooks.
 	finalized := false
 	fireRollback := func() {
 		for _, f := range onRollback {
@@ -70,15 +64,15 @@ func (sm *postgresDBManager) WithTransaction(ctx context.Context, onRollback ...
 				f()
 			}
 		}
-		onRollback = nil
+		onRollback = nil // prevent a second call from re-running any hooks
 	}
+
 	commitFn := func(commitCtx context.Context) error {
 		if ctxErr := commitCtx.Err(); ctxErr != nil {
 			return fmt.Errorf("%w: context error before commit: %w", ErrTxFailed, ctxErr)
 		}
-		err := tx.Commit()
-		if err != nil {
-			return fmt.Errorf("%w: commit failed: %w", ErrTxFailed, translateError(err))
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("%w: commit failed: %w", ErrTxFailed, translatePostgresError(err))
 		}
 		finalized = true
 		return nil
@@ -90,8 +84,8 @@ func (sm *postgresDBManager) WithTransaction(ctx context.Context, onRollback ...
 			finalized = true
 			fireRollback()
 		}
-		if rollbackErr != nil && fmt.Errorf("%w", rollbackErr).Error() != "sql: transaction has already been committed or rolled back" {
-			return fmt.Errorf("%w: rollback failed: %w", ErrTxFailed, translateError(rollbackErr))
+		if rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
+			return fmt.Errorf("%w: rollback failed: %w", ErrTxFailed, translatePostgresError(rollbackErr))
 		}
 		return nil
 	}
@@ -102,47 +96,31 @@ func (sm *postgresDBManager) WithTransaction(ctx context.Context, onRollback ...
 // Close shuts down the underlying database connection group.
 func (sm *postgresDBManager) Close() error {
 	if sm.dbInstance != nil {
-		log.Println("Closing database connection group.")
 		return sm.dbInstance.Close()
 	}
 	return nil
 }
 
-// translateError translates common sql and pq errors into package-defined errors.
-// It wraps unknown errors for context.
-func translateError(err error) error {
+// translatePostgresError maps common sql and pq errors into package-defined
+// sentinels, wrapping with %w so the original stays inspectable.
+func translatePostgresError(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	// Handle no rows error first - this is common after QueryRow().Scan().
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("%w: %w", ErrNotFound, err)
 	}
 
-	// Handle context errors explicitly. Although checked elsewhere, they might
-	// be returned directly by driver operations sometimes.
-	if err == context.Canceled {
-		// Wrap context.Canceled with our specific error type if desired,
-		// or just return a general query cancelled error.
-		// Adding context.Canceled itself provides more detail via errors.Is/As.
+	if errors.Is(err, context.Canceled) {
 		return fmt.Errorf("%w: %w", ErrQueryCanceled, context.Canceled)
 	}
-	if err == context.DeadlineExceeded {
+	if errors.Is(err, context.DeadlineExceeded) {
 		return fmt.Errorf("%w: %w", ErrQueryCanceled, context.DeadlineExceeded)
 	}
 
-	// Check for PostgreSQL specific errors via pq.Error
 	var pqErr *pq.Error
-	if err != nil {
-		if e, ok := err.(*pq.Error); ok {
-			pqErr = e
-		}
-	}
-
-	if pqErr != nil {
-		// Use pqErr.Code which is the SQLSTATE code (e.g., "23505")
-		// Using Code.Name() can be less stable if lib/pq changes names.
+	if errors.As(err, &pqErr) {
 		switch pqErr.Code {
 		case "23505":
 			return fmt.Errorf("%w: %w", ErrUniqueViolation, err)
@@ -179,6 +157,5 @@ func translateError(err error) error {
 		}
 	}
 
-	// Wrap other unknown errors encountered (network errors, driver bugs, etc.)
 	return fmt.Errorf("libdb: unexpected database error: %w", err)
 }

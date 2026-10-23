@@ -207,3 +207,12 @@ func checkRowsAffected(result sql.Result) error {
 func (s *store) EstimateBackendCount(ctx context.Context) (int64, error) {
 	return s.estimateCount(ctx, "llm_backends")
 }
+
+// LockBackend locks a backend row for the duration of the transaction.
+func (s *store) LockBackend(ctx context.Context, id string) error {
+	result, err := s.Exec.ExecContext(ctx, `UPDATE llm_backends SET name = name WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	return checkRowsAffected(result)
+}

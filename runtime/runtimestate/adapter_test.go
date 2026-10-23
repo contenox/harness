@@ -7,7 +7,6 @@ import (
 
 	"github.com/contenox/harness/runtime/runtimestate"
 	"github.com/contenox/harness/runtime/runtimetypes"
-	"github.com/contenox/harness/runtime/statetype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,12 +19,12 @@ func TestUnit_ModelProviderAdapter_SetsCorrectModelCapabilities(t *testing.T) {
 	backendID := "backend-test"
 	backendURL := "http://host:1234"
 
-	runtime := map[string]statetype.BackendRuntimeState{
+	runtime := map[string]runtimestate.BackendRuntimeState{
 		backendID: {
 			ID:      backendID,
 			Name:    "Test Backend",
 			Backend: runtimetypes.Backend{ID: backendID, Name: "Ollama", Type: "ollama", BaseURL: backendURL},
-			PulledModels: []statetype.ModelPullStatus{
+			PulledModels: []runtimestate.ModelPullStatus{
 				{
 					Name:          chatModelName,
 					Model:         chatModelName,
@@ -52,15 +51,12 @@ func TestUnit_ModelProviderAdapter_SetsCorrectModelCapabilities(t *testing.T) {
 		},
 	}
 
-	// 2. Get the adapter function
 	adapterFunc := runtimestate.LocalProviderAdapter(ctx, nil, runtime)
 
-	// 3. Get the providers
 	providers, err := adapterFunc(ctx, "ollama")
 	require.NoError(t, err)
 	require.Len(t, providers, 3, "Should create one provider per model")
 
-	// 4. Verify capabilities
 	foundChat := false
 	foundEmbed := false
 	foundUnknown := false
@@ -91,13 +87,12 @@ func TestUnit_ModelProviderAdapter_PropagatesCapabilitiesCorrectly(t *testing.T)
 	backendID := "backend-test"
 	backendURL := "http://host:1234"
 
-	// Define models with specific capabilities
-	runtime := map[string]statetype.BackendRuntimeState{
+	runtime := map[string]runtimestate.BackendRuntimeState{
 		backendID: {
 			ID:      backendID,
 			Name:    "Test Backend",
 			Backend: runtimetypes.Backend{ID: backendID, Name: "Ollama", Type: "ollama", BaseURL: backendURL},
-			PulledModels: []statetype.ModelPullStatus{
+			PulledModels: []runtimestate.ModelPullStatus{
 				{
 					Name:          "chat-model",
 					Model:         "chat-model",
@@ -138,7 +133,6 @@ func TestUnit_ModelProviderAdapter_PropagatesCapabilitiesCorrectly(t *testing.T)
 	require.NoError(t, err, "should not return error")
 	require.Len(t, providers, 3, "should create one provider per model")
 
-	// Verify capabilities
 	for _, p := range providers {
 		switch p.ModelName() {
 		case "chat-model":
@@ -171,18 +165,16 @@ func TestUnit_ModelProviderAdapter_HandlesMissingCapabilities(t *testing.T) {
 	backendID := "backend-test"
 	backendURL := "http://host:1234"
 
-	// Define model with partial capabilities
-	runtime := map[string]statetype.BackendRuntimeState{
+	runtime := map[string]runtimestate.BackendRuntimeState{
 		backendID: {
 			ID:      backendID,
 			Name:    "Test Backend",
 			Backend: runtimetypes.Backend{ID: backendID, Name: "Ollama", Type: "ollama", BaseURL: backendURL},
-			PulledModels: []statetype.ModelPullStatus{
+			PulledModels: []runtimestate.ModelPullStatus{
 				{
 					Name:       "partial-model",
 					Model:      "partial-model",
 					ModifiedAt: now,
-					// Missing capability fields
 				},
 			},
 		},
@@ -194,7 +186,6 @@ func TestUnit_ModelProviderAdapter_HandlesMissingCapabilities(t *testing.T) {
 	require.NoError(t, err, "should not return error")
 	require.Len(t, providers, 1, "should create one provider")
 
-	// Verify zero-value capabilities
 	p := providers[0]
 	require.False(t, p.CanChat(), "should default to no chat support")
 	require.False(t, p.CanEmbed(), "should default to no embedding support")
@@ -203,12 +194,54 @@ func TestUnit_ModelProviderAdapter_HandlesMissingCapabilities(t *testing.T) {
 	require.Equal(t, 0, p.GetContextLength(), "should default to zero context length")
 }
 
+func TestUnit_ModelProviderAdapter_ResolvesRegisteredBackendName(t *testing.T) {
+	ctx := context.Background()
+	backendID := "native-local-id"
+
+	runtime := map[string]runtimestate.BackendRuntimeState{
+		backendID: {
+			ID:      backendID,
+			Name:    "native-local",
+			Backend: runtimetypes.Backend{ID: backendID, Name: "native-local", Type: "modeld", BaseURL: "local"},
+			PulledModels: []runtimestate.ModelPullStatus{
+				{
+					Name:          "qwen3.5-0.8b",
+					Model:         "qwen3.5-0.8b",
+					CanChat:       true,
+					CanPrompt:     true,
+					CanStream:     true,
+					ContextLength: 4096,
+				},
+			},
+		},
+	}
+
+	adapterFunc := runtimestate.LocalProviderAdapter(ctx, nil, runtime)
+
+	byType, err := adapterFunc(ctx, "modeld")
+	require.NoError(t, err)
+	require.Len(t, byType, 1, "a type request returns one provider per model")
+
+	byName, err := adapterFunc(ctx, "native-local")
+	require.NoError(t, err)
+	require.Len(t, byName, 1, "a request naming the registered backend resolves")
+	require.Equal(t, "qwen3.5-0.8b", byName[0].ModelName())
+
+	unfiltered, err := adapterFunc(ctx)
+	require.NoError(t, err)
+	require.Len(t, unfiltered, 1, "an unfiltered request returns each model once")
+
+	unknown, err := adapterFunc(ctx, "not-a-backend")
+	require.NoError(t, err)
+	require.Empty(t, unknown, "an unknown provider resolves nothing")
+}
+
 func TestUnit_ModelProviderAdapter_CreatesOpenAIProviderViaCatalog(t *testing.T) {
 	ctx := context.Background()
 	backendID := "openai-backend"
 	backendURL := "http://openai.local"
 
-	state := statetype.BackendRuntimeState{
+	state := runtimestate.BackendRuntimeState{
 		ID:   backendID,
 		Name: "OpenAI Backend",
 		Backend: runtimetypes.Backend{
@@ -217,7 +250,7 @@ func TestUnit_ModelProviderAdapter_CreatesOpenAIProviderViaCatalog(t *testing.T)
 			Type:    "openai",
 			BaseURL: backendURL,
 		},
-		PulledModels: []statetype.ModelPullStatus{
+		PulledModels: []runtimestate.ModelPullStatus{
 			{
 				Name:          "gpt-5",
 				Model:         "gpt-5",
@@ -230,7 +263,7 @@ func TestUnit_ModelProviderAdapter_CreatesOpenAIProviderViaCatalog(t *testing.T)
 	}
 	state.SetAPIKey("test-key")
 
-	runtime := map[string]statetype.BackendRuntimeState{
+	runtime := map[string]runtimestate.BackendRuntimeState{
 		backendID: state,
 	}
 
@@ -246,41 +279,4 @@ func TestUnit_ModelProviderAdapter_CreatesOpenAIProviderViaCatalog(t *testing.T)
 	require.True(t, provider.CanChat())
 	require.True(t, provider.CanPrompt())
 	require.True(t, provider.CanStream())
-}
-
-func TestUnit_ModelProviderAdapter_LocalAliasResolvesLlamaProvider(t *testing.T) {
-	t.Skip("llama backend is temporarily disabled pending modeld local runtime transition")
-	ctx := context.Background()
-	backendID := "local-backend"
-	runtime := map[string]statetype.BackendRuntimeState{
-		backendID: {
-			ID:   backendID,
-			Name: "Local Alias Backend",
-			Backend: runtimetypes.Backend{
-				ID:      backendID,
-				Name:    "local",
-				Type:    "local",
-				BaseURL: t.TempDir(),
-			},
-			PulledModels: []statetype.ModelPullStatus{
-				{
-					Name:          "coder",
-					Model:         "coder",
-					CanChat:       true,
-					CanPrompt:     true,
-					CanStream:     true,
-					ContextLength: 8192,
-				},
-			},
-		},
-	}
-
-	adapterFunc := runtimestate.LocalProviderAdapter(ctx, nil, runtime)
-	for _, requested := range []string{"local", "llama"} {
-		providers, err := adapterFunc(ctx, requested)
-		require.NoError(t, err)
-		require.Len(t, providers, 1, "requested=%s", requested)
-		require.Equal(t, "llama", providers[0].GetType())
-		require.Equal(t, "coder", providers[0].ModelName())
-	}
 }

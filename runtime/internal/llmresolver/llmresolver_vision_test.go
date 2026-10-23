@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/contenox/harness/runtime/internal/llmresolver"
-	libmodelprovider "github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo"
 )
 
 // TestUnit_ChatModelResolution_VisionGate covers the vision capability gate:
@@ -15,15 +15,15 @@ import (
 // exists the failure is the typed vision error — never a silent fallback to a
 // text-only model.
 func TestUnit_ChatModelResolution_VisionGate(t *testing.T) {
-	getModels := func(providers []libmodelprovider.Provider) func(context.Context, ...string) ([]libmodelprovider.Provider, error) {
-		return func(context.Context, ...string) ([]libmodelprovider.Provider, error) { return providers, nil }
+	getModels := func(providers []modelrepo.Provider) func(context.Context, ...string) ([]modelrepo.Provider, error) {
+		return func(context.Context, ...string) ([]modelrepo.Provider, error) { return providers, nil }
 	}
 
-	textOnly := &libmodelprovider.MockProvider{
+	textOnly := &modelrepo.MockProvider{
 		ID: "text", Name: "qwen3-4b", ContextLength: 8192,
 		CanChatFlag: true, CanStreamFlag: true, Backends: []string{"b1"},
 	}
-	visionCapable := &libmodelprovider.MockProvider{
+	visionCapable := &modelrepo.MockProvider{
 		ID: "vision", Name: "gemma3-vlm", ContextLength: 8192,
 		CanChatFlag: true, CanStreamFlag: true, CanVisionFlag: true, Backends: []string{"b2"},
 	}
@@ -31,7 +31,7 @@ func TestUnit_ChatModelResolution_VisionGate(t *testing.T) {
 	t.Run("image request selects the vision-capable provider", func(t *testing.T) {
 		_, provider, _, err := llmresolver.Chat(context.Background(),
 			llmresolver.Request{RequiresVision: true},
-			getModels([]libmodelprovider.Provider{textOnly, visionCapable}),
+			getModels([]modelrepo.Provider{textOnly, visionCapable}),
 			llmresolver.Randomly,
 		)
 		if err != nil {
@@ -45,7 +45,7 @@ func TestUnit_ChatModelResolution_VisionGate(t *testing.T) {
 	t.Run("image request with only text models fails with the typed vision error", func(t *testing.T) {
 		_, _, _, err := llmresolver.Chat(context.Background(),
 			llmresolver.Request{RequiresVision: true},
-			getModels([]libmodelprovider.Provider{textOnly}),
+			getModels([]modelrepo.Provider{textOnly}),
 			llmresolver.Randomly,
 		)
 		if !errors.Is(err, llmresolver.ErrNoVisionCapableModel) {
@@ -64,7 +64,7 @@ func TestUnit_ChatModelResolution_VisionGate(t *testing.T) {
 	t.Run("stream path enforces the same gate", func(t *testing.T) {
 		_, _, _, err := llmresolver.Stream(context.Background(),
 			llmresolver.Request{RequiresVision: true},
-			getModels([]libmodelprovider.Provider{textOnly}),
+			getModels([]modelrepo.Provider{textOnly}),
 			llmresolver.Randomly,
 		)
 		if !errors.Is(err, llmresolver.ErrNoVisionCapableModel) {
@@ -75,7 +75,7 @@ func TestUnit_ChatModelResolution_VisionGate(t *testing.T) {
 	t.Run("text request still resolves to a text-only provider", func(t *testing.T) {
 		_, provider, _, err := llmresolver.Chat(context.Background(),
 			llmresolver.Request{ModelNames: []string{"qwen3-4b"}},
-			getModels([]libmodelprovider.Provider{textOnly}),
+			getModels([]modelrepo.Provider{textOnly}),
 			llmresolver.Randomly,
 		)
 		if err != nil {
@@ -89,7 +89,7 @@ func TestUnit_ChatModelResolution_VisionGate(t *testing.T) {
 	t.Run("no candidates at all keeps the generic error", func(t *testing.T) {
 		_, _, _, err := llmresolver.Chat(context.Background(),
 			llmresolver.Request{ModelNames: []string{"does-not-exist"}, RequiresVision: true},
-			getModels([]libmodelprovider.Provider{textOnly}),
+			getModels([]modelrepo.Provider{textOnly}),
 			llmresolver.Randomly,
 		)
 		if !errors.Is(err, llmresolver.ErrNoSatisfactoryModel) {

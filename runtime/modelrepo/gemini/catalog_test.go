@@ -39,7 +39,7 @@ func TestUnit_CatalogProvider_DoesNotInferThinkingFromModelName(t *testing.T) {
 	models, err := catalog.ListModels(context.Background())
 	require.NoError(t, err)
 	require.Len(t, models, 1)
-	require.Equal(t, "models/gemini-2.5-pro", models[0].Name)
+	require.Equal(t, "gemini-2.5-pro", models[0].Name)
 	require.False(t, models[0].CanThink, "Gemini thinking support must come from the model resource thinking field")
 }
 
@@ -84,7 +84,7 @@ func TestUnit_CatalogProvider_ListModels(t *testing.T) {
 	require.Len(t, models, 1)
 
 	model := models[0]
-	require.Equal(t, "models/gemini-flash-latest", model.Name)
+	require.Equal(t, "gemini-flash-latest", model.Name)
 	require.Equal(t, 8192, model.ContextLength)
 	require.Equal(t, 2048, model.MaxOutputTokens)
 	require.True(t, model.CanChat)

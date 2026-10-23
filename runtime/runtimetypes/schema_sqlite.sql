@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS llm_affinity_group (
     updated_at TIMESTAMP NOT NULL
 );
 
+-- Upstreams are addressed by entry, not by address: one provider wired twice is
+-- two rows, each with its own name and its own credential, so the resolver has
+-- two candidates to move between when one of them is rate limited or its key
+-- dies. The human label is what stays unique.
 CREATE TABLE IF NOT EXISTS llm_backends (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(512) NOT NULL UNIQUE,
@@ -31,8 +35,7 @@ CREATE TABLE IF NOT EXISTS llm_backends (
     type VARCHAR(512) NOT NULL,
 
     created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
-    UNIQUE(type, base_url)
+    updated_at TIMESTAMP NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS llm_affinity_group_backend_assignments (
@@ -141,6 +144,11 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_idx_id ON messages (idx_id);
 CREATE INDEX IF NOT EXISTS idx_messages_added_at ON messages (added_at);
+-- Serves ListMessagesPage's keyset walk: the (idx_id, added_at, id) prefix
+-- seeks the cursor and satisfies ORDER BY added_at, id from the index, so a
+-- page costs its own size rather than a sort of the whole stream. Measured on
+-- a multi-stream shape: 50 pages 221ms -> 66ms, inserts +1.5%.
+CREATE INDEX IF NOT EXISTS idx_messages_idx_added_id ON messages (idx_id, added_at, id);
 CREATE INDEX IF NOT EXISTS idx_message_indices_identity ON message_indices (identity);
 
 CREATE INDEX IF NOT EXISTS idx_functions_created_at ON functions(created_at);
@@ -207,7 +215,10 @@ CREATE INDEX IF NOT EXISTS idx_agents_kind ON agents(kind);
 -- docs/development/blueprints/acp/fleet-consolidation.md, slice C1, defect
 -- D3). state starts 'pending' and ends exactly once, at 'approved'/'denied'
 -- (via Respond) or 'expired' (the sweeper, once expires_at passes with
--- nobody having answered, applying on_timeout — default deny).
+-- nobody having answered, applying on_timeout — default deny). A zero
+-- expires_at is the ask an operator gave no deadline (envelope timeout =
+-- "never", or an approval-ceiling of never): the sweeper's range excludes
+-- it, so it stays pending until somebody answers it.
 -- diff is nullable: most tool calls have none. policy_name/matched_rule
 -- mirror hitlservice.EvaluationResult so an operator can always name which
 -- rule gated a given action (matched_rule NULL means the policy's
@@ -251,6 +262,31 @@ CREATE TABLE IF NOT EXISTS llm_model_registry (
 );
 CREATE INDEX IF NOT EXISTS idx_llm_model_registry_created_at ON llm_model_registry(created_at);
 
+-- chain_checkpoints: durable suspended chain runs (S6, runtime/taskengine +
+-- runtime/agentservice). A run that parks on a human approval past the fast
+-- window is checkpointed here, keyed by the approval ID whose verdict resumes
+-- it (id == hitl_approvals.id == the engine-minted tool-call ID on
+-- execute_tool_calls paths). payload is the engine's VERSIONED JSON envelope
+-- (taskengine.Checkpoint, schema_version mirrored into its own column for
+-- operator queries); this layer never interprets it. claimed_at is the
+-- resume claim CAS: exactly one resumer proceeds, and a claim gone stale
+-- (resumer killed mid-run) is reclaimable. failure keeps a run whose resume
+-- errored findable instead of silently lost; a successful terminal DELETES
+-- the row. Migration-safe by construction: CREATE TABLE IF NOT EXISTS on a
+-- brand-new table.
+CREATE TABLE IF NOT EXISTS chain_checkpoints (
+    id             VARCHAR(255) PRIMARY KEY,
+    schema_version INT NOT NULL,
+    payload        TEXT NOT NULL,
+    session_id     VARCHAR(255) NOT NULL DEFAULT '',
+    request_id     VARCHAR(255) NOT NULL DEFAULT '',
+    failure        TEXT,
+    claimed_at     TIMESTAMP,
+    created_at     TIMESTAMP NOT NULL,
+    updated_at     TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_chain_checkpoints_created_at ON chain_checkpoints(created_at);
+
 CREATE TABLE IF NOT EXISTS local_fs_reads (
     session_id    VARCHAR(255) NOT NULL DEFAULT '',
     path          TEXT NOT NULL,
@@ -280,6 +316,75 @@ CREATE TABLE IF NOT EXISTS bus_replies (
     request_id TEXT    PRIMARY KEY,
     data       BLOB    NOT NULL,
     created_at INTEGER NOT NULL DEFAULT (unixepoch('now'))
+);
+
+-- workspace_index_configs / workspace_chunks: the local workspace semantic index
+-- (internal/services/workspaceindex, see
+-- docs/development/blueprints/workspace-index.md). Not a vector database and not
+-- multi-tenant — one index per workspace, in the same SQLite file as everything
+-- else.
+--
+-- A config row is one IMMUTABLE GENERATION of an index: which embedding model
+-- produced its vectors, how wide they are, how files were chunked, which
+-- resolved root was walked. There is no UPDATE path and the live config cannot
+-- be deleted (runtimetypes/workspaceindex.go). Changing the embedding model
+-- creates a NEW config and cuts over — the newest config for a workspace is the
+-- active one — because vectors from two models sharing one table is the silent
+-- corruption this design exists to prevent.
+--
+-- dimension is recorded here rather than per chunk so a vector of the wrong
+-- width is a load error at the store boundary, never a silently mis-scored hit.
+-- Migration-safe by construction: CREATE TABLE IF NOT EXISTS on brand-new tables.
+CREATE TABLE IF NOT EXISTS workspace_index_configs (
+    id                  VARCHAR(255) PRIMARY KEY,
+    workspace_id        VARCHAR(255) NOT NULL,
+    root                TEXT NOT NULL DEFAULT '',
+    embed_model         VARCHAR(512) NOT NULL CHECK (length(trim(embed_model)) > 0),
+    embed_provider      VARCHAR(255) NOT NULL CHECK (length(trim(embed_provider)) > 0),
+    dimension           INT NOT NULL CHECK (dimension > 0),
+    chunk_tokens        INT NOT NULL DEFAULT 0,
+    chunk_overlap_lines INT NOT NULL DEFAULT 0,
+    created_at          TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_index_configs_workspace
+    ON workspace_index_configs(workspace_id, created_at);
+
+ALTER TABLE workspace_index_configs ADD COLUMN embedding_fingerprint TEXT NOT NULL DEFAULT '';
+ALTER TABLE workspace_index_configs ADD COLUMN pending BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- content_sha is the digest of the WHOLE FILE the chunk came from, not of the
+-- chunk text: one column answers both "did this file change since I indexed it"
+-- (incremental re-index) and "is this hit still true" (staleness at query time).
+-- vector is a little-endian float32 blob whose length must equal the config's
+-- dimension.
+CREATE TABLE IF NOT EXISTS workspace_chunks (
+    id           VARCHAR(255) PRIMARY KEY,
+    config_id    VARCHAR(255) NOT NULL REFERENCES workspace_index_configs(id) ON DELETE CASCADE,
+    workspace_id VARCHAR(255) NOT NULL,
+    path         TEXT NOT NULL,
+    start_line   INT NOT NULL,
+    end_line     INT NOT NULL,
+    content_sha  VARCHAR(64) NOT NULL,
+    text         TEXT NOT NULL,
+    vector       BLOB NOT NULL,
+    created_at   TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workspace_chunks_config_path
+    ON workspace_chunks(config_id, path);
+
+-- The lexical half of hybrid retrieval: FTS5 narrows to a bounded candidate set
+-- (bm25 order) and vectors rank within it, so scoring never scans the whole
+-- index. This is a standalone contentful FTS5 table rather than an
+-- external-content one because our chunk key is a VARCHAR id, not the INTEGER
+-- rowid external-content tables require; both tables are written only by
+-- AppendWorkspaceChunks / DeleteWorkspaceChunks*, in the same call, so they
+-- cannot drift. FTS5 availability in modernc.org/sqlite is proven by
+-- TestUnit_WorkspaceIndex_FTS5IsAvailable rather than assumed.
+CREATE VIRTUAL TABLE IF NOT EXISTS workspace_chunks_fts USING fts5(
+    text,
+    chunk_id UNINDEXED,
+    config_id UNINDEXED,
+    tokenize = 'unicode61'
 );
 
 -- Incremental migrations — executed one-by-one by NewSQLiteDBManager so that
@@ -337,27 +442,187 @@ ALTER TABLE hitl_approvals ADD COLUMN session_id  VARCHAR(255) NOT NULL DEFAULT 
 ALTER TABLE hitl_approvals ADD COLUMN agent_name  VARCHAR(255) NOT NULL DEFAULT '';
 ALTER TABLE hitl_approvals ADD COLUMN mission_id  VARCHAR(255);
 
-PRAGMA foreign_keys=off;
-BEGIN TRANSACTION;
+-- The per-session ask inbox's access path
+-- (ListPendingHITLApprovalsForSession): name a session, then filter to
+-- pending — how a client attaching to a session finds the ask a parked run is
+-- waiting on. Indexed here rather than beside the table's other indexes
+-- because session_id only exists after the ALTER above has run; a pre-
+-- attribution database would otherwise fail the whole schema on "no such
+-- column".
+CREATE INDEX IF NOT EXISTS idx_hitl_approvals_session_state ON hitl_approvals(session_id, state);
 
--- 1. Create the clean version
-CREATE TABLE llm_backends_temp (
-    id VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(512) NOT NULL UNIQUE,
-    base_url VARCHAR(512) NOT NULL,
-    type VARCHAR(512) NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
-    UNIQUE(type, base_url)
+-- Durable event-dispatch tier. The tables are owned by events.go and
+-- event_firings.go in this package; the service tier over them is
+-- internal/services/eventlog + eventtrigger. A beta surface — the tables are
+-- always present, like functions/event_triggers, but nothing writes or reads
+-- them without opt-in-beta.
+--
+-- The event log itself is DATE-PARTITIONED: one table per UTC day
+-- (event_log_YYYYMMDD), created at runtime by
+-- EventStore.EnsureEventPartitionExists (events.go), so retention is an O(1)
+-- whole-table DROP (PruneEventPartitionsBefore) rather than DELETE+VACUUM on
+-- the operator's hot database — bob2's partition property, SQLite-native.
+-- Each partition also gets (workspace_id, nid) and (workspace_id, type)
+-- indexes at creation: the cursor-tail and query-surface access paths, bob2's
+-- per-tenant index pair. The static schema holds only the registry, the
+-- global NID sequence, and the dispatcher's cursor/firings tables.
+--
+-- WORKSPACE scoping (bob2's tenancy, mapped to the runtime's workspaces):
+-- every event row carries workspace_id (a column + (workspace_id, nid) index
+-- per partition — partitioning stays date-based, workspace is a filter), and
+-- reads/cursors/firings are workspace-scoped. Bus subjects stay unscoped:
+-- the bus is a nudge, the log carries the workspace dimension.
+--
+-- event_partitions: one row per live per-day event table.
+CREATE TABLE IF NOT EXISTS event_partitions (
+    period     TEXT PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL
 );
 
--- 2. Move your data
-INSERT INTO llm_backends_temp (id, name, base_url, type, created_at, updated_at)
-SELECT id, name, base_url, type, created_at, updated_at FROM llm_backends;
+-- event_nid_seq: the store's single-row monotonic counter. Bumped in the same
+-- transaction as the insert that needs it — an event partition row, or a proxy
+-- usage snapshot — so NIDs stay strictly ordered. The event log's partition
+-- ordering and dispatch cursor rely on that; the metering log needs only each
+-- scope's newest row to sort last.
+CREATE TABLE IF NOT EXISTS event_nid_seq (
+    id       INTEGER PRIMARY KEY CHECK (id = 1),
+    last_nid INTEGER NOT NULL
+);
+INSERT OR IGNORE INTO event_nid_seq (id, last_nid) VALUES (1, 0);
 
--- 3. Swap them
-DROP TABLE llm_backends;
-ALTER TABLE llm_backends_temp RENAME TO llm_backends;
+-- event_cursors: one row per (consumer, workspace) — the last event nid that
+-- dispatcher has fully processed for that workspace. Per-workspace so two
+-- workspaces' dispatchers never share or fight over a cursor; catch-up after
+-- downtime is ListEventsSince(workspace, last_nid).
+CREATE TABLE IF NOT EXISTS event_cursors (
+    consumer     TEXT NOT NULL,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    last_nid     INTEGER NOT NULL DEFAULT 0,
+    updated_at   TIMESTAMP NOT NULL,
+    PRIMARY KEY (consumer, workspace_id)
+);
 
-COMMIT;
-PRAGMA foreign_keys=on;
+-- event_firings: one row per (workspace, trigger, event) execution attempt.
+-- The PK is the at-least-once dedup: an event reaching the dispatcher via
+-- both the live bus and the catch-up scan claims the row once
+-- (INSERT OR IGNORE), so a chain fires at most once per trigger per event.
+-- status/error record the outcome ('running'/'ok'/'error'/'refused');
+-- request_id links to `contenox state`.
+CREATE TABLE IF NOT EXISTS event_firings (
+    workspace_id TEXT NOT NULL DEFAULT '',
+    trigger_name TEXT NOT NULL,
+    nid          INTEGER NOT NULL,
+    status       TEXT NOT NULL DEFAULT 'running',
+    error        TEXT,
+    request_id   TEXT NOT NULL DEFAULT '',
+    created_at   TIMESTAMP NOT NULL,
+    updated_at   TIMESTAMP NOT NULL,
+    PRIMARY KEY (workspace_id, trigger_name, nid)
+);
+
+-- The PK's leading (workspace_id, trigger_name) serves the claim and the
+-- outcome UPDATE, but not ListEventFirings' newest-first read: ORDER BY nid
+-- DESC across trigger names made SQLite materialize a temp b-tree over the
+-- whole workspace before applying LIMIT. This index is that read's access
+-- path, in its exact order, with status trailing so a --status filter is
+-- answered from the index instead of a row fetch per candidate. Measured on
+-- 20k firings: default listing 40ms -> 0.7ms, --status error 45ms -> 1.2ms,
+-- with no measurable cost on the claim/finish writes (both fsync-bound).
+CREATE INDEX IF NOT EXISTS idx_event_firings_ws_nid
+    ON event_firings (workspace_id, nid DESC, trigger_name, status);
+
+-- Gateway key ledger. Only the bearer's digest is stored, never the bearer; the
+-- allowance a bearer carries lives in its signed claims, so this table is
+-- identity and lifecycle, not policy.
+CREATE TABLE IF NOT EXISTS proxy_keys (
+    id         TEXT PRIMARY KEY,
+    key_hash   TEXT NOT NULL UNIQUE,
+    client_id  TEXT NOT NULL,
+    tier       TEXT NOT NULL DEFAULT '',
+    issued_at  TIMESTAMP NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    revoked_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_proxy_keys_client
+    ON proxy_keys (client_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_proxy_keys_created
+    ON proxy_keys (created_at DESC, id DESC);
+
+-- proxy_usage: append-only metering snapshots. Every metered turn appends one
+-- row per scope it counts in, carrying both that turn's delta and the scope's
+-- cumulative totals through that turn, so each allowance question is answered by
+-- the newest row for its scope — never by summing rows.
+CREATE TABLE IF NOT EXISTS proxy_usage (
+    nid                    INTEGER NOT NULL,
+    id                     TEXT PRIMARY KEY,
+    scope                  TEXT NOT NULL,
+    scope_id               TEXT NOT NULL,
+    key_hash               TEXT NOT NULL,
+    client_id              TEXT NOT NULL,
+    model                  TEXT NOT NULL,
+    window_kind            TEXT NOT NULL,
+    window_start           TIMESTAMP NOT NULL,
+    prompt_tokens          INTEGER NOT NULL DEFAULT 0,
+    completion_tokens      INTEGER NOT NULL DEFAULT 0,
+    thinking_tokens        INTEGER,
+    total_tokens           INTEGER NOT NULL DEFAULT 0,
+    cache_read_tokens      INTEGER NOT NULL DEFAULT 0,
+    cache_write_tokens     INTEGER NOT NULL DEFAULT 0,
+    effective_input        INTEGER NOT NULL DEFAULT 0,
+    effective_output       INTEGER,
+    cost_microdollars      INTEGER NOT NULL DEFAULT 0,
+    image_count            INTEGER NOT NULL DEFAULT 0,
+    audio_bytes            INTEGER NOT NULL DEFAULT 0,
+    duration_ms            INTEGER NOT NULL DEFAULT 0,
+    finish_reason          TEXT,
+    cum_prompt_tokens      INTEGER NOT NULL DEFAULT 0,
+    cum_completion_tokens  INTEGER NOT NULL DEFAULT 0,
+    cum_thinking_tokens    INTEGER,
+    cum_total_tokens       INTEGER NOT NULL DEFAULT 0,
+    cum_cache_read_tokens  INTEGER NOT NULL DEFAULT 0,
+    cum_cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+    cum_effective_input    INTEGER NOT NULL DEFAULT 0,
+    cum_effective_output   INTEGER,
+    cum_cost_microdollars  INTEGER NOT NULL DEFAULT 0,
+    cum_image_count        INTEGER NOT NULL DEFAULT 0,
+    cum_audio_bytes        INTEGER NOT NULL DEFAULT 0,
+    recorded_at            TIMESTAMP NOT NULL
+);
+
+ALTER TABLE proxy_usage ADD COLUMN thinking_tokens INTEGER;
+ALTER TABLE proxy_usage ADD COLUMN effective_output INTEGER;
+ALTER TABLE proxy_usage ADD COLUMN cum_thinking_tokens INTEGER;
+ALTER TABLE proxy_usage ADD COLUMN cum_effective_output INTEGER;
+UPDATE proxy_usage
+SET thinking_tokens = COALESCE(thinking_tokens, 0),
+    effective_output = COALESCE(effective_output, completion_tokens),
+    cum_thinking_tokens = COALESCE(cum_thinking_tokens, 0),
+    cum_effective_output = COALESCE(cum_effective_output, cum_completion_tokens)
+WHERE thinking_tokens IS NULL OR effective_output IS NULL
+   OR cum_thinking_tokens IS NULL OR cum_effective_output IS NULL;
+
+-- The one read is "newest row for this scope", so the index carries the scope's
+-- whole key in its order with nid descending.
+CREATE INDEX IF NOT EXISTS idx_proxy_usage_scope
+    ON proxy_usage (scope, scope_id, model, window_kind, nid DESC);
+CREATE INDEX IF NOT EXISTS idx_proxy_usage_key
+    ON proxy_usage (key_hash, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_proxy_usage_recorded
+    ON proxy_usage (recorded_at);
+
+-- What the operator states about a served model beyond what the upstream
+-- reports: context window, output ceiling, capabilities and upstream pricing.
+-- One row per provider, the per-model map folded into JSON because the two
+-- backends spell their JSON operators differently.
+CREATE TABLE IF NOT EXISTS llm_provider_model_facts (
+    provider_id TEXT PRIMARY KEY,
+    facts       TEXT NOT NULL,
+    updated_at  TIMESTAMP NOT NULL
+);
+
+ALTER TABLE kv ADD COLUMN revision BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE kv ADD COLUMN generation TEXT NOT NULL DEFAULT '';
+ALTER TABLE llm_backends ADD COLUMN revision BIGINT NOT NULL DEFAULT 0;

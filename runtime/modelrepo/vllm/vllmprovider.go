@@ -11,20 +11,28 @@ import (
 )
 
 type vLLMProvider struct {
-	Name            string
-	ID              string
-	ContextLength   int
-	MaxOutputTokens int
-	SupportsChat    bool
-	SupportsEmbed   bool
-	SupportsStream  bool
-	SupportsPrompt  bool
-	SupportsThink   bool
-	SupportsVision  bool
-	Backends        []string
-	authToken       string
-	client          *http.Client
-	tracker         libtracker.ActivityTracker
+	SupportsAutocomplete bool
+	SupportsNextEdit     bool
+	FIMFormat            string
+	NextEditFormat       string
+	Name                 string
+	ID                   string
+	ContextLength        int
+	MaxOutputTokens      int
+	SupportsChat         bool
+	SupportsEmbed        bool
+	SupportsStream       bool
+	SupportsPrompt       bool
+	SupportsThink        bool
+	SupportsVision       bool
+	// SupportsAudio is the operator's declaration that this deployment accepts
+	// audio input; the vendor's model list reports no modality, so the adapter
+	// sends an audio part only where one was declared.
+	SupportsAudio bool
+	Backends      []string
+	authToken     string
+	client        *http.Client
+	tracker       libtracker.ActivityTracker
 }
 
 func NewVLLMProvider(modelName string, backends []string, client *http.Client, caps modelrepo.CapabilityConfig, authToken string, tracker libtracker.ActivityTracker) modelrepo.Provider {
@@ -32,20 +40,25 @@ func NewVLLMProvider(modelName string, backends []string, client *http.Client, c
 		tracker = libtracker.NoopTracker{}
 	}
 	return &vLLMProvider{
-		Name:            modelName,
-		ID:              "vllm:" + modelName,
-		ContextLength:   caps.ContextLength,
-		MaxOutputTokens: caps.MaxOutputTokens,
-		SupportsChat:    caps.CanChat,
-		SupportsEmbed:   caps.CanEmbed,
-		SupportsStream:  caps.CanStream,
-		SupportsPrompt:  caps.CanPrompt,
-		SupportsThink:   caps.CanThink,
-		SupportsVision:  caps.CanVision,
-		Backends:        backends,
-		authToken:       authToken,
-		client:          client,
-		tracker:         tracker,
+		SupportsAutocomplete: caps.CanAutocomplete,
+		SupportsNextEdit:     caps.CanNextEdit,
+		FIMFormat:            caps.FIMFormat,
+		NextEditFormat:       caps.NextEditFormat,
+		Name:                 modelName,
+		ID:                   "vllm:" + modelName,
+		ContextLength:        caps.ContextLength,
+		MaxOutputTokens:      caps.MaxOutputTokens,
+		SupportsChat:         caps.CanChat,
+		SupportsEmbed:        caps.CanEmbed,
+		SupportsStream:       caps.CanStream,
+		SupportsPrompt:       caps.CanPrompt,
+		SupportsThink:        caps.CanThink,
+		SupportsVision:       caps.CanVision,
+		SupportsAudio:        caps.CanAudio,
+		Backends:             backends,
+		authToken:            authToken,
+		client:               client,
+		tracker:              tracker,
 	}
 }
 
@@ -106,6 +119,10 @@ func (p *vLLMProvider) CanVision() bool {
 	return p.SupportsVision
 }
 
+func (p *vLLMProvider) CanAudio() bool {
+	return p.SupportsAudio
+}
+
 func (p *vLLMProvider) GetChatConnection(ctx context.Context, backendID string) (modelrepo.LLMChatClient, error) {
 	if !p.CanChat() {
 		return nil, fmt.Errorf("provider %s (model %s) does not support chat", p.GetID(), p.ModelName())
@@ -114,7 +131,7 @@ func (p *vLLMProvider) GetChatConnection(ctx context.Context, backendID string) 
 		return nil, err
 	}
 
-	return NewVLLMChatClient(ctx, backendID, p.ModelName(), p.ContextLength, p.MaxOutputTokens, p.client, p.authToken, p.CanThink(), p.tracker)
+	return NewVLLMChatClient(ctx, backendID, p.ModelName(), p.ContextLength, p.MaxOutputTokens, p.client, p.authToken, p.CanThink(), p.CanAudio(), p.tracker)
 }
 
 func (p *vLLMProvider) GetPromptConnection(ctx context.Context, backendID string) (modelrepo.LLMPromptExecClient, error) {
@@ -130,7 +147,13 @@ func (p *vLLMProvider) GetPromptConnection(ctx context.Context, backendID string
 }
 
 func (p *vLLMProvider) GetEmbedConnection(ctx context.Context, backendID string) (modelrepo.LLMEmbedClient, error) {
-	return nil, fmt.Errorf("provider %s (model %s) does not support embeddings", p.GetID(), p.ModelName())
+	if !p.CanEmbed() {
+		return nil, fmt.Errorf("provider %s (model %s) does not support embeddings", p.GetID(), p.ModelName())
+	}
+	if err := p.validateBackend(backendID); err != nil {
+		return nil, err
+	}
+	return NewVLLMEmbedClient(backendID, p.ModelName(), p.client, p.authToken, p.tracker)
 }
 
 func (p *vLLMProvider) GetStreamConnection(ctx context.Context, backendID string) (modelrepo.LLMStreamClient, error) {
@@ -142,5 +165,7 @@ func (p *vLLMProvider) GetStreamConnection(ctx context.Context, backendID string
 		return nil, err
 	}
 
-	return NewVLLMStreamClient(ctx, backendID, p.ModelName(), p.ContextLength, p.MaxOutputTokens, p.client, p.authToken, p.CanThink(), p.tracker)
+	return NewVLLMStreamClient(ctx, backendID, p.ModelName(), p.ContextLength, p.MaxOutputTokens, p.client, p.authToken, p.CanThink(), p.CanAudio(), p.tracker)
 }
+
+func (p *vLLMProvider) CanAutocomplete() bool { return p.SupportsAutocomplete }

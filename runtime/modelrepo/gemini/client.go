@@ -11,7 +11,6 @@ import (
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
-	"github.com/contenox/harness/runtime/reasoning"
 )
 
 type geminiClient struct {
@@ -26,7 +25,7 @@ type geminiClient struct {
 }
 
 type geminiGenerateContentRequest struct {
-	SystemInstruction *geminiSystemInstruction `json:"system_instruction,omitempty"`
+	SystemInstruction *geminiSystemInstruction `json:"systemInstruction,omitempty"`
 	Contents          []geminiContent          `json:"contents"`
 	GenerationConfig  *geminiGenerationConfig  `json:"generationConfig,omitempty"`
 	Tools             []geminiToolRequest      `json:"tools,omitempty"`
@@ -40,19 +39,21 @@ type geminiGenerationConfig struct {
 	MaxOutputTokens *int     `json:"maxOutputTokens,omitempty"`
 	StopSequences   []string `json:"stopSequences,omitempty"`
 	Seed            *int     `json:"seed,omitempty"`
-	// ThinkingConfig controls extended thinking on Gemini 2.5+ models.
-	// Use nil to omit (default behaviour, no thinking).
+	// ResponseMimeType is application/json for a schema-constrained request; empty leaves the default text output.
+	ResponseMimeType string `json:"responseMimeType,omitempty"`
+	// ResponseJsonSchema is the caller's JSON Schema the response must satisfy, sent whole.
+	ResponseJsonSchema any `json:"responseJsonSchema,omitempty"`
+	// ThinkingConfig carries the thinking control the model's published facts accept; nil omits it.
 	ThinkingConfig *geminiThinkingConfig `json:"thinkingConfig,omitempty"`
 }
 
-// geminiThinkingConfig maps to Gemini thinking controls. Gemini 3 uses
-// thinkingLevel; Gemini 2.5 uses thinkingBudget.
 type geminiThinkingConfig struct {
 	ThinkingBudget *int   `json:"thinkingBudget,omitempty"`
 	ThinkingLevel  string `json:"thinkingLevel,omitempty"`
+	// IncludeThoughts asks the model to return its thoughts beside its answer.
+	IncludeThoughts bool `json:"includeThoughts,omitempty"`
 }
 
-// sendRequest: shared HTTP helper for Gemini clients
 func (c *geminiClient) sendRequest(ctx context.Context, endpoint string, request interface{}, response interface{}) error {
 	fullURL := fmt.Sprintf("%s%s", c.baseURL, endpoint)
 
@@ -67,7 +68,7 @@ func (c *geminiClient) sendRequest(ctx context.Context, endpoint string, request
 	)
 	defer end()
 
-	var reqBody io.Reader
+	var body []byte
 	if request != nil {
 		b, err := json.Marshal(request)
 		if err != nil {
@@ -75,19 +76,25 @@ func (c *geminiClient) sendRequest(ctx context.Context, endpoint string, request
 			reportErr(err)
 			return err
 		}
-		reqBody = bytes.NewBuffer(b)
+		body = b
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, reqBody)
-	if err != nil {
-		err = fmt.Errorf("failed to create request: %w", err)
-		reportErr(err)
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Goog-Api-Key", c.apiKey)
-
-	resp, err := c.httpClient.Do(req)
+	// Bounded end-to-end; retried on 429/5xx with Retry-After honored.
+	ctx, cancel := modelrepo.NonStreamingContext(ctx)
+	defer cancel()
+	resp, err := modelrepo.DoWithRetry(ctx, c.httpClient, func() (*http.Request, error) {
+		var reqBody io.Reader
+		if body != nil {
+			reqBody = bytes.NewReader(body)
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, reqBody)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Goog-Api-Key", c.apiKey)
+		return req, nil
+	})
 	if err != nil {
 		err = fmt.Errorf("HTTP request failed for model %s: %w", c.modelName, err)
 		reportErr(err)
@@ -95,7 +102,6 @@ func (c *geminiClient) sendRequest(ctx context.Context, endpoint string, request
 	}
 	defer resp.Body.Close()
 
-	// Log headers via tracker
 	reportChange("http_response", map[string]any{
 		"status_code": resp.StatusCode,
 		"headers":     resp.Header,
@@ -109,14 +115,16 @@ func (c *geminiClient) sendRequest(ctx context.Context, endpoint string, request
 				Status  string `json:"status"`
 			} `json:"error"`
 		}
-		body, _ := io.ReadAll(resp.Body)
-		if jsonErr := json.Unmarshal(body, &eresp); jsonErr == nil && eresp.Error.Message != "" {
+		respBody, _ := io.ReadAll(resp.Body)
+		if jsonErr := json.Unmarshal(respBody, &eresp); jsonErr == nil && eresp.Error.Message != "" {
 			err = fmt.Errorf("gemini API error: %d %s - %s (model=%s url=%s)",
 				resp.StatusCode, eresp.Error.Status, eresp.Error.Message, c.modelName, fullURL)
+			err = modelrepo.ClassifyProviderError(err, resp.StatusCode, eresp.Error.Status, eresp.Error.Message)
 			reportErr(err)
 			return err
 		}
-		err = fmt.Errorf("gemini API error: %d - %s (model=%s url=%s)", resp.StatusCode, string(body), c.modelName, fullURL)
+		err = fmt.Errorf("gemini API error: %d - %s (model=%s url=%s)", resp.StatusCode, string(respBody), c.modelName, fullURL)
+		err = modelrepo.ClassifyProviderError(err, resp.StatusCode, "", string(respBody))
 		reportErr(err)
 		return err
 	}
@@ -133,31 +141,48 @@ func (c *geminiClient) sendRequest(ctx context.Context, endpoint string, request
 	return nil
 }
 
-// buildGeminiRequest builds a proper Gemini generateContent request using modelrepo args & tools
-func buildGeminiRequest(modelName string, messages []modelrepo.Message, systemInstruction *geminiSystemInstruction, args []modelrepo.ChatArgument, canThink ...bool) (geminiGenerateContentRequest, error) {
-	// Collect chat args
+func buildGeminiRequest(modelName string, messages []modelrepo.Message, args []modelrepo.ChatArgument, canThink ...bool) (geminiGenerateContentRequest, error) {
+	// Raw-byte cap enforced under Gemini's 20 MB total-request limit before the wire.
+	if err := modelrepo.ValidateAudioParts("gemini", modelName, messages); err != nil {
+		return geminiGenerateContentRequest{}, err
+	}
+
 	cfg := &modelrepo.ChatConfig{}
 	for _, a := range args {
 		a.Apply(cfg)
 	}
 
-	// Convert tools -> Gemini tool declarations
+	var systemInstruction *geminiSystemInstruction
+	filtered := make([]modelrepo.Message, 0, len(messages))
+	for _, m := range messages {
+		if m.Role == "system" {
+			if m.Content != "" {
+				systemInstruction = &geminiSystemInstruction{
+					Parts: []geminiPart{{Text: m.Content}},
+				}
+			}
+			continue
+		}
+		filtered = append(filtered, m)
+	}
+	messages = filtered
+
 	var tools []geminiToolRequest
 	if len(cfg.Tools) > 0 {
 		decls := make([]geminiFunctionDeclaration, 0, len(cfg.Tools))
 		for _, t := range cfg.Tools {
-			toolschema, err := geminiSanitiseSchema(t.Function.Parameters)
+			if t.Type != "function" || t.Function == nil {
+				continue
+			}
+			schema, err := geminiParameterSchema(t.Function.Parameters)
 			if err != nil {
 				return geminiGenerateContentRequest{}, err
 			}
-			if t.Type == "function" && t.Function != nil {
-				decls = append(decls, geminiFunctionDeclaration{
-					Name:        t.Function.Name,
-					Description: t.Function.Description,
-					// Gemini rejects additionalProperties in function schemas.
-					Parameters: toolschema,
-				})
-			}
+			decls = append(decls, geminiFunctionDeclaration{
+				Name:                 t.Function.Name,
+				Description:          t.Function.Description,
+				ParametersJsonSchema: schema,
+			})
 		}
 		if len(decls) > 0 {
 			tools = append(tools, geminiToolRequest{
@@ -166,7 +191,8 @@ func buildGeminiRequest(modelName string, messages []modelrepo.Message, systemIn
 		}
 	}
 
-	contents := convertToGeminiMessages(messages)
+	contents := convertToGeminiMessages(messages, modelName)
+	contents = trimTrailingModelTurn(contents)
 	if len(contents) == 0 {
 		return geminiGenerateContentRequest{}, fmt.Errorf("gemini: refusing to send empty contents for model %s after filtering %d message(s); provide at least one non-empty user/model/tool message, tool call, or tool response", modelName, len(messages))
 	}
@@ -183,132 +209,101 @@ func buildGeminiRequest(modelName string, messages []modelrepo.Message, systemIn
 		req.GenerationConfig.MaxOutputTokens = cfg.MaxTokens
 	}
 	req.GenerationConfig.Seed = cfg.Seed
+	applyGeminiResponseFormat(req.GenerationConfig, cfg.Format)
 
-	// Omitting ThinkingConfig means the model uses its default.
 	if thinkingAllowed(canThink) {
-		req.GenerationConfig.ThinkingConfig = geminiThinkingConfigForModel(modelName, cfg.Think)
+		control, err := ThinkingControlFor(modelName, cfg.Think)
+		if err != nil {
+			return geminiGenerateContentRequest{}, err
+		}
+		if control != nil {
+			req.GenerationConfig.ThinkingConfig = &geminiThinkingConfig{
+				ThinkingBudget:  control.Budget,
+				ThinkingLevel:   control.Level,
+				IncludeThoughts: control.IncludeThoughts,
+			}
+		}
 	}
 
 	return req, nil
 }
 
-func geminiThinkingConfigForModel(modelName string, think *string) *geminiThinkingConfig {
-	level, ok, err := reasoning.NormalizeOptional(valueOfStringPtr(think))
-	if err != nil || !ok || level == reasoning.Auto {
-		return nil
-	}
-	if geminiUsesThinkingLevel(modelName) {
-		mapped := geminiThinkingLevel(modelName, level)
-		if mapped == "" {
-			return nil
-		}
-		return &geminiThinkingConfig{ThinkingLevel: mapped}
-	}
-	budget, ok := geminiThinkingBudget(level)
-	if !ok {
-		return nil
-	}
-	return &geminiThinkingConfig{ThinkingBudget: &budget}
-}
-
+// thinkingAllowed reports whether the model's declaration says it thinks; a
+// model whose declaration says it does not is never sent a thinking control.
 func thinkingAllowed(canThink []bool) bool {
 	return len(canThink) == 0 || canThink[0]
 }
 
-func valueOfStringPtr(v *string) string {
-	if v == nil {
-		return ""
+// applyGeminiResponseFormat puts the neutral structured-output control on the
+// request: the vendor's responseMimeType selects JSON output and
+// responseJsonSchema carries the caller's schema whole. The text mode
+// constrains nothing and is left off the wire.
+func applyGeminiResponseFormat(config *geminiGenerationConfig, format *modelrepo.ResponseFormat) {
+	if format == nil || format.Mode == modelrepo.ResponseFormatText {
+		return
 	}
-	return *v
-}
-
-func geminiUsesThinkingLevel(modelName string) bool {
-	m := strings.ToLower(strings.TrimSpace(modelName))
-	return strings.Contains(m, "gemini-3")
-}
-
-func geminiThinkingLevel(modelName, level string) string {
-	switch level {
-	case reasoning.Off:
-		if strings.Contains(strings.ToLower(modelName), "flash") {
-			return "minimal"
-		}
-		return "low"
-	case reasoning.Minimal:
-		if strings.Contains(strings.ToLower(modelName), "flash") {
-			return "minimal"
-		}
-		return "low"
-	case reasoning.Low:
-		return "low"
-	case reasoning.Medium:
-		if strings.Contains(strings.ToLower(modelName), "flash") {
-			return "medium"
-		}
-		return "high"
-	case reasoning.High, reasoning.XHigh:
-		return "high"
-	default:
-		return ""
+	config.ResponseMimeType = "application/json"
+	if format.Mode == modelrepo.ResponseFormatJSONSchema {
+		config.ResponseJsonSchema = format.Schema
 	}
 }
 
-func geminiThinkingBudget(level string) (int, bool) {
-	switch level {
-	case reasoning.Off:
-		return 0, true
-	case reasoning.Minimal, reasoning.Low:
-		return 1024, true
-	case reasoning.Medium:
-		return 8192, true
-	case reasoning.High:
-		return 24576, true
-	case reasoning.XHigh:
-		return -1, true
-	default:
-		return 0, false
+// geminiParameterSchema renders a tool's declared parameters as the vendor's
+// documented JSON Schema member. A tool that declares none carries neither
+// member, which the vendor documents as optional.
+func geminiParameterSchema(parameters any) (json.RawMessage, error) {
+	if parameters == nil {
+		return nil, nil
 	}
+	raw, err := json.Marshal(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("gemini: encode tool parameter schema: %w", err)
+	}
+	return raw, nil
 }
 
-// convert modelrepo messages to Gemini "contents"
-func convertToGeminiMessages(messages []modelrepo.Message) []geminiContent {
+func convertToGeminiMessages(messages []modelrepo.Message, modelName string) []geminiContent {
 	out := make([]geminiContent, 0, len(messages))
 
-	// Map OpenAI-style tool_call_id -> function name so we can
-	// populate FunctionResponse.Name for tool responses.
 	toolCallNameByID := make(map[string]string)
 
 	for _, m := range messages {
-		// System messages are handled via SystemInstruction
 		if m.Role == "system" {
 			continue
 		}
 
-		// Map internal roles to Gemini roles ("user" | "model").
-		// Gemini does NOT accept "tool", so we treat tool responses
-		// as coming from the "user" side.
+		// Gemini has no "tool" role; tool responses go out as "user".
 		var role string
 		switch m.Role {
 		case "assistant", "model":
-			// provider-agnostic "assistant" -> Gemini "model"
 			role = "model"
 		default:
-			// "user", "tool", or anything else -> "user"
 			role = "user"
+		}
+
+		for _, tc := range m.ToolCalls {
+			if tc.ID != "" && tc.Function.Name != "" {
+				toolCallNameByID[tc.ID] = tc.Function.Name
+			}
+		}
+
+		if stored, ok := replayContinuation(m.Continuation, modelName); ok {
+			parts := stored
+			if len(out) > 0 && out[len(out)-1].Role == role {
+				out[len(out)-1].Parts = mergeGeminiParts(out[len(out)-1].Parts, parts)
+			} else {
+				out = append(out, geminiContent{Role: role, Parts: parts})
+			}
+			continue
 		}
 
 		parts := make([]geminiPart, 0)
 
-		// Add text part FIRST if it's not a tool role ---
-		// Handle text content for user/assistant messages.
-		// This ensures text is included even if tool calls/responses follow.
+		// Text goes first, so it's present even if tool calls/responses follow.
 		if m.Content != "" && m.Role != "tool" {
 			parts = append(parts, geminiPart{Text: m.Content})
 		}
 
-		// Image attachments: append one inlineData part per image, after the
-		// text part, mirroring the OpenAI content-parts ordering. The resolver
-		// only routes image-bearing requests to vision-capable providers.
 		for _, img := range m.Images {
 			parts = append(parts, geminiPart{
 				InlineData: &geminiInlineData{
@@ -318,14 +313,17 @@ func convertToGeminiMessages(messages []modelrepo.Message) []geminiContent {
 			})
 		}
 
-		// Assistant tool calls: encode as functionCall parts
+		for _, a := range m.Audio {
+			parts = append(parts, geminiPart{
+				InlineData: &geminiInlineData{
+					MimeType: a.MimeType,
+					Data:     a.Data,
+				},
+			})
+		}
+
 		if len(m.ToolCalls) > 0 {
 			for _, tc := range m.ToolCalls {
-				// Remember mapping from tool_call_id -> function name
-				if tc.ID != "" && tc.Function.Name != "" {
-					toolCallNameByID[tc.ID] = tc.Function.Name
-				}
-
 				if tc.Function.Name == "" {
 					continue
 				}
@@ -344,26 +342,18 @@ func convertToGeminiMessages(messages []modelrepo.Message) []geminiContent {
 					Args: args,
 				}
 
-				// Gemini 3 requires thoughtSignature at the Part level.
-				// Use the preserved signature from ProviderMeta when available.
-				// For tool calls without a signature (first turn, parallel calls, legacy history)
-				// use the official Google bypass value so the strict validator never rejects the turn.
-				// See: https://ai.google.dev/gemini-api/docs/thought-signatures
 				part := geminiPart{FunctionCall: fc}
-				if sig, ok := tc.ProviderMeta["thought_signature"]; ok && sig != "" {
+				if sig := tc.ProviderMeta[thoughtSignatureMetaKey]; sig != "" {
 					part.ThoughtSignature = sig
 				} else {
-					part.ThoughtSignature = "skip_thought_signature_validator"
+					part.ThoughtSignature = skipThoughtSignatureValidator
 				}
 
 				parts = append(parts, part)
 			}
 		}
 
-		// Properly handle tool responses
-		// Tool responses: encode as functionResponse parts if we can
 		if m.Role == "tool" {
-			// Try to find the function name associated with this tool_call_id
 			fnName := ""
 			if m.ToolCallID != "" {
 				if n, ok := toolCallNameByID[m.ToolCallID]; ok {
@@ -381,14 +371,12 @@ func convertToGeminiMessages(messages []modelrepo.Message) []geminiContent {
 			})
 		}
 
-		// 3) Normal text content (user/assistant/system-like)
-		// If we somehow ended up with no parts at all, skip this message
 		if len(parts) == 0 {
 			continue
 		}
 
 		if len(out) > 0 && out[len(out)-1].Role == role {
-			out[len(out)-1].Parts = append(out[len(out)-1].Parts, parts...)
+			out[len(out)-1].Parts = mergeGeminiParts(out[len(out)-1].Parts, parts)
 		} else {
 			out = append(out, geminiContent{
 				Role:  role,
@@ -398,6 +386,47 @@ func convertToGeminiMessages(messages []modelrepo.Message) []geminiContent {
 	}
 
 	return out
+}
+
+// mergeGeminiParts appends one message's parts to the parts of the turn of the
+// same role that precedes it, keeping every functionResponse after that turn's
+// prose and media. Gemini wants one user turn per function-call cycle — two
+// user-role contents in a row fail its alternation check — so a tool result and
+// the operator's next prompt share a turn; text placed after a functionResponse
+// is the shape the provider answers with "Requests ending with a model turn are
+// not supported".
+func mergeGeminiParts(existing, incoming []geminiPart) []geminiPart {
+	responses := make([]geminiPart, 0, len(incoming))
+	merged := make([]geminiPart, 0, len(existing)+len(incoming))
+	keep := func(parts []geminiPart) {
+		for _, p := range parts {
+			if p.FunctionResponse != nil {
+				responses = append(responses, p)
+				continue
+			}
+			merged = append(merged, p)
+		}
+	}
+	keep(existing)
+	keep(incoming)
+	return append(merged, responses...)
+}
+
+// trimTrailingModelTurn drops trailing model-role contents. Gemini rejects a
+// request whose last content is a model turn ("Requests ending with a model turn
+// are not supported") — a recovery, summarise, or handoff history arrives with
+// the previous task's reply last — and a model content that called a tool is no
+// more sendable when it trails, because the functionResponse Gemini requires must
+// follow its functionCall and nothing follows a trailing turn.
+func trimTrailingModelTurn(contents []geminiContent) []geminiContent {
+	last := len(contents) - 1
+	for last >= 0 && contents[last].Role == "model" {
+		last--
+	}
+	if last == len(contents)-1 {
+		return contents
+	}
+	return contents[:last+1]
 }
 
 func geminiToolResponseMap(content string) map[string]interface{} {
@@ -444,131 +473,4 @@ func geminiContainsSchemaReference(v any) bool {
 		}
 	}
 	return false
-}
-
-// allowedGeminiSchemaFields lists the only JSON fields Gemini accepts in a Schema.
-var allowedGeminiSchemaFields = map[string]bool{
-	"type":        true,
-	"description": true,
-	"enum":        true,
-	"items":       true,
-	"properties":  true,
-	"required":    true,
-	"nullable":    true,
-}
-
-// sanitizeGeminiSchema transforms a JSON Schema map into a form compatible with Gemini.
-// It converts "type" arrays to a single string, sets "nullable" when appropriate,
-// and removes any unsupported fields.
-func sanitizeGeminiSchema(schema map[string]any) map[string]any {
-	if schema == nil {
-		return nil
-	}
-
-	result := make(map[string]any)
-
-	// Handle "type" field specially
-	if typeVal, ok := schema["type"]; ok {
-		switch v := typeVal.(type) {
-		case string:
-			result["type"] = v
-		case []interface{}:
-			// Convert array to string, and optionally set nullable
-			var typeStr string
-			nullable := false
-			for _, elem := range v {
-				if s, ok := elem.(string); ok {
-					if s == "null" {
-						nullable = true
-						continue
-					}
-					// Take first non-null type as the primary type
-					if typeStr == "" {
-						typeStr = s
-					}
-				}
-			}
-			if typeStr == "" {
-				typeStr = "string" // fallback
-			}
-			result["type"] = typeStr
-			if nullable {
-				result["nullable"] = true
-			}
-		}
-	}
-
-	// Handle other allowed fields
-	for _, field := range []string{"description", "enum", "required"} {
-		if val, ok := schema[field]; ok {
-			result[field] = val
-		}
-	}
-
-	// Recursively handle "items"
-	if items, ok := schema["items"]; ok {
-		if itemsMap, ok := items.(map[string]any); ok {
-			result["items"] = sanitizeGeminiSchema(itemsMap)
-		}
-	}
-
-	// Recursively handle "properties"
-	if props, ok := schema["properties"]; ok {
-		if propsMap, ok := props.(map[string]any); ok {
-			cleanProps := make(map[string]any)
-			for k, v := range propsMap {
-				if subSchema, ok := v.(map[string]any); ok {
-					cleanProps[k] = sanitizeGeminiSchema(subSchema)
-				} else {
-					// If not a map, keep as is (unlikely)
-					cleanProps[k] = v
-				}
-			}
-			result["properties"] = cleanProps
-		}
-	}
-
-	// "nullable" may already be set, but if it wasn't, we don't add it.
-	// If it was set originally and not overwritten, preserve it.
-	if nullable, ok := schema["nullable"]; ok && nullable != nil {
-		if _, exists := result["nullable"]; !exists {
-			result["nullable"] = nullable
-		}
-	}
-
-	return result
-}
-
-// geminiSanitiseSchema converts arbitrary JSON Schema to Gemini's exact schema format.
-func geminiSanitiseSchema(params any) (*geminiSchema, error) {
-	if params == nil {
-		return nil, nil
-	}
-
-	// Step 1: Marshal to JSON to get a clean representation.
-	raw, err := json.Marshal(params)
-	if err != nil {
-		return nil, err
-	}
-
-	// Step 2: Unmarshal into a map to manipulate.
-	var schemaMap map[string]any
-	if err := json.Unmarshal(raw, &schemaMap); err != nil {
-		// If it's not an object (e.g., a primitive), we can't do much; treat as empty.
-		schemaMap = make(map[string]any)
-	}
-
-	// Step 3: Recursively sanitize.
-	cleanedMap := sanitizeGeminiSchema(schemaMap)
-
-	// Step 4: Marshal back to JSON and then unmarshal into the strict struct.
-	cleanedRaw, err := json.Marshal(cleanedMap)
-	if err != nil {
-		return nil, err
-	}
-	var schema geminiSchema
-	if err := json.Unmarshal(cleanedRaw, &schema); err != nil {
-		return nil, err
-	}
-	return &schema, nil
 }

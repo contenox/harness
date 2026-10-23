@@ -46,12 +46,18 @@ type CatalogFactory interface {
 
 // CatalogOptions carries optional construction dependencies used by vendor implementations.
 type CatalogOptions struct {
+	Authorize  func(context.Context) (http.Header, error)
 	HTTPClient *http.Client
 	Tracker    libtracker.ActivityTracker
 }
 
 // CatalogOption mutates CatalogOptions before a provider is constructed.
 type CatalogOption func(*CatalogOptions)
+
+// WithCatalogAuthorizer supplies current per-request credentials without storing tokens in catalog specs.
+func WithCatalogAuthorizer(authorize func(context.Context) (http.Header, error)) CatalogOption {
+	return func(opts *CatalogOptions) { opts.Authorize = authorize }
+}
 
 // WithCatalogHTTPClient overrides the HTTP client used for observation and Provider construction.
 func WithCatalogHTTPClient(client *http.Client) CatalogOption {
@@ -76,6 +82,15 @@ var (
 	catalogRegistryMu sync.RWMutex
 	catalogRegistry   = map[string]CatalogProviderConstructor{}
 )
+
+// HasCatalogProvider reports whether a catalog implementation is registered
+// for backendType.
+func HasCatalogProvider(backendType string) bool {
+	catalogRegistryMu.RLock()
+	defer catalogRegistryMu.RUnlock()
+	_, ok := catalogRegistry[strings.ToLower(strings.TrimSpace(backendType))]
+	return ok
+}
 
 // RegisterCatalogProvider registers a backend catalog implementation by type.
 // Vendor packages call this from init() to avoid import cycles from modelrepo -> vendor packages.
@@ -113,7 +128,7 @@ func (registryCatalogFactory) NewCatalogProvider(spec BackendSpec, opts ...Catal
 	}
 
 	options := CatalogOptions{
-		HTTPClient: http.DefaultClient,
+		HTTPClient: SharedHTTPClient,
 		Tracker:    libtracker.NoopTracker{},
 	}
 	for _, opt := range opts {
@@ -122,7 +137,7 @@ func (registryCatalogFactory) NewCatalogProvider(spec BackendSpec, opts ...Catal
 		}
 	}
 	if options.HTTPClient == nil {
-		options.HTTPClient = http.DefaultClient
+		options.HTTPClient = SharedHTTPClient
 	}
 	if options.Tracker == nil {
 		options.Tracker = libtracker.NoopTracker{}

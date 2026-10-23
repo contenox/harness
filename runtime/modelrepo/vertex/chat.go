@@ -13,8 +13,6 @@ type vertexChatClient struct {
 	vertexClient
 }
 
-// Chat implements modelrepo.LLMChatClient against the Gemini generateContent
-// wire format (vertex-google).
 func (c *vertexChatClient) Chat(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (modelrepo.ChatResult, error) {
 	reportErr, reportChange, end := c.tracker.Start(ctx, "chat", "vertex", "model", c.modelName)
 	defer end()
@@ -56,10 +54,9 @@ func (c *vertexChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 	}
 
 	var (
-		outText       string
-		thinkingText  string
-		toolCalls     []modelrepo.ToolCall
-		lastSignature string
+		outText      string
+		thinkingText string
+		toolCalls    []modelrepo.ToolCall
 	)
 	for _, p := range cand.Content.Parts {
 		switch {
@@ -83,30 +80,49 @@ func (c *vertexChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 					Arguments: string(argsJSON),
 				},
 			}
-			sig := p.ThoughtSignature
-			if sig == "" {
-				sig = p.FunctionCall.ThoughtSignature
-			}
-			if sig == "" {
-				sig = lastSignature
-			}
-			if sig != "" {
-				lastSignature = sig
-				tc.ProviderMeta = map[string]string{"thought_signature": sig}
+			// A signature belongs to the part the API returned it on: the
+			// first of a parallel group carries one and the rest carry none, so
+			// one call's signature is never replayed as another's.
+			if p.ThoughtSignature != "" {
+				tc.ProviderMeta = map[string]string{thoughtSignatureMetaKey: p.ThoughtSignature}
 			}
 			toolCalls = append(toolCalls, tc)
 		}
 	}
 
 	if outText == "" && len(toolCalls) == 0 {
-		err := fmt.Errorf("empty content from Vertex AI model %s", c.modelName)
-		reportErr(err)
-		return modelrepo.ChatResult{}, err
+		// A turn that carries only thoughts or a thought signature is a legal
+		// end-of-turn the vendor documents, so it is reported as one; a broken
+		// tool-call turn is not, because reported as success it lands in
+		// history as a completed reply and the caller's retry never fires.
+		if cand.FinishReason == "MALFORMED_FUNCTION_CALL" {
+			err := fmt.Errorf("empty content from Vertex AI model %s: finish reason (%s)", c.modelName, cand.FinishReason)
+			reportErr(err)
+			return modelrepo.ChatResult{}, err
+		}
+		empty := modelrepo.ChatResult{
+			Message: modelrepo.Message{
+				Role:         "assistant",
+				Content:      "",
+				Thinking:     thinkingText,
+				Continuation: responseContinuation(c.modelName, cand.Content.Parts),
+			},
+			Usage: resp.UsageMetadata.neutralUsage(),
+		}
+		reportChange("chat_completed_empty", empty)
+		return empty, nil
 	}
 
 	result := modelrepo.ChatResult{
-		Message:   modelrepo.Message{Role: "assistant", Content: outText, Thinking: thinkingText},
-		ToolCalls: toolCalls,
+		Message: modelrepo.Message{
+			Role:         "assistant",
+			Content:      outText,
+			Thinking:     thinkingText,
+			Continuation: responseContinuation(c.modelName, cand.Content.Parts),
+		},
+		ToolCalls:    toolCalls,
+		Usage:        resp.UsageMetadata.neutralUsage(),
+		FinishReason: cand.FinishReason,
 	}
 	reportChange("chat_completed", result)
 	return result, nil

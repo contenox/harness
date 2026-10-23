@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/contenox/harness/libtracker"
-	"github.com/contenox/harness/runtime/modelregistry"
+
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
@@ -36,9 +37,54 @@ func (p *catalogProvider) Type() string {
 }
 
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(p.baseURL(), "/")+"/v1beta/models", nil)
+	// Catalog listing is a non-streaming call: bound it end-to-end.
+	ctx, cancel := modelrepo.NonStreamingContext(ctx)
+	defer cancel()
+
+	names, err := p.listModelNames(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	models := make([]modelrepo.ObservedModel, 0, len(names))
+	for _, name := range names {
+		observed, err := p.describeModel(ctx, name)
+		if err != nil {
+			return nil, err
+		}
+		models = append(models, observed)
+	}
+	return models, nil
+}
+
+// listModelNames walks every page of the vendor's model list. The list is
+// paginated (nextPageToken, at most 1000 models per page), so a single request
+// reports only the first page as the whole catalogue.
+func (p *catalogProvider) listModelNames(ctx context.Context) ([]string, error) {
+	var names []string
+	pageToken := ""
+	for {
+		page, next, err := p.listModelPage(ctx, pageToken)
+		if err != nil {
+			return nil, err
+		}
+		names = append(names, page...)
+		if next == "" {
+			return names, nil
+		}
+		pageToken = next
+	}
+}
+
+func (p *catalogProvider) listModelPage(ctx context.Context, pageToken string) ([]string, string, error) {
+	listURL := strings.TrimRight(p.baseURL(), "/") + "/v1beta/models?pageSize=1000"
+	if pageToken != "" {
+		listURL += "&pageToken=" + url.QueryEscape(pageToken)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, listURL, nil)
+	if err != nil {
+		return nil, "", err
 	}
 	if p.spec.APIKey != "" {
 		req.Header.Set("X-Goog-Api-Key", p.spec.APIKey)
@@ -46,36 +92,35 @@ func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedM
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Gemini catalog returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return nil, "", fmt.Errorf("Gemini catalog returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var payload struct {
 		Models []struct {
 			Name string `json:"name"`
 		} `json:"models"`
+		NextPageToken string `json:"nextPageToken"`
 	}
 	if err := json.Unmarshal(body, &payload); err != nil {
-		return nil, fmt.Errorf("decode Gemini catalog response: %w", err)
+		return nil, "", fmt.Errorf("decode Gemini catalog response: %w", err)
 	}
 
-	models := make([]modelrepo.ObservedModel, 0, len(payload.Models))
+	names := make([]string, 0, len(payload.Models))
 	for _, item := range payload.Models {
-		observed, err := p.describeModel(ctx, item.Name)
-		if err != nil {
-			return nil, err
+		if item.Name != "" {
+			names = append(names, item.Name)
 		}
-		models = append(models, observed)
 	}
-	return models, nil
+	return names, payload.NextPageToken, nil
 }
 
 func (p *catalogProvider) ProviderFor(model modelrepo.ObservedModel) modelrepo.Provider {
@@ -97,6 +142,7 @@ func (p *catalogProvider) baseURL() string {
 	return base
 }
 
+// describeModel reads one model by its resource name and lists it under the bare id that role assignment and generation use.
 func (p *catalogProvider) describeModel(ctx context.Context, modelName string) (modelrepo.ObservedModel, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/v1beta/%s", strings.TrimRight(p.baseURL(), "/"), modelName), nil)
 	if err != nil {
@@ -132,7 +178,7 @@ func (p *catalogProvider) describeModel(ctx context.Context, modelName string) (
 	}
 
 	observed := modelrepo.ObservedModel{
-		Name:          modelName,
+		Name:          modelrepo.ModelID(modelName),
 		ContextLength: payload.InputTokenLimit,
 		CapabilityConfig: modelrepo.CapabilityConfig{
 			ContextLength:   payload.InputTokenLimit,
@@ -140,6 +186,9 @@ func (p *catalogProvider) describeModel(ctx context.Context, modelName string) (
 		},
 	}
 	observed.CanThink = payload.Thinking
+	if payload.Thinking {
+		observed.ThinkingTypes = ThinkingDeclarationFor(modelName)
+	}
 	for _, method := range payload.SupportedGenerationMethods {
 		switch method {
 		case "generateContent":
@@ -150,9 +199,9 @@ func (p *catalogProvider) describeModel(ctx context.Context, modelName string) (
 			observed.CanEmbed = true
 		}
 	}
-	// Gemini's model API reports no input modalities, so vision comes from the
-	// hand-maintained Google allowlist rather than runtime detection.
-	observed.CanVision = observed.CanChat && modelregistry.GeminiModelSupportsVision(observed.Name)
+	// Gemini's model API reports no input modalities; vision/audio come from hand-maintained allowlists.
+	observed.CanVision = observed.CanChat && modelrepo.GeminiModelSupportsVision(observed.Name)
+	observed.CanAudio = observed.CanChat && modelrepo.GeminiModelSupportsAudio(observed.Name)
 
 	return observed, nil
 }

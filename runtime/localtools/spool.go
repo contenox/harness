@@ -16,10 +16,10 @@ package localtools
 // kept, oldest-first eviction beyond that. Both caps are documented constants.
 
 import (
-	"github.com/contenox/harness/runtime/homedir"
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/contenox/harness/runtime/homedir"
 	"io"
 	"os"
 	"path/filepath"

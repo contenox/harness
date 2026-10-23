@@ -4,19 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"math/rand"
 	"strings"
 
 	"github.com/contenox/harness/libtracker"
-	libmodelprovider "github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo"
 )
 
+// filterCandidates keeps the providers that serve a requested model. A model
+// served under the exact requested name is the match; names that only agree
+// once normalised are candidates only when no provider carries the exact name,
+// so two models that differ by organisation prefix never alternate.
 func filterCandidates(
 	ctx context.Context,
 	req Request,
-	getModels func(ctx context.Context, backendTypes ...string) ([]libmodelprovider.Provider, error),
-	capCheck func(libmodelprovider.Provider) bool,
-) ([]libmodelprovider.Provider, error) {
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+	capCheck func(modelrepo.Provider) bool,
+) ([]modelrepo.Provider, error) {
 	providerTypes := req.ProviderTypes
 	providers, err := getModels(ctx, providerTypes...)
 	if err != nil {
@@ -26,39 +31,34 @@ func filterCandidates(
 		return nil, ErrNoAvailableModels
 	}
 
-	// Use a map to track seen providers by ID to prevent duplicates
 	seenProviders := make(map[string]bool)
-	var candidates []libmodelprovider.Provider
+	var candidates []modelrepo.Provider
 
-	// Handle model name preferences
 	if len(req.ModelNames) > 0 {
-		// Check preferred models in order of priority
 		for _, preferredModel := range req.ModelNames {
-			// Use normalized model names for matching
 			normalizedPreferred := NormalizeModelName(preferredModel)
-
+			var exact, loose []modelrepo.Provider
 			for _, p := range providers {
-				if seenProviders[p.GetID()] {
+				if seenProviders[candidateKey(p)] || !validateProvider(p, req.ContextLength, capCheck) {
 					continue
 				}
-
-				// Normalize provider's model name for comparison
-				currentNormalized := NormalizeModelName(p.ModelName())
-				currentFull := p.ModelName()
-
-				// Match either normalized or full name
-				if currentNormalized != normalizedPreferred && currentFull != preferredModel {
-					continue
+				switch {
+				case p.ModelName() == preferredModel:
+					exact = append(exact, p)
+				case NormalizeModelName(p.ModelName()) == normalizedPreferred:
+					loose = append(loose, p)
 				}
-
-				if validateProvider(p, req.ContextLength, capCheck) {
-					candidates = append(candidates, p)
-					seenProviders[p.GetID()] = true
-				}
+			}
+			matched := exact
+			if len(matched) == 0 {
+				matched = loose
+			}
+			for _, p := range matched {
+				candidates = append(candidates, p)
+				seenProviders[candidateKey(p)] = true
 			}
 		}
 	} else {
-		// Consider all providers when no model names specified
 		for _, p := range providers {
 			if validateProvider(p, req.ContextLength, capCheck) {
 				candidates = append(candidates, p)
@@ -67,12 +67,6 @@ func filterCandidates(
 	}
 
 	if len(candidates) == 0 {
-		// Distinguish a context-only shortfall — capable, name-matched models exist
-		// but every one advertises less context than the request needs (e.g. tool
-		// schemas pushed the requirement past a small model's window) — from a plain
-		// no-match, so the caller gets an actionable message instead of an opaque
-		// failure. A capable model whose context is 0 (unknown) is never rejected on
-		// context, so reaching here with capable models means they are all too small.
 		if req.ContextLength > 0 {
 			largest := 0
 			var largestName string
@@ -91,37 +85,64 @@ func filterCandidates(
 				}
 			}
 			if capable && largest > 0 && largest < req.ContextLength {
-				return nil, fmt.Errorf("%w: request needs %d tokens of context but the largest available model %q provides only %d; use a larger-context model or reduce the request size (fewer tools or shorter history)",
-					ErrNoSatisfactoryModel, req.ContextLength, largestName, largest)
+				// A window the caller requested stays a requirement. An ask the
+				// executor marked as a preference carries an output reserve on
+				// top of an input that already fits, so it is fitted to the
+				// model's own window instead of refusing a call it can serve.
+				requested := modelrepo.RequestedContextLengthFromContext(ctx)
+				if !req.FitContextToModel || requested > largest {
+					return nil, fmt.Errorf("%w: requested context capacity is %d tokens but the largest matching model %q provides only %d; choose a larger-context model or lower the requested context window",
+						ErrNoSatisfactoryModel, req.ContextLength, largestName, largest)
+				}
+				req.ContextLength = largest
+				for _, p := range providers {
+					if !validateProvider(p, req.ContextLength, capCheck) {
+						continue
+					}
+					if len(req.ModelNames) > 0 && !providerMatchesAnyName(p, req.ModelNames) {
+						continue
+					}
+					if seenProviders[candidateKey(p)] {
+						continue
+					}
+					candidates = append(candidates, p)
+					seenProviders[candidateKey(p)] = true
+				}
 			}
 		}
 
-		var builder strings.Builder
+		if len(candidates) == 0 {
+			var builder strings.Builder
 
-		builder.WriteString("no models matched requirements:\n")
-		builder.WriteString(fmt.Sprintf("- provider: %q\n", providerTypes))
-		builder.WriteString(fmt.Sprintf("- model names: %v\n", req.ModelNames))
-		builder.WriteString(fmt.Sprintf("- required context length: %d\n", req.ContextLength))
-		if req.RequiresVision {
-			builder.WriteString("- requires vision (request carries images)\n")
+			builder.WriteString("no models matched requirements:\n")
+			builder.WriteString(fmt.Sprintf("- provider: %q\n", providerTypes))
+			builder.WriteString(fmt.Sprintf("- model names: %v\n", req.ModelNames))
+			builder.WriteString(fmt.Sprintf("- required context length: %d\n", req.ContextLength))
+			if req.RequiresVision {
+				builder.WriteString("- requires vision (request carries images)\n")
+			}
+			if req.RequiresAudio {
+				builder.WriteString("- requires audio (request carries audio attachments)\n")
+			}
+
+			builder.WriteString("- available models:\n")
+			for _, p := range providers {
+				builder.WriteString(fmt.Sprintf("  • %s (ID: %s, context: %d, canchat: %v, can embed: %v, canprompt: %v, canvision: %v, canaudio: %v)\n",
+					p.ModelName(), p.GetID(), p.GetContextLength(), p.CanChat(), p.CanEmbed(), p.CanPrompt(), p.CanVision(), p.CanAudio()))
+			}
+
+			return nil, fmt.Errorf("%w\n%s", ErrNoSatisfactoryModel, builder.String())
 		}
-
-		builder.WriteString("- available models:\n")
-		for _, p := range providers {
-			builder.WriteString(fmt.Sprintf("  • %s (ID: %s, context: %d, canchat: %v, can embed: %v, canprompt: %v, canvision: %v)\n",
-				p.ModelName(), p.GetID(), p.GetContextLength(), p.CanChat(), p.CanEmbed(), p.CanPrompt(), p.CanVision()))
-		}
-
-		return nil, fmt.Errorf("%w\n%s", ErrNoSatisfactoryModel, builder.String())
 	}
 
 	return candidates, nil
 }
 
-// providerMatchesAnyName reports whether p's model name matches any of names,
-// comparing both the full name and the normalized form (the same match rule the
-// candidate filter uses, minus its per-name priority ordering).
-func providerMatchesAnyName(p libmodelprovider.Provider, names []string) bool {
+func candidateKey(p modelrepo.Provider) string {
+	return p.GetID() + "\x00" + strings.Join(p.GetBackendIDs(), "\x00")
+}
+
+func providerMatchesAnyName(p modelrepo.Provider, names []string) bool {
 	full := p.ModelName()
 	normalized := NormalizeModelName(full)
 	for _, name := range names {
@@ -132,10 +153,7 @@ func providerMatchesAnyName(p libmodelprovider.Provider, names []string) bool {
 	return false
 }
 
-// validateProvider checks if a provider meets requirements.
-// A provider whose context length is 0 (unknown) is never rejected on context
-// grounds — we only filter out models that are *known* to be insufficient.
-func validateProvider(p libmodelprovider.Provider, minContext int, capCheck func(libmodelprovider.Provider) bool) bool {
+func validateProvider(p modelrepo.Provider, minContext int, capCheck func(modelrepo.Provider) bool) bool {
 	cl := p.GetContextLength()
 	if minContext > 0 && cl > 0 && cl < minContext {
 		return false
@@ -143,29 +161,26 @@ func validateProvider(p libmodelprovider.Provider, minContext int, capCheck func
 	return capCheck(p)
 }
 
-// NormalizeModelName standardizes model names for comparison
+// NormalizeModelName standardizes model names for comparison: lowercased,
+// separators and organization prefix stripped, quantization suffixes and any
+// trailing ":version" removed.
 func NormalizeModelName(modelName string) string {
-	// Convert to lowercase for case-insensitive comparison
 	normalized := strings.ToLower(modelName)
 
-	// Remove common prefixes and suffixes
 	normalized = strings.ReplaceAll(normalized, " ", "")
 	normalized = strings.ReplaceAll(normalized, "-", "")
 	normalized = strings.ReplaceAll(normalized, "_", "")
 	normalized = strings.ReplaceAll(normalized, ".", "")
 
-	// Remove organization prefix if present
 	if parts := strings.Split(normalized, "/"); len(parts) > 1 {
 		normalized = parts[1]
 	}
 
-	// Remove quantization suffixes
 	normalized = strings.ReplaceAll(normalized, "awq", "")
 	normalized = strings.ReplaceAll(normalized, "gptq", "")
 	normalized = strings.ReplaceAll(normalized, "4bit", "")
 	normalized = strings.ReplaceAll(normalized, "fp16", "")
 
-	// Remove version numbers
 	if idx := strings.LastIndex(normalized, ":"); idx != -1 {
 		normalized = normalized[:idx]
 	}
@@ -173,29 +188,52 @@ func NormalizeModelName(modelName string) string {
 	return normalized
 }
 
-// visionCapCheck wraps a base capability check with the vision requirement
-// when the request carries image attachments, so image-bearing requests only
-// resolve to providers that report CanVision.
-func visionCapCheck(req Request, base func(libmodelprovider.Provider) bool) func(libmodelprovider.Provider) bool {
+func refusePinnedNonVision(
+	ctx context.Context,
+	req Request,
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+	base func(modelrepo.Provider) bool,
+) error {
+	if !req.RequiresVision || len(req.ModelNames) == 0 {
+		return nil
+	}
+	providers, err := getModels(ctx, req.ProviderTypes...)
+	if err != nil {
+		return nil // let filterCandidates surface the lookup failure
+	}
+	for _, name := range req.ModelNames {
+		matched := false
+		for _, p := range providers {
+			if !providerMatchesAnyName(p, []string{name}) || !base(p) {
+				continue
+			}
+			matched = true
+			if p.CanVision() {
+				return nil
+			}
+		}
+		if matched {
+			return fmt.Errorf("%w: requested model %q accepts text only and the request carries images; name a vision-capable model, set a vision-capable default, or drop the model pin to let routing pick one",
+				ErrPinnedModelLacksVision, name)
+		}
+	}
+	return nil
+}
+
+func visionCapCheck(req Request, base func(modelrepo.Provider) bool) func(modelrepo.Provider) bool {
 	if !req.RequiresVision {
 		return base
 	}
-	return func(p libmodelprovider.Provider) bool {
+	return func(p modelrepo.Provider) bool {
 		return base(p) && p.CanVision()
 	}
 }
 
-// classifyVisionFailure distinguishes a vision-capability shortfall from a
-// plain no-match: when a vision-requiring request found no candidates but the
-// same request without the vision requirement would have, the failure is the
-// missing vision capability and the returned error says so. The request still
-// fails either way — degrading to a text-only model would silently drop the
-// images, which is never acceptable.
 func classifyVisionFailure(
 	ctx context.Context,
 	req Request,
-	getModels func(ctx context.Context, backendTypes ...string) ([]libmodelprovider.Provider, error),
-	base func(libmodelprovider.Provider) bool,
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+	base func(modelrepo.Provider) bool,
 	err error,
 ) error {
 	if !req.RequiresVision || !errors.Is(err, ErrNoSatisfactoryModel) {
@@ -212,13 +250,82 @@ func classifyVisionFailure(
 	return fmt.Errorf("%w: matching models %v accept text only; use a vision-capable model for requests with images", ErrNoVisionCapableModel, names)
 }
 
+// Selection is one resolved (provider, backend) pair; the first in an ordered
+// set is the policy's pick, later ones are failover alternates.
+type Selection struct {
+	Provider modelrepo.Provider
+	Backend  string
+}
+
+func orderSelections(candidates []modelrepo.Provider, policy Policy) ([]Selection, error) {
+	provider, backend, err := policy(candidates)
+	if err != nil {
+		return nil, err
+	}
+	selections := []Selection{{Provider: provider, Backend: backend}}
+	// The pick is skipped once by identity (ID + backend); two entries with the
+	// same ID and backend are the same target, so dropping one is correct.
+	skippedPick := false
+	for _, p := range candidates {
+		if p == nil {
+			continue
+		}
+		for _, b := range p.GetBackendIDs() {
+			if !skippedPick && b == backend && p.GetID() == provider.GetID() {
+				skippedPick = true
+				continue
+			}
+			selections = append(selections, Selection{Provider: p, Backend: b})
+		}
+	}
+	return selections, nil
+}
+
+func chatCandidates(
+	ctx context.Context,
+	req Request,
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+) ([]modelrepo.Provider, error) {
+	if err := refusePinnedNonVision(ctx, req, getModels, modelrepo.Provider.CanChat); err != nil {
+		return nil, err
+	}
+	if err := refusePinnedNonAudio(ctx, req, getModels, modelrepo.Provider.CanChat); err != nil {
+		return nil, err
+	}
+	candidates, err := filterCandidates(ctx, req, getModels, audioCapCheck(req, visionCapCheck(req, modelrepo.Provider.CanChat)))
+	if err != nil {
+		err = classifyVisionFailure(ctx, req, getModels, modelrepo.Provider.CanChat, err)
+		return nil, classifyAudioFailure(ctx, req, getModels, modelrepo.Provider.CanChat, err)
+	}
+	return candidates, nil
+}
+
+// ChatSelections resolves the failover-ordered (provider, backend) pairs for a
+// chat request; the caller excludes a backend whose refusal is terminal for it
+// and moves to the next.
+func ChatSelections(
+	ctx context.Context,
+	req Request,
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+	policy Policy,
+) ([]Selection, error) {
+	if req.ContextLength < 0 {
+		return nil, fmt.Errorf("context length must be non-negative")
+	}
+	candidates, err := chatCandidates(ctx, req, getModels)
+	if err != nil {
+		return nil, err
+	}
+	return orderSelections(candidates, policy)
+}
+
 // Chat implements the chat resolution workflow using the provided dependencies.
 func Chat(
 	ctx context.Context,
 	req Request,
-	getModels func(ctx context.Context, backendTypes ...string) ([]libmodelprovider.Provider, error),
-	resolver func(candidates []libmodelprovider.Provider) (libmodelprovider.Provider, string, error),
-) (libmodelprovider.LLMChatClient, libmodelprovider.Provider, string, error) {
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+	resolver func(candidates []modelrepo.Provider) (modelrepo.Provider, string, error),
+) (modelrepo.LLMChatClient, modelrepo.Provider, string, error) {
 	tracker := req.Tracker
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
@@ -231,12 +338,12 @@ func Chat(
 		"model_names", req.ModelNames,
 		"context_length", req.ContextLength,
 		"requires_vision", req.RequiresVision,
+		"requires_audio", req.RequiresAudio,
 	)
 	defer endFn()
 
-	candidates, err := filterCandidates(ctx, req, getModels, visionCapCheck(req, libmodelprovider.Provider.CanChat))
+	candidates, err := chatCandidates(ctx, req, getModels)
 	if err != nil {
-		err = classifyVisionFailure(ctx, req, getModels, libmodelprovider.Provider.CanChat, err)
 		reportErr(err)
 		return nil, nil, "", err
 	}
@@ -250,7 +357,7 @@ func Chat(
 		reportErr(err)
 		return nil, nil, "", err
 	}
-	client, err := provider.GetChatConnection(libmodelprovider.WithRequestedContextLength(ctx, req.ContextLength), backend)
+	client, err := provider.GetChatConnection(modelrepo.WithRequestedContextLength(ctx, req.ContextLength), backend)
 	if err != nil {
 		reportErr(err)
 		return nil, nil, "", err
@@ -267,9 +374,9 @@ func Chat(
 func Embed(
 	ctx context.Context,
 	embedReq EmbedRequest,
-	getModels func(ctx context.Context, backendTypes ...string) ([]libmodelprovider.Provider, error),
-	resolver func(candidates []libmodelprovider.Provider) (libmodelprovider.Provider, string, error),
-) (libmodelprovider.LLMEmbedClient, libmodelprovider.Provider, string, error) {
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+	resolver func(candidates []modelrepo.Provider) (modelrepo.Provider, string, error),
+) (modelrepo.LLMEmbedClient, modelrepo.Provider, string, error) {
 	tracker := embedReq.Tracker
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
@@ -292,7 +399,7 @@ func Embed(
 		ModelNames:    []string{embedReq.ModelName},
 		ProviderTypes: []string{embedReq.ProviderType},
 	}
-	candidates, err := filterCandidates(ctx, req, getModels, libmodelprovider.Provider.CanEmbed)
+	candidates, err := filterCandidates(ctx, req, getModels, modelrepo.Provider.CanEmbed)
 	if err != nil {
 		reportErr(err)
 		return nil, nil, "", fmt.Errorf("failed to filter candidates: %w", err)
@@ -315,13 +422,47 @@ func Embed(
 	return client, provider, backend, nil
 }
 
+func streamCandidates(
+	ctx context.Context,
+	req Request,
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+) ([]modelrepo.Provider, error) {
+	if err := refusePinnedNonVision(ctx, req, getModels, modelrepo.Provider.CanStream); err != nil {
+		return nil, err
+	}
+	if err := refusePinnedNonAudio(ctx, req, getModels, modelrepo.Provider.CanStream); err != nil {
+		return nil, err
+	}
+	candidates, err := filterCandidates(ctx, req, getModels, audioCapCheck(req, visionCapCheck(req, modelrepo.Provider.CanStream)))
+	if err != nil {
+		err = classifyVisionFailure(ctx, req, getModels, modelrepo.Provider.CanStream, err)
+		return nil, classifyAudioFailure(ctx, req, getModels, modelrepo.Provider.CanStream, err)
+	}
+	return candidates, nil
+}
+
+// StreamSelections resolves the failover-ordered (provider, backend) pairs for
+// a streaming request; see ChatSelections for the iteration contract.
+func StreamSelections(
+	ctx context.Context,
+	req Request,
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+	policy Policy,
+) ([]Selection, error) {
+	candidates, err := streamCandidates(ctx, req, getModels)
+	if err != nil {
+		return nil, err
+	}
+	return orderSelections(candidates, policy)
+}
+
 // Stream implements the streaming resolution workflow using the provided dependencies.
 func Stream(
 	ctx context.Context,
 	req Request,
-	getModels func(ctx context.Context, backendTypes ...string) ([]libmodelprovider.Provider, error),
-	resolver func(candidates []libmodelprovider.Provider) (libmodelprovider.Provider, string, error),
-) (libmodelprovider.LLMStreamClient, libmodelprovider.Provider, string, error) {
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+	resolver func(candidates []modelrepo.Provider) (modelrepo.Provider, string, error),
+) (modelrepo.LLMStreamClient, modelrepo.Provider, string, error) {
 	tracker := req.Tracker
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
@@ -334,12 +475,12 @@ func Stream(
 		"model_names", req.ModelNames,
 		"context_length", req.ContextLength,
 		"requires_vision", req.RequiresVision,
+		"requires_audio", req.RequiresAudio,
 	)
 	defer endFn()
 
-	candidates, err := filterCandidates(ctx, req, getModels, visionCapCheck(req, libmodelprovider.Provider.CanStream))
+	candidates, err := streamCandidates(ctx, req, getModels)
 	if err != nil {
-		err = classifyVisionFailure(ctx, req, getModels, libmodelprovider.Provider.CanStream, err)
 		reportErr(err)
 		return nil, nil, "", err
 	}
@@ -348,7 +489,7 @@ func Stream(
 		reportErr(err)
 		return nil, nil, "", err
 	}
-	client, err := provider.GetStreamConnection(libmodelprovider.WithRequestedContextLength(ctx, req.ContextLength), backend)
+	client, err := provider.GetStreamConnection(modelrepo.WithRequestedContextLength(ctx, req.ContextLength), backend)
 	if err != nil {
 		reportErr(err)
 		return nil, nil, "", err
@@ -361,13 +502,32 @@ func Stream(
 	return client, provider, backend, nil
 }
 
+// PromptExecuteSelections resolves the failover-ordered (provider, backend)
+// pairs for a prompt-execution request; see ChatSelections for the iteration
+// contract.
+func PromptExecuteSelections(
+	ctx context.Context,
+	req Request,
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+	policy Policy,
+) ([]Selection, error) {
+	if len(req.ModelNames) == 0 {
+		return nil, errors.New("at least one model name is required")
+	}
+	candidates, err := filterCandidates(ctx, req, getModels, modelrepo.Provider.CanPrompt)
+	if err != nil {
+		return nil, err
+	}
+	return orderSelections(candidates, policy)
+}
+
 // PromptExecute implements the prompt execution resolution workflow using the provided dependencies.
 func PromptExecute(
 	ctx context.Context,
 	req Request,
-	getModels func(ctx context.Context, backendTypes ...string) ([]libmodelprovider.Provider, error),
-	resolver func(candidates []libmodelprovider.Provider) (libmodelprovider.Provider, string, error),
-) (libmodelprovider.LLMPromptExecClient, libmodelprovider.Provider, string, error) {
+	getModels func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error),
+	resolver func(candidates []modelrepo.Provider) (modelrepo.Provider, string, error),
+) (modelrepo.LLMPromptExecClient, modelrepo.Provider, string, error) {
 	tracker := req.Tracker
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
@@ -387,7 +547,7 @@ func PromptExecute(
 		reportErr(err)
 		return nil, nil, "", err
 	}
-	candidates, err := filterCandidates(ctx, req, getModels, libmodelprovider.Provider.CanPrompt)
+	candidates, err := filterCandidates(ctx, req, getModels, modelrepo.Provider.CanPrompt)
 	if err != nil {
 		reportErr(err)
 		return nil, nil, "", err
@@ -397,7 +557,7 @@ func PromptExecute(
 		reportErr(err)
 		return nil, nil, "", err
 	}
-	client, err := provider.GetPromptConnection(libmodelprovider.WithRequestedContextLength(ctx, req.ContextLength), backend)
+	client, err := provider.GetPromptConnection(modelrepo.WithRequestedContextLength(ctx, req.ContextLength), backend)
 	if err != nil {
 		reportErr(err)
 		return nil, nil, "", err
@@ -411,10 +571,56 @@ func PromptExecute(
 	return client, provider, backend, nil
 }
 
-// Randomly is a policy that selects a random provider and random backend.
-//
-// This provides basic load balancing across available resources.
-func Randomly(candidates []libmodelprovider.Provider) (libmodelprovider.Provider, string, error) {
+// Policy selects one provider and one of its backends from the candidate set.
+type Policy = func(candidates []modelrepo.Provider) (modelrepo.Provider, string, error)
+
+// StickyOrRandom returns a Policy that pins a session to one provider+backend
+// via rendezvous hashing over the candidate set; an empty key behaves exactly
+// like Randomly.
+func StickyOrRandom(sessionKey string) Policy {
+	if sessionKey == "" {
+		return Randomly
+	}
+	return func(candidates []modelrepo.Provider) (modelrepo.Provider, string, error) {
+		if len(candidates) == 0 {
+			return nil, "", ErrNoSatisfactoryModel
+		}
+		var (
+			best        modelrepo.Provider
+			bestBackend string
+			bestScore   uint64
+			found       bool
+		)
+		for _, p := range candidates {
+			if p == nil {
+				continue
+			}
+			for _, backend := range p.GetBackendIDs() {
+				score := rendezvousScore(sessionKey, p.GetID(), backend)
+				if !found || score > bestScore {
+					best, bestBackend, bestScore, found = p, backend, score, true
+				}
+			}
+		}
+		if !found {
+			return nil, "", ErrNoSatisfactoryModel
+		}
+		return best, bestBackend, nil
+	}
+}
+
+func rendezvousScore(sessionKey, providerID, backendID string) uint64 {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(sessionKey))
+	_, _ = h.Write([]byte{0})
+	_, _ = h.Write([]byte(providerID))
+	_, _ = h.Write([]byte{0})
+	_, _ = h.Write([]byte(backendID))
+	return h.Sum64()
+}
+
+// Randomly is a Policy that selects a random provider and random backend.
+func Randomly(candidates []modelrepo.Provider) (modelrepo.Provider, string, error) {
 	provider, err := selectRandomProvider(candidates)
 	if err != nil {
 		return nil, "", err
@@ -434,12 +640,15 @@ var ErrNoAvailableModels = errors.New("no models found in runtime state")
 // ErrNoSatisfactoryModel is returned when providers exist but none match requirements.
 var ErrNoSatisfactoryModel = errors.New("no model matched the requirements")
 
-// ErrNoVisionCapableModel is returned when a request carries image attachments
-// but no candidate model supports vision. It wraps ErrNoSatisfactoryModel so
-// existing no-match handling (e.g. the resolution self-heal cycle) still fires.
+// ErrNoVisionCapableModel is returned when an image-bearing request has no
+// vision-capable candidate; it wraps ErrNoSatisfactoryModel.
 var ErrNoVisionCapableModel = fmt.Errorf("%w: no available model supports image input (vision)", ErrNoSatisfactoryModel)
 
-func selectRandomBackend(provider libmodelprovider.Provider) (string, error) {
+// ErrPinnedModelLacksVision is returned when an image-bearing request pins a
+// model that cannot accept images; it does not wrap ErrNoSatisfactoryModel.
+var ErrPinnedModelLacksVision = errors.New("explicitly requested model lacks vision capability")
+
+func selectRandomBackend(provider modelrepo.Provider) (string, error) {
 	if provider == nil {
 		return "", ErrNoSatisfactoryModel
 	}
@@ -452,7 +661,7 @@ func selectRandomBackend(provider libmodelprovider.Provider) (string, error) {
 	return backendIDs[rand.Intn(len(backendIDs))], nil
 }
 
-func selectRandomProvider(candidates []libmodelprovider.Provider) (libmodelprovider.Provider, error) {
+func selectRandomProvider(candidates []modelrepo.Provider) (modelrepo.Provider, error) {
 	if len(candidates) == 0 {
 		return nil, ErrNoSatisfactoryModel
 	}

@@ -32,10 +32,15 @@ implemented** peers from the reference Rust SDK
 
 | Target | Validates | Peer binary |
 | --- | --- | --- |
-| `make acp-conformance` | our **agent** side (`libacp/cmd/acp-stub-agent` via `AgentSideConnection`) | `acp-validator`, a conformance-checking ACP client |
-| `make acp-client-e2e` | our **client** side (`ClientSideConnection` over `acpexec`) | `testy`, the SDK's deterministic test agent |
+| `make acp-conformance` | our **agent** side — the shipped `contenox acp` binary over stdio, driven by a deterministic noop chain | `acp-validator`, a conformance-checking ACP client |
+| `make acp-host-e2e` | our **client** side (`ClientSideConnection` through `runtime/agenthost`) | `testy`, the SDK's deterministic test agent |
 
-Both targets skip-or-fail cleanly when their binary env var is unset:
+Both targets fail cleanly when their binary env var is unset:
+
+- `ACP_VALIDATOR_BIN` — build the crate vendored at `tools/acp-validator`
+  (see its README; it needs a sibling rust-sdk checkout). `acp-conformance`
+  drives `contenox acp --auto` itself, so it replaces the deleted Go stub-agent
+  harness rather than exercising a Go fixture.
 
 - `ACP_TESTY_BIN` / `ACP_MCP_ECHO_BIN` — build from a rust-sdk checkout with
   `cargo build -p agent-client-protocol-test --bins`; the binaries land at

@@ -17,7 +17,8 @@ func TestUnit_GoogleCatalog_ListModels(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodGet, r.Method)
 		require.NotEmpty(t, r.Header.Get("Authorization"), "expected ADC bearer token")
-		require.Equal(t, "test-project", r.Header.Get("x-goog-user-project"))
+		require.Empty(t, r.Header.Get("x-goog-user-project"),
+			"an ambient credential names its own quota project in the ADC setup; the endpoint's project segment does not override it")
 		require.Equal(t, "/v1beta1/publishers/google/models", r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -58,12 +59,24 @@ func TestUnit_GoogleCatalog_ListModels(t *testing.T) {
 	require.Equal(t, "gemini-2.5-pro", pro.Name)
 	require.True(t, pro.CanChat)
 	require.False(t, pro.CanEmbed)
-	require.False(t, pro.CanThink, "Vertex publisher list metadata does not expose Gemini thinking support")
+	// The publisher list publishes no capability metadata, so thinking is
+	// declared from the vendor's own page for the family: Gemini 2.5 Pro takes
+	// a caller-set thinking budget and cannot turn thinking off.
+	require.True(t, pro.CanThink)
+	require.NotNil(t, pro.ThinkingTypes)
+	require.True(t, pro.ThinkingTypes.Enabled)
+	require.False(t, pro.ThinkingTypes.Disabled)
+	require.Equal(t, 1048576, pro.ContextLength)
+	require.Equal(t, 65536, pro.MaxOutputTokens)
 
 	provider := catalog.ProviderFor(flash)
 	require.Equal(t, "vertex-google", provider.GetType())
 	require.Equal(t, "gemini-flash-latest", provider.ModelName())
-	require.False(t, provider.CanThink())
+	require.False(t, provider.CanThink(),
+		"a rolling alias the vendor's model pages do not describe declares nothing rather than being guessed from its name")
+	require.Equal(t, 0, provider.GetMaxOutputTokens(),
+		"a family the vendor's pages do not cover declares no output ceiling, so no clamp is applied")
+	require.Equal(t, 0, provider.GetContextLength())
 }
 
 // bearerInjectTransport provides a fake bearer token and redirects to the test server.

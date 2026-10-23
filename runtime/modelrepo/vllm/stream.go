@@ -12,20 +12,28 @@ import (
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo/codec/chatcompletions"
 )
 
 type VLLMStreamClient struct {
 	vLLMClient
 }
 
-func NewVLLMStreamClient(ctx context.Context, baseURL, modelName string, contextLength, maxOutputTokens int, httpClient *http.Client, apiKey string, canThink bool, tracker libtracker.ActivityTracker) (modelrepo.LLMStreamClient, error) {
+func NewVLLMStreamClient(ctx context.Context, baseURL, modelName string, contextLength, maxOutputTokens int, httpClient *http.Client, apiKey string, canThink, canAudio bool, tracker libtracker.ActivityTracker) (modelrepo.LLMStreamClient, error) {
+	if httpClient == nil {
+		httpClient = modelrepo.SharedHTTPClient
+	}
+	if tracker == nil {
+		tracker = libtracker.NoopTracker{}
+	}
 	client := &VLLMStreamClient{
 		vLLMClient: vLLMClient{
-			baseURL:         baseURL,
+			baseURL:         normalizeBaseURL(baseURL),
 			httpClient:      httpClient,
 			modelName:       modelName,
 			maxOutputTokens: maxOutputTokens,
 			canThink:        canThink,
+			canAudio:        canAudio,
 			apiKey:          apiKey,
 			tracker:         tracker,
 		},
@@ -35,17 +43,55 @@ func NewVLLMStreamClient(ctx context.Context, baseURL, modelName string, context
 	return client, nil
 }
 
-// Stream implements LLMStreamClient interface
-func (c *VLLMStreamClient) Stream(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (<-chan *modelrepo.StreamParcel, error) {
-	// Start tracking the operation
-	reportErr, reportChange, end := c.tracker.Start(ctx, "stream", "vllm", "model", c.modelName)
-	// Note: We don't defer end() here because the stream is asynchronous
+// streamErrorFrame is the body of a streamed error frame. The vendor emits the
+// OpenAI error envelope: the diagnosis is an object under "error", and a frame
+// whose diagnosis is dropped leaves a failed turn looking like a short one.
+type streamErrorFrame struct {
+	Error *struct {
+		Message string `json:"message"`
+		Type    string `json:"type"`
+		Param   string `json:"param"`
+		Code    int    `json:"code"`
+	} `json:"error"`
+	Object  string `json:"object"`
+	Message string `json:"message"`
+	Type    string `json:"type"`
+	Code    int    `json:"code"`
+}
 
-	request := buildChatRequest(c.modelName, messages, args, c.canThink)
+// streamError reports the failure a streamed frame carries, empty when the
+// frame is an ordinary chunk. It reads the vendor's error reference body as
+// well, which publishes the same envelope without the outer member.
+func streamError(jsonData string) (message, code string, status int, failed bool) {
+	var frame streamErrorFrame
+	if err := json.Unmarshal([]byte(jsonData), &frame); err != nil {
+		return "", "", 0, false
+	}
+	if frame.Error != nil {
+		return frame.Error.Message, frame.Error.Type, frame.Error.Code, true
+	}
+	if frame.Object == "error" && frame.Message != "" {
+		return frame.Message, frame.Type, frame.Code, true
+	}
+	return "", "", 0, false
+}
+
+// Stream emits raw StreamParcel deltas as they arrive, ending in exactly one terminal parcel.
+func (c *VLLMStreamClient) Stream(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (<-chan *modelrepo.StreamParcel, error) {
+	reportErr, reportChange, end := c.tracker.Start(ctx, "stream", "vllm", "model", c.modelName)
+	// end() is not deferred here; ownership passes to the goroutine below since the stream is asynchronous.
+
+	if err := c.checkAudio(messages); err != nil {
+		reportErr(err)
+		end()
+		return nil, err
+	}
+
+	request, nameMap := buildChatRequest(c.modelName, messages, args, c.canThink)
 	c.clampChatRequest(&request)
 	request.Stream = true
+	request.StreamOptions = &streamOptions{IncludeUsage: true}
 
-	// Prepare the request
 	url := c.baseURL + "/v1/chat/completions"
 	reqBody, err := json.Marshal(request)
 	if err != nil {
@@ -73,82 +119,70 @@ func (c *VLLMStreamClient) Stream(ctx context.Context, messages []modelrepo.Mess
 		return nil, err
 	}
 
-	// Check response status
 	if resp.StatusCode != http.StatusOK {
 		defer resp.Body.Close()
 		body, _ := io.ReadAll(resp.Body)
 		err = fmt.Errorf("vLLM API returned non-200 status: %d - %s for model %s",
 			resp.StatusCode, string(body), c.modelName)
+		err = modelrepo.ClassifyProviderError(err, resp.StatusCode, "", string(body))
 		reportErr(err)
 		end()
 		return nil, err
 	}
 
-	// Process the stream in a separate goroutine
 	go func() {
 		defer close(streamCh)
 		defer resp.Body.Close()
-		defer end() // End tracking when the stream completes
+		defer end()
 
-		// Create a scanner to read the response line by line
+		send := func(p *modelrepo.StreamParcel) bool {
+			select {
+			case streamCh <- p:
+				return true
+			case <-ctx.Done():
+				return false
+			}
+		}
+
+		// Tool names are sanitized on the way out; the decoder translates them back to the caller's originals.
+		dec := chatcompletions.NewStreamDecoder(nameMap)
 		scanner := bufio.NewScanner(resp.Body)
+		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 		var chunkCount int
-		var totalContent strings.Builder
 
 		for scanner.Scan() {
 			line := scanner.Text()
-
-			// Skip empty lines
-			if line == "" {
+			if !strings.HasPrefix(line, "data: ") {
+				continue
+			}
+			jsonData := strings.TrimPrefix(line, "data: ")
+			if jsonData == "[DONE]" {
+				dec.MarkTerminated()
 				continue
 			}
 
-			// SSE format starts with "data: "
-			if strings.HasPrefix(line, "data: ") {
-				jsonData := strings.TrimPrefix(line, "data: ")
+			if message, code, status, failed := streamError(jsonData); failed {
+				err := modelrepo.ClassifyProviderError(fmt.Errorf("vLLM stream error: %s", message), status, code, message)
+				reportErr(err)
+				send(&modelrepo.StreamParcel{Error: err})
+				return
+			}
 
-				// Skip [DONE] messages
-				if jsonData == "[DONE]" {
-					continue
-				}
-
-				var chunk chatStreamResponse
-				if err := json.Unmarshal([]byte(jsonData), &chunk); err != nil {
-					// ignore malformed frame; continue
-					continue
-				}
-
-				// Handle error chunks
-				if chunk.Error != nil {
-					err := fmt.Errorf("vLLM stream error: %s", *chunk.Error)
-					reportErr(err)
-					select {
-					case streamCh <- &modelrepo.StreamParcel{
-						Error: err,
-					}:
-					case <-ctx.Done():
-					}
+			parcels, derr := dec.DecodeLine([]byte(jsonData))
+			if derr != nil {
+				derr = fmt.Errorf("vLLM stream decode failed for model %s: %w", c.modelName, derr)
+				reportErr(derr)
+				send(&modelrepo.StreamParcel{Error: derr})
+				return
+			}
+			for _, p := range parcels {
+				chunkCount++
+				if !send(p) {
 					return
 				}
-
-				// Process the chunk
-				if len(chunk.Choices) > 0 {
-					delta := chunk.Choices[0].Delta
-					thinking := delta.Thinking()
-					if delta.Content != "" || thinking != "" {
-						if delta.Content != "" {
-							chunkCount++
-							totalContent.WriteString(delta.Content)
-						}
-						select {
-						case streamCh <- &modelrepo.StreamParcel{
-							Data:     delta.Content,
-							Thinking: thinking,
-						}:
-						case <-ctx.Done():
-							return
-						}
-					}
+				if p.Error != nil {
+					reportErr(p.Error)
+					return
 				}
 			}
 		}
@@ -156,58 +190,17 @@ func (c *VLLMStreamClient) Stream(ctx context.Context, messages []modelrepo.Mess
 		if err := scanner.Err(); err != nil && err != io.EOF {
 			err := fmt.Errorf("stream scanning error: %w", err)
 			reportErr(err)
-			select {
-			case streamCh <- &modelrepo.StreamParcel{
-				Error: err,
-			}:
-			case <-ctx.Done():
-				return
-			}
+			send(&modelrepo.StreamParcel{Error: err})
+			return
 		}
 
-		reportChange("stream_completed", map[string]any{
-			"chunk_count":     chunkCount,
-			"total_length":    totalContent.Len(),
-			"content_preview": truncateString(totalContent.String(), 100),
-		})
+		if !send(dec.Finish()) {
+			return
+		}
+		reportChange("stream_completed", map[string]any{"chunk_count": chunkCount})
 	}()
 
 	return streamCh, nil
-}
-
-// chatStreamResponse represents a single chunk in the streaming response
-type chatStreamResponse struct {
-	ID      string `json:"id"`
-	Object  string `json:"object"`
-	Created int    `json:"created"`
-	Model   string `json:"model"`
-	Choices []struct {
-		Delta        chatStreamDelta `json:"delta"`
-		Index        int             `json:"index"`
-		FinishReason string          `json:"finish_reason,omitempty"`
-	} `json:"choices,omitempty"`
-	Error *string `json:"error,omitempty"`
-}
-
-type chatStreamDelta struct {
-	Role             string `json:"role,omitempty"`
-	Content          string `json:"content,omitempty"`
-	ReasoningContent string `json:"reasoning_content,omitempty"`
-	Reasoning        string `json:"reasoning,omitempty"`
-}
-
-func (d chatStreamDelta) Thinking() string {
-	if d.Reasoning != "" {
-		return d.Reasoning
-	}
-	return d.ReasoningContent
-}
-
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
 }
 
 var _ modelrepo.LLMStreamClient = (*VLLMStreamClient)(nil)

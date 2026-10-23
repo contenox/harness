@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -14,7 +15,16 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/valkey"
 )
 
-// SetupLocalValKeyInstance remains unchanged
+const requireValkeyEnv = "LIBKVSTORE_REQUIRE_VALKEY"
+
+func requireValkey(t *testing.T) {
+	t.Helper()
+	if os.Getenv(requireValkeyEnv) != "" {
+		return
+	}
+	testcontainers.SkipIfProviderIsNotHealthy(t)
+}
+
 func SetupLocalValKeyInstance(ctx context.Context) (string, testcontainers.Container, func(), error) {
 	cleanup := func() {}
 
@@ -39,6 +49,7 @@ func SetupLocalValKeyInstance(ctx context.Context) (string, testcontainers.Conta
 }
 
 func TestUnit_ValkeyCRUD(t *testing.T) {
+	requireValkey(t)
 	ctx := context.Background()
 
 	connStr, _, cleanup, err := SetupLocalValKeyInstance(ctx)
@@ -57,41 +68,36 @@ func TestUnit_ValkeyCRUD(t *testing.T) {
 	require.NoError(t, err)
 	defer manager.Close()
 
-	kv, err := manager.Executor(ctx) // Changed from Operation to Executor
+	kv, err := manager.Executor(ctx)
 	require.NoError(t, err)
 
 	key := "testkey"
 	value := json.RawMessage(`"testvalue"`)
 
-	// Test Set (using separate key/value parameters)
-	err = kv.Set(ctx, key, value) // Changed from KeyValue struct
+	err = kv.Set(ctx, key, value)
 	require.NoError(t, err)
 
-	// Test Get
 	retrieved, err := kv.Get(ctx, key)
 	require.NoError(t, err)
 	assert.Equal(t, value, retrieved)
 
-	// Test Exists
 	exists, err := kv.Exists(ctx, key)
 	require.NoError(t, err)
 	assert.True(t, exists)
 
-	// Test Delete
 	err = kv.Delete(ctx, key)
 	require.NoError(t, err)
 
-	// Test Get after Delete
 	_, err = kv.Get(ctx, key)
 	assert.ErrorIs(t, err, libkv.ErrNotFound)
 
-	// Test Exists after Delete
 	exists, err = kv.Exists(ctx, key)
 	require.NoError(t, err)
 	assert.False(t, exists)
 }
 
 func TestUnit_ValkeyTTL(t *testing.T) {
+	requireValkey(t)
 	ctx := context.Background()
 
 	connStr, _, cleanup, err := SetupLocalValKeyInstance(ctx)
@@ -110,25 +116,23 @@ func TestUnit_ValkeyTTL(t *testing.T) {
 	require.NoError(t, err)
 	defer manager.Close()
 
-	kv, err := manager.Executor(ctx) // Changed from Operation to Executor
+	kv, err := manager.Executor(ctx)
 	require.NoError(t, err)
 
 	key := "ttlkey"
 	value := json.RawMessage(`"ttlvalue"`)
 
-	// Set with TTL (using duration instead of absolute time)
-	err = kv.SetWithTTL(ctx, key, value, 2*time.Second) // Changed method and parameter
+	err = kv.SetWithTTL(ctx, key, value, 2*time.Second)
 	require.NoError(t, err)
 
-	// Wait for TTL to expire
 	time.Sleep(3 * time.Second)
 
-	// Test Get after TTL
 	_, err = kv.Get(ctx, key)
 	assert.ErrorIs(t, err, libkv.ErrNotFound)
 }
 
 func TestUnit_ValkeyList(t *testing.T) {
+	requireValkey(t)
 	ctx := context.Background()
 
 	connStr, _, cleanup, err := SetupLocalValKeyInstance(ctx)
@@ -147,22 +151,20 @@ func TestUnit_ValkeyList(t *testing.T) {
 	require.NoError(t, err)
 	defer manager.Close()
 
-	kv, err := manager.Executor(ctx) // Changed from Operation to Executor
+	kv, err := manager.Executor(ctx)
 	require.NoError(t, err)
 
 	keys := []string{"key1", "key2", "key3"}
 	value := json.RawMessage(`"value"`)
 
 	for _, key := range keys {
-		err := kv.Set(ctx, key, value) // Changed to separate parameters
+		err := kv.Set(ctx, key, value)
 		require.NoError(t, err)
 	}
 
-	// List keys using pattern (changed from List() to Keys())
-	listed, err := kv.Keys(ctx, "*") // Pattern-based listing
+	listed, err := kv.Keys(ctx, "*")
 	require.NoError(t, err)
 
-	// Convert to map for easy comparison
 	listedMap := make(map[string]bool)
 	for _, k := range listed {
 		listedMap[k] = true
@@ -174,6 +176,7 @@ func TestUnit_ValkeyList(t *testing.T) {
 }
 
 func TestUnit_ValkeyListOperations(t *testing.T) {
+	requireValkey(t)
 	ctx := context.Background()
 
 	connStr, _, cleanup, err := SetupLocalValKeyInstance(ctx)
@@ -192,7 +195,7 @@ func TestUnit_ValkeyListOperations(t *testing.T) {
 	require.NoError(t, err)
 	defer manager.Close()
 
-	kv, err := manager.Executor(ctx) // Changed from Operation to Executor
+	kv, err := manager.Executor(ctx)
 	require.NoError(t, err)
 
 	listKey := "testlist"
@@ -203,18 +206,15 @@ func TestUnit_ValkeyListOperations(t *testing.T) {
 		json.RawMessage(`"item3"`),
 	}
 
-	// Test ListPush (changed from LPush)
 	for _, v := range values {
 		err := kv.ListPush(ctx, listKey, v)
 		require.NoError(t, err)
 	}
 
-	// Test ListRange (changed from LRange)
 	items, err := kv.ListRange(ctx, listKey, 0, -1)
 	require.NoError(t, err)
 	assert.Equal(t, len(values), len(items))
 
-	// Verify items in reverse order
 	for i, expected := range []string{"item3", "item2", "item1"} {
 		var actual string
 		err := json.Unmarshal(items[i], &actual)
@@ -222,7 +222,6 @@ func TestUnit_ValkeyListOperations(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	}
 
-	// Test ListRPop (changed from RPop)
 	popped, err := kv.ListRPop(ctx, listKey)
 	require.NoError(t, err)
 
@@ -231,13 +230,13 @@ func TestUnit_ValkeyListOperations(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "item1", poppedValue)
 
-	// Test ListLength (changed from LLen)
 	length, err := kv.ListLength(ctx, listKey)
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), length)
 }
 
 func TestUnit_ValkeySetOperations(t *testing.T) {
+	requireValkey(t)
 	ctx := context.Background()
 
 	connStr, _, cleanup, err := SetupLocalValKeyInstance(ctx)
@@ -256,7 +255,7 @@ func TestUnit_ValkeySetOperations(t *testing.T) {
 	require.NoError(t, err)
 	defer manager.Close()
 
-	kv, err := manager.Executor(ctx) // Changed from Operation to Executor
+	kv, err := manager.Executor(ctx)
 	require.NoError(t, err)
 
 	setKey := "testset"
@@ -267,18 +266,15 @@ func TestUnit_ValkeySetOperations(t *testing.T) {
 		json.RawMessage(`"member3"`),
 	}
 
-	// Test SetAdd (changed from SAdd)
 	for _, m := range members {
 		err := kv.SetAdd(ctx, setKey, m)
 		require.NoError(t, err)
 	}
 
-	// Test SetMembers (changed from SMembers)
 	setMembers, err := kv.SetMembers(ctx, setKey)
 	require.NoError(t, err)
 	assert.Equal(t, len(members), len(setMembers))
 
-	// Verify all members exist
 	memberMap := make(map[string]bool)
 	for _, m := range setMembers {
 		var s string

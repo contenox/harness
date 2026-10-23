@@ -15,7 +15,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// stubToolsRepo is a minimal ToolsRepo for macro expansion tests.
 type stubToolsRepo struct {
 	names map[string][]taskengine.Tool
 }
@@ -69,14 +68,12 @@ func newMacroChain(template string, tools []string) *taskengine.TaskChainDefinit
 
 func runMacroExpand(t *testing.T, repo taskengine.ToolsRepo, sysInstruction string, tools []string) string {
 	t.Helper()
-	// We only test macro expansion; wrap a noop inner executor.
 	inner := &noopEnv{}
 	env, err := taskengine.NewMacroEnv(inner, repo)
 	if err != nil {
 		t.Fatalf("NewMacroEnv: %v", err)
 	}
 	chain := newMacroChain(sysInstruction, tools)
-	// ExecEnv expands macros then delegates to noopEnv which returns the expanded system_instruction.
 	raw, _, _, err := env.ExecEnv(libtracker.WithNewRequestID(context.Background()), chain, "", taskengine.DataTypeString)
 	if err != nil {
 		t.Fatalf("ExecEnv: %v", err)
@@ -88,7 +85,6 @@ func runMacroExpand(t *testing.T, repo taskengine.ToolsRepo, sysInstruction stri
 	return s
 }
 
-// noopEnv captures the expanded system_instruction from the first task and returns it.
 type noopEnv struct{}
 
 func (n *noopEnv) ExecEnv(_ context.Context, chain *taskengine.TaskChainDefinition, input any, _ taskengine.DataType) (any, taskengine.DataType, []taskengine.CapturedStateUnit, error) {
@@ -107,7 +103,6 @@ func stubRepo() *stubToolsRepo {
 }
 
 func TestUnit_MacroEnv_Tools_NoAllowlist(t *testing.T) {
-	// nil allowlist = no tools exposed; use ["*"] to expose all tools
 	out := runMacroExpand(t, stubRepo(), "{{toolservice:tools}}", nil)
 	var names []string
 	if err := json.Unmarshal([]byte(out), &names); err != nil {
@@ -119,7 +114,6 @@ func TestUnit_MacroEnv_Tools_NoAllowlist(t *testing.T) {
 }
 
 func TestUnit_MacroEnv_Tools_StarAllowlist(t *testing.T) {
-	// ["*"] = explicit all
 	out := runMacroExpand(t, stubRepo(), "{{toolservice:tools}}", []string{"*"})
 	var names []string
 	if err := json.Unmarshal([]byte(out), &names); err != nil {
@@ -131,7 +125,6 @@ func TestUnit_MacroEnv_Tools_StarAllowlist(t *testing.T) {
 }
 
 func TestUnit_MacroEnv_Tools_EmptyAllowlist(t *testing.T) {
-	// [] = explicitly no tools
 	out := runMacroExpand(t, stubRepo(), "{{toolservice:tools}}", []string{})
 	var names []string
 	if err := json.Unmarshal([]byte(out), &names); err != nil {
@@ -191,7 +184,6 @@ func TestUnit_MacroEnv_Tools_Allowed(t *testing.T) {
 
 func TestUnit_MacroEnv_Tools_NotAllowed(t *testing.T) {
 	out := runMacroExpand(t, stubRepo(), "{{toolservice:tools tools_b}}", []string{"tools_a"})
-	// tools_b is not in allowlist → should return empty array
 	var names []string
 	if err := json.Unmarshal([]byte(out), &names); err != nil {
 		t.Fatalf("not JSON: %v — got: %s", err, out)
@@ -202,10 +194,9 @@ func TestUnit_MacroEnv_Tools_NotAllowed(t *testing.T) {
 }
 
 func TestUnit_MacroEnv_Tools_NoAllowlist_Allowed(t *testing.T) {
-	// nil allowlist → no tools exposed; ["*"] is the explicit all-tools opt-in
 	out := runMacroExpand(t, stubRepo(), "{{toolservice:tools tools_b}}", []string{"*"})
 	if strings.Contains(out, "tool_b1") {
-		return // good
+		return
 	}
 	t.Errorf("expected tool_b1 when [*] allowlist, got: %s", out)
 }
@@ -218,7 +209,6 @@ func keys(m map[string][]string) []string {
 	return ks
 }
 
-// sysInstrEnv captures the expanded system_instruction from the first task.
 type sysInstrEnv struct{}
 
 func (n *sysInstrEnv) ExecEnv(_ context.Context, chain *taskengine.TaskChainDefinition, input any, _ taskengine.DataType) (any, taskengine.DataType, []taskengine.CapturedStateUnit, error) {
@@ -265,37 +255,6 @@ func fsAndShellRepo() *stubToolsRepo {
 	}}
 }
 
-func TestUnit_MacroEnv_ToolPreference_InjectedWhenBothPresent(t *testing.T) {
-	out := runSysInstrExpand(t, fsAndShellRepo(), "You are an agent.", []string{"*"})
-	if !strings.Contains(out, "TOOL PREFERENCE") {
-		t.Fatalf("expected TOOL PREFERENCE injection when both local_fs and local_shell are allowed, got:\n%s", out)
-	}
-	if !strings.Contains(out, "local_fs") || !strings.Contains(out, "local_shell") {
-		t.Errorf("preference paragraph must reference both groups: %s", out)
-	}
-}
-
-func TestUnit_MacroEnv_ToolPreference_SkippedWhenLocalShellAbsent(t *testing.T) {
-	out := runSysInstrExpand(t, fsAndShellRepo(), "You are an agent.", []string{"local_fs", "webtools"})
-	if strings.Contains(out, "TOOL PREFERENCE") {
-		t.Errorf("preference must not be injected when local_shell is excluded: %s", out)
-	}
-}
-
-func TestUnit_MacroEnv_ToolPreference_SkippedWhenLocalFSAbsent(t *testing.T) {
-	out := runSysInstrExpand(t, fsAndShellRepo(), "You are an agent.", []string{"local_shell", "webtools"})
-	if strings.Contains(out, "TOOL PREFERENCE") {
-		t.Errorf("preference must not be injected when local_fs is excluded: %s", out)
-	}
-}
-
-func TestUnit_MacroEnv_ToolPreference_SkippedWhenNoTools(t *testing.T) {
-	out := runSysInstrExpand(t, fsAndShellRepo(), "You are an agent.", []string{})
-	if strings.Contains(out, "TOOL PREFERENCE") {
-		t.Errorf("preference must not be injected when allowlist is empty: %s", out)
-	}
-}
-
 func TestUnit_MacroEnv_HostMacro_ExpandsToRuntimeFacts(t *testing.T) {
 	out := runSysInstrExpand(t, fsAndShellRepo(), "os={{host:os}} arch={{host:arch}} all={{host}}", []string{"*"})
 	if !strings.Contains(out, "os="+runtime.GOOS) {
@@ -306,17 +265,6 @@ func TestUnit_MacroEnv_HostMacro_ExpandsToRuntimeFacts(t *testing.T) {
 	}
 	if !strings.Contains(out, `"os":"`+runtime.GOOS+`"`) {
 		t.Fatalf("{{host}} not expanded to JSON facts: %s", out)
-	}
-}
-
-func TestUnit_MacroEnv_HostFacts_AutoAppendedAndIdempotent(t *testing.T) {
-	out := runSysInstrExpand(t, fsAndShellRepo(), "You are an agent.", []string{"*"})
-	want := "Host: os=" + runtime.GOOS + " arch=" + runtime.GOARCH
-	if !strings.Contains(out, want) {
-		t.Fatalf("raw host facts not auto-appended, want %q in:\n%s", want, out)
-	}
-	if strings.Count(out, "Host: os=") != 1 {
-		t.Fatalf("host facts must be appended exactly once, got %d:\n%s", strings.Count(out, "Host: os="), out)
 	}
 }
 
@@ -579,5 +527,59 @@ func TestUnit_MacroEnv_ExecuteConfigMaxTokens_InvalidVarErrors(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "execute_config.max_tokens macro error") {
 		t.Fatalf("error = %q, want execute_config.max_tokens macro context", err.Error())
+	}
+}
+
+func TestUnit_MacroEnv_ToolsMacro_RendersAllowedRegistry(t *testing.T) {
+	out := runSysInstrExpand(t, fsAndShellRepo(), "tools={{tools}}", []string{"local_fs"})
+	if !strings.Contains(out, "read_file") {
+		t.Fatalf("{{tools}} did not render the allowed registry: %s", out)
+	}
+	if strings.Contains(out, "local_shell") {
+		t.Errorf("{{tools}} rendered a toolset outside the allowlist: %s", out)
+	}
+}
+
+func TestUnit_MacroEnv_ToolsMacro_EmptyWithoutAllowlist(t *testing.T) {
+	out := runSysInstrExpand(t, fsAndShellRepo(), "tools={{tools}}", []string{})
+	if out != "tools={}" {
+		t.Fatalf("{{tools}} with no allowlist should render an empty map, got: %s", out)
+	}
+}
+
+func TestUnit_MacroEnv_NothingIsAppendedImplicitly(t *testing.T) {
+	out := runSysInstrExpand(t, fsAndShellRepo(), "You are an agent.", []string{"*"})
+	if out != "You are an agent." {
+		t.Fatalf("system instruction was modified without a macro:\n%s", out)
+	}
+}
+
+// TestUnit_MacroEnv_CwdIsOptionalAndReal pins the macro the ACP prompts use to state
+// the workspace root. It must not fail a render when a session carries no cwd — the
+// var macro errors on a missing name, which is why the prompts carry a fallback — and
+// must resolve to the session path when one exists.
+func TestUnit_MacroEnv_CwdIsOptionalAndReal(t *testing.T) {
+	env, err := taskengine.NewMacroEnv(&noopEnv{}, nil)
+	if err != nil {
+		t.Fatalf("NewMacroEnv: %v", err)
+	}
+	chain := newMacroChain("root={{var:cwd|.}}", nil)
+
+	unset := taskengine.WithTemplateVars(libtracker.WithNewRequestID(context.Background()), map[string]string{})
+	raw, _, _, err := env.ExecEnv(unset, chain, "", taskengine.DataTypeString)
+	if err != nil {
+		t.Fatalf("a session without a cwd must still render: %v", err)
+	}
+	if raw != "root=." {
+		t.Fatalf("unset cwd rendered %q, want root=.", raw)
+	}
+
+	set := taskengine.WithTemplateVars(libtracker.WithNewRequestID(context.Background()), map[string]string{"cwd": "/w/repo"})
+	raw, _, _, err = env.ExecEnv(set, chain, "", taskengine.DataTypeString)
+	if err != nil {
+		t.Fatalf("ExecEnv: %v", err)
+	}
+	if raw != "root=/w/repo" {
+		t.Fatalf("cwd rendered %q, want root=/w/repo", raw)
 	}
 }

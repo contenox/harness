@@ -4,105 +4,68 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
+	"github.com/contenox/harness/runtime/modelrepo/openai"
 )
 
-type mistralProvider struct {
-	id              string
-	apiKey          string
-	modelName       string
-	baseURL         string
-	httpClient      *http.Client
-	contextLength   int
-	maxOutputTokens int
-	canChat         bool
-	canPrompt       bool
-	canEmbed        bool
-	canStream       bool
-	canThink        bool
-	canVision       bool
-	tracker         libtracker.ActivityTracker
+type provider struct {
+	modelrepo.Provider
+	apiKey               string
+	baseURL              string
+	client               *http.Client
+	model                string
+	tracker              libtracker.ActivityTracker
+	canAutocomplete      bool
+	declaredAutocomplete bool
+	fimFormat            string
 }
 
-// NewMistralProvider returns a modelrepo.Provider for the direct Mistral API.
-func NewMistralProvider(apiKey, modelName string, backendURLs []string, capability modelrepo.CapabilityConfig, httpClient *http.Client, tracker libtracker.ActivityTracker) modelrepo.Provider {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
+func newProvider(apiKey, model, baseURL string, caps modelrepo.CapabilityConfig, client *http.Client, tracker libtracker.ActivityTracker) *provider {
+	if client == nil {
+		client = modelrepo.SharedHTTPClient
 	}
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
 	}
-	baseURL := defaultBaseURL
-	if len(backendURLs) > 0 && backendURLs[0] != "" {
-		baseURL = backendURLs[0]
-	}
-	return &mistralProvider{
-		id:              fmt.Sprintf("mistral-%s", modelName),
-		apiKey:          apiKey,
-		modelName:       modelName,
-		baseURL:         baseURL,
-		httpClient:      httpClient,
-		contextLength:   capability.ContextLength,
-		maxOutputTokens: capability.MaxOutputTokens,
-		canChat:         capability.CanChat,
-		canPrompt:       capability.CanPrompt,
-		canEmbed:        capability.CanEmbed,
-		canStream:       capability.CanStream,
-		canThink:        capability.CanThink,
-		canVision:       capability.CanVision,
-		tracker:         tracker,
-	}
+	declaredAutocomplete := caps.CanAutocomplete
+	canAutocomplete := declaredAutocomplete && caps.FIMFormat == "mistral-fim"
+	caps.CanAutocomplete = false
+	// Every model this backend serves is reached through Mistral's own request
+	// reference, so the dialect is a property of the vendor rather than of a
+	// catalogue row: a model declared by hand speaks the same spelling.
+	caps.Dialect = dialectName
+	return &provider{Provider: openai.NewOpenAIProvider(apiKey, model, []string{baseURL}, caps, client, tracker), apiKey: apiKey, baseURL: baseURL, client: client, model: model, tracker: tracker, canAutocomplete: canAutocomplete, declaredAutocomplete: declaredAutocomplete, fimFormat: caps.FIMFormat}
 }
 
-func (p *mistralProvider) GetBackendIDs() []string { return []string{p.baseURL} }
-func (p *mistralProvider) ModelName() string       { return p.modelName }
-func (p *mistralProvider) GetID() string           { return p.id }
-func (p *mistralProvider) GetType() string         { return "mistral" }
-func (p *mistralProvider) GetContextLength() int   { return p.contextLength }
-func (p *mistralProvider) GetMaxOutputTokens() int { return p.maxOutputTokens }
-func (p *mistralProvider) CanChat() bool           { return p.canChat }
-func (p *mistralProvider) CanEmbed() bool          { return p.canEmbed }
-func (p *mistralProvider) CanStream() bool         { return p.canStream }
-func (p *mistralProvider) CanPrompt() bool         { return p.canPrompt }
-func (p *mistralProvider) CanThink() bool          { return p.canThink }
-func (p *mistralProvider) CanVision() bool         { return p.canVision }
+func (p *provider) GetType() string       { return "mistral" }
+func (p *provider) CanAutocomplete() bool { return p.canAutocomplete }
 
-func (p *mistralProvider) base() mistralClient {
-	return mistralClient{
-		baseURL:         p.baseURL,
-		apiKey:          p.apiKey,
-		modelName:       p.modelName,
-		maxOutputTokens: p.maxOutputTokens,
-		httpClient:      p.httpClient,
-		tracker:         p.tracker,
+// CanNextEdit reports that Mistral's native FIM operation is not a structured edit protocol.
+func (p *provider) CanNextEdit() bool { return false }
+
+// GetNextEditConnection refuses to treat Mistral FIM as an independent edit operation.
+func (p *provider) GetNextEditConnection(context.Context, string) (modelrepo.LLMNextEditClient, error) {
+	return nil, modelrepo.ErrNextEditUnsupported
+}
+
+func (p *provider) GetAutocompleteConnection(ctx context.Context, backendID string) (modelrepo.LLMAutocompleteClient, error) {
+	if !p.declaredAutocomplete {
+		return nil, modelrepo.ErrAutocompleteUnsupported
 	}
-}
-
-func (p *mistralProvider) GetChatConnection(_ context.Context, _ string) (modelrepo.LLMChatClient, error) {
-	if !p.CanChat() {
-		return nil, fmt.Errorf("model %s does not support chat interactions", p.modelName)
+	if p.fimFormat != "mistral-fim" {
+		return nil, fmt.Errorf("mistral native autocomplete requires the mistral-fim operation contract")
 	}
-	return &mistralChatClient{mistralClient: p.base()}, nil
-}
-
-func (p *mistralProvider) GetStreamConnection(_ context.Context, _ string) (modelrepo.LLMStreamClient, error) {
-	if !p.CanStream() {
-		return nil, fmt.Errorf("model %s does not support streaming interactions", p.modelName)
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
-	return &mistralStreamClient{mistralClient: p.base()}, nil
-}
-
-func (p *mistralProvider) GetPromptConnection(_ context.Context, _ string) (modelrepo.LLMPromptExecClient, error) {
-	if !p.CanPrompt() {
-		return nil, fmt.Errorf("model %s does not support prompt interactions", p.modelName)
+	baseURL := p.baseURL
+	if backendID != "" {
+		baseURL = strings.TrimRight(backendID, "/")
 	}
-	return &mistralPromptClient{mistralClient: p.base()}, nil
+	return &autocompleteClient{apiKey: p.apiKey, baseURL: baseURL, client: p.client, model: p.model, tracker: p.tracker}, nil
 }
 
-func (p *mistralProvider) GetEmbedConnection(_ context.Context, _ string) (modelrepo.LLMEmbedClient, error) {
-	return nil, fmt.Errorf("model %s (mistral) does not support embeddings via this provider", p.modelName)
-}
-
-var _ modelrepo.Provider = (*mistralProvider)(nil)
+var _ modelrepo.Provider = (*provider)(nil)

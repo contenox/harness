@@ -9,15 +9,17 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// NewVLLMPromptClient creates a new prompt client
 func NewVLLMPromptClient(ctx context.Context, baseURL, modelName string, contextLength, maxOutputTokens int, httpClient *http.Client, apiKey string, canThink bool, tracker libtracker.ActivityTracker) (modelrepo.LLMPromptExecClient, error) {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = modelrepo.SharedHTTPClient
+	}
+	if tracker == nil {
+		tracker = libtracker.NoopTracker{}
 	}
 
 	client := &vLLMPromptClient{
 		vLLMClient: vLLMClient{
-			baseURL:         baseURL,
+			baseURL:         normalizeBaseURL(baseURL),
 			httpClient:      httpClient,
 			modelName:       modelName,
 			maxOutputTokens: maxOutputTokens,
@@ -35,35 +37,39 @@ func NewVLLMPromptClient(ctx context.Context, baseURL, modelName string, context
 	return client, nil
 }
 
-// Prompt implements LLMPromptExecClient interface
-func (c *vLLMClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string) (string, error) {
-	// Start tracking the operation
+func (c *vLLMClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string, promptArgs ...modelrepo.PromptArgument) (string, *modelrepo.TokenUsage, error) {
 	reportErr, reportChange, end := c.tracker.Start(ctx, "prompt", "vllm", "model", c.modelName)
 	defer end()
+	promptConfig, err := modelrepo.PromptConfigFromArgs(promptArgs...)
+	if err != nil {
+		return "", nil, err
+	}
 
 	messages := []modelrepo.Message{
 		{Role: "system", Content: systemInstruction},
 		{Role: "user", Content: prompt},
 	}
 
-	request := buildChatRequest(c.modelName, messages, []modelrepo.ChatArgument{
+	maxTokens := c.maxTokens
+	if promptConfig.MaxTokens != nil {
+		maxTokens = *promptConfig.MaxTokens
+	}
+	request, _ := buildChatRequest(c.modelName, messages, []modelrepo.ChatArgument{
 		modelrepo.WithTemperature(float64(temperature)),
-		modelrepo.WithMaxTokens(c.maxTokens),
+		modelrepo.WithMaxTokens(maxTokens),
 	})
 	c.clampChatRequest(&request)
 
-	// Send request to the chat completions endpoint
 	var response chatResponse
 	if err := c.sendRequest(ctx, "/v1/chat/completions", request, &response); err != nil {
 		reportErr(err)
-		return "", err
+		return "", nil, err
 	}
 
-	// Handle response
 	if len(response.Choices) == 0 {
 		err := fmt.Errorf("no completion choices returned from vLLM for model %s", c.modelName)
 		reportErr(err)
-		return "", err
+		return "", nil, err
 	}
 
 	choice := response.Choices[0]
@@ -72,7 +78,7 @@ func (c *vLLMClient) Prompt(ctx context.Context, systemInstruction string, tempe
 		if choice.Message.Content == "" {
 			err := fmt.Errorf("empty content from model %s despite normal completion", c.modelName)
 			reportErr(err)
-			return "", err
+			return "", nil, err
 		}
 		reportChange("prompt_completed", map[string]any{
 			"finish_reason":     "stop",
@@ -81,18 +87,18 @@ func (c *vLLMClient) Prompt(ctx context.Context, systemInstruction string, tempe
 			"prompt_tokens":     response.Usage.PromptTokens,
 			"completion_tokens": response.Usage.CompletionTokens,
 		})
-		return choice.Message.Content, nil
+		return choice.Message.Content, response.Usage.Usage(), nil
 	case "length":
 		err := fmt.Errorf("token limit reached for model %s (partial response: %q)", c.modelName, choice.Message.Content)
 		reportErr(err)
-		return "", err
+		return "", nil, err
 	case "content_filter":
 		err := fmt.Errorf("content filtered for model %s (partial response: %q)", c.modelName, choice.Message.Content)
 		reportErr(err)
-		return "", err
+		return "", nil, err
 	default:
 		err := fmt.Errorf("unexpected completion reason %q for model %s", choice.FinishReason, c.modelName)
 		reportErr(err)
-		return "", err
+		return "", nil, err
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/modelrepo"
@@ -24,12 +23,13 @@ type GeminiProvider struct {
 	canStream       bool
 	canThink        bool
 	canVision       bool
+	canAudio        bool
 	tracker         libtracker.ActivityTracker
 }
 
 func NewGeminiProvider(apiKey string, modelName string, baseURLs []string, cap modelrepo.CapabilityConfig, httpClient *http.Client, tracker libtracker.ActivityTracker) modelrepo.Provider {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = modelrepo.SharedHTTPClient
 	}
 	if len(baseURLs) == 0 {
 		baseURLs = []string{"https://generativelanguage.googleapis.com"}
@@ -38,8 +38,8 @@ func NewGeminiProvider(apiKey string, modelName string, baseURLs []string, cap m
 		tracker = libtracker.NoopTracker{}
 	}
 	apiBaseURL := baseURLs[0]
+	modelName = modelrepo.ModelID(modelName)
 	id := fmt.Sprintf("gemini-%s", modelName)
-	modelName, _ = strings.CutPrefix(modelName, "models/")
 	return &GeminiProvider{
 		id:              id,
 		apiKey:          apiKey,
@@ -54,6 +54,7 @@ func NewGeminiProvider(apiKey string, modelName string, baseURLs []string, cap m
 		canStream:       cap.CanStream,
 		canThink:        cap.CanThink,
 		canVision:       cap.CanVision,
+		canAudio:        cap.CanAudio,
 		tracker:         tracker,
 	}
 }
@@ -70,6 +71,7 @@ func (p *GeminiProvider) CanStream() bool         { return p.canStream }
 func (p *GeminiProvider) CanPrompt() bool         { return p.canPrompt }
 func (p *GeminiProvider) CanThink() bool          { return p.canThink }
 func (p *GeminiProvider) CanVision() bool         { return p.canVision }
+func (p *GeminiProvider) CanAudio() bool          { return p.canAudio }
 
 func (p *GeminiProvider) GetChatConnection(ctx context.Context, backendID string) (modelrepo.LLMChatClient, error) {
 	if !p.CanChat() {
@@ -138,4 +140,10 @@ func (p *GeminiProvider) GetStreamConnection(ctx context.Context, backendID stri
 			tracker:         p.tracker,
 		},
 	}, nil
+}
+
+func (p *GeminiProvider) CanAutocomplete() bool { return false }
+
+func (p *GeminiProvider) GetAutocompleteConnection(context.Context, string) (modelrepo.LLMAutocompleteClient, error) {
+	return nil, modelrepo.ErrAutocompleteUnsupported
 }

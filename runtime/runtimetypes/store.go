@@ -35,10 +35,12 @@ type QueueItem struct {
 }
 
 type Backend struct {
-	ID      string `json:"id" example:"b7d9e1a3-8f0c-4a7d-9b1e-2f3a4b5c6d7e"`
-	Name    string `json:"name" example:"ollama-production"`
-	BaseURL string `json:"baseUrl" example:"http://ollama-prod.internal:11434"`
-	Type    string `json:"type" example:"ollama"`
+	// Revision advances on every persisted connection edit.
+	Revision int64  `json:"revision"`
+	ID       string `json:"id" example:"b7d9e1a3-8f0c-4a7d-9b1e-2f3a4b5c6d7e"`
+	Name     string `json:"name" example:"ollama-production"`
+	BaseURL  string `json:"baseUrl" example:"http://ollama-prod.internal:11434"`
+	Type     string `json:"type" example:"ollama"`
 
 	CreatedAt time.Time `json:"createdAt" example:"2023-11-15T14:30:45Z"`
 	UpdatedAt time.Time `json:"updatedAt" example:"2023-11-15T14:30:45Z"`
@@ -141,6 +143,9 @@ type Store interface {
 	GetBackend(ctx context.Context, id string) (*Backend, error)
 	UpdateBackend(ctx context.Context, backend *Backend) error
 	DeleteBackend(ctx context.Context, id string) error
+	LockBackend(ctx context.Context, id string) error
+	GetLLMProviderModelFacts(ctx context.Context, providerID string) (map[string]ModelFacts, error)
+	SetLLMProviderModelFact(ctx context.Context, providerID, model string, facts ModelFacts) error
 	ListAllBackends(ctx context.Context) ([]*Backend, error)
 	ListBackends(ctx context.Context, createdAtCursor *time.Time, limit int) ([]*Backend, error)
 	GetBackendByName(ctx context.Context, name string) (*Backend, error)

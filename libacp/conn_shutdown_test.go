@@ -11,19 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// handlerJoinDelay is how long the slow handlers below keep working AFTER
-// their context is cancelled. It models the real thing Run's caller races
-// with: a handler that has observed cancellation but is still unwinding
-// through session/driver/DB state. Long enough that a Run which does not join
-// its handler goroutines loses this race deterministically, short enough not
-// to slow the suite down.
 const handlerJoinDelay = 250 * time.Millisecond
 
-// lingeringAgent's NewSession keeps running for handlerJoinDelay after its
-// context is cancelled, then records that it has RETURNED. Observing
-// cancellation is the weak property (already covered by
-// TestUnit_ConnectionClose_FailsPendingCallsAndCancelsHandlers); `returned` is
-// the strong one.
 type lingeringAgent struct {
 	libacp.UnimplementedAgent
 	entered  chan struct{}
@@ -42,10 +31,8 @@ func (a *lingeringAgent) NewSession(ctx context.Context, _ libacp.NewSessionRequ
 	return libacp.NewSessionResponse{SessionID: "sess-1"}, nil
 }
 
-// Run must not return while an inbound request handler is still executing.
-// The caller (contenoxcli's acp command) closes the transport and tears down
-// live session/driver state the instant Run returns, so a handler that is
-// merely "cancelled but still unwinding" would be touching freed state.
+// Invariant: Run must not return while an inbound request handler is still
+// executing, since the caller tears down live session state the instant it does.
 func TestUnit_AgentSideRun_JoinsInFlightRequestHandlerBeforeReturning(t *testing.T) {
 	agent := &lingeringAgent{entered: make(chan struct{})}
 
@@ -80,7 +67,6 @@ func TestUnit_AgentSideRun_JoinsInFlightRequestHandlerBeforeReturning(t *testing
 		"Run returned while the NewSession handler goroutine was still executing")
 }
 
-// lingeringClient is the client-side mirror of lingeringAgent.
 type lingeringClient struct {
 	libacp.UnimplementedClient
 	entered  chan struct{}
@@ -131,9 +117,6 @@ func TestUnit_ClientSideRun_JoinsInFlightRequestHandlerBeforeReturning(t *testin
 		"Run returned while the ReadTextFile handler goroutine was still executing")
 }
 
-// lingeringNotifyAgent's Cancel (session/cancel handler) lingers past
-// cancellation the same way, pinning that notification dispatch is tracked
-// too, not just request dispatch.
 type lingeringNotifyAgent struct {
 	libacp.UnimplementedAgent
 	entered  chan struct{}
