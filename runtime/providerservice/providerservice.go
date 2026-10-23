@@ -201,6 +201,15 @@ func (s *service) Configure(ctx context.Context, providerType string, req Config
 		}
 	}
 
+	if cfg.APIKey != "" || cfg.APIKeyEnv != "" {
+		// The runtime resolves a connection's credential from its own record, not
+		// the shared provider row that status uses. Write both: this is what makes
+		// a freshly configured provider reachable without a serve restart.
+		if err := s.writeBackendCredential(ctx, store, providerType, backend.ID, *cfg); err != nil {
+			return nil, err
+		}
+	}
+
 	if req.SetDefault {
 		if err := clikv.WriteConfig(ctx, store, s.workspaceID, "default-provider", providerType); err != nil {
 			return nil, fmt.Errorf("set default-provider: %w", err)
@@ -312,6 +321,30 @@ func (s *service) writeProviderConfig(ctx context.Context, store runtimetypes.St
 	return nil
 }
 
+// writeBackendCredential stores the credential in the per-connection record the
+// runtime's provider resolution reads (BackendCredentialKey).
+func (s *service) writeBackendCredential(ctx context.Context, store runtimetypes.Store, providerType, backendID string, cfg runtimestate.ProviderConfig) error {
+	record := runtimestate.ProviderConfig{Type: providerType}
+	switch {
+	case strings.TrimSpace(cfg.APIKeyEnv) != "":
+		record.CredentialSource = runtimestate.CredentialEnvironment
+		record.APIKeyEnv = strings.TrimSpace(cfg.APIKeyEnv)
+	case strings.TrimSpace(cfg.APIKey) != "":
+		record.CredentialSource = runtimestate.CredentialStored
+		record.APIKey = cfg.APIKey
+	default:
+		return nil
+	}
+	data, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("marshal backend credential: %w", err)
+	}
+	if err := store.SetKV(ctx, runtimestate.BackendCredentialKey(providerType, backendID), data); err != nil {
+		return fmt.Errorf("store backend credential: %w", err)
+	}
+	return nil
+}
+
 func (s *service) readProviderConfig(ctx context.Context, providerType string) (*runtimestate.ProviderConfig, error) {
 	store := runtimetypes.New(s.dbInstance.WithoutTransaction())
 	var cfg runtimestate.ProviderConfig
@@ -337,6 +370,12 @@ func (s *service) statusFrom(ctx context.Context, store runtimetypes.Store, defa
 		status.BackendName = backend.Name
 		status.BaseURL = backend.BaseURL
 		status.UpdatedAt = backend.UpdatedAt
+	}
+	if backend != nil {
+		var record runtimestate.ProviderConfig
+		if err := store.GetKV(ctx, runtimestate.BackendCredentialKey(backend.Type, backend.ID), &record); err == nil {
+			cfg = &record
+		}
 	}
 	if cfg != nil {
 		switch {

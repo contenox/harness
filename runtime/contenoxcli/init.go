@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	libdb "github.com/contenox/harness/libdbexec"
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/backendservice"
 	"github.com/contenox/harness/runtime/internal/setupcheck"
@@ -19,7 +20,6 @@ import (
 	"github.com/contenox/harness/runtime/project"
 	"github.com/contenox/harness/runtime/runtimestate"
 	"github.com/contenox/harness/runtime/runtimetypes"
-	"github.com/google/uuid"
 )
 
 //go:embed chain-contenox.json
@@ -129,16 +129,7 @@ var providerConfigs = map[string]providerConfig{
 		defaultModel: "anthropic.claude-3-5-sonnet-20241022-v2:0",
 		envKey:       "", // ambient AWS credential chain
 	},
-	"llama": {
-		name:         "Llama.cpp (GGUF)",
-		defaultModel: "",
-		envKey:       "",
-	},
-	"openvino": {
-		name:         "OpenVINO IR",
-		defaultModel: "",
-		envKey:       "",
-	},
+
 	"vertex-google": {
 		name:         "Google Vertex AI (Gemini)",
 		defaultModel: "gemini-flash-latest",
@@ -146,71 +137,48 @@ var providerConfigs = map[string]providerConfig{
 	},
 }
 
-// ensureLocalBackends registers the implicit local inference backends (llama +
-// openvino) if missing, each pointed at its own per-type directory under
-// ~/.contenox-harness/models/<type>/ so GGUF and OpenVINO IR models never collide. They
-// are always-present infrastructure; the user populates them via
-// `contenox model pull`. modeld serves one backend at a time, so both are
-// registered and the daemon's mode decides which is live. Idempotent.
-func ensureLocalBackends(out io.Writer) error {
-	homeDir, err := globalContenoxDir()
+// pruneLegacyLocalBackends removes modeld-era local backends (llama, openvino,
+// modeld, local). The daemon that served them is gone, so the rows only produce
+// "Unsupported backend type" errors in runtime health.
+func pruneLegacyLocalBackends(ctx context.Context, db libdb.DBManager) (int, error) {
+	store := runtimetypes.New(db.WithoutTransaction())
+	backends, err := store.ListBackends(ctx, nil, runtimetypes.MAXLIMIT)
 	if err != nil {
-		return err
+		return 0, fmt.Errorf("list backends: %w", err)
 	}
+	removed := 0
+	for _, backend := range backends {
+		if !modelrepo.IsLocalBackendType(backend.Type) {
+			continue
+		}
+		if err := store.DeleteBackend(ctx, backend.ID); err != nil {
+			return removed, fmt.Errorf("delete legacy backend %q: %w", backend.Name, err)
+		}
+		removed++
+	}
+	return removed, nil
+}
+
+// pruneLegacyLocalBackendsFromHome opens the global store and prunes, for init.
+func pruneLegacyLocalBackendsFromHome(out io.Writer) {
 	dbPath, err := globalDBPath()
 	if err != nil {
-		return err
+		return
 	}
 	ctx := libtracker.WithNewRequestID(context.Background())
 	db, err := OpenDBAt(ctx, dbPath)
 	if err != nil {
-		return err
+		return
 	}
 	defer db.Close()
-	svc := backendservice.New(db)
-
-	present := map[string]bool{}
-	backends, err := svc.List(ctx, nil, 1000)
+	removed, err := pruneLegacyLocalBackends(ctx, db)
 	if err != nil {
-		return fmt.Errorf("list backends: %w", err)
+		fmt.Fprintf(out, "  warning: could not prune legacy local backends: %v\n", err)
+		return
 	}
-	for _, b := range backends {
-		present[strings.ToLower(b.Type)] = true
+	if removed > 0 {
+		fmt.Fprintf(out, "  Removed %d legacy local backend(s)\n", removed)
 	}
-
-	// A legacy flat ~/.contenox-harness/models backend (type "llama" or its "local" alias)
-	// counts as the llama backend — leave it and its files in place. New per-type
-	// pulls land under models/<type>/.
-	if !present["llama"] && !present["local"] {
-		if err := registerLocalBackend(ctx, out, svc, homeDir, "llama"); err != nil {
-			return err
-		}
-	}
-	if !present["openvino"] {
-		if err := registerLocalBackend(ctx, out, svc, homeDir, "openvino"); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// registerLocalBackend creates one local backend of the given type pointed at
-// ~/.contenox-harness/models/<type>/, creating the directory.
-func registerLocalBackend(ctx context.Context, out io.Writer, svc backendservice.Service, homeDir, typ string) error {
-	modelsDir := filepath.Join(homeDir, "models", typ)
-	if err := os.MkdirAll(modelsDir, 0o755); err != nil {
-		return fmt.Errorf("create %s models dir: %w", typ, err)
-	}
-	if err := svc.Create(ctx, &runtimetypes.Backend{
-		ID:      uuid.NewString(),
-		Name:    typ,
-		BaseURL: modelsDir,
-		Type:    typ,
-	}); err != nil {
-		return fmt.Errorf("create %s backend: %w", typ, err)
-	}
-	fmt.Fprintf(out, "  Registered %s backend -> %s\n", typ, modelsDir)
-	return nil
 }
 
 // hasBackendOfType returns true when the local DB already contains at least one
@@ -282,14 +250,12 @@ func RunGlobalInit(out io.Writer) error {
 	if err := writeEmbeddedHITLPolicies(homeDir, false); err != nil {
 		return err
 	}
-	if err := ensureLocalBackends(out); err != nil {
-		fmt.Fprintf(out, "  warning: could not register local backends: %v\n", err)
-	}
+	pruneLegacyLocalBackendsFromHome(out)
 	return nil
 }
 
 // RunInit scaffolds .contenox/ with default chain files.
-// provider is "" (defaults to the already-configured provider or "llama"), or one of providerConfigs.
+// provider is "" (defaults to the already-configured provider or "ollama"), or one of providerConfigs.
 // contenoxDir is the target data directory (e.g. from --data-dir or the default .contenox/).
 // projectName is the friendly name to stamp into the marker — an explicit name
 // renames an already-named project; "" leaves the marker's name (or lack of one)
@@ -312,13 +278,13 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 			}
 		}
 		if provider == "" {
-			provider = "llama"
+			provider = "ollama"
 		}
 	}
 
 	pc, ok := providerConfigs[provider]
 	if !ok {
-		return fmt.Errorf("unknown provider %q — valid options: ollama, openai, openrouter, gemini, anthropic, mistral, bedrock, llama, openvino, vertex-google", provider)
+		return fmt.Errorf("unknown provider %q — valid options: ollama, openai, openrouter, gemini, anthropic, mistral, bedrock, vertex-google", provider)
 	}
 	if err := os.MkdirAll(contenoxDir, 0750); err != nil {
 		return fmt.Errorf("failed to create .contenox directory: %w", err)
@@ -419,9 +385,7 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 	// The local backends (llama + openvino) are always-present infrastructure.
 	// Create them if missing so the user only ever needs to pull a model — never
 	// wire up a backend.
-	if err := ensureLocalBackends(out); err != nil {
-		fmt.Fprintf(errOut, "  warning: could not register local backends: %v\n", err)
-	}
+	pruneLegacyLocalBackendsFromHome(out)
 
 	fmt.Fprintln(out, "Done.")
 	fmt.Fprintln(out, "")

@@ -60,7 +60,8 @@ func TestUnit_RuntimeStatesTriggersDebouncedReconcile(t *testing.T) {
 	}))
 	keyData, err := json.Marshal(runtimestate.ProviderConfig{APIKey: "test-key", Type: "openai"})
 	require.NoError(t, err)
-	require.NoError(t, store.SetKV(ctx, runtimestate.OpenaiKey, keyData))
+	// v2 credentials are per connection, not one shared row per adapter type.
+	require.NoError(t, store.SetKV(ctx, runtimestate.BackendCredentialKey("openai", "openai-backend"), keyData))
 
 	// Still inside the debounce window: a burst of config-options reads (e.g. the
 	// ACP client repeatedly asking for the model list) must not force a re-scan.

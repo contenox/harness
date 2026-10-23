@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	libdb "github.com/contenox/harness/libdbexec"
@@ -57,6 +58,12 @@ func (s *service) Create(ctx context.Context, backend *runtimetypes.Backend) err
 		return fmt.Errorf("too many rows in the system (current %d): %w", count, err)
 	}
 
+	if duplicate, err := sameConnectionExists(ctx, storeInstance, backend, ""); err != nil {
+		return err
+	} else if duplicate {
+		return duplicateBackendError{typ: backend.Type, baseURL: backend.BaseURL, cause: libdb.ErrUniqueViolation}
+	}
+
 	if err := storeInstance.CreateBackend(ctx, backend); err != nil {
 		return sanitizeBackendStoreError(backend, err)
 	}
@@ -73,7 +80,13 @@ func (s *service) Update(ctx context.Context, backend *runtimetypes.Backend) err
 		return err
 	}
 	tx := s.dbInstance.WithoutTransaction()
-	if err := runtimetypes.New(tx).UpdateBackend(ctx, backend); err != nil {
+	storeInstance := runtimetypes.New(tx)
+	if duplicate, err := sameConnectionExists(ctx, storeInstance, backend, backend.ID); err != nil {
+		return err
+	} else if duplicate {
+		return duplicateBackendError{typ: backend.Type, baseURL: backend.BaseURL, cause: libdb.ErrUniqueViolation}
+	}
+	if err := storeInstance.UpdateBackend(ctx, backend); err != nil {
 		return sanitizeBackendStoreError(backend, err)
 	}
 	return nil
@@ -97,12 +110,27 @@ func validate(backend *runtimetypes.Backend) error {
 		return fmt.Errorf("%w: baseURL is required", ErrInvalidBackend)
 	}
 	switch modelrepo.CanonicalBackendType(backend.Type) {
-	case "ollama", "vllm", "openai", "openrouter", "anthropic", "mistral", "bedrock", "gemini", "llama", "openvino", "modeld", "vertex-google", "scripted-test":
+	case "ollama", "vllm", "openai", "openrouter", "anthropic", "mistral", "bedrock", "gemini", "vertex-google", "scripted-test":
 	default:
-		return fmt.Errorf("%w: Type must be ollama, vllm, openrouter, openai, anthropic, mistral, bedrock, gemini, llama (local alias accepted), openvino, modeld, vertex-google, or scripted-test (test only)", ErrInvalidBackend)
+		return fmt.Errorf("%w: Type must be ollama, vllm, openrouter, openai, anthropic, mistral, bedrock, gemini, vertex-google, or scripted-test (test only)", ErrInvalidBackend)
 	}
 
 	return nil
+}
+
+// sameConnectionExists reports whether another row already names the same
+// implementation type and endpoint, the pair that identifies a connection.
+func sameConnectionExists(ctx context.Context, store runtimetypes.Store, backend *runtimetypes.Backend, excludeID string) (bool, error) {
+	count, err := store.CountBackendsByTypeAndURL(
+		ctx,
+		modelrepo.CanonicalBackendType(backend.Type),
+		strings.TrimSpace(backend.BaseURL),
+		excludeID,
+	)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func sanitizeBackendStoreError(backend *runtimetypes.Backend, err error) error {

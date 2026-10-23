@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
 	libdb "github.com/contenox/harness/libdbexec"
 	"github.com/contenox/harness/runtime/modelregistryservice"
@@ -155,13 +154,10 @@ func GroupByFamily(entries []ModelDescriptor) []FamilyGroup {
 }
 
 type Registry interface {
-	// Resolve returns the descriptor for name from curated or user-added entries.
+	// Resolve returns the descriptor for a user-added registry entry.
 	Resolve(ctx context.Context, name string) (*ModelDescriptor, error)
-	// List returns all known descriptors (curated + user-added). User entries override curated SourceURL.
+	// List returns every user-added descriptor.
 	List(ctx context.Context) ([]ModelDescriptor, error)
-	// OptimalFor returns the best registry name for an arbitrary model name string.
-	// Exact match → family mapping → fallback.
-	OptimalFor(ctx context.Context, modelName string) (string, error)
 }
 
 type registryImpl struct {
@@ -173,82 +169,45 @@ func New(svc modelregistryservice.Service) Registry {
 }
 
 func (r *registryImpl) Resolve(ctx context.Context, name string) (*ModelDescriptor, error) {
-	// User DB entry takes precedence over curated.
-	if r.svc != nil {
-		if e, err := r.svc.GetByName(ctx, name); err == nil {
-			d := mergeUserEntry(e)
-			return &d, nil
-		} else if !errors.Is(err, libdb.ErrNotFound) {
-			return nil, err
+	if r.svc == nil {
+		return nil, fmt.Errorf("%w: %s", ErrNotFound, name)
+	}
+	entry, err := r.svc.GetByName(ctx, name)
+	if err != nil {
+		if errors.Is(err, libdb.ErrNotFound) {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, name)
 		}
+		return nil, err
 	}
-	if d, ok := curatedModels[name]; ok {
-		return &d, nil
-	}
-	return nil, fmt.Errorf("%w: %s", ErrNotFound, name)
+	descriptor := mergeUserEntry(entry)
+	return &descriptor, nil
 }
 
 func (r *registryImpl) List(ctx context.Context) ([]ModelDescriptor, error) {
-	merged := make(map[string]ModelDescriptor, len(curatedModels))
-	for k, v := range curatedModels {
-		merged[k] = v
+	if r.svc == nil {
+		return nil, nil
 	}
-	if r.svc != nil {
-		entries, err := r.svc.List(ctx, nil, 1000)
-		if err != nil {
-			return nil, err
-		}
-		for _, e := range entries {
-			merged[e.Name] = mergeUserEntry(e)
-		}
+	entries, err := r.svc.List(ctx, nil, 1000)
+	if err != nil {
+		return nil, err
 	}
-	out := make([]ModelDescriptor, 0, len(merged))
-	for _, v := range merged {
-		out = append(out, v)
+	out := make([]ModelDescriptor, 0, len(entries))
+	for _, entry := range entries {
+		out = append(out, mergeUserEntry(entry))
 	}
 	return out, nil
 }
 
-func (r *registryImpl) OptimalFor(ctx context.Context, modelName string) (string, error) {
-	lower := strings.ToLower(strings.SplitN(modelName, ":", 2)[0])
-
-	// Exact match in curated.
-	if _, ok := curatedModels[lower]; ok {
-		return lower, nil
-	}
-	// Exact match in DB.
-	if r.svc != nil {
-		if _, err := r.svc.GetByName(ctx, lower); err == nil {
-			return lower, nil
-		}
-	}
-	// Family substring matching.
-	for _, fm := range defaultFamilies {
-		for _, sub := range fm.Substrings {
-			if strings.Contains(lower, sub) {
-				return fm.CanonicalName, nil
-			}
-		}
-	}
-	return defaultFallback, nil
-}
-
+// mergeUserEntry turns a stored registry row into its descriptor. There is no
+// curated catalogue behind it: every field comes from the row itself.
 func mergeUserEntry(e *runtimetypes.ModelRegistryEntry) ModelDescriptor {
 	if e == nil {
 		return ModelDescriptor{}
 	}
-	d, ok := curatedModels[e.Name]
-	if !ok {
-		d = ModelDescriptor{Name: e.Name}
+	return ModelDescriptor{
+		ID:        e.ID,
+		Name:      e.Name,
+		SourceURL: e.SourceURL,
+		SizeBytes: e.SizeBytes,
 	}
-	d.ID = e.ID
-	d.Name = e.Name
-	d.Curated = false
-	if e.SourceURL != "" {
-		d.SourceURL = e.SourceURL
-	}
-	if e.SizeBytes > 0 {
-		d.SizeBytes = e.SizeBytes
-	}
-	return d
 }

@@ -1,11 +1,11 @@
 package contenoxcli
 
 import (
-	"github.com/contenox/harness/runtime/homedir"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/contenox/harness/runtime/homedir"
 	"io"
 	"os"
 	"os/signal"
@@ -757,6 +757,12 @@ func acpPolicySource() hitlservice.PolicySource {
 // The check is non-blocking: it waits at most 500 ms so a cache hit is instant
 // and a slow network call is silently skipped (will appear next session from cache).
 func acpUpdateBanner(ctx context.Context, db libdb.DBManager, contenoxDir string) string {
+	// The environment override exists for non-interactive callers (tests,
+	// air-gapped operations) whose working directory or local store the banner
+	// must not depend on. The persisted setting is the product surface.
+	if v, ok := os.LookupEnv("CONTENOX_UPDATE_CHECK"); ok && (v == "false" || v == "0") {
+		return ""
+	}
 	if acpsvc.ReadConfigValue(ctx, db, "update-check") == "false" {
 		return ""
 	}

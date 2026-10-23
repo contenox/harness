@@ -246,6 +246,15 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
+	// A database from a modeld-era install still lists llama/openvino backends.
+	// The daemon that served them is gone; prune them before runtime health or
+	// the setup screen can report them as failures.
+	if removed, pruneErr := pruneLegacyLocalBackends(dbCtx, db); pruneErr != nil {
+		slog.Warn("could not prune legacy local backends", "error", pruneErr)
+	} else if removed > 0 {
+		slog.Info("pruned legacy local backends", "count", removed)
+	}
+
 	// Environment handling for the shells serve spawns: the SANDBOX_* scrub
 	// (agent shells default to deny-secrets, the operator terminal to off) composed
 	// with the operator's global shell-env injection (read live, cached briefly, so

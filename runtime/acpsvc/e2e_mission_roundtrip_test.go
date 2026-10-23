@@ -156,7 +156,7 @@ func TestFleetE2E_MissionRoundTrip(t *testing.T) {
 	mrtRunCLI(t, bin, home, "config", "set", "default-mission-agent", "reporter")
 	mrtRunCLI(t, bin, home, "config", "set", "default-mission-policy", "default")
 
-	contenoxDir := filepath.Join(home, ".contenox")
+	contenoxDir := filepath.Join(home, ".contenox-harness")
 	require.DirExists(t, contenoxDir, "the CLI seeding run must have created the isolated state directory")
 
 	// The one shared store: the units resolve $HOME/.contenox-harness/local.db, and so does
@@ -396,7 +396,7 @@ func TestFleetE2E_MissionRoundTrip_UnitReportRoutesToSupervisor(t *testing.T) {
 	mrtRunCLI(t, bin, home, "config", "set", "default-mission-agent", "reporter")
 	mrtRunCLI(t, bin, home, "config", "set", "default-mission-policy", "default")
 
-	contenoxDir := filepath.Join(home, ".contenox")
+	contenoxDir := filepath.Join(home, ".contenox-harness")
 	require.DirExists(t, contenoxDir)
 
 	ctx := context.Background()

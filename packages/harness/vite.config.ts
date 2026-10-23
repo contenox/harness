@@ -96,6 +96,14 @@ export default defineConfig(({ mode }) => {
               target: proxyTarget,
               changeOrigin: true,
               ws: true,
+              // changeOrigin rewrites Host to the API origin; rewrite Origin to
+              // match so the local serve's same-origin mutation guard accepts the
+              // dev page instead of treating it as a cross-site request.
+              configure: proxy => {
+                proxy.on('proxyReq', proxyReq => {
+                  proxyReq.setHeader('origin', new URL(proxyTarget).origin);
+                });
+              },
             },
             /** ACP chat speaks WebSocket NDJSON on /acp (runtime/contenoxcli/acp_ws.go), outside /api. */
             '/acp': {
@@ -107,6 +115,11 @@ export default defineConfig(({ mode }) => {
             '/ui': {
               target: proxyTarget,
               changeOrigin: true,
+              configure: proxy => {
+                proxy.on('proxyReq', proxyReq => {
+                  proxyReq.setHeader('origin', new URL(proxyTarget).origin);
+                });
+              },
             },
           },
         }

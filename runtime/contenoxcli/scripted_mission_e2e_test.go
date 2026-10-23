@@ -145,7 +145,7 @@ func TestSystem_ScriptedMissionSequence(t *testing.T) {
 	homeDir := filepath.Join(root, "home")
 	workspaceDir := filepath.Join(root, "workspace")
 	dataDir := filepath.Join(workspaceDir, ".contenox")
-	dbPath := filepath.Join(homeDir, ".contenox", "local.db")
+	dbPath := filepath.Join(homeDir, ".contenox-harness", "local.db")
 	require.NoError(t, os.MkdirAll(homeDir, 0o755))
 	require.NoError(t, os.MkdirAll(workspaceDir, 0o755))
 

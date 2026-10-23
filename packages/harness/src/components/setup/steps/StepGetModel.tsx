@@ -2,25 +2,24 @@ import { H2, P, Panel, Section } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
 import { getCloudProviderSetup } from '../../../lib/providerCatalog';
 import BackendsSection from '../../../pages/admin/backends/components/BackendsSection';
-import ModelRegistryPage from '../../../pages/admin/models/ModelRegistryPage';
 import ProviderForm from '../../../pages/admin/backends/components/ProviderForm';
 import type { ProviderChoice } from './StepChooseProvider';
 
 type Props = {
   provider: ProviderChoice;
   onRefreshStatus: () => void;
+  /** Advances the wizard after cloud credentials are saved. */
+  onSaved?: () => void;
 };
 
-export default function StepGetModel({ provider, onRefreshStatus: _onRefreshStatus }: Props) {
+export default function StepGetModel({ provider, onRefreshStatus: _onRefreshStatus, onSaved }: Props) {
   const { t } = useTranslation();
-  const setup = provider !== 'local' && provider !== 'ollama' ? getCloudProviderSetup(provider) : null;
+  const setup = provider !== 'ollama' ? getCloudProviderSetup(provider) : null;
 
   const desc =
-    provider === 'local'
-      ? t('onboarding.step_get_model.desc_local')
-      : provider === 'ollama'
-        ? t('onboarding.step_get_model.desc_ollama')
-        : t('onboarding.step_get_model.desc_cloud');
+    provider === 'ollama'
+      ? t('onboarding.step_get_model.desc_ollama')
+      : t('onboarding.step_get_model.desc_cloud');
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -36,13 +35,11 @@ export default function StepGetModel({ provider, onRefreshStatus: _onRefreshStat
         )}
       </div>
 
-      {provider === 'local' && <ModelRegistryPage />}
-
       {provider === 'ollama' && <BackendsSection />}
 
       {setup && (
         <Section title={t(setup.titleKey)}>
-          <ProviderForm setup={setup} />
+          <ProviderForm setup={setup} onSaved={onSaved} />
         </Section>
       )}
     </div>

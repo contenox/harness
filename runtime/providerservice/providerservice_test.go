@@ -97,3 +97,22 @@ func TestUnit_ProviderService_ListsSupportedProviderCapabilities(t *testing.T) {
 	require.True(t, byProvider["openai"].RequiresSecretConfig)
 	require.True(t, byProvider["vertex-google"].RequiresBaseURL)
 }
+
+func TestUnit_ProviderService_ConfigureWritesTheConnectionCredential(t *testing.T) {
+	db := testSQLiteDB(t)
+	svc := providerservice.New(db, "workspace")
+
+	status, err := svc.Configure(context.Background(), "openai", providerservice.ConfigureProviderRequest{
+		APIKey: "sk-test",
+		Upsert: true,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, status.BackendID)
+
+	store := runtimetypes.New(db.WithoutTransaction())
+	var record runtimestate.ProviderConfig
+	require.NoError(t, store.GetKV(context.Background(),
+		runtimestate.BackendCredentialKey("openai", status.BackendID), &record))
+	require.Equal(t, runtimestate.CredentialStored, record.CredentialSource)
+	require.Equal(t, "sk-test", record.APIKey)
+}

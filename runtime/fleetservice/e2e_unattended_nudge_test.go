@@ -61,7 +61,7 @@ func TestFleetE2E_UnattendedNudge_MuteUnitHeartbeatsNudgedAndBlocked(t *testing.
 	runContenoxCLI(t, bin, home, "config", "set", "default-model", "chain-unit-fixture-model")
 	runContenoxCLI(t, bin, home, "config", "set", "update-check", "false")
 
-	contenoxDir := filepath.Join(home, ".contenox")
+	contenoxDir := filepath.Join(home, ".contenox-harness")
 	require.DirExists(t, contenoxDir)
 	// The print-only fixture: a unit that answers in prose and NEVER touches a
 	// mission tool — the confused unit this whole cure exists for.

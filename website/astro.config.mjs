@@ -1,11 +1,13 @@
 import { defineConfig } from "astro/config";
 import tailwindcss from "@tailwindcss/vite";
 import sitemap from "@astrojs/sitemap";
+import s3Media from "./tools/s3-media-integration.mjs";
 
 export default defineConfig({
   site: "https://contenox.com",
   output: "static",
   integrations: [
+    s3Media(),
     sitemap({
       // Development docs (contributor docs and blueprint design records) stay
       // browsable and searchable on-site, but are kept out of the SEO surface.
@@ -13,7 +15,6 @@ export default defineConfig({
     }),
   ],
   markdown: {
-    remarkPlugins: [(await import("./src/lib/remark-md-links.mjs")).default],
     shikiConfig: {
       themes: { light: "github-light", dark: "github-dark" },
       defaultColor: false,

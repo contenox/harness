@@ -166,7 +166,7 @@ func TestFleetE2E_OvernightBatch(t *testing.T) {
 	runContenoxCLI(t, contenoxBin, home, "config", "set", "default-model", "overnight-batch-fake-model")
 	runContenoxCLI(t, contenoxBin, home, "config", "set", "update-check", "false")
 
-	contenoxDir := filepath.Join(home, ".contenox")
+	contenoxDir := filepath.Join(home, ".contenox-harness")
 	require.DirExists(t, contenoxDir)
 
 	ctx := context.Background()

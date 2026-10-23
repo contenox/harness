@@ -62,7 +62,7 @@ func ProtectAPI(token, allowedOrigins string, next http.Handler) http.Handler {
 			return
 		}
 		if isCrossSiteBrowserMutation(r, allowedOrigins) {
-			_ = apiframework.Error(w, r, apiframework.Forbidden("cross-origin mutating requests require TOKEN"), apiframework.AuthorizeOperation)
+			_ = apiframework.Error(w, r, apiframework.Forbidden("cross-origin mutating requests require TOKEN: open the cockpit on the API origin, allow it with ALLOWED_API_ORIGINS, or run serve with TOKEN"), apiframework.AuthorizeOperation)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -154,7 +154,35 @@ func originMatchesRequest(origin string, r *http.Request) bool {
 	if r.TLS != nil {
 		reqScheme = "https"
 	}
-	return strings.EqualFold(u.Scheme, reqScheme) && strings.EqualFold(u.Host, r.Host)
+	if !strings.EqualFold(u.Scheme, reqScheme) {
+		return false
+	}
+	if strings.EqualFold(u.Host, r.Host) {
+		return true
+	}
+	// Loopback aliases are one origin for a local serve: a page opened as
+	// http://localhost:32123 and a request Host of 127.0.0.1:32123 (or the
+	// reverse) are the same local cockpit. Ports still have to match.
+	originHost, originPort := splitHostPort(u.Host)
+	requestHost, requestPort := splitHostPort(r.Host)
+	return originPort == requestPort &&
+		isLoopbackHost(originHost) && isLoopbackHost(requestHost)
+}
+
+func splitHostPort(hostport string) (string, string) {
+	host, port, err := net.SplitHostPort(hostport)
+	if err != nil {
+		return strings.Trim(hostport, "[]"), ""
+	}
+	return strings.Trim(host, "[]"), port
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func originExplicitlyAllowed(origin, allowedOrigins string) bool {

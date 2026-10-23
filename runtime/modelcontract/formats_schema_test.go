@@ -3,8 +3,6 @@ package modelcontract_test
 import (
 	"encoding/json"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -124,76 +122,4 @@ func appendUniqueText(values []string, value string) []string {
 		}
 	}
 	return append(values, value)
-}
-
-func TestUnit_TokenizerCompanionBuilderReadsTheCompletionFormatSchema(t *testing.T) {
-	schema := readDeclaredSchema(t)
-	python, err := exec.LookPath("python3")
-	if err != nil {
-		t.Fatalf("the tokenizer companion builder is Python and this check requires python3: %v", err)
-	}
-	builder, err := filepath.Abs(filepath.Join("..", "..", "..", "scripts", "prepare-openvino-literal-source-tokenizer.py"))
-	if err != nil {
-		t.Fatalf("resolve the tokenizer companion builder path: %v", err)
-	}
-	output, err := exec.Command(python, builder, "--dump-formats").Output()
-	if err != nil {
-		t.Fatalf("run %s --dump-formats: %v", builder, err)
-	}
-	var dumped struct {
-		Schema  string `json:"schema"`
-		Formats map[string]struct {
-			Kind     string   `json:"kind"`
-			Version  int      `json:"version"`
-			Controls []string `json:"controls"`
-		} `json:"formats"`
-	}
-	if err := json.Unmarshal(output, &dumped); err != nil {
-		t.Fatalf("decode the tokenizer companion builder vocabulary: %v", err)
-	}
-	declared, err := filepath.Abs(modelcontract.CompletionFormatSchemaFile)
-	if err != nil {
-		t.Fatalf("resolve the format schema path: %v", err)
-	}
-	if filepath.Clean(dumped.Schema) != declared {
-		t.Fatalf("the tokenizer companion builder reads %q instead of %q", dumped.Schema, declared)
-	}
-	expected := map[string]struct {
-		Kind     string
-		Version  int
-		Controls []string
-	}{}
-	for _, entry := range schema.FIM {
-		if entry.Kind != "tokens" {
-			continue
-		}
-		expected[entry.ID] = struct {
-			Kind     string
-			Version  int
-			Controls []string
-		}{entry.Operation, entry.Version, entry.Stops}
-	}
-	for _, entry := range schema.NextEdit {
-		expected[entry.ID] = struct {
-			Kind     string
-			Version  int
-			Controls []string
-		}{entry.Operation, entry.Version, entry.Controls}
-	}
-	if len(dumped.Formats) != len(expected) {
-		t.Fatalf("the tokenizer companion builder serves %d formats, the schema declares %d literal-source formats", len(dumped.Formats), len(expected))
-	}
-	for format, want := range expected {
-		got, found := dumped.Formats[format]
-		if !found {
-			t.Fatalf("the tokenizer companion builder does not serve declared format %q", format)
-		}
-		version, controls, err := modelcontract.TokenizerCompanionControls(want.Kind, format)
-		if err != nil {
-			t.Fatalf("TokenizerCompanionControls(%q, %q): %v", want.Kind, format, err)
-		}
-		if got.Kind != want.Kind || got.Version != want.Version || version != want.Version || !reflect.DeepEqual(got.Controls, want.Controls) || !reflect.DeepEqual(controls, want.Controls) {
-			t.Fatalf("format %q: builder serves %#v, the schema declares %#v, the runtime contract reports version %d controls %#v", format, got, want, version, controls)
-		}
-	}
 }

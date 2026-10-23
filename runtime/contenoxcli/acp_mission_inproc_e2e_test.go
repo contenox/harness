@@ -84,7 +84,7 @@ func TestSystem_ACPMissionInProcess(t *testing.T) {
 	homeDir := filepath.Join(root, "home")
 	workspaceDir := filepath.Join(root, "workspace")
 	dataDir := filepath.Join(workspaceDir, ".contenox")
-	dbPath := filepath.Join(homeDir, ".contenox", "local.db")
+	dbPath := filepath.Join(homeDir, ".contenox-harness", "local.db")
 	require.NoError(t, os.MkdirAll(homeDir, 0o755))
 	require.NoError(t, os.MkdirAll(workspaceDir, 0o755))
 
@@ -93,6 +93,7 @@ func TestSystem_ACPMissionInProcess(t *testing.T) {
 	// too, so THIS process is a top-level editor (not a dispatched unit) and hosts
 	// the fleet; the child unit gets the chain path from its declared agent env.
 	baseEnv := append(os.Environ(),
+		"CONTENOX_UPDATE_CHECK=false",
 		"HOME="+homeDir,
 		"CONTENOX_DEFAULT_MODEL=inproc-e2e-fake-model",
 		"CONTENOX_DEFAULT_PROVIDER=ollama",
@@ -224,7 +225,7 @@ func TestSystem_ACPMissionForwardOptInHonest(t *testing.T) {
 	homeDir := filepath.Join(root, "home")
 	workspaceDir := filepath.Join(root, "workspace")
 	dataDir := filepath.Join(workspaceDir, ".contenox")
-	dbPath := filepath.Join(homeDir, ".contenox", "local.db")
+	dbPath := filepath.Join(homeDir, ".contenox-harness", "local.db")
 	require.NoError(t, os.MkdirAll(homeDir, 0o755))
 	require.NoError(t, os.MkdirAll(workspaceDir, 0o755))
 

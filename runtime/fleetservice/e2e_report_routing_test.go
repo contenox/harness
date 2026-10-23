@@ -71,7 +71,7 @@ func TestFleetE2E_ReportRouting_ParentSessionAndInbox(t *testing.T) {
 	runContenoxCLI(t, bin, home, "config", "set", "default-model", "chain-unit-fixture-model")
 	runContenoxCLI(t, bin, home, "config", "set", "update-check", "false")
 
-	contenoxDir := filepath.Join(home, ".contenox")
+	contenoxDir := filepath.Join(home, ".contenox-harness")
 	require.DirExists(t, contenoxDir)
 	writeChainAgentFixture(t, contenoxDir)
 

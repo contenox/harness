@@ -72,7 +72,7 @@ Examples:
   contenox config set default-model    qwen2.5:7b
   contenox config set default-provider ollama
 
-  # Keep chat on a hosted provider, but run VS Code ghost text on local modeld:
+  # Keep chat on a hosted provider, but run VS Code ghost text on a local Ollama model:
   contenox config set default-provider openai
   contenox config set default-model    gpt-5-mini
   contenox config set default-autocomplete-provider llama

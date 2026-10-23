@@ -7,20 +7,34 @@ import type { SetupStatus } from '../../../lib/types';
 type Props = {
   data: SetupStatus | undefined;
   onRefreshStatus: () => void;
+  /** Advances the wizard once defaults are saved. */
+  onSaved?: () => void;
 };
 
-export default function StepSetModel({ data, onRefreshStatus }: Props) {
+export default function StepSetModel({ data, onRefreshStatus, onSaved }: Props) {
   const { t } = useTranslation();
   const putConfig = usePutCLIConfig();
   const formId = useId();
 
-  const allModels = (data?.backendChecks ?? []).flatMap(b => b.chatModels ?? []);
-  const hasModels = allModels.length > 0;
   const hasDefaults = !!(data?.defaultModel || data?.defaultProvider);
 
   const [model, setModel] = useState(data?.defaultModel ?? '');
   const [provider, setProvider] = useState(data?.defaultProvider ?? '');
   const [defaultChain, setDefaultChain] = useState(data?.defaultChain ?? '');
+
+  const allModels = Array.from(
+    new Set((data?.backendChecks ?? []).flatMap(b => b.chatModels ?? [])),
+  );
+  const hasModels = allModels.length > 0;
+  const providerOptions = Array.from(
+    new Set(
+      (data?.backendChecks ?? [])
+        .filter(b => b.reachable || b.chatModelCount > 0)
+        .map(b => b.type),
+    ),
+  );
+  if (provider && !providerOptions.includes(provider)) providerOptions.unshift(provider);
+  if (model && !allModels.includes(model)) allModels.unshift(model);
 
   useEffect(() => {
     setModel(data?.defaultModel ?? '');
@@ -28,13 +42,22 @@ export default function StepSetModel({ data, onRefreshStatus }: Props) {
     setDefaultChain(data?.defaultChain ?? '');
   }, [data]);
 
+  // The form is useless without a model: preselect the preferred available one
+  // so Save is enabled and the operator does not leave the wizard half-done.
+  useEffect(() => {
+    if (model !== '' || allModels.length === 0) return;
+    const preferred = allModels.find(m => m === 'gpt-5.4') ?? allModels[0];
+    setModel(preferred);
+  }, [allModels, model]);
+
   useEffect(() => {
     if (putConfig.isSuccess) {
       onRefreshStatus();
+      onSaved?.();
       const timer = window.setTimeout(() => putConfig.reset(), 4000);
       return () => window.clearTimeout(timer);
     }
-  }, [putConfig.isSuccess, putConfig.reset, onRefreshStatus]);
+  }, [putConfig.isSuccess, putConfig.reset, onRefreshStatus, onSaved]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,11 +103,20 @@ export default function StepSetModel({ data, onRefreshStatus }: Props) {
         </FormField>
 
         <FormField label={t('onboarding.step_set_model.provider_label')}>
-          <Input
-            value={provider}
-            onChange={e => setProvider(e.target.value)}
-            placeholder={t('onboarding.step_set_model.provider_placeholder')}
-          />
+          {providerOptions.length > 0 ? (
+            <Select
+              value={provider}
+              onChange={e => setProvider(e.target.value)}
+              placeholder={t('onboarding.step_set_model.provider_placeholder')}
+              options={providerOptions.map(p => ({ value: p, label: p }))}
+            />
+          ) : (
+            <Input
+              value={provider}
+              onChange={e => setProvider(e.target.value)}
+              placeholder={t('onboarding.step_set_model.provider_placeholder')}
+            />
+          )}
         </FormField>
 
         <FormField label={t('onboarding.step_set_model.chain_label')}>
@@ -105,7 +137,10 @@ export default function StepSetModel({ data, onRefreshStatus }: Props) {
           <P variant="muted" className="text-sm">{t('onboarding.step_set_model.saved')}</P>
         )}
 
-        <Button type="submit" variant="primary" disabled={putConfig.isPending}>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={putConfig.isPending || !model.trim() || !provider.trim()}>
           {t('onboarding.step_set_model.save')}
         </Button>
       </form>

@@ -202,7 +202,7 @@ func TestUnit_ModelProviderAdapter_ResolvesRegisteredBackendName(t *testing.T) {
 		backendID: {
 			ID:      backendID,
 			Name:    "native-local",
-			Backend: runtimetypes.Backend{ID: backendID, Name: "native-local", Type: "modeld", BaseURL: "local"},
+			Backend: runtimetypes.Backend{ID: backendID, Name: "native-local", Type: "ollama", BaseURL: "http://host:11434"},
 			PulledModels: []runtimestate.ModelPullStatus{
 				{
 					Name:          "qwen3.5-0.8b",
@@ -218,7 +218,7 @@ func TestUnit_ModelProviderAdapter_ResolvesRegisteredBackendName(t *testing.T) {
 
 	adapterFunc := runtimestate.LocalProviderAdapter(ctx, nil, runtime)
 
-	byType, err := adapterFunc(ctx, "modeld")
+	byType, err := adapterFunc(ctx, "ollama")
 	require.NoError(t, err)
 	require.Len(t, byType, 1, "a type request returns one provider per model")
 

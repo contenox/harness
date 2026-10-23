@@ -16,10 +16,12 @@ const TOTAL_STEPS = 4;
 
 function detectProvider(provider: string): ProviderChoice {
   const p = provider.trim().toLowerCase();
-  if (p === 'local') return 'local';
+  // Legacy local types (local/llama/openvino/modeld) have no provider any
+  // more; the closest supported local option is an Ollama server.
+  if (p === 'local' || p === 'llama' || p === 'openvino' || p === 'modeld') return 'ollama';
   if (p === 'vertex') return 'vertex-google';
   if (isCloudProviderType(p)) return p;
-  return 'local';
+  return 'ollama';
 }
 
 type Props = {
@@ -31,7 +33,7 @@ export function OnboardingWizard({ data, onDismiss }: Props) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
-  const [provider, setProvider] = useState<ProviderChoice>('local');
+  const [provider, setProvider] = useState<ProviderChoice>('ollama');
   const [initialized, setInitialized] = useState(false);
 
   // Smart starting step — runs once after first data load
@@ -95,8 +97,17 @@ export function OnboardingWizard({ data, onDismiss }: Props) {
       {/* Step content */}
       <div className="flex-1 min-h-0 overflow-auto p-6">
         {step === 0 && <StepChooseProvider value={provider} onChange={setProvider} />}
-        {step === 1 && <StepGetModel provider={provider} onRefreshStatus={refreshStatus} />}
-        {step === 2 && <StepSetModel data={data} onRefreshStatus={refreshStatus} />}
+        {step === 1 && (
+          <StepGetModel
+            provider={provider}
+            onRefreshStatus={refreshStatus}
+            onSaved={() => {
+              refreshStatus();
+              setStep(2);
+            }}
+          />
+        )}
+        {step === 2 && <StepSetModel data={data} onRefreshStatus={refreshStatus} onSaved={() => setStep(3)} />}
         {step === 3 && (
           <StepHealthCheck data={data} onRefreshStatus={refreshStatus} onFinish={onDismiss} />
         )}

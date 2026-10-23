@@ -2,7 +2,6 @@
 package contenoxcli
 
 import (
-	"github.com/contenox/harness/runtime/homedir"
 	"context"
 	"errors"
 	"fmt"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/contenox/harness/runtime/homedir"
 
 	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/runtime/internal/clikv"
@@ -55,7 +56,7 @@ const (
 )
 
 // reservedSubcommands are first-arg names that must not be treated as run input (Cobra or our subcommands).
-var reservedSubcommands = map[string]bool{"init": true, "chat": true, "help": true, "completion": true, "session": true, "run": true, "tools": true, "mcp": true, "backend": true, "agent": true, "config": true, "model": true, "models": true, "modeld": true, "doctor": true, "version": true, "state": true, "acp": true, "acpx": true, "setup": true, "cache": true, "serve": true, "update": true, "approvals": true, "fleet": true, "mission": true, "workspace": true, "sandbox": true, "shell-env": true}
+var reservedSubcommands = map[string]bool{"init": true, "chat": true, "help": true, "completion": true, "session": true, "run": true, "tools": true, "mcp": true, "backend": true, "agent": true, "config": true, "model": true, "models": true, "doctor": true, "version": true, "state": true, "acp": true, "acpx": true, "setup": true, "cache": true, "serve": true, "update": true, "approvals": true, "fleet": true, "mission": true, "workspace": true, "sandbox": true, "shell-env": true}
 
 // Main runs the contenox CLI: init subcommand or run (default) with optional positional input.
 func Main() {
@@ -184,11 +185,11 @@ func firstNonFlagIsReserved(args []string) bool {
 
 var rootCmd = &cobra.Command{
 	Use:   "contenox",
-	Short: "Local AI workflow runtime: run versioned chains with your tools and models.",
+	Short: "AI harness runtime: run versioned chains with your tools and models.",
 	Long: `Contenox is a local runtime for packaged, auditable AI workflows.
 Chains define the prompts, model routing, tools, retries, branch conditions,
 and human approval gates. State is stored in SQLite. Cloud providers and Ollama
-work directly from the CLI; local GGUF/OpenVINO inference is served by modeld.
+work directly from the CLI; local inference is reached through an Ollama server.
 
   Quickstart:
     contenox setup                         # interactive wizard — pick provider, model, API key
@@ -197,15 +198,8 @@ work directly from the CLI; local GGUF/OpenVINO inference is served by modeld.
 
   Inspect models:
     contenox model list                    # models exposed by registered live backends
-    contenox model registry-list           # curated local models available for 'model pull'
-    contenox model local                   # installed local GGUF/OpenVINO artifacts
 
   Or register an LLM backend manually:
-    # Local llama.cpp GGUF via modeld (no provider API key, no network):
-    contenox backend add llama --type llama --url <models-dir>
-    contenox config set default-provider llama
-    contenox config set default-model <model-name>
-
     # Local Ollama daemon
     ollama serve && ollama pull qwen2.5:7b
     contenox backend add ollama --type ollama
@@ -232,7 +226,7 @@ work directly from the CLI; local GGUF/OpenVINO inference is served by modeld.
     contenox config set default-provider openrouter
 
   VS Code autocomplete can use a separate model from chat:
-    # Example: chat on OpenAI, ghost text on local modeld llama.
+    # Example: chat on OpenAI, ghost text on a local Ollama model.
     contenox config set default-provider openai
     contenox config set default-model    gpt-5-mini
     contenox config set default-autocomplete-provider llama
@@ -312,11 +306,10 @@ This writes default-chain.json and default-run-chain.json.
 
 After init, register a backend, make sure the runtime can see a model, then set your defaults:
 
-  # Local llama.cpp via modeld:
-  contenox model pull qwen3-4b
-  contenox model local
-  contenox config set default-provider llama
-  contenox config set default-model qwen3-4b
+  # Local Ollama daemon
+  ollama pull qwen2.5:7b
+  contenox config set default-provider ollama
+  contenox config set default-model qwen2.5:7b
 
   # Local Ollama:
   contenox backend add local --type ollama
@@ -369,7 +362,7 @@ This is the subcommand form of 'contenox --version' and exists so that typing
 func init() {
 	v := cliVersion()
 	rootCmd.Version = v
-	rootCmd.Short = fmt.Sprintf("Local AI workflow runtime v%s: run versioned chains with your tools and models.", v)
+	rootCmd.Short = fmt.Sprintf("AI harness runtime v%s: run versioned chains with your tools and models.", v)
 	// Cobra prints Long for --help when set; include version so it matches runtime/version/version.txt.
 	rootCmd.Long = fmt.Sprintf("Version: %s\n\n%s", v, rootCmd.Long)
 

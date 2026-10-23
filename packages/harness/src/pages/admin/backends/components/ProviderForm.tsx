@@ -8,9 +8,11 @@ import type { CloudProviderType } from '../../../../lib/types';
 type ProviderFormProps = {
   provider?: CloudProviderType;
   setup?: CloudProviderSetup;
+  /** Called after the credentials are saved, so a wizard can advance. */
+  onSaved?: () => void;
 };
 
-export default function ProviderForm({ provider, setup: setupProp }: ProviderFormProps) {
+export default function ProviderForm({ provider, setup: setupProp, onSaved }: ProviderFormProps) {
   const { t } = useTranslation();
   const setup = setupProp ?? getCloudProviderSetup(provider ?? 'openai');
   const [secret, setSecret] = useState('');
@@ -75,6 +77,7 @@ export default function ProviderForm({ provider, setup: setupProp }: ProviderFor
       {
         onSuccess: () => {
           setSecret('');
+          onSaved?.();
         },
       },
     );

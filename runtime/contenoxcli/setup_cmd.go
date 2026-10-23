@@ -82,8 +82,6 @@ var setupProviders = []setupProvider{
 	{key: "openrouter", label: "OpenRouter (300+ models, one API key — deepseek, qwen, llama, gemini, gpt and more)", defaultModel: "deepseek/deepseek-chat-v3-5", envKey: "OPENROUTER_API_KEY", needsAPIKey: true},
 	{key: "gemini", label: "Google Gemini", defaultModel: "gemini-flash-latest", envKey: "GEMINI_API_KEY", needsAPIKey: true},
 	{key: "vertex-google", label: "Google Vertex AI (Gemini via gcloud ADC)", defaultModel: "gemini-flash-latest", needsAPIKey: false, needsBaseURL: true, baseURLHint: "https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT/locations/us-central1"},
-	{key: "llama", label: "Llama.cpp GGUF (local modeld)", defaultModel: "", needsAPIKey: false},
-	{key: "openvino", label: "OpenVINO IR (local modeld)", defaultModel: "", needsAPIKey: false},
 }
 
 // errSetupNoInput is returned when setup's interactive provider choice reaches
@@ -266,13 +264,6 @@ func runSetup(cmd *cobra.Command, out io.Writer) error {
 
 // printModeldInstallFallback explains why the prebuilt path did not apply and,
 // except for a checksum mismatch, prints the source-build instructions.
-
-func defaultCuratedPullExample(backend string) string {
-	if backend == "openvino" {
-		return "qwen2.5-coder-0.5b-ov"
-	}
-	return "qwen3-8b"
-}
 
 // reportSetupReadiness runs the same read-only reachability check as
 // `contenox doctor` (a backend sync, never a model completion) and prints an

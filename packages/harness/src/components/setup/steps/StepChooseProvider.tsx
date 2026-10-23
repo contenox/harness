@@ -5,7 +5,7 @@ import { ONBOARDING_PROVIDER_SETUPS } from '../../../lib/providerCatalog';
 import type { CloudProviderType } from '../../../lib/types';
 import { cn } from '../../../lib/utils';
 
-export type ProviderChoice = 'local' | CloudProviderType;
+export type ProviderChoice = CloudProviderType;
 
 type ProviderCardProps = {
   id: ProviderChoice;
@@ -55,11 +55,6 @@ export default function StepChooseProvider({ value, onChange }: Props) {
   const { t } = useTranslation();
 
   const providers: { id: ProviderChoice; titleKey: TranslationKey; descKey: TranslationKey }[] = [
-    {
-      id: 'local',
-      titleKey: 'onboarding.step_choose_provider.local_title',
-      descKey: 'onboarding.step_choose_provider.local_desc',
-    },
     {
       id: 'ollama',
       titleKey: 'onboarding.step_choose_provider.ollama_title',

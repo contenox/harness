@@ -140,6 +140,7 @@ type RemoteTools struct {
 
 type Store interface {
 	CreateBackend(ctx context.Context, backend *Backend) error
+	CountBackendsByTypeAndURL(ctx context.Context, typ, baseURL, excludeID string) (int, error)
 	GetBackend(ctx context.Context, id string) (*Backend, error)
 	UpdateBackend(ctx context.Context, backend *Backend) error
 	DeleteBackend(ctx context.Context, id string) error

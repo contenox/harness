@@ -34,6 +34,20 @@ func (s *store) CreateBackend(ctx context.Context, backend *Backend) error {
 	return err
 }
 
+// CountBackendsByTypeAndURL reports how many backends other than excludeID
+// share an implementation type and base URL. The service treats that pair as
+// the identity of a connection: two rows for the same endpoint would shadow
+// each other in resolution.
+func (s *store) CountBackendsByTypeAndURL(ctx context.Context, typ, baseURL, excludeID string) (int, error) {
+	var count int
+	err := s.Exec.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM llm_backends
+		WHERE type = $1 AND base_url = $2 AND ($3 = '' OR id <> $3)`,
+		typ, baseURL, excludeID,
+	).Scan(&count)
+	return count, err
+}
+
 func (s *store) GetBackend(ctx context.Context, id string) (*Backend, error) {
 	var backend Backend
 	err := s.Exec.QueryRowContext(ctx, `

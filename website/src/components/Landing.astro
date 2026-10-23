@@ -25,80 +25,143 @@ export interface LandingStrings {
 interface Props {
   t: LandingStrings;
 }
+import InstallCommand from './InstallCommand.astro';
+import showcase from '../data/showcase.json';
 const { t } = Astro.props;
-const install = 'curl -fsSL https://contenox.com/install.sh | sh';
-const foundation = ['Go', 'SQLite', 'PostgreSQL', 'NATS', 'Valkey', 'MCP', 'ACP'];
-const eyebrow = 'text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400';
-const h2 = 'mt-4 text-3xl font-bold tracking-tight sm:text-4xl';
-const body = 'mt-6 max-w-2xl text-base leading-relaxed text-neutral-600 dark:text-neutral-300';
-const primary = 'rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200';
-const ghost = 'rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900';
-const index = 'text-sm font-medium tabular-nums text-neutral-400 dark:text-neutral-600';
+// Heavy product media lives in the website assets bucket, never in the repo.
+const media = 'https://contenox-website-assets-573643652148.s3.amazonaws.com/media/';
+const foundation = [
+  ['Go', 'the implementation'],
+  ['SQLite', 'default state'],
+  ['PostgreSQL', 'server state'],
+  ['NATS', 'server messaging'],
+  ['Valkey', 'server cache'],
+  ['MCP', 'tool servers'],
+  ['ACP', 'editor protocol'],
+];
 ---
 
-<section class="border-b border-neutral-200 px-5 pb-20 pt-24 dark:border-neutral-800">
-  <div class="mx-auto max-w-5xl">
-    <p class={eyebrow}>{t.eyebrow}</p>
-    <h1 class="mt-6 max-w-3xl text-5xl font-bold tracking-tight sm:text-6xl">{t.h1}</h1>
-    <p class="mt-7 max-w-2xl text-lg leading-relaxed text-neutral-600 dark:text-neutral-300">{t.lede}</p>
-    <div class="mt-10 flex flex-wrap gap-3">
-      <a href="#install" class={primary}>{t.ctaInstall}</a>
-      <a href="#harness" class={ghost}>{t.ctaHow}</a>
-    </div>
-    <ul class="mt-16 flex flex-wrap gap-x-8 gap-y-2 border-t border-neutral-200 pt-6 text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-      {t.principles.map((p) => <li>{p}</li>)}
-    </ul>
-  </div>
-</section>
-
-<section id="harness" class="scroll-mt-20 border-b border-neutral-200 px-5 py-20 dark:border-neutral-800">
-  <div class="mx-auto grid max-w-5xl gap-10 md:grid-cols-[4rem_1fr]">
-    <div class={index}>01</div>
-    <div>
-      <p class={eyebrow}>{t.s1Eyebrow}</p>
-      <h2 class={h2}>{t.s1H2}</h2>
-      <p class={body}>{t.s1P1}</p>
-      <p class={body}>{t.s1P2}</p>
-    </div>
-  </div>
-</section>
-
-<section id="install" class="scroll-mt-20 border-b border-neutral-200 px-5 py-20 dark:border-neutral-800">
-  <div class="mx-auto grid max-w-5xl gap-10 md:grid-cols-[4rem_1fr]">
-    <div class={index}>02</div>
-    <div>
-      <p class={eyebrow}>{t.s2Eyebrow}</p>
-      <h2 class={h2}>{t.s2H2}</h2>
-      <p class={body}>{t.s2P}</p>
-      <div class="mt-8 flex max-w-xl items-center justify-between gap-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 font-mono text-sm dark:border-neutral-800 dark:bg-neutral-900">
-        <span class="truncate">{install}</span>
+<div class="storefront">
+  <section class="hero">
+    <div class="hero-aura" aria-hidden="true"></div>
+    <div class="hero-copy">
+      <p class="eyebrow">{t.eyebrow}</p>
+      <h1>{t.h1}</h1>
+      <p class="hero-lede">{t.lede}</p>
+      <div class="hero-actions">
+        <a href="#download" class="button button-primary">{t.ctaInstall}</a>
+        <a href="#showcase" class="button button-quiet">
+          {t.ctaHow} <span aria-hidden="true">↓</span>
+        </a>
       </div>
-      <p class="mt-4 text-sm text-neutral-500 dark:text-neutral-400">{t.s2Note}</p>
     </div>
-  </div>
-</section>
 
-<section id="foundation" class="scroll-mt-20 border-b border-neutral-200 px-5 py-20 dark:border-neutral-800">
-  <div class="mx-auto grid max-w-5xl gap-10 md:grid-cols-[4rem_1fr]">
-    <div class={index}>03</div>
-    <div>
-      <p class={eyebrow}>{t.s3Eyebrow}</p>
-      <h2 class={h2}>{t.s3H2}</h2>
-      <p class={body}>{t.s3P}</p>
-      <ul class="mt-10 grid grid-cols-2 gap-x-8 gap-y-4 border-t border-neutral-200 pt-8 sm:grid-cols-4 dark:border-neutral-800">
-        {foundation.map((name) => (
-          <li class="text-sm font-medium text-neutral-800 dark:text-neutral-200">{name}</li>
-        ))}
-      </ul>
-      <p class="mt-8 text-sm text-neutral-500 dark:text-neutral-400">{t.s3License}</p>
+    <div id="showcase" class="product-stage">
+      <div class="stage-header" aria-hidden="true">
+        <span>Contenox</span>
+        <span class="stage-status"><i></i> Workbench</span>
+      </div>
+      <div class="stage-media">
+        {showcase.sources.length > 0 ? (
+          <video
+            muted
+            playsinline
+            controls
+            preload="metadata"
+            poster={showcase.poster}
+            aria-label="Contenox workbench demonstration"
+          >
+            {showcase.sources.map(({ src, type }) => <source src={src} type={type} />)}
+          </video>
+        ) : (
+          <img
+            src={showcase.poster}
+            alt="The Contenox workbench: workspace tree, live transcript and file preview beside one session."
+            decoding="async"
+          />
+        )}
+      </div>
     </div>
-  </div>
-</section>
 
-<section class="px-5 py-24">
-  <div class="mx-auto max-w-5xl">
-    <p class={eyebrow}>{t.endEyebrow}</p>
-    <h2 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">{t.endH2}</h2>
-    <a href="#install" class={`mt-10 inline-block ${primary}`}>{t.endCta}</a>
-  </div>
-</section>
+    <div class="principles" aria-label="Contenox principles">
+      {t.principles.map((p) => <span>{p}</span>)}
+    </div>
+  </section>
+
+  <section class="editorial-section workbench-section">
+    <div class="section-index" aria-hidden="true">01</div>
+    <div class="section-heading">
+      <p class="eyebrow">{t.s1Eyebrow}</p>
+      <h2>{t.s1H2}</h2>
+    </div>
+    <div class="section-copy">
+      <p>{t.s1P1}</p>
+      <p>{t.s1P2}</p>
+    </div>
+  </section>
+
+  <section id="download" class="editorial-section download-section scroll-mt-16">
+    <div class="section-index" aria-hidden="true">02</div>
+    <div class="section-heading">
+      <p class="eyebrow">{t.s2Eyebrow}</p>
+      <h2>{t.s2H2}</h2>
+    </div>
+    <div class="download-intro">
+      <p>{t.s2P}</p>
+      <p class="download-note">{t.s2Note}</p>
+    </div>
+    <div class="download-area">
+      <div class="download-install">
+        <InstallCommand posixLabel="macOS / Linux" windowsLabel="Windows" copyLabel="Copy" />
+      </div>
+    </div>
+  </section>
+
+  <section id="built-on" class="foundation-section scroll-mt-16">
+    <div class="foundation-heading">
+      <p class="eyebrow">{t.s3Eyebrow}</p>
+      <h2>{t.s3H2}</h2>
+      <p>{t.s3P}</p>
+    </div>
+    <div class="foundation-list">
+      {foundation.map(([name, role]) => (
+        <div class="foundation-item">
+          <span>{name}</span>
+          <small>{role}</small>
+        </div>
+      ))}
+    </div>
+    <p class="foundation-license">{t.s3License}</p>
+  </section>
+
+  <section class="final-section">
+    <div class="final-copy">
+      <p class="eyebrow">{t.endEyebrow}</p>
+      <h2>{t.endH2}</h2>
+      <a href="#download" class="button button-dark">{t.endCta}</a>
+    </div>
+    <div class="frog-field">
+      <span class="frog-caption">Phyllobates terribilis</span>
+      <img src={`${media}phyllobates-terribilis-a19746b09422999e0e3774b16281cee67bce7bae33681c563b62f2f2b0f117e3.webp`} alt="Golden poison frog" decoding="async" />
+    </div>
+  </section>
+</div>
+
+<style>
+  .stage-media img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .download-install {
+    max-width: 32rem;
+  }
+
+  .download-note {
+    margin-top: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+</style>

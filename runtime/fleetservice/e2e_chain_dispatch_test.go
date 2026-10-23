@@ -188,7 +188,7 @@ func TestFleetE2E_ChainAgent_DiscoveredDispatchedAndAnswers(t *testing.T) {
 	runContenoxCLI(t, bin, home, "config", "set", "default-model", "chain-unit-fixture-model")
 	runContenoxCLI(t, bin, home, "config", "set", "update-check", "false")
 
-	contenoxDir := filepath.Join(home, ".contenox")
+	contenoxDir := filepath.Join(home, ".contenox-harness")
 	require.DirExists(t, contenoxDir, "the CLI seeding run must have created the isolated state directory")
 	chainPath := writeChainAgentFixture(t, contenoxDir)
 

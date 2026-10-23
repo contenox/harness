@@ -65,7 +65,7 @@ func TestFleetService_E2E_MissionPlanFromDispatchedUnit(t *testing.T) {
 
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
-	contenoxDir := filepath.Join(tmpHome, ".contenox")
+	contenoxDir := filepath.Join(tmpHome, ".contenox-harness")
 	require.NoError(t, os.MkdirAll(contenoxDir, 0o700))
 	dbPath := filepath.Join(contenoxDir, "local.db")
 

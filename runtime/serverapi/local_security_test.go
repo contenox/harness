@@ -283,3 +283,39 @@ func TestProtectMutatingAPI_TokenAllowsCrossOriginBrowserReadWithToken(t *testin
 		t.Fatalf("status = %d, want 204", rr.Code)
 	}
 }
+
+func TestProtectMutatingAPI_NoTokenAllowsLoopbackAliasOrigin(t *testing.T) {
+	called := false
+	handler := ProtectMutatingAPI("", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:32123/api/backends", strings.NewReader(`{}`))
+	req.Host = "127.0.0.1:32123"
+	req.Header.Set("Origin", "http://localhost:32123")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if !called || rr.Code != http.StatusNoContent {
+		t.Fatalf("loopback alias should be same-origin, status = %d", rr.Code)
+	}
+}
+
+func TestProtectMutatingAPI_NoTokenRejectsLoopbackDifferentPort(t *testing.T) {
+	called := false
+	handler := ProtectMutatingAPI("", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:32123/api/backends", strings.NewReader(`{}`))
+	req.Host = "127.0.0.1:32123"
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if called || rr.Code != http.StatusForbidden {
+		t.Fatalf("different port is cross-origin, status = %d", rr.Code)
+	}
+}

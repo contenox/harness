@@ -161,31 +161,34 @@
 @theme {
 
 
-  --color-primary-50: #ecfdf5;
-  --color-primary-100: #d1fae5;
-  --color-primary-200: #a7f3d0;
-  --color-primary-300: #6ee7b7;
-  --color-primary-400: #34d399;
-  --color-primary-500: #10b981;
-  --color-primary-600: #059669;
-  --color-primary-700: #047857;
-  --color-primary-800: #065f46;
-  --color-primary-900: #064e3b;
-  --color-primary-950: #022c22;
-  --color-primary: var(--color-primary-600);
-  --color-brand: var(--color-primary-600);
+  /* Monochrome primary, lifted verbatim from the Bob-era @contenox/ui theme
+     (recovered-saas-snapshots/bob2-prealpha .../packages/ui/src/index.css).
+     Colour is reserved for semantic state (success / warning / error). */
+  --color-primary-50: #f5f5f5;
+  --color-primary-100: #e5e5e5;
+  --color-primary-200: #d4d4d4;
+  --color-primary-300: #a3a3a3;
+  --color-primary-400: #737373;
+  --color-primary-500: #525252;
+  --color-primary-600: #404040;
+  --color-primary-700: #262626;
+  --color-primary-800: #171717;
+  --color-primary-900: #0a0a0a;
+  --color-primary-950: #000000;
+  --color-primary: var(--color-primary-500);
+  --color-brand: var(--color-primary-500);
 
 
-  --color-secondary-50: #f8fafc;
-  --color-secondary-100: #f1f5f9;
-  --color-secondary-200: #e2e8f0;
-  --color-secondary-300: #cbd5e1;
-  --color-secondary-400: #94a3b8;
-  --color-secondary-500: #64748b;
-  --color-secondary-600: #475569;
-  --color-secondary-700: #334155;
-  --color-secondary-800: #1e293b;
-  --color-secondary-900: #0f172a;
+  --color-secondary-50: #fafafa;
+  --color-secondary-100: #f5f5f5;
+  --color-secondary-200: #e5e5e5;
+  --color-secondary-300: #d4d4d4;
+  --color-secondary-400: #a3a3a3;
+  --color-secondary-500: #737373;
+  --color-secondary-600: #525252;
+  --color-secondary-700: #404040;
+  --color-secondary-800: #262626;
+  --color-secondary-900: #171717;
   --color-secondary: var(--color-secondary-500);
 
 
@@ -245,16 +248,16 @@
   --color-dark-brand: var(--color-dark-primary-500);
 
 
-  --color-dark-secondary-50: #f4f5f7;
-  --color-dark-secondary-100: #e5e7eb;
-  --color-dark-secondary-200: #cdd0d5;
-  --color-dark-secondary-300: #a4a8b0;
-  --color-dark-secondary-400: #7a7f88;
-  --color-dark-secondary-500: #585d66;
-  --color-dark-secondary-600: #40444b;
-  --color-dark-secondary-700: #292c32;
-  --color-dark-secondary-800: #191b20;
-  --color-dark-secondary-900: #0e1014;
+  --color-dark-secondary-50: #f5f5f5;
+  --color-dark-secondary-100: #e5e5e5;
+  --color-dark-secondary-200: #d4d4d4;
+  --color-dark-secondary-300: #a3a3a3;
+  --color-dark-secondary-400: #737373;
+  --color-dark-secondary-500: #565656;
+  --color-dark-secondary-600: #3a3a3a;
+  --color-dark-secondary-700: #262626;
+  --color-dark-secondary-800: #171717;
+  --color-dark-secondary-900: #0a0a0a;
   --color-dark-secondary: var(--color-dark-secondary-500);
 
 

@@ -69,8 +69,6 @@ If you're not sure, start with [Ollama](/docs/integrations/providers/ollama/) â€
 All providers can also be configured from the Beam UI (`contenox serve`), which
 stores keys and creates the matching backend for you:
 
-![Beam's cloud providers page: Ollama, OpenAI, Anthropic, Gemini, Mistral, and Vertex AI configuration cards](/beam-providers.png)
-
 ---
 
 ## Next steps

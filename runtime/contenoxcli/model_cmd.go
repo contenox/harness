@@ -24,21 +24,13 @@ var modelCmd = &cobra.Command{
 	Use:     "model",
 	Aliases: []string{"models"},
 	Short:   "Inspect LLM models from live backends and local disk.",
-	Long: `Inspect models from LLM backends and local model storage.
+	Long: `Inspect models from LLM backends.
 
 'model list' queries registered backends in real time and shows models that can
-be used now. For local llama/OpenVINO, that means modeld is running in the
-matching backend mode and can describe/load the model. Inactive local modeld
-backend registrations are hidden from this live list.
-
-'model local' is the offline inventory of installed GGUF/OpenVINO artifacts on
-disk. It does not require modeld and may include models that are not currently
-loadable by the active daemon.
+be used now.
 
 Examples:
   contenox model list
-  contenox model local
-  contenox model registry-list
 
 Set the default model:
   contenox config set default-model    gemini-flash-latest
@@ -57,12 +49,6 @@ var modelListCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Short:   "List models currently loadable from live backends.",
 	Long: `Query each registered backend in real time and show models that can be used now.
-
-For cloud/Ollama/vLLM providers this is the provider-advertised live catalog.
-For local llama/OpenVINO this is the modeld runtime view: only the backend mode
-currently served by modeld is shown, and only models modeld can describe/load
-are listed. Use 'contenox model local' to inspect installed local artifacts even
-when modeld is stopped or serving the other local backend.
 
 Shows model name, backend, and effective capabilities observed at runtime plus
 manual overrides (chat, embed, prompt, think, vision, context length).

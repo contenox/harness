@@ -26,3 +26,24 @@ Conventions:
   install instructions).
 - Deployment (CI push of `dist/` to a GitHub Pages repo) is not wired yet;
   builds are local-only.
+
+
+## Content-addressed media
+
+Large product media never enters this repository. It lives in the website asset
+bucket as immutable, content-addressed objects; only URL-stable identity files
+(favicons, icons, logos, the Open Graph image) stay under `public/`.
+
+Publish a reviewed capture and update the tracked manifest:
+
+```bash
+python3 tools/publish-showcase.py --poster /tmp/contenox-harness-workbench-poster.webp
+# optional film:
+python3 tools/publish-showcase.py --poster poster.webp --webm film.webm --mp4 film.mp4
+```
+
+The publisher hashes the bytes, uploads with `Cache-Control: immutable` and
+`If-None-Match: *`, reads the object back, verifies the bytes, and only then
+rewrites `src/data/showcase.json`. `Landing.astro` reads that manifest; when it
+contains video sources the product stage renders a `<video>`, otherwise the
+poster image.

@@ -119,7 +119,7 @@ func TestFleetE2E_AttentionAsk_OperatorAnswerReachesTheUnit(t *testing.T) {
 	runContenoxCLI(t, bin, home, "config", "set", "default-model", "ask-fixture-model")
 	runContenoxCLI(t, bin, home, "config", "set", "update-check", "false")
 
-	contenoxDir := filepath.Join(home, ".contenox")
+	contenoxDir := filepath.Join(home, ".contenox-harness")
 	require.DirExists(t, contenoxDir)
 	writeAskChainAgentFixture(t, contenoxDir)
 

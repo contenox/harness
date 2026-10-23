@@ -92,11 +92,12 @@ func TestSystem_ACPMissionForward(t *testing.T) {
 	homeDir := filepath.Join(root, "home")
 	workspaceDir := filepath.Join(root, "workspace")
 	dataDir := filepath.Join(workspaceDir, ".contenox")
-	dbPath := filepath.Join(homeDir, ".contenox", "local.db")
+	dbPath := filepath.Join(homeDir, ".contenox-harness", "local.db")
 	require.NoError(t, os.MkdirAll(homeDir, 0o755))
 	require.NoError(t, os.MkdirAll(workspaceDir, 0o755))
 
 	baseEnv := append(os.Environ(),
+		"CONTENOX_UPDATE_CHECK=false",
 		"HOME="+homeDir,
 		"CONTENOX_DEFAULT_MODEL=fwd-e2e-fake-model",
 		"CONTENOX_DEFAULT_PROVIDER=ollama",

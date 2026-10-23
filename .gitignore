@@ -130,7 +130,9 @@ website/.astro/
 tools/rust-sdk/
 tools/acp-validator/target/
 tools/acp-validator/Cargo.lock
-version
+# The built version-reporting binary at the repo root; anchored so it
+# cannot match the tracked runtime/version package directory.
+/version
 
 # Visual review screenshots are local artefacts and are never committed.
 packages/harness/e2e/screenshots/
