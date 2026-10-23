@@ -7,12 +7,12 @@ export type WizardStepStatus = "complete" | "current" | "upcoming" | "error";
 export type WizardStepProps = {
   step: number;
   status: WizardStepStatus;
-  /** First incomplete / actionable step: sets aria-current="step" (use even when status is error). */
+
   active?: boolean;
   title: React.ReactNode;
   description?: React.ReactNode;
   children?: React.ReactNode;
-  /** When false, the rail shows a connector line below the indicator (default true). */
+
   isLast?: boolean;
   className?: string;
 };

@@ -1,7 +1,9 @@
 import { forwardRef } from "react";
 import { cn } from "../../utils";
 
-/** Semantic tone for a terminal line's text or glyph. */
+/**
+ * Semantic tone for a terminal line's text or glyph.
+ */
 export type TerminalTone = "default" | "muted" | "accent" | "error" | "success";
 
 const toneClass: Record<TerminalTone, string> = {
@@ -13,13 +15,21 @@ const toneClass: Record<TerminalTone, string> = {
 };
 
 export interface TerminalLineProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Leading glyph (e.g. ❯, ⏺, ⎿). Rendered in `glyphTone`. */
+  /**
+   * Leading glyph (e.g. ❯, ⏺, ⎿).
+   */
   glyph?: React.ReactNode;
-  /** Tone of the glyph. Defaults to `accent`. */
+  /**
+   * Tone of the glyph.
+   */
   glyphTone?: TerminalTone;
-  /** Tone of the line content. Defaults to `default`. */
+  /**
+   * Tone of the line content.
+   */
   tone?: TerminalTone;
-  /** Left indent in grid steps (each ≈ one glyph column). */
+  /**
+   * Left indent in grid steps (each ≈ one glyph column).
+   */
   indent?: 0 | 1 | 2 | 3;
 }
 
@@ -30,11 +40,7 @@ const indentClass: Record<NonNullable<TerminalLineProps["indent"]>, string> = {
   3: "pl-7",
 };
 
-/**
- * One line of terminal scrollback: an optional leading glyph plus content, on
- * the monospace grid. The building block for command echoes, tool lines, and
- * result annotations. Purely presentational.
- */
+
 export const TerminalLine = forwardRef<HTMLDivElement, TerminalLineProps>(
   function TerminalLine(
     { glyph, glyphTone = "accent", tone = "default", indent = 0, className, children, ...props },
@@ -61,11 +67,13 @@ export const TerminalLine = forwardRef<HTMLDivElement, TerminalLineProps>(
 );
 
 export interface TerminalMetaProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Indent in grid steps. Defaults to 2 (aligns under a glyph line's content). */
+  /**
+   * Indent in grid steps.
+   */
   indent?: 0 | 1 | 2 | 3;
 }
 
-/** A dim metadata line (chain, model, tokens…) under a command. */
+
 export const TerminalMeta = forwardRef<HTMLDivElement, TerminalMetaProps>(
   function TerminalMeta({ indent = 2, className, ...props }, ref) {
     return (

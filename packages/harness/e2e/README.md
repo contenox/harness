@@ -22,6 +22,14 @@ The SPA routes on the **URL hash** (`#/chat`, `#/backends`, …); the tests
 address those hash routes directly, since a plain path only loads the shell and
 the router falls back to `#/chat`.
 
+The workbench captures (`workbench.png`, `workbench-file.png`,
+`workbench-phone.png`) mount the library's session layout at
+`#/workbench/<sessionId>`: file tree, open files, preview pane and the live
+transcript. `run.sh` seeds a small workspace (`README.md`, `notes.txt`,
+`src/main.ts`) so the tree and the preview have content; the phone capture
+discovers the session at desktop width and then shrinks, because the sidebar
+list is not in the DOM while collapsed.
+
 One product detail the seeding papers over: `contenox init` registers `llama`
 and `openvino` backends for a modeld install, which this build reports as
 "Unsupported backend type". `run.sh` removes them so the capture shows the state

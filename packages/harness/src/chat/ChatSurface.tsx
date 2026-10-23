@@ -33,7 +33,7 @@ import {
   Span,
   chatTranscriptMarkdownComponents,
   useChatScroll,
-} from '../../../ui/src/chat';
+} from '@contenox/ui/chat';
 
 export type BeamChatSession = {
   id: string;

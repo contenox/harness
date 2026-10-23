@@ -78,7 +78,7 @@ function configOptionCurrentValue(options: SessionConfigOption[], id: string): s
  * Overlays locally-staged values onto the workspace-level config options so the
  * empty-chat controls reflect the user's pending picks before any session
  * exists. `currentValue` is a string on the wire (booleans as "true"/"false" —
- * see configOptionMapping), so a staged value is stringified onto it.
+ * see the shared config-option helpers), so a staged value is stringified onto it.
  */
 function overlayStagedValues(
   options: SessionConfigOption[],

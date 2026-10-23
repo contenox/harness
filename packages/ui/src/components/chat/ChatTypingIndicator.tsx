@@ -2,7 +2,7 @@ import { cn } from "../../utils";
 
 export type ChatTypingIndicatorProps = {
   className?: string;
-  /** Accessible label (e.g. “Assistant is typing”) */
+
   "aria-label"?: string;
 };
 

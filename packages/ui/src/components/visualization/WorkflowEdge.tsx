@@ -12,29 +12,29 @@ export interface WorkflowEdgeProps {
   isError?: boolean;
   className?: string;
 
-  // Used so the label chip avoids covering the (+) insert buttons
+
   addButtonPositions?: Array<{ x: number; y: number }>;
 
-  // Compose info (for color + suffix)
+
   hasCompose?: boolean;
   composeStrategy?: string | undefined;
 
-  // Clicking the ONLY label chip should open the compose sidebar
+
   onComposeClick?: () => void;
 }
 
 const ONE_LINE_HEIGHT = 22;
-const TWO_LINE_HEIGHT = 34; // when a strategy line is shown
+const TWO_LINE_HEIGHT = 34;
 const LABEL_PAD_X = 10;
 const LABEL_MIN_W = 44;
 const LABEL_MAX_W = 200;
 const BUTTON_RADIUS = 12;
 
-// Slightly larger margins so we never get too close to buttons/nodes
+
 const COLLISION_MARGIN = 10;
 const NODE_PADDING = 8;
 
-// very light width estimate; good enough for chip sizing
+
 const measureTextWidth = (text: string, approxCharPx = 7) =>
   Math.max(
     LABEL_MIN_W,
@@ -69,8 +69,8 @@ const rectsOverlap = (
   );
 };
 
-// Chip token classes + short label per compose strategy (mirrors beam's
-// ComposeEdgeBadge mapping; bare semantic tokens flip via the .dark rule)
+
+
 const STRATEGY_STYLE: Record<string, { chipClass: string; short: string }> = {
   override: { chipClass: "fill-primary-500 stroke-primary-900", short: "OVR" },
   merge_chat_histories: {
@@ -121,13 +121,13 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
 
   const strokeWidth = isHighlighted ? 2.5 : 1.5;
 
-  // Edge midpoint between node centers
+
   const centerX =
     (source.x + source.width / 2 + target.x + target.width / 2) / 2;
   const centerY =
     (source.y + source.height / 2 + target.y + target.height / 2) / 2;
 
-  // Directional vector from source-center to target-center
+
   const sx = source.x + source.width / 2;
   const sy = source.y + source.height / 2;
   const tx = target.x + target.width / 2;
@@ -136,7 +136,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
   const dy = ty - sy;
   const horizontalDominant = Math.abs(dx) >= Math.abs(dy);
 
-  // Node rects to avoid placing the label over them
+
   const srcRect = useMemo(
     () => ({
       left: source.x,
@@ -157,14 +157,14 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
     [target.x, target.y, target.width, target.height],
   );
 
-  // Determine chip style from compose strategy
+
   const { chipClass, short: shortStrat } = getStyleForStrategy(composeStrategy);
 
-  // Two-line content when composed
+
   const line1 = (label || "default").trim();
   const line2 = hasCompose ? shortStrat : "";
 
-  // Chip dimensions
+
   const chipWidth = useMemo(
     () =>
       Math.max(
@@ -178,13 +178,13 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
   const halfW = chipWidth / 2;
   const halfH = chipHeight / 2;
 
-  // Preferred offsets from the midpoint depend on chipHeight now
+
   const normalOffset = BUTTON_RADIUS + halfH + 10;
   const alongOffset = BUTTON_RADIUS + halfW + 10;
   const diagOffsetX = halfW + BUTTON_RADIUS + 12;
   const diagOffsetY = halfH + BUTTON_RADIUS + 12;
 
-  // Subtle placement bias (deterministic)
+
   const candidates = useMemo(() => {
     if (horizontalDominant) {
       const primary = [
@@ -261,13 +261,13 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
       bottom: cy + halfH,
     };
 
-    // 1) avoid overlapping with any + button circle
+
     const hitsButton = addButtonPositions.some((btn) =>
       circleIntersectsRect(btn.x, btn.y, BUTTON_RADIUS, rect, COLLISION_MARGIN),
     );
     if (hitsButton) return false;
 
-    // 2) avoid overlapping with source/target nodes (extra padding)
+
     const hitsNodes =
       rectsOverlap(rect, srcRect, NODE_PADDING) ||
       rectsOverlap(rect, tgtRect, NODE_PADDING);
@@ -276,7 +276,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
     return true;
   };
 
-  // Pick a stable candidate for the label chip
+
   const labelCenter = useMemo(() => {
     for (const c of candidates) {
       if (candidateIsSafe(c.x, c.y)) return c;

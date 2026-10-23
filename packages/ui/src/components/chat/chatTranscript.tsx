@@ -3,7 +3,7 @@ import type { Components } from "react-markdown";
 import { cn } from "../../utils";
 import { CodeBlockView } from "./CodeBlockView";
 
-/** Flatten a markdown node's children down to its raw text (for code fences). */
+
 function nodeText(children: React.ReactNode): string {
   if (children == null || typeof children === "boolean") return "";
   if (typeof children === "string" || typeof children === "number")
@@ -17,10 +17,10 @@ function nodeText(children: React.ReactNode): string {
   return "";
 }
 
-/** Default ReactMarkdown `components` map for assistant/user transcript content. */
+
 export const chatTranscriptMarkdownComponents: Components = {
-  // Block code is rendered entirely by the `code` handler (into a CodeBlockView);
-  // this keeps the `pre` wrapper from adding a second frame around it.
+
+
   pre: ({ children }: React.ComponentPropsWithoutRef<"pre">) => <>{children}</>,
 
   code: (props: React.ComponentPropsWithoutRef<"code"> & { node?: any }) => {
@@ -37,7 +37,7 @@ export const chatTranscriptMarkdownComponents: Components = {
       return <CodeBlockView code={nodeText(children)} language={match?.[1]} />;
     }
 
-    // Inline code styling
+
     return (
       <code
         className={cn(
@@ -51,8 +51,8 @@ export const chatTranscriptMarkdownComponents: Components = {
     );
   },
 
-  // Tailwind's preflight strips default heading/list styling, so the transcript
-  // must restate it with semantic tokens — otherwise markdown reads as flat text.
+
+
   h1: ({ children, ...props }: React.ComponentPropsWithoutRef<"h1">) => (
     <h1
       className="text-text dark:text-dark-text mt-4 mb-2 text-xl font-semibold first:mt-0"
@@ -148,7 +148,7 @@ export const chatTranscriptMarkdownComponents: Components = {
     />
   ),
 
-  // GFM tables: scroll horizontally inside the bubble instead of overflowing it.
+
   table: ({ children, ...props }: React.ComponentPropsWithoutRef<"table">) => (
     <div className="my-3 overflow-x-auto">
       <table className="w-full border-collapse text-sm" {...props}>
@@ -178,8 +178,8 @@ export const chatTranscriptMarkdownComponents: Components = {
     </td>
   ),
 
-  // Markdown-embedded images must degrade nicely inside a chat column: never
-  // overflow the bubble, keep the transcript's rounded/bordered look.
+
+
   img: ({ className, ...props }: React.ComponentPropsWithoutRef<"img">) => (
     <img
       loading="lazy"

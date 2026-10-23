@@ -38,7 +38,7 @@ export const TabbedForm: React.FC<TabbedFormProps> = ({
 
   const activeTabContent = tabs.find((t) => t.id === activeTab)?.content;
 
-  // keyboard nav: ← → Home End
+
   const onKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
     const idx = tabs.findIndex((t) => t.id === activeTab);
     if (idx === -1) return;

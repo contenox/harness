@@ -71,6 +71,28 @@ JSON
   "$BIN" config set default-model scripted-ui >/dev/null
 )
 
+# A workspace with a little content, so the workbench capture shows a real tree
+# and a preview rather than an empty pane. These are the files `/api/files`
+# serves for the session's cwd.
+mkdir -p "$WORK_DIR/src"
+cat > "$WORK_DIR/README.md" <<'MARKDOWN'
+# Screenshot workspace
+
+This file is served by the runtime's `/files` API and previewed by the
+library's workbench. It exists so the screenshot suite has something to show.
+MARKDOWN
+cat > "$WORK_DIR/notes.txt" <<'TEXT'
+Release checklist
+- backends reachable
+- scripted dialog seeded
+- workbench preview open
+TEXT
+cat > "$WORK_DIR/src/main.ts" <<'TS'
+export function greet(name: string): string {
+  return `hello, ${name}`;
+}
+TS
+
 # The SPA's session sidebar is fed by the ACP surface (session/list), not by the
 # CLI's own store, so the capture seeds the conversation over ACP the way an
 # editor would; a `contenox "<prompt>"` session would not appear there.

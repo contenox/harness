@@ -19,11 +19,11 @@ function ToggleGlyph() {
 
 export type TranscriptEmbedCardProps = {
   title: React.ReactNode;
-  /** Optional right side of the header (e.g. caption). */
+
   headerRight?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
-  /** Initial open state; default false so tall embeds stay collapsed in the thread. */
+
   defaultOpen?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -31,7 +31,6 @@ export type TranscriptEmbedCardProps = {
 
 /**
  * Collapsible block for non-message content inside a chat transcript (plans, previews).
- * Uses the same surface vocabulary as workbench panels, not marketing Card chrome.
  */
 export function TranscriptEmbedCard({
   title,

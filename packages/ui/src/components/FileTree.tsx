@@ -4,51 +4,67 @@ import { cn } from "../utils";
 
 /**
  * Severity of a single {@link FileTreeIndicator}, which tints its icon.
- * Consumer-defined semantics; the workspace file panel maps a HITL policy verdict
- * onto it — `allow` → a calm success green, `approve` → warning, `deny` → error,
- * `unreachable` → muted (paired with {@link FileTreeNode.dimmed} on the row).
  */
 export type FileTreeIndicatorStatus = "allow" | "approve" | "deny" | "unreachable";
 
 /**
- * A small trailing status icon on a row (e.g. a read or write access marker). The
- * icon element is CONSUMER-supplied so this component stays domain-agnostic — the
- * tree only tints it by {@link FileTreeIndicatorStatus} (via `currentColor`) and
- * wires its tooltip / accessible label. A node may carry several (rendered in
- * order, right-aligned), which is how the workspace panel shows the two
- * independent read + write axes.
+ * A small trailing status icon on a row (e.g. a read or write access marker).
  */
 export interface FileTreeIndicator {
-  /** Stable id within a node's indicator list (used as the React key). */
+  /**
+   * Stable id within a node's indicator list (used as the React key).
+   */
   key: string;
-  /** Icon element to render, e.g. a lucide `<Eye />`. Sized/styled by the consumer; tinted here. */
+  /**
+   * Icon element to render, e.g. a lucide `<Eye />`.
+   */
   icon: ReactNode;
-  /** Severity that tints the icon. */
+  /**
+   * Severity that tints the icon.
+   */
   status: FileTreeIndicatorStatus;
-  /** Per-indicator tooltip and accessible label (e.g. the localized policy reason). */
+  /**
+   * Per-indicator tooltip and accessible label (e.g. the localized policy reason).
+   */
   title?: string;
 }
 
 export interface FileTreeNode {
-  /** Unique id for this node. */
+  /**
+   * Unique id for this node.
+   */
   id: string;
-  /** Display name. */
+  /**
+   * Display name.
+   */
   name: string;
-  /** Full path (used for context, not rendering). */
+  /**
+   * Full path (used for context, not rendering).
+   */
   path?: string;
-  /** Whether this node is a directory. */
+  /**
+   * Whether this node is a directory.
+   */
   isDirectory?: boolean;
-  /** Nested children (only for directories). */
+  /**
+   * Nested children (only for directories).
+   */
   children?: FileTreeNode[];
-  /** Trailing status indicators (e.g. read + write access), rendered after the name. */
+  /**
+   * Trailing status indicators (e.g. read + write access), rendered after the name.
+   */
   indicators?: FileTreeIndicator[];
-  /** Dims the row to half opacity (e.g. an out-of-boundary / unreachable path). */
+  /**
+   * Dims the row to half opacity (e.g. an out-of-boundary / unreachable path).
+   */
   dimmed?: boolean;
-  /** Optional row tooltip. */
+  /**
+   * Optional row tooltip.
+   */
   title?: string;
 }
 
-/** Icon tint per severity. `allow` is a calm success green (a thin stroke, not a loud fill). */
+
 const INDICATOR_TINT_CLASS: Record<FileTreeIndicatorStatus, string> = {
   allow: "text-success-500 dark:text-dark-success-500",
   approve: "text-warning-500 dark:text-dark-warning-500",
@@ -56,7 +72,7 @@ const INDICATOR_TINT_CLASS: Record<FileTreeIndicatorStatus, string> = {
   unreachable: "text-text-muted dark:text-dark-text-muted",
 };
 
-/** The right-aligned run of trailing indicators (kept optional so plain trees are untouched). */
+
 function IndicatorRow({ indicators }: { indicators: FileTreeIndicator[] }) {
   return (
     <span className="ml-auto flex shrink-0 items-center gap-1 pl-1.5">
@@ -77,21 +93,32 @@ function IndicatorRow({ indicators }: { indicators: FileTreeIndicator[] }) {
 }
 
 export interface FileTreeProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** The tree data. */
+  /**
+   * The tree data.
+   */
   nodes: FileTreeNode[];
-  /** Currently selected node id. */
+  /**
+   * Currently selected node id.
+   */
   selectedId?: string | null;
-  /** Called when a file or folder is clicked. */
+  /**
+   * Called when a file or folder is clicked.
+   */
   onNodeSelect?: (node: FileTreeNode) => void;
   /**
    * `expand` (default): directory row toggles open/closed and fires `onNodeSelect`.
-   * `navigate`: directory row only calls `onNodeSelect` (e.g. change cwd); use the chevron to expand/collapse when children exist.
    */
   directoryClickMode?: "expand" | "navigate";
-  /** Set of node ids that are initially expanded. Defaults to all directories expanded. */
+  /**
+   * Set of node ids that are initially expanded.
+   */
   defaultExpanded?: Set<string>;
-  /** Depth indentation in px. */
+  /**
+   * Depth indentation in px.
+   */
   indent?: number;
+  initialDepth?: number;
+  renderChildren?: (node: FileTreeNode, depth: number) => ReactNode;
 }
 
 export const FileTree = forwardRef<HTMLDivElement, FileTreeProps>(
@@ -104,6 +131,8 @@ export const FileTree = forwardRef<HTMLDivElement, FileTreeProps>(
       directoryClickMode = "expand",
       defaultExpanded,
       indent = 16,
+      initialDepth = 0,
+      renderChildren,
       ...props
     },
     ref,
@@ -119,7 +148,8 @@ export const FileTree = forwardRef<HTMLDivElement, FileTreeProps>(
           <FileTreeItem
             key={node.id}
             node={node}
-            depth={0}
+            depth={initialDepth}
+            renderChildren={renderChildren}
             indent={indent}
             selectedId={selectedId}
             onNodeSelect={onNodeSelect}
@@ -132,9 +162,10 @@ export const FileTree = forwardRef<HTMLDivElement, FileTreeProps>(
   },
 );
 
-/* ------------------------------------------------------------------ */
+
 
 interface FileTreeItemProps {
+  renderChildren?: (node: FileTreeNode, depth: number) => ReactNode;
   node: FileTreeNode;
   depth: number;
   indent: number;
@@ -145,6 +176,7 @@ interface FileTreeItemProps {
 }
 
 function FileTreeItem({
+  renderChildren,
   node,
   depth,
   indent,
@@ -275,9 +307,9 @@ function FileTreeItem({
         </button>
       )}
 
-      {node.isDirectory && expanded && node.children && (
+      {node.isDirectory && expanded && (node.children || renderChildren) && (
         <div role="group">
-          {node.children.map((child) => (
+          {renderChildren ? renderChildren(node, depth + 1) : node.children?.map((child) => (
             <FileTreeItem
               key={child.id}
               node={child}
@@ -287,6 +319,7 @@ function FileTreeItem({
               onNodeSelect={onNodeSelect}
               directoryClickMode={directoryClickMode}
               defaultExpanded={defaultExpanded}
+              renderChildren={renderChildren}
             />
           ))}
         </div>

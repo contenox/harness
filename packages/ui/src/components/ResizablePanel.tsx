@@ -7,10 +7,7 @@ interface ResizablePanelGroupProps extends React.HTMLAttributes<HTMLDivElement> 
   orientation?: Orientation;
 }
 
-/**
- * Container that lays out two children with a draggable divider between them.
- * Wrap exactly two `ResizablePanel` children and one `ResizablePanelHandle`.
- */
+
 export const ResizablePanelGroup = forwardRef<
   HTMLDivElement,
   ResizablePanelGroupProps
@@ -32,14 +29,14 @@ export const ResizablePanelGroup = forwardRef<
   );
 });
 
-/* ------------------------------------------------------------------ */
+
 
 interface ResizablePanelProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Default size as a CSS value (e.g. "50%", "300px"). */
+
   defaultSize?: string;
-  /** Minimum size in px. */
+
   minSize?: number;
-  /** Maximum size in px. */
+
   maxSize?: number;
 }
 
@@ -52,7 +49,7 @@ export const ResizablePanel = forwardRef<HTMLDivElement, ResizablePanelProps>(
       <div
         ref={ref}
         className={cn(
-          // not overflow-auto: scroll containers break flex sizing for children (e.g. xterm FitAddon)
+
           "min-h-0 min-w-0 overflow-hidden",
           className,
         )}
@@ -70,22 +67,17 @@ export const ResizablePanel = forwardRef<HTMLDivElement, ResizablePanelProps>(
   },
 );
 
-/* ------------------------------------------------------------------ */
+
 
 interface ResizablePanelHandleProps
   extends React.HTMLAttributes<HTMLDivElement> {
   orientation?: Orientation;
   onResize?: (delta: number) => void;
-  /** Called when the drag ends (pointer up). Useful for persisting layout. */
+
   onResizeEnd?: () => void;
 }
 
-/**
- * Draggable divider between two `ResizablePanel`s.
- *
- * Resizes the **next** sibling by the inverse of the pointer‐move delta so
- * the first (previous) panel can keep `flex-grow: 1` and fill remaining space.
- */
+
 export const ResizablePanelHandle = forwardRef<
   HTMLDivElement,
   ResizablePanelHandleProps

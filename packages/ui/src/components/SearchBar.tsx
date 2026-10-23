@@ -1,4 +1,4 @@
-// components/SearchBar.tsx
+
 import { Search, X } from "lucide-react";
 import { forwardRef } from "react";
 import { cn } from "../utils";

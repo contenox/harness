@@ -2,7 +2,7 @@ import { forwardRef } from "react";
 import { cn } from "../utils";
 
 export type MonoLogListProps = React.HTMLAttributes<HTMLUListElement> & {
-  /** Scroll container max height (default max-h-48). */
+
   maxHeightClassName?: string;
 };
 

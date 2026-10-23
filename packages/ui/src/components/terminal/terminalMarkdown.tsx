@@ -2,14 +2,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import type { Components } from "react-markdown";
 import { cn } from "../../utils";
 
-/**
- * ReactMarkdown component map for terminal-style surfaces (the console
- * result area). Dark-safe by construction: inline code uses opacity-on-
- * black/white so its contrast never depends on surface-scale tokens flipping
- * (the failure mode of the chat transcript map, whose `dark:bg-dark-surface-*`
- * loses the zero-specificity `dark:` cascade → invisible text). Terminal-
- * appropriate: tight spacing, framed code blocks, plain bold/headings.
- */
+
 export const terminalMarkdownComponents: Components = {
   p: ({ children }) => <p className="my-1 whitespace-pre-wrap">{children}</p>,
   strong: ({ children }) => (

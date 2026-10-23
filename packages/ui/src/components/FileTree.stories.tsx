@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Eye, Pencil } from "lucide-react";
+import { expect, userEvent, within } from 'storybook/test';
 import { FileTree, type FileTreeIndicator, type FileTreeNode } from "./FileTree";
 
 const meta: Meta<typeof FileTree> = {
@@ -9,6 +10,23 @@ const meta: Meta<typeof FileTree> = {
 
 export default meta;
 type Story = StoryObj<typeof FileTree>;
+
+export const LazyChildren: Story = {
+  args: {
+    nodes: [{ id: 'articles', name: 'articles', isDirectory: true }],
+    directoryClickMode: 'navigate',
+    defaultExpanded: new Set(),
+    renderChildren: (_node, depth) => <FileTree initialDepth={depth} nodes={[{ id: 'intro', name: 'intro.md' }]} />,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.queryByText('intro.md')).toBeNull();
+    await userEvent.click(canvas.getByRole('button', { name: 'Expand', exact: true }));
+    await expect(canvas.getByText('intro.md')).toBeVisible();
+    await userEvent.click(canvas.getByRole('button', { name: 'Collapse', exact: true }));
+    await expect(canvas.queryByText('intro.md')).toBeNull();
+  },
+};
 
 const smallTree: FileTreeNode[] = [
   {
@@ -118,11 +136,8 @@ export const NavigateMode: Story = {
   ),
 };
 
-/* ------------------------------------------------------------------ */
-/* Two-axis access indicators: an eye (read) + a pencil (write), each tinted
-   independently by its verdict. This is the shape the workspace agent-view
-   feeds — a normal file reads green-eye / yellow-pencil, a secret is red on
-   both, an out-of-boundary entry is muted + a dimmed row. */
+
+
 
 const eye = <Eye className="h-3.5 w-3.5" />;
 const pencil = <Pencil className="h-3.5 w-3.5" />;

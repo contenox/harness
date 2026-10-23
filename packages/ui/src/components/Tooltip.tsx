@@ -7,13 +7,13 @@ type TooltipProps = {
   children: ReactNode;
   position?: "top" | "bottom" | "left" | "right";
   className?: string;
-  /** Delay before showing, in milliseconds. */
+
   delay?: number;
 };
 
-// Rendered into a portal with viewport-fixed coordinates so the tooltip cannot
-// be clipped by overflow ancestors; the translate classes center it on the
-// measured anchor point.
+
+
+
 const positionClasses: Record<NonNullable<TooltipProps["position"]>, string> = {
   top: "-translate-x-1/2 -translate-y-full",
   bottom: "-translate-x-1/2",

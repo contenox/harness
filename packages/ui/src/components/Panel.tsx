@@ -22,12 +22,12 @@ export const Panel = forwardRef<HTMLDivElement, PanelProps>(
     <div
       ref={ref}
       className={cn(
-        // Base styles
+
         "transition-colors",
-        // Conditionally remove rounded corners for the topBordered variant
+
         variant === "body" ? "rounded-none" : "rounded-lg",
         {
-          // Variants
+
           "p-4 inherit bg-inherit text-inherit": variant === "default",
           "p-4 shadow-sm dark:shadow-md": variant === "raised",
           "p-4 border border-surface-300 dark:border-dark-surface-700":

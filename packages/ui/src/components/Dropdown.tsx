@@ -13,7 +13,13 @@ export interface DropdownProps {
   children?: React.ReactNode;
   contentClassName?: string;
   className?: string;
-  /** Accessible label of the built-in trigger when no option is selected. */
+  /**
+   * Which edge of the trigger the panel aligns to.
+   */
+  align?: "start" | "end";
+  /**
+   * Accessible label of the built-in trigger when no option is selected.
+   */
   placeholder?: string;
 }
 
@@ -27,13 +33,14 @@ export function Dropdown({
   children,
   contentClassName,
   className,
+  align = "start",
   placeholder = "Select",
 }: DropdownProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  // The element that had focus when the dropdown opened; Escape and selection
-  // return focus there so keyboard users don't get dropped at <body>.
+
+
   const openerRef = useRef<HTMLElement | null>(null);
   const isControlled = controlledOpen !== undefined;
   const isOpen = isControlled ? controlledOpen : internalOpen;
@@ -93,8 +100,8 @@ export function Dropdown({
     items[next].focus();
   };
 
-  // Keyboard contract: arrows open and move focus through the items, Home/End
-  // jump, Escape closes and restores focus, Tab closes and lets focus move on.
+
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {
       case "Escape":
@@ -135,7 +142,7 @@ export function Dropdown({
     }
   };
 
-  // Close when focus leaves the widget entirely (e.g. Tab past the last item).
+
   const handleBlur = (e: React.FocusEvent) => {
     if (isOpen && !e.currentTarget.contains(e.relatedTarget as Node)) {
       close();
@@ -211,7 +218,21 @@ export function Dropdown({
         <div
           ref={contentRef}
           className={cn(
-            "absolute z-50 mt-2 w-full rounded-lg border shadow-lg backdrop-blur-md bg-surface-50/90 dark:bg-dark-surface-200/90",
+            "absolute z-50 mt-2 rounded-lg border shadow-lg backdrop-blur-md bg-surface-50/90 dark:bg-dark-surface-200/90",
+
+
+
+
+
+
+            "w-max min-w-full max-w-[calc(100vw-2rem)]",
+
+
+
+
+
+            "max-h-[min(32rem,calc(100vh-4rem))] overflow-y-auto overscroll-contain",
+            align === "end" && "right-0",
             contentClassName,
           )}
           role={options && !children ? "listbox" : undefined}

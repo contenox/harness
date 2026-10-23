@@ -4,7 +4,7 @@ import { cn } from "../utils";
 export type InsetPanelTone = "default" | "muted" | "strip" | "section";
 
 export type InsetPanelProps = React.HTMLAttributes<HTMLDivElement> & {
-  /** default: nested workbench card. muted: elevated surface (errors, loading). strip: full-width row with bottom border. section: scroll bucket under toolbar (border-b, surface-100). */
+
   tone?: InsetPanelTone;
 };
 
@@ -31,7 +31,7 @@ export const InsetPanel = forwardRef<HTMLDivElement, InsetPanelProps>(function I
 });
 
 export type InsetPanelHeaderProps = React.HTMLAttributes<HTMLDivElement> & {
-  /** compact: py-1.5 (graph titles). comfortable: py-2 (captions, toolbars). */
+
   density?: "compact" | "comfortable";
 };
 

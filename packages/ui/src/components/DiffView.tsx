@@ -9,10 +9,7 @@ export interface DiffLine {
 }
 
 /**
- * Builds `DiffLine[]` from old→new file text for `DiffView` using an LCS line
- * diff (common prefix/suffix trimmed first, so typical single-hunk edits skip
- * the DP entirely). Inputs beyond the DP guard fall back to whole-block
- * remove/add for the divergent middle. Empty `oldText` yields a pure addition.
+ * Builds `DiffLine[]` from old→new file text for `DiffView` using an LCS line diff (common prefix/suffix trimmed first, so typical single-hunk edits skip the DP entirely).
  */
 export function diffLinesFromTexts(
   oldText: string,
@@ -21,8 +18,8 @@ export function diffLinesFromTexts(
   const oldLines = oldText ? oldText.split("\n") : [];
   const newLines = newText.split("\n");
 
-  // Trim the common prefix and suffix: they become context lines, and the DP
-  // only ever runs on the divergent middle.
+
+
   let start = 0;
   while (
     start < oldLines.length &&
@@ -71,8 +68,8 @@ export function diffLinesFromTexts(
   return lines;
 }
 
-// Guard for the O(n·m) LCS table; beyond it the middle degrades to whole-block
-// remove/add, which is what this function always did before the LCS existed.
+
+
 const LCS_CELL_LIMIT = 1_000_000;
 
 function emitMiddleDiff(
@@ -93,8 +90,8 @@ function emitMiddleDiff(
     return;
   }
 
-  // Standard LCS length table, then a backtrack that emits removes before
-  // adds within each divergent run (conventional unified-diff ordering).
+
+
   const rows = midOld.length + 1;
   const cols = midNew.length + 1;
   const table = new Uint32Array(rows * cols);
@@ -127,11 +124,17 @@ function emitMiddleDiff(
 }
 
 export interface DiffViewProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** The file path shown in the header. */
+  /**
+   * The file path shown in the header.
+   */
   filePath: string;
-  /** Parsed diff lines. */
+  /**
+   * Parsed diff lines.
+   */
   lines: DiffLine[];
-  /** Optional language hint (for future syntax highlighting). */
+  /**
+   * Optional language hint (for future syntax highlighting).
+   */
   language?: string;
 }
 

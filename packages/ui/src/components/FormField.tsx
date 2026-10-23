@@ -1,3 +1,4 @@
+import { cloneElement, isValidElement, useId } from "react";
 import { Label } from "./Label";
 import { P } from "./Typography";
 import { cn } from "../utils";
@@ -12,8 +13,16 @@ export type FormFieldProps = {
   tooltip?: string;
   children: React.ReactNode;
   className?: string;
+
+  htmlFor?: string;
 };
 
+
+type IdentifiableControlProps = { id?: string };
+
+/**
+ * A label, a control, and whatever has to be said about it.
+ */
 export function FormField({
   label,
   required,
@@ -22,12 +31,23 @@ export function FormField({
   tooltip,
   children,
   className,
+  htmlFor,
 }: FormFieldProps) {
+  const generatedId = useId();
+  const singleControl = isValidElement<IdentifiableControlProps>(children);
+  const fieldId = singleControl
+    ? children.props.id ?? htmlFor ?? generatedId
+    : htmlFor;
+  const control =
+    singleControl && children.props.id === undefined
+      ? cloneElement(children, { id: fieldId })
+      : children;
+
   return (
     <div className={cn("space-y-1.5", className)}>
       <div className="flex items-baseline justify-between">
         <div className="flex items-center gap-1">
-          <Label className="text-sm font-medium">
+          <Label htmlFor={fieldId} className="text-sm font-medium">
             {label}
             {required && (
               <span className="text-error dark:text-dark-error">*</span>
@@ -46,7 +66,7 @@ export function FormField({
         )}
       </div>
 
-      {children}
+      {control}
 
       {error && (
         <P className="text-xs text-error dark:text-dark-error flex items-center gap-1">

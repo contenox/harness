@@ -7,10 +7,7 @@ import { Span } from "./Typography";
 import { FileText, TerminalSquare, ListChecks, Workflow, Database } from "lucide-react";
 
 /**
- * Discriminated union representing every typed attachment kind that can be
- * rendered inline adjacent to a chat message. Mirrors the Go-side
- * `taskengine.WidgetHint` / artifact shapes; `image` mirrors the ACP
- * `ContentBlock` image shape (base64 `data` + `mimeType`, no `data:` prefix).
+ * Discriminated union representing every typed attachment kind that can be rendered inline adjacent to a chat message.
  */
 export type InlineAttachment =
   | { kind: "file_view"; path: string; text: string; truncated?: boolean }
@@ -34,43 +31,42 @@ export type InlineAttachment =
   | { kind: "state_unit"; name: string; data?: unknown }
   | {
       kind: "image";
-      /** Raw base64 payload WITHOUT a `data:` prefix (the ACP wire form). */
+
       data: string;
       mimeType: string;
-      /** Accessible description; falls back to `labels.imageAttachment`. */
+
       alt?: string;
     };
 
 /**
- * Overridable UI strings for attachment titles and captions. Every entry is
- * optional and falls back to the built-in English default.
+ * Overridable UI strings for attachment titles and captions.
  */
 export type InlineAttachmentLabels = {
-  /** Singular line-count unit (default: "line"). */
+
   line?: string;
-  /** Plural line-count unit (default: "lines"). */
+
   lines?: string;
-  /** Marker appended when a file view is truncated (default: "truncated"). */
+
   truncated?: string;
-  /** Title for terminal excerpts (default: "Terminal output"). */
+
   terminalOutput?: string;
-  /** Title prefix before the plan-step ordinal (default: "Plan step"). */
+
   planStep?: string;
-  /** Caption above the plan-step description (default: "Description"). */
+
   description?: string;
-  /** Caption above the plan-step summary (default: "Summary"). */
+
   summary?: string;
-  /** Fallback title for DAG attachments (default: "Compiled chain DAG"). */
+
   compiledChainDag?: string;
-  /** Title for state-unit attachments (default: "Captured state"). */
+
   capturedState?: string;
-  /** Placeholder when a state unit has no data (default: "(no data)"). */
+
   noData?: string;
-  /** Fallback alt text/title for image attachments (default: "Attached image"). */
+
   imageAttachment?: string;
-  /** Accessible name of the click-to-expand affordance (default: "Show image full size"). */
+
   expandImage?: string;
-  /** Accessible name of the expanded image dialog's close button (default: "Close"). */
+
   closeImage?: string;
 };
 
@@ -253,13 +249,7 @@ function StateUnitAttachment({
   );
 }
 
-/**
- * An inline image part: a size-constrained thumbnail rendered directly (NOT
- * collapsed behind a disclosure like the text-shaped kinds — a picture's
- * content IS its preview), expanding to full size in a `Dialog` on click.
- * The payload is the ACP wire form (raw base64 + mime type), assembled into a
- * `data:` URI here so callers never concatenate URI prefixes themselves.
- */
+
 function ImageAttachmentView({
   attachment,
   labels,
@@ -300,8 +290,7 @@ function ImageAttachmentView({
 }
 
 /**
- * Dispatch to the renderer for `attachment.kind`. Unknown kinds return null
- * so an experimental shape never breaks the thread.
+ * Dispatch to the renderer for `attachment.kind`.
  */
 export function InlineAttachmentRenderer({
   attachment,
@@ -331,8 +320,7 @@ export function InlineAttachmentRenderer({
 }
 
 /**
- * Render a list of attachments. Returns null when the list is empty so
- * callers can spread `<InlineAttachments />` unconditionally.
+ * Render a list of attachments.
  */
 export function InlineAttachments({
   attachments,

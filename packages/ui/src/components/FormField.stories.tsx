@@ -3,6 +3,7 @@ import { FormField } from "./FormField";
 import { Input } from "./Input";
 import { Textarea } from "./TextArea";
 import { Select } from "./Select";
+import { expect, userEvent, within } from 'storybook/test';
 
 const meta: Meta<typeof FormField> = {
   title: "Forms/FormField",
@@ -29,6 +30,23 @@ export const Default: Story = {
   args: {
     label: "Email address",
     children: <Input type="email" placeholder="you@example.com" />,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole('textbox', { name: 'Email address' });
+    await userEvent.click(canvas.getByText('Email address'));
+    await expect(input).toHaveFocus();
+    await userEvent.type(input, 'operator@example.test');
+    await expect(input).toHaveValue('operator@example.test');
+  },
+};
+
+export const ExistingControlID: Story = {
+  args: { label: 'Existing control', children: <Input id="existing-control" /> },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByText('Existing control'));
+    await expect(canvas.getByLabelText('Existing control')).toHaveFocus();
   },
 };
 

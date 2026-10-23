@@ -13,10 +13,7 @@ interface TabbedPageProps extends React.HTMLAttributes<HTMLDivElement> {
   defaultActiveTab?: string;
   activeTab?: string;
   onTabChange?: (tabId: string) => void;
-  /**
-   * When true, only the active tab's content is mounted. Inactive panels render
-   * empty placeholders so hidden tabs do not run effects or fetch data.
-   */
+
   mountActivePanelOnly?: boolean;
 }
 
@@ -32,7 +29,7 @@ export function TabbedPage({
     controlledActiveTab ?? defaultActiveTab ?? tabs[0]?.id,
   );
 
-  // refs for roving focus — keyed by tab id
+
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {

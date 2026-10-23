@@ -130,7 +130,7 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
 
   return (
     <GridLayout
-      className={cn("h-full min-h-0 gap-4", className)} // fill the page
+      className={cn("h-full min-h-0 gap-4", className)}
       responsive={{ base: 1, lg: 2 }}
     >
       {/* LEFT: Main editor */}

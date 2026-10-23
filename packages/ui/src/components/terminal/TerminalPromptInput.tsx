@@ -13,12 +13,18 @@ import { TERMINAL_GLYPH } from "./glyphs";
 export interface TerminalPromptInputProps {
   value: string;
   onChange: (value: string) => void;
-  /** Consumer handles Enter/Tab/completion here. */
+  /**
+   * Consumer handles Enter/Tab/completion here.
+   */
   onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   disabled?: boolean;
-  /** Prompt glyph. Defaults to ❯. */
+  /**
+   * Prompt glyph.
+   */
   prompt?: React.ReactNode;
-  /** Dim hint shown when empty and unfocused. */
+  /**
+   * Dim hint shown when empty and unfocused.
+   */
   hint?: string;
   className?: string;
 }
@@ -28,15 +34,7 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
   else if (ref && typeof ref === "object") (ref as { current: T | null }).current = value;
 }
 
-/**
- * A terminal prompt line — not a chat box. The input is flush with the
- * surrounding monospace grid: a prompt glyph, the text on the same cells, and
- * a blinking block cursor sitting in the text (tracked to the caret, correct
- * mid-string). Editing is keyboard-only via `onKeyDown`.
- *
- * Implementation: a transparent <textarea> captures input and selection while
- * an aria-hidden mirror renders the visible text + block cursor.
- */
+
 export const TerminalPromptInput = forwardRef<HTMLTextAreaElement, TerminalPromptInputProps>(
   function TerminalPromptInput(
     { value, onChange, onKeyDown, disabled, prompt = TERMINAL_GLYPH.prompt, hint, className },

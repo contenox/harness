@@ -1,7 +1,9 @@
 import { forwardRef } from "react";
 import { cn } from "../utils";
 
-/** Fixed-width secondary column (e.g. run log) with left border. */
+/**
+ * Fixed-width secondary column (e.g. run log) with left border.
+ */
 export type SidePanelColumnProps = React.HTMLAttributes<HTMLDivElement> & {
   side?: "left" | "right";
 };
@@ -61,7 +63,7 @@ export type SidePanelRailButtonProps =
     side?: "left" | "right";
   };
 
-/** Narrow strip shown when the side panel is collapsed (icon + optional badge). */
+
 export const SidePanelRailButton = forwardRef<
   HTMLButtonElement,
   SidePanelRailButtonProps

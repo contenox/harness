@@ -3,14 +3,13 @@ import { cn } from "../utils";
 
 /**
  * Pairs with {@link Tabs}: triggers use `id="tab-${id}"` and `aria-controls="panel-${id}"`.
- * Each TabPanel must use the same string `tabId` as the corresponding tab entry.
  */
 export type TabPanelProps<T extends string = string> = {
   tabId: T;
   activeTab: T;
   children: ReactNode;
   className?: string;
-  /** When true, inactive panels render nothing (saves heavy children e.g. graphs). */
+
   lazy?: boolean;
 };
 
@@ -38,7 +37,9 @@ export function TabPanel<T extends string = string>({
   );
 }
 
-/** Optional layout wrapper around multiple TabPanel siblings (flex column fill). */
+/**
+ * Optional layout wrapper around multiple TabPanel siblings (flex column fill).
+ */
 export function TabPanels({
   className,
   children,

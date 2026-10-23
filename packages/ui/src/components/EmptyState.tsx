@@ -7,12 +7,14 @@ type EmptyStateVariant = "default" | "error" | "warning" | "success" | "info";
 type EmptyStateProps = {
   title: string;
   subtitle?: string;
-  description: string;
+  description?: string;
   icon?: React.ReactNode;
   className?: string;
   orientation?: "vertical" | "horizontal";
   iconSize?: "sm" | "md" | "lg";
   variant?: EmptyStateVariant;
+
+  children?: React.ReactNode;
 };
 
 export function EmptyState({
@@ -24,6 +26,7 @@ export function EmptyState({
   orientation = "vertical",
   iconSize = "md",
   variant = "default",
+  children,
 }: EmptyStateProps) {
   const variantStyles: Record<EmptyStateVariant, string> = {
     default: cn("text-text dark:text-dark-text"),
@@ -31,8 +34,7 @@ export function EmptyState({
       "text-text dark:text-dark-text",
       "bg-surface-50 dark:bg-dark-surface-50",
     ),
-    /* Dark semantic ramps are inverted (50 = darkest, 900 = palest):
-       dark bg wants a LOW step, dark text a HIGH step. */
+
     success: cn(
       "text-[var(--color-success-800)] dark:text-[var(--color-dark-success-700)]",
       "bg-[var(--color-success-50)] dark:bg-[var(--color-dark-success-100)]",
@@ -90,6 +92,16 @@ export function EmptyState({
         <H3 className="text-text-secondary dark:text-dark-text-secondary font-medium mt-2">
           {description}
         </H3>
+      )}
+      {children && (
+        <div
+          className={cn(
+            "mt-6 flex flex-col gap-3",
+            orientation === "horizontal" ? "items-start" : "items-center",
+          )}
+        >
+          {children}
+        </div>
       )}
     </Section>
   );

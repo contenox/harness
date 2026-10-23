@@ -15,16 +15,16 @@ const preview: Preview = {
     backgrounds: { disable: true },
   },
   decorators: [
-    // Apply .dark to <html> — same element beam's ThemeProvider targets, so
-    // the .dark token flip AND html.dark color-scheme both engage.
+
+
     withThemeByClassName({
       themes: { light: "", dark: "dark" },
       defaultTheme: "light",
       parentSelector: "html",
     }),
     (Story) =>
-      // --background/--foreground come from index.css (:root / .dark); no
-      // manual overrides here or broken dark styling gets masked.
+
+
       React.createElement(
         "div",
         {

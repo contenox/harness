@@ -9,10 +9,26 @@ type CardProps = React.HTMLAttributes<HTMLDivElement> & {
   variant?: "default" | "filled" | "surface" | "error" | "bordered" | "dotted";
   layout?: CardLayout;
   statusBorder?: StatusBorder;
+
+  interactive?: boolean;
 };
 
+
+const interactiveStyles =
+  "hover:-translate-y-1 hover:border-primary-500/30 hover:shadow-lg hover:shadow-primary-500/10";
+
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant = "default", layout = "default", statusBorder, ...props }, ref) => {
+  (
+    {
+      className,
+      variant = "default",
+      layout = "default",
+      statusBorder,
+      interactive = false,
+      ...props
+    },
+    ref,
+  ) => {
     const statusBorderStyles: Record<StatusBorder, string> = {
       default: "border-l-4 border-l-border dark:border-l-dark-surface-600",
       success: "border-l-4 border-l-success dark:border-l-dark-success",
@@ -33,9 +49,9 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         className={cn(
           "rounded-xl border p-6 transition-all duration-300 shadow-sm backdrop-blur-sm",
-          "hover:-translate-y-1 hover:border-primary-500/30 hover:shadow-lg hover:shadow-primary-500/10 dark:hover:border-primary-400/30",
+          interactive && interactiveStyles,
           {
-            "bg-white/80 border-surface-200/60 dark:bg-dark-surface-50/80 dark:border-dark-surface-400/60":
+            "bg-white/80 border-surface-200/60 dark:bg-dark-surface-100/80 dark:border-dark-surface-700/60":
               variant === "default",
             "bg-surface-100/80 border-surface-200/60 dark:bg-dark-surface-300/80 dark:border-dark-surface-400/60":
               variant === "filled",

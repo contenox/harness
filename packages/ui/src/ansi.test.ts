@@ -31,7 +31,7 @@ describe("sanitizeTerminalText", () => {
     expect(out).not.toContain("\x07");
     expect(out).not.toContain("\r");
     expect(out).toContain("naro@nox16");
-    // color codes survive
+
     expect(out).toContain("\x1b[01;34m");
   });
 

@@ -1,4 +1,4 @@
-// components/Checkbox.tsx
+
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { cn } from "../utils";
 import { Inbox } from "./Inbox";

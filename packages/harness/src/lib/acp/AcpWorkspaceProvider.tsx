@@ -13,7 +13,7 @@ import {
   type AcpSessionsState,
   type AcpWorkspaceState,
 } from '../../hooks/acpWorkspaceState';
-import { WebSocketTransport } from './transport';
+import { WebSocketTransport } from '@contenox/acp-client';
 
 /**
  * Context value: the ONE workspace controller for the whole app, plus the two

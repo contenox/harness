@@ -1,6 +1,4 @@
-/* Self-hosted brand fonts — consumers must serve public/fonts at /fonts (Beam
-   ships them in its public dir; Storybook via staticDirs). Kept out of
-   index.css so the tsup/esbuild bundle never has to resolve the asset URLs. */
+
 @font-face {
   font-family: "Geist";
   src: url("/fonts/Geist-Variable.woff2") format("woff2-variations");

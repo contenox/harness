@@ -19,6 +19,7 @@ interface ResourceCardProps {
   };
   isLoading?: boolean;
   className?: string;
+  actionLabels?: { edit: string; delete: string; deleting: string };
 }
 
 const statusBorderStyles: Record<
@@ -40,6 +41,7 @@ export function ResourceCard({
   actions,
   isLoading = false,
   className = "",
+  actionLabels = { edit: 'Edit', delete: 'Delete', deleting: 'Deleting' },
 }: ResourceCardProps) {
   return (
     <Panel
@@ -62,12 +64,12 @@ export function ResourceCard({
         {badge && <div className="shrink-0">{badge}</div>}
       </div>
 
-      <div className="space-y-4">{children}</div>
+      {children && <div className="space-y-4">{children}</div>}
 
       {actions && (
-        <div className="border-t pt-4">
-          <ButtonGroup className="flex items-center justify-between">
-            <div className="flex gap-2">
+        <div className="border-surface-300 dark:border-dark-surface-600 border-t pt-4">
+          <ButtonGroup className="flex flex-wrap items-center justify-between">
+            <div className="flex flex-wrap gap-2">
               {actions.edit && (
                 <Button
                   variant="outline"
@@ -75,7 +77,7 @@ export function ResourceCard({
                   onClick={actions.edit}
                   disabled={isLoading}
                 >
-                  Edit
+                  {actionLabels.edit}
                 </Button>
               )}
               {actions.custom}
@@ -91,10 +93,10 @@ export function ResourceCard({
                 {isLoading ? (
                   <>
                     <Spinner size="sm" />
-                    Deleting
+                    {actionLabels.deleting}
                   </>
                 ) : (
-                  "Delete"
+                  actionLabels.delete
                 )}
               </Button>
             )}

@@ -29,6 +29,7 @@ export OLLAMA_HOST
 
 DEV_CONTENOX_BIN := $(HOME)/.local/bin/contenox
 UI_DIR := $(PROJECT_ROOT)/packages/ui
+ACP_CLIENT_DIR := $(PROJECT_ROOT)/packages/acp-client
 HARNESS_DIR := $(PROJECT_ROOT)/packages/harness
 HARNESS_DEV_HOST ?= 127.0.0.1
 HARNESS_DEV_PORT ?= 5173
@@ -48,14 +49,14 @@ CONTENOX_DEV_URL ?= http://$(CONTENOX_DEV_ADDR):$(CONTENOX_DEV_PORT)
 	deps-ui \
 	dev-harness dev-web-proxy dev-install dev-link dev-unlink \
 	\
-	test test-all test-unit test-api test-ui test-vllm test-system test-contenox-verbose test-contenox-help \
+	test test-all test-unit test-api test-ui test-ui-stories test-vllm test-system test-contenox-verbose test-contenox-help \
 	tool-eval \
 	acp-conformance acp-host-e2e rust-e2e \
 	verify-ui-embed visual
 
 help:
 	@echo "build-*    build-contenox build-contenox-windows build-ui"
-	@echo "test-*     test test-all test-unit test-api test-ui test-vllm test-system test-contenox-verbose test-contenox-help"
+	@echo "test-*     test test-all test-unit test-api test-ui test-ui-stories test-vllm test-system test-contenox-verbose test-contenox-help"
 	@echo "           (test-all = the one-command release gate: builds ui/cli/website, then unit, ui, cli-help, api, acp-conformance, acp-host-e2e, full go test)"
 	@echo "tool-eval  gated per-model tool-eval matrix (opt-in; CONTENOX_RUN_TOOL_EVALS=1; see comment above the target)"
 	@echo "acp-conformance  drive the shipped 'contenox acp' agent with the Rust acp-validator conformance client (needs ACP_VALIDATOR_BIN)"
@@ -142,8 +143,17 @@ test-api: build-ui
 	@CONTENOX_BIN=$(PROJECT_ROOT)/bin/contenox $(PROJECT_ROOT)/scripts/run_apitests.sh $(PYTEST_ARGS)
 
 test-ui: deps-ui
+	cd $(ACP_CLIENT_DIR) && npm test
+	cd $(UI_DIR) && npm run build
+	cd $(UI_DIR) && npm test -- --project unit
 	cd $(HARNESS_DIR) && npm run typecheck
 	cd $(HARNESS_DIR) && npm test
+
+# The storybook project renders every story in a real browser at three
+# viewports. Run serially: in parallel, three browsers racing the storybook dev
+# server made a handful of story modules fail to import or time out.
+test-ui-stories:
+	cd $(UI_DIR) && npx vitest run --project storybook --maxWorkers=1 --testTimeout=30000
 
 visual:
 	bash $(PROJECT_ROOT)/packages/harness/e2e/run.sh
@@ -245,8 +255,9 @@ dev-unlink:
 	@rm -f $(DEV_CONTENOX_BIN)
 
 deps-ui:
-	cd $(UI_DIR) && npm ci
-	cd $(HARNESS_DIR) && npm ci
+	cd $(ACP_CLIENT_DIR) && npm install --legacy-peer-deps --no-audit --no-fund
+	cd $(UI_DIR) && npm install --legacy-peer-deps --no-audit --no-fund
+	cd $(HARNESS_DIR) && npm install --legacy-peer-deps --no-audit --no-fund
 
 deps-website:
 	cd $(PROJECT_ROOT)/website && npm ci

@@ -5,7 +5,7 @@ import type { AcpChatMessage } from '../../../hooks/acpSessionState';
  * (placeholder vs markdown vs trailing caret) — no React, so the logic is
  * unit-testable without mounting `TranscriptItems.tsx` (see
  * `streamingPresentation.test.ts`), and kept in its own module (matching
- * `configOptionMapping.ts`/`slashMenuState.ts`'s pattern in this directory)
+ * the shared config-option helpers / `slashMenuState.ts` pattern in this directory)
  * instead of exported alongside the component, which would defeat React
  * Fast Refresh for that file.
  */

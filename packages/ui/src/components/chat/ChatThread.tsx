@@ -7,7 +7,7 @@ export type ChatThreadProps = {
   children: React.ReactNode;
   className?: string;
   scrollClassName?: string;
-  /** Scroll region `aria-live` (default polite). Set false to omit. */
+
   ariaLive?: false | "off" | "polite" | "assertive";
 };
 

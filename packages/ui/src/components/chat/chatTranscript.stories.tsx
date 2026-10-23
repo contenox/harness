@@ -102,7 +102,7 @@ export const MarkdownComponents: Story = {
   ),
 };
 
-/** Same content under the dark theme flip — verifies the vs2015 highlight palette. */
+
 export const MarkdownComponentsDark: Story = {
   render: () => (
     <div

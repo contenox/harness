@@ -22,8 +22,8 @@ describe("formatCompactNumber", () => {
   });
 
   it("is locale-aware", () => {
-    // German compact notation joins the number and unit with a non-breaking
-    // space, so match loosely rather than pin the exact whitespace byte.
+
+
     expect(formatCompactNumber(1_500_000, "de-DE")).toMatch(/^1,5\s*Mio\.$/);
   });
 

@@ -15,6 +15,7 @@ import HomeRedirect from '../pages/HomeRedirect.tsx';
 import { LOGIN_ROUTE } from './routeConstants.ts';
 
 const AcpChatPage = lazy(() => import('../pages/chat/AcpChatPage.tsx'));
+const WorkbenchPage = lazy(() => import('../pages/workbench/WorkbenchPage.tsx'));
 const BackendsPage = lazy(() => import('../pages/admin/backends/BackendPage.tsx'));
 const FleetPage = lazy(() => import('../pages/admin/fleet/FleetPage.tsx'));
 const MissionListPage = lazy(() => import('../pages/admin/missions/MissionListPage.tsx'));
@@ -134,6 +135,24 @@ export const routes: RouteConfig[] = [
     path: '/chat/:sessionId',
     element: AcpChatPage,
     label: i18n.t('navbar.chat'),
+    showInNav: false,
+    protected: true,
+    showInShelf: false,
+  },
+  {
+    // The library workbench: file tree, open files and preview beside the
+    // session. Reached from a session, not the shelf.
+    path: '/workbench/:sessionId',
+    element: WorkbenchPage,
+    label: '',
+    showInNav: false,
+    protected: true,
+    showInShelf: false,
+  },
+  {
+    path: '/workbench',
+    element: WorkbenchPage,
+    label: '',
     showInNav: false,
     protected: true,
     showInShelf: false,

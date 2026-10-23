@@ -1,0 +1,27 @@
+{
+  "name": "@contenox/acp-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent Client Protocol client: JSON-RPC over a pluggable transport, with no framework and no runtime dependency.",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "prettier:check": "prettier --check \"src/**/*.{ts,json,md}\"",
+    "prettier": "prettier --write \"src/**/*.{ts,json,md}\"",
+    "test": "vitest run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@agentclientprotocol/sdk": "1.2.1",
+    "vitest": "^3.2.7"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "sideEffects": false
+}

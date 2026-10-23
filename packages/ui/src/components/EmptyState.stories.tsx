@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Button } from "./Button";
 import { EmptyState } from "./EmptyState";
 
 const meta: Meta<typeof EmptyState> = {
@@ -54,6 +55,15 @@ export const Horizontal: Story = {
     icon: <span>{"ℹ"}</span>,
     title: "Heads up",
     description: "This area is currently empty.",
+  },
+};
+
+export const WithAction: Story = {
+  args: {
+    icon: <span>{"\u{1F4C1}"}</span>,
+    title: "No files yet",
+    description: "Upload a file to get started.",
+    children: <Button variant="primary">Upload a file</Button>,
   },
 };
 

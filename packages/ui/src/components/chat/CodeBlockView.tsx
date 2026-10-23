@@ -4,14 +4,14 @@ import hljs from "highlight.js/lib/common";
 import { cn } from "../../utils";
 import { copyTextToClipboard } from "./clipboard";
 
-/** Above this length we skip highlighting to keep streaming re-renders cheap. */
+
 const HIGHLIGHT_MAX_CHARS = 20000;
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-/** Synchronous so it stays flicker-free while assistant tokens stream in. */
+
 function highlight(code: string, language?: string): string {
   if (code.length > HIGHLIGHT_MAX_CHARS) return escapeHtml(code);
   try {
@@ -27,16 +27,18 @@ function highlight(code: string, language?: string): string {
 export interface CodeBlockViewProps {
   code: string;
   language?: string;
-  /** Accessible label for the copy control. */
+  /**
+   * Accessible label for the copy control.
+   */
   copyLabel?: string;
-  /** Label shown briefly after a successful copy. */
+  /**
+   * Label shown briefly after a successful copy.
+   */
   copiedLabel?: string;
 }
 
 /**
- * A fenced code block for the chat transcript: a header bar (language + copy)
- * over syntax-highlighted code. Highlighting mirrors VS Code's `vs` / `vs2015`
- * themes (see `index.css`) so blocks match the Monaco editors.
+ * A fenced code block for the chat transcript: a header bar (language + copy) over syntax-highlighted code.
  */
 export function CodeBlockView({
   code,

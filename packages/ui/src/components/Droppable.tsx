@@ -60,7 +60,7 @@ export function Droppable({
       className={cn(
         "transition-all duration-200 ease-in-out",
         isDraggingOver &&
-          "ring-2 ring-accent-500 bg-accent-50 dark:bg-dark-accent-50 rounded-lg",
+          "ring-2 ring-accent-500 bg-accent-50 dark:bg-dark-accent-800 rounded-lg",
         className,
       )}
       onDragEnter={handleDragEnter}

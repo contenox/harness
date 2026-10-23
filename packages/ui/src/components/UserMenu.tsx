@@ -39,7 +39,8 @@ export function UserMenu({
         </Button>
       }
       className={cn("relative", className)}
-      contentClassName="absolute right-0 mt-2 w-48 rounded-lg shadow-lg z-50"
+      align="end"
+      contentClassName="w-48"
     >
       <Section>
         {(friendlyName || mail) && (

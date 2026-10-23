@@ -8,11 +8,11 @@ type ToastProps = {
   message: string;
   variant: "success" | "error";
   className?: string;
-  /** When provided, renders a dismiss button and enables auto-dismiss. */
+
   onDismiss?: () => void;
-  /** Auto-dismiss after this many milliseconds (requires onDismiss). */
+
   duration?: number;
-  /** Accessible name of the dismiss button. */
+
   dismissLabel?: string;
 };
 
@@ -32,7 +32,7 @@ export function Toast({
 
   return createPortal(
     <div
-      // Errors interrupt (alert/assertive); successes wait their turn.
+
       role={variant === "error" ? "alert" : "status"}
       aria-live={variant === "error" ? "assertive" : "polite"}
       className={cn(

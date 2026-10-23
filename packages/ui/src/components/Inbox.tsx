@@ -1,4 +1,4 @@
-// components/Inbox.tsx
+
 import { forwardRef } from "react";
 import { cn } from "../utils";
 

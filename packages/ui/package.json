@@ -6,10 +6,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build:css": "tailwindcss -i ./src/index.css -o ./dist/index.css",
-    "build": "tsup src/index.ts --format cjs,esm --dts --external react,react-dom,clsx,tailwind-merge,lucide-react,tailwindcss,react-markdown --tsconfig tsconfig.json && npm run build:css",
+    "build": "tsup --config tsup.config.ts && npm run build:css",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest run",
+    "test:stories": "vitest run --project storybook",
     "prettier:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
     "prettier": "prettier --write \"**/*.{ts,tsx,js,json,md}\""
   },
@@ -22,10 +23,15 @@
     "tailwindcss": "^4.0.0"
   },
   "dependencies": {
+    "@contenox/acp-client": "file:../acp-client",
     "@dagrejs/dagre": "^1.1.5",
+    "@monaco-editor/react": "^4.7.0",
     "clsx": "^2.1.1",
     "highlight.js": "^11.11.1",
     "lucide-react": "^0.479.0",
+    "monaco-editor": "^0.57.0",
+    "react-router-dom": "^7.3.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.0.2"
   },
   "exports": {
@@ -35,21 +41,77 @@
       "require": "./dist/index.js"
     },
     "./chat": {
-      "types": "./src/chat.ts",
-      "import": "./src/chat.ts",
-      "default": "./src/chat.ts"
+      "types": "./dist/chat.d.ts",
+      "import": "./dist/chat.mjs",
+      "require": "./dist/chat.js"
+    },
+    "./editor": {
+      "types": "./dist/editor.d.ts",
+      "import": "./dist/editor.mjs",
+      "require": "./dist/editor.js"
+    },
+    "./access": {
+      "types": "./dist/access.d.ts",
+      "import": "./dist/access.mjs",
+      "require": "./dist/access.js"
+    },
+    "./inference": {
+      "types": "./dist/inference.d.ts",
+      "import": "./dist/inference.mjs",
+      "require": "./dist/inference.js"
+    },
+    "./product": {
+      "types": "./dist/product.d.ts",
+      "import": "./dist/product.mjs",
+      "require": "./dist/product.js"
+    },
+    "./product-lib": {
+      "types": "./dist/product-lib.d.ts",
+      "import": "./dist/product-lib.mjs",
+      "require": "./dist/product-lib.js"
+    },
+    "./session": {
+      "types": "./dist/session.d.ts",
+      "import": "./dist/session.mjs",
+      "require": "./dist/session.js"
     },
     "./styles.css": "./dist/index.css",
     "./theme.css": "./src/index.css",
-    "./fonts.css": "./src/fonts.css"
+    "./fonts.css": "./src/fonts.css",
+    "./session-state": {
+      "types": "./dist/session-state.d.ts",
+      "import": "./dist/session-state.mjs",
+      "require": "./dist/session-state.js"
+    },
+    "./session-lib": {
+      "types": "./dist/session-lib.d.ts",
+      "import": "./dist/session-lib.mjs",
+      "require": "./dist/session-lib.js"
+    },
+    "./session-ui": {
+      "types": "./dist/session-ui.d.ts",
+      "import": "./dist/session-ui.mjs",
+      "require": "./dist/session-ui.js"
+    },
+    "./session-workspace": {
+      "types": "./dist/session-workspace.d.ts",
+      "import": "./dist/session-workspace.mjs",
+      "require": "./dist/session-workspace.js"
+    }
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "public"
+  ],
+  "sideEffects": [
+    "**/*.css",
+    "**/monacoBootstrap.ts"
   ],
   "devDependencies": {
-    "@storybook/addon-themes": "^10.4.0",
-    "@storybook/react-vite": "^10.4.0",
+    "@storybook/addon-themes": "10.4.0",
+    "@storybook/addon-vitest": "10.4.0",
+    "@storybook/react-vite": "10.4.0",
     "@tailwindcss/cli": "^4.3.0",
     "@tailwindcss/postcss": "^4.1.3",
     "@tailwindcss/typography": "^0.5.19",
@@ -57,11 +119,11 @@
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^9.0.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
+    "@vitest/browser": "^3.2.7",
+    "playwright": "^1.63.0",
     "postcss": "^8.5.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react-dom": "^19.2.3",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "storybook": "^10.4.0",

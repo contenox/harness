@@ -8,7 +8,7 @@ import {
 } from "./InlineAttachmentRenderer";
 import { chatTranscriptMarkdownComponents } from "./chat/chatTranscript";
 
-// A 1x1 transparent PNG — small but syntactically real base64.
+
 const PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
@@ -24,7 +24,7 @@ describe("InlineAttachmentRenderer: image kind", () => {
       createElement(InlineAttachmentRenderer, { attachment: imageAttachment }),
     );
     expect(html).toContain(`src="data:image/png;base64,${PNG_B64}"`);
-    // Size-constrained so a large screenshot cannot blow out the thread column.
+
     expect(html).toContain("max-w-full");
     expect(html).toContain("max-h-64");
   });
@@ -33,9 +33,9 @@ describe("InlineAttachmentRenderer: image kind", () => {
     const html = renderToStaticMarkup(
       createElement(InlineAttachmentRenderer, { attachment: imageAttachment }),
     );
-    // The thumbnail itself is a button that opens the full-size dialog…
+
     expect(html).toContain('aria-label="Show image full size"');
-    // …and the collapsed-by-default dialog contributes no markup until opened.
+
     expect(html).not.toContain('role="dialog"');
   });
 

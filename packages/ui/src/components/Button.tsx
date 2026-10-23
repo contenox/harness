@@ -19,6 +19,15 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   textAlign?: "center" | "bottom";
 };
 
+
+const dangerStyles = cn(
+  "border border-error-300 dark:border-dark-error-400",
+  "bg-error-50 dark:bg-dark-error-50",
+  "text-error-700 dark:text-dark-error-800",
+  "hover:bg-error-100 dark:hover:bg-dark-error-100",
+  "focus-visible:ring-error-300 dark:focus-visible:ring-dark-error-300",
+);
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
@@ -38,11 +47,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         "shadow-md shadow-primary-500/20 dark:shadow-none",
         "ring-1 ring-inset ring-white/20 dark:ring-black/10",
         variant !== "text" &&
-          "bg-gradient-to-b from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 border border-transparent dark:from-primary-500 dark:to-primary-600 dark:hover:from-primary-400 dark:hover:to-primary-500",
+          "bg-gradient-to-b from-primary-500 to-primary-700 hover:from-primary-400 hover:to-primary-600 border border-transparent",
         "hover:shadow-lg active:scale-[0.98]",
         "focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2",
-        // When disabled, fade out the contrast rather than washing out a bright hue
-        "disabled:opacity-60 disabled:hover:from-primary-500 disabled:hover:to-primary-600",
+
+        "disabled:opacity-60 disabled:hover:from-primary-500 disabled:hover:to-primary-700",
       ),
       secondary: cn(
         "text-text-inverted dark:text-dark-text",
@@ -72,13 +81,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       "bg-transparent",
       "hover:bg-surface-100 dark:hover:bg-dark-surface-100",
       "text-current",
-    );
-
-    const dangerStyles = cn(
-      "bg-transparent",
-      "text-error dark:text-dark-error",
-      "hover:bg-error/10 dark:hover:bg-dark-error/10",
-      "focus-visible:ring-error-300 dark:focus-visible:ring-dark-error-300",
     );
 
     const successStyles = cn(

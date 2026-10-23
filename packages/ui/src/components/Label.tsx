@@ -1,4 +1,4 @@
-// components/Label.tsx
+
 import { cn } from "../utils";
 
 type LabelProps = React.LabelHTMLAttributes<HTMLLabelElement>;

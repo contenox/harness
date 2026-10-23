@@ -8,25 +8,45 @@ export type ToolCallStatus = "pending" | "running" | "success" | "error";
 
 export interface ToolCallCardProps
   extends React.HTMLAttributes<HTMLDivElement> {
-  /** Tool / hook name (e.g. "local_shell", "linear"). */
+  /**
+   * Tool / hook name (e.g. "local_shell", "linear").
+   */
   tool: string;
-  /** Short summary of what happened (e.g. "Created DEV-116"). */
+  /**
+   * Short summary of what happened (e.g. "Created DEV-116").
+   */
   title: string;
-  /** Execution status. */
+  /**
+   * Execution status.
+   */
   status?: ToolCallStatus;
-  /** Icon shown before the tool name. */
+  /**
+   * Icon shown before the tool name.
+   */
   icon?: React.ReactNode;
-  /** External link (e.g. Linear issue URL). */
+  /**
+   * External link (e.g. Linear issue URL).
+   */
   href?: string;
-  /** Collapsible detail content (raw JSON, full output, etc.). */
+  /**
+   * Collapsible detail content (raw JSON, full output, etc.).
+   */
   detail?: React.ReactNode;
-  /** Duration string (e.g. "1.2s"). */
+  /**
+   * Duration string (e.g. "1.2s").
+   */
   duration?: string;
-  /** Override the status badge labels (defaults: "Pending" / "Running" / "Done" / "Error"). */
+  /**
+   * Override the status badge labels (defaults: "Pending" / "Running" / "Done" / "Error").
+   */
   statusLabels?: Partial<Record<ToolCallStatus, string>>;
-  /** Accessible label for the external link (default: "Open in external tool"). */
+  /**
+   * Accessible label for the external link (default: "Open in external tool").
+   */
   externalLinkLabel?: string;
-  /** Accessible label for the detail toggle button (default: "Toggle detail"). */
+  /**
+   * Accessible label for the detail toggle button (default: "Toggle detail").
+   */
   toggleDetailLabel?: string;
 }
 

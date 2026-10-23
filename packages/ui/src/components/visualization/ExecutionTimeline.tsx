@@ -153,7 +153,7 @@ function HistoricalState({
   state: CapturedStateUnit[];
   l: Required<ExecutionTimelineLabels>;
 }) {
-  // duration is a Go time.Duration serialized as nanoseconds; pick a readable unit.
+
   const formatDuration = (ns: number): string => {
     const ms = ns / 1_000_000;
     if (ms < 1000) return `${Math.round(ms)} ms`;

@@ -7,9 +7,9 @@ import {
 } from "react";
 
 export type UseChatScrollOptions = {
-  /** Values that should trigger an auto-scroll check (e.g. message list) */
+
   deps: DependencyList;
-  /** Pixels from bottom to still count as "near bottom" (default 160) */
+
   thresholdPx?: number;
   behavior?: ScrollBehavior;
 };

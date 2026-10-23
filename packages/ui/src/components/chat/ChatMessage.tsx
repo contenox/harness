@@ -29,8 +29,8 @@ function defaultAvatarLetter(role: ChatMessageBaseProps["role"]): string {
 }
 
 function avatarRingClass(role: ChatMessageBaseProps["role"]): string {
-  // Light mode uses the soft -100/-800 pairing (same convention as Badge) —
-  // a solid -600 disc reads far too heavy next to light bubbles.
+
+
   switch (role) {
     case "user":
       return "bg-primary-100 text-primary-800 dark:bg-dark-primary-600 dark:text-dark-text-inverted";
@@ -100,9 +100,9 @@ export function ChatMessage({
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
   const isUser = role === "user";
-  // Non-collapsible transcripts opt out of the per-message Hide/Show toggle
-  // entirely (only thought blocks / tool detail collapse there) — force the
-  // body open and skip rendering the trigger below.
+
+
+
   const effectiveOpen = collapsible ? open : true;
 
   const bubbleRing =
@@ -126,11 +126,11 @@ export function ChatMessage({
     if (ok) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
-      // Root cause of the ring "sticking" after a mouse click: focus never
-      // leaves the button once clicked, so its focus ring stays visible
-      // indefinitely. Blurring on successful copy clears it without
-      // affecting keyboard users (a subsequent Tab/Shift+Tab still moves
-      // focus normally).
+
+
+
+
+
       button?.blur();
     }
   };

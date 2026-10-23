@@ -1,13 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @tailwind utilities;
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@layer base {
+
+  @media (pointer: coarse) {
+    button,
+    select,
+    textarea,
+    [role='button'],
+    a[href],
+    input:not([type='checkbox'], [type='radio'], [type='hidden']) {
+      @apply min-h-11 min-w-11;
+    }
+  }
+}
+
 @layer components {
-  /* Tighten up prose spacing to feel more like a compact document */
+
   .prose-compact :where(p, ul, ol, pre, blockquote) {
     margin-top: 0.75em;
     margin-bottom: 0.75em;
@@ -29,11 +41,7 @@
 }
 
 @layer components {
-  /* Syntax highlighting for chat code fences (highlight.js). Mirrors VS Code's
-     `vs` (light) / `vs2015` (dark) so transcript code matches the Monaco
-     editors. Colors are hex by design: this is a code theme, not UI chrome —
-     the card frame/background comes from surface tokens in CodeBlockView. The
-     `.dark` overrides ride the same theme flip as the rest of the design system. */
+
   .hljs {
     color: inherit;
     background: transparent;
@@ -94,7 +102,7 @@
     font-weight: 600;
   }
 
-  /* Dark — VS Code `vs2015` / Dark+ */
+
   .dark .hljs-comment,
   .dark .hljs-quote {
     color: #6a9955;
@@ -151,22 +159,23 @@
 }
 
 @theme {
-  /* ========== Light Mode Palettes ========== */
-  /* Light Mode - Vibrant Indigo Primary */
-  --color-primary-50: #eef2ff;
-  --color-primary-100: #e0e7ff;
-  --color-primary-200: #c7d2fe;
-  --color-primary-300: #a5b4fc;
-  --color-primary-400: #818cf8;
-  --color-primary-500: #6366f1;
-  --color-primary-600: #4f46e5;
-  --color-primary-700: #4338ca;
-  --color-primary-800: #3730a3;
-  --color-primary-900: #312e81;
+
+
+  --color-primary-50: #ecfdf5;
+  --color-primary-100: #d1fae5;
+  --color-primary-200: #a7f3d0;
+  --color-primary-300: #6ee7b7;
+  --color-primary-400: #34d399;
+  --color-primary-500: #10b981;
+  --color-primary-600: #059669;
+  --color-primary-700: #047857;
+  --color-primary-800: #065f46;
+  --color-primary-900: #064e3b;
+  --color-primary-950: #022c22;
   --color-primary: var(--color-primary-600);
   --color-brand: var(--color-primary-600);
 
-  /* Light Mode Secondary - Neutral Slate */
+
   --color-secondary-50: #f8fafc;
   --color-secondary-100: #f1f5f9;
   --color-secondary-200: #e2e8f0;
@@ -179,7 +188,7 @@
   --color-secondary-900: #0f172a;
   --color-secondary: var(--color-secondary-500);
 
-  /* Light Mode Accent - neutral graphite, not a separate brand hue */
+
   --color-accent-50: #fafafa;
   --color-accent-100: #f5f5f5;
   --color-accent-200: #e5e5e5;
@@ -192,36 +201,36 @@
   --color-accent-900: #171717;
   --color-accent: var(--color-accent-500);
 
-  /* ========== Light Mode Error Colors ========== */
-  --color-error-50: #fef2f2; /* Very light red */
-  --color-error-100: #fee2e2; /* Soft pinkish red */
-  --color-error-200: #fecaca; /* Gentle red */
-  --color-error-300: #fca5a5; /* Light warning red */
-  --color-error-400: #f87171; /* Medium warning red */
-  --color-error-500: #dc2626; /* Improved contrast */
-  --color-error-600: #dc2626; /* Strong error red */
-  --color-error-700: #b91c1c; /* Deep red */
-  --color-error-800: #991b1b; /* Dark red */
-  --color-error-900: #7f1d1d; /* Almost burgundy */
+
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-200: #fecaca;
+  --color-error-300: #fca5a5;
+  --color-error-400: #f87171;
+  --color-error-500: #dc2626;
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+  --color-error-800: #991b1b;
+  --color-error-900: #7f1d1d;
   --color-error: var(--color-error-500);
 
-  /* ========== Light Mode Background Colors ========== */
-  --color-background-light: var(--color-surface-100); /* Was #f9fafb */
-  --color-background-dark: var(--color-surface-200); /* Was #f3f4f6 */
+
+  --color-background-light: var(--color-surface-100);
+  --color-background-dark: var(--color-surface-200);
   --color-background: var(--color-background-light);
 
-  /* Gradient (pure indigo depth, no violet/pink) */
+
   --color-gradientStart: var(--color-primary-500);
-  --color-gradientEnd: #3730a3; /* indigo-800 */
+  --color-gradientEnd: var(--color-primary-800);
   --color-gradient: linear-gradient(
     to bottom,
     var(--color-gradientStart),
     var(--color-gradientEnd)
   );
 
-  /* ========== Dark Mode Palettes ========== */
-  /* ========== Dark Mode Primary Colors — neutral/light (brand-matched) ========== */
-  /* On contenox.com, dark primary is neutral-white for text; indigo is CTA-only */
+
+
+
   --color-dark-primary-50: #fafafa;
   --color-dark-primary-100: #f5f5f5;
   --color-dark-primary-200: #e5e5e5;
@@ -235,7 +244,7 @@
   --color-dark-primary: var(--color-dark-primary-500);
   --color-dark-brand: var(--color-dark-primary-500);
 
-  /* Dark Mode Secondary — graphite neutral */
+
   --color-dark-secondary-50: #f4f5f7;
   --color-dark-secondary-100: #e5e7eb;
   --color-dark-secondary-200: #cdd0d5;
@@ -248,7 +257,7 @@
   --color-dark-secondary-900: #0e1014;
   --color-dark-secondary: var(--color-dark-secondary-500);
 
-  /* Accent uses the same neutral family; no secondary hue. */
+
   --color-dark-accent-50: #f5f5f5;
   --color-dark-accent-100: #e5e5e5;
   --color-dark-accent-200: #d4d4d4;
@@ -261,46 +270,46 @@
   --color-dark-accent-900: #0a0a0a;
   --color-dark-accent: var(--color-dark-accent-500);
 
-  /* ========== Dark Mode Error Colors ========== */
-  --color-dark-error-50: #2d0c0c; /* Soft muted red */
-  --color-dark-error-100: #400f0f; /* Slightly richer */
-  --color-dark-error-200: #5a1313; /* More visible */
-  --color-dark-error-300: #7f1d1d; /* Deep warning red */
-  --color-dark-error-400: #991b1b; /* More intense */
-  --color-dark-error-500: #b91c1c; /* Dark mode standard error */
-  --color-dark-error-600: #dc2626; /* Strong warning */
-  --color-dark-error-700: #ef4444; /* Brighter contrast */
-  --color-dark-error-800: #f87171; /* Near-alert red */
-  --color-dark-error-900: #fca5a5; /* Softest visible */
+
+  --color-dark-error-50: #2d0c0c;
+  --color-dark-error-100: #400f0f;
+  --color-dark-error-200: #5a1313;
+  --color-dark-error-300: #7f1d1d;
+  --color-dark-error-400: #991b1b;
+  --color-dark-error-500: #b91c1c;
+  --color-dark-error-600: #dc2626;
+  --color-dark-error-700: #ef4444;
+  --color-dark-error-800: #f87171;
+  --color-dark-error-900: #fca5a5;
   --color-dark-error: var(--color-dark-error-500);
 
-  /* ========== Light Mode Success Colors ========== */
-  --color-success-50: #f0fdf4; /* Very light green */
-  --color-success-100: #dcfce7; /* Soft mint */
-  --color-success-200: #bbf7d0; /* Pale green */
-  --color-success-300: #86efac; /* Light success green */
-  --color-success-400: #4ade80; /* Medium success green */
-  --color-success-500: #22c55e; /* Success green (Base) */
-  --color-success-600: #16a34a; /* Deep success green */
-  --color-success-700: #15803d; /* Dark green */
-  --color-success-800: #166534; /* Forest green */
-  --color-success-900: #14532d; /* Pine green */
+
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+  --color-success-800: #166534;
+  --color-success-900: #14532d;
   --color-success: var(--color-success-500);
 
-  /* ========== Light Mode Warning Colors ========== */
-  --color-warning-50: #fefce8; /* Lightest yellow */
-  --color-warning-100: #fef9c3; /* Pale yellow */
-  --color-warning-200: #fef08a; /* Soft warning yellow */
-  --color-warning-300: #fde047; /* Medium yellow */
-  --color-warning-400: #facc15; /* Golden yellow */
-  --color-warning-500: #eab308; /* Warning yellow (Base) */
-  --color-warning-600: #ca8a04; /* Amber */
-  --color-warning-700: #a16207; /* Dark amber */
-  --color-warning-800: #854d0e; /* Ochre */
-  --color-warning-900: #713f12; /* Dark ochre */
+
+  --color-warning-50: #fefce8;
+  --color-warning-100: #fef9c3;
+  --color-warning-200: #fef08a;
+  --color-warning-300: #fde047;
+  --color-warning-400: #facc15;
+  --color-warning-500: #eab308;
+  --color-warning-600: #ca8a04;
+  --color-warning-700: #a16207;
+  --color-warning-800: #854d0e;
+  --color-warning-900: #713f12;
   --color-warning: var(--color-warning-500);
 
-  /* ========== Light Mode Info Colors ========== */
+
   --color-info-50: #f5f5f5;
   --color-info-100: #e5e5e5;
   --color-info-200: #d4d4d4;
@@ -313,35 +322,34 @@
   --color-info-900: #0a0a0a;
   --color-info: var(--color-info-500);
 
-  /* ========== Dark Mode Success Colors ========== */
-  --color-dark-success-50: #052e16; /* Dark forest green */
-  --color-dark-success-100: #14532d; /* Deep pine */
-  --color-dark-success-200: #166534; /* Rich green */
-  --color-dark-success-300: #15803d; /* Success green */
-  --color-dark-success-400: #16a34a; /* Vibrant green */
-  --color-dark-success-500: #22c55e; /* Base success */
-  --color-dark-success-600: #4ade80; /* Bright green */
-  --color-dark-success-700: #86efac; /* Light mint */
-  --color-dark-success-800: #bbf7d0; /* Pale success */
-  --color-dark-success-900: #dcfce7; /* Very light mint */
+
+  --color-dark-success-50: #052e16;
+  --color-dark-success-100: #14532d;
+  --color-dark-success-200: #166534;
+  --color-dark-success-300: #15803d;
+  --color-dark-success-400: #16a34a;
+  --color-dark-success-500: #22c55e;
+  --color-dark-success-600: #4ade80;
+  --color-dark-success-700: #86efac;
+  --color-dark-success-800: #bbf7d0;
+  --color-dark-success-900: #dcfce7;
   --color-dark-success: var(--color-dark-success-500);
 
-  /* ========== Dark Mode Warning Colors ========== */
-  --color-dark-warning-50: #422006; /* Dark burnt orange */
-  --color-dark-warning-100: #713f12; /* Deep ochre */
-  --color-dark-warning-200: #854d0e; /* Rich amber */
-  --color-dark-warning-300: #a16207; /* Warm warning */
-  --color-dark-warning-400: #ca8a04; /* Golden amber */
-  --color-dark-warning-500: #eab308; /* Base warning */
-  --color-dark-warning-600: #facc15; /* Bright yellow */
-  --color-dark-warning-700: #fde047; /* Light warning */
-  --color-dark-warning-800: #fef08a; /* Pale yellow */
-  --color-dark-warning-900: #fef9c3; /* Very light yellow */
+
+  --color-dark-warning-50: #422006;
+  --color-dark-warning-100: #713f12;
+  --color-dark-warning-200: #854d0e;
+  --color-dark-warning-300: #a16207;
+  --color-dark-warning-400: #ca8a04;
+  --color-dark-warning-500: #eab308;
+  --color-dark-warning-600: #facc15;
+  --color-dark-warning-700: #fde047;
+  --color-dark-warning-800: #fef08a;
+  --color-dark-warning-900: #fef9c3;
   --color-dark-warning: var(--color-dark-warning-500);
 
-  /* ========== Dark Mode Info Colors ========== */
-  /* Info is neutral graphite; the dark ramp aliases dark-primary
-     (matches StatusIndicator's existing info -> dark-primary mapping). */
+
+
   --color-dark-info-50: var(--color-dark-primary-50);
   --color-dark-info-100: var(--color-dark-primary-100);
   --color-dark-info-200: var(--color-dark-primary-200);
@@ -354,7 +362,7 @@
   --color-dark-info-900: var(--color-dark-primary-900);
   --color-dark-info: var(--color-dark-info-500);
 
-  /* ========== Text Color Additions ========== */
+
   --color-text-success: var(--color-success-700);
   --color-text-warning: var(--color-warning-700);
   --color-text-info: var(--color-info-600);
@@ -362,55 +370,55 @@
   --color-dark-text-warning: var(--color-dark-warning-400);
   --color-dark-text-info: var(--color-dark-info-400);
 
-  /* ========== Dark Mode Background Colors ========== */
+
   --color-dark-background-light: var(
     --color-dark-surface-100
-  ); /* Your key color integrated */
+  );
   --color-dark-background-dark: var(
     --color-dark-surface-200
-  ); /* Matches surface-50 */
+  );
   --color-dark-background: var(--color-dark-background-light);
 
-  /* ========== Gradients ========== */
-  --color-dark-gradientStart: var(--color-dark-primary-500); 
-  --color-dark-gradientEnd: #3730a3; /* indigo-800 */
+
+  --color-dark-gradientStart: var(--color-dark-primary-500);
+  --color-dark-gradientEnd: var(--color-primary-800);
   --color-dark-gradient: linear-gradient(
     to bottom,
     var(--color-dark-gradientStart),
     var(--color-dark-gradientEnd)
   );
 
-  /* ========== Typography ========== */
-  --color-text: #2b2f33; /* Darker text for better contrast */
-  --color-dark-text: #e8eaed; /* Near-white, cool neutral */
 
-  /* ========== Light Mode Text Colors ========== */
+  --color-text: #2b2f33;
+  --color-dark-text: #e8eaed;
+
+
   --color-text-primary: var(--color-primary-600);
   --color-text-primary-hover: var(--color-primary-700);
   --color-text-secondary: var(--color-secondary-600);
   --color-text-accent: var(--color-accent-600);
   --color-text-error: var(--color-error-600);
-  --color-text-muted: #5a6268; /* Was #6b7280 */
+  --color-text-muted: #5a6268;
   --color-text-inverted: var(
     --color-surface-50
-  ); /* White text for dark surfaces */
-  --color-text-surface: var(--color-text); /* Surface text */
+  );
+  --color-text-surface: var(--color-text);
   --color-text-surface-inverted: var(--color-text-inverted);
 
-  /* ========== Dark Mode Text Colors ========== */
+
   --color-dark-text-primary: var(--color-dark-primary-500);
   --color-dark-text-primary-hover: var(--color-dark-primary-200);
   --color-dark-text-secondary: var(--color-dark-secondary-300);
   --color-dark-text-accent: #d4d4d4;
   --color-dark-text-error: var(--color-dark-error-400);
-  --color-dark-text-muted: #787c85; /* Muted — cool graphite */
+  --color-dark-text-muted: #787c85;
   --color-dark-text-inverted: var(--color-dark-surface-50);
   --color-dark-text-surface: var(--color-dark-text);
   --color-dark-text-surface-inverted: var(--color-dark-text-inverted);
 
-  /* ========== Light Mode Surface Colors ========== */
+
   --color-surface-50: #f8f9fa; 
-  --color-surface-100: #fcfcfc; /* Off-white for app canvas */
+  --color-surface-100: #fcfcfc;
   --color-surface-200: #f3f4f6; 
   --color-surface-300: #e5e7eb; 
   --color-surface-400: #d1d5db; 
@@ -421,8 +429,8 @@
   --color-surface-900: #1f2937; 
   --color-surface: var(--color-surface-50);
 
-  /* ========== Dark Mode Surface Colors (brand-matched cool graphite) ========== */
-  /* Matched to contenox.com: #08090a → #0d0e10 → #121416 progression */
+
+
   --color-dark-surface-50: #08090a; 
   --color-dark-surface-100: #0d0e10; 
   --color-dark-surface-200: #121416; 
@@ -435,10 +443,12 @@
   --color-dark-surface-900: #757980; 
   --color-dark-surface: var(--color-dark-surface-200);
 
-  /* ========== Fonts, Spacing, Radius, Easing ========== */
-  --font-display: "Outfit", system-ui, sans-serif;
-  --font-body: "Outfit", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist", system-ui, sans-serif;
+  --font-body: "Geist", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
   --spacing-18: 4.5rem;
   --spacing-22: 5.5rem;
   --spacing-30: 7.5rem;
@@ -454,26 +464,10 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark theme: re-point the bare semantic tokens at their dark twins whenever
-   the `.dark` class is set (ThemeProvider puts it on <html>, Storybook on
-   <body>). Deliberately unlayered so it beats the @layer theme :root values.
-   Explicit `dark:*-dark-*` utilities still win over the auto-flip (variants
-   sort after bare utilities). Class-driven only — a prefers-color-scheme
-   fallback would break an explicit light toggle under a dark OS. */
+
 .dark {
-  /* Core color overrides */
-  --color-primary: var(--color-dark-primary);
-  --color-brand: var(--color-dark-brand);
-  --color-primary-50: var(--color-dark-primary-50);
-  --color-primary-100: var(--color-dark-primary-100);
-  --color-primary-200: var(--color-dark-primary-200);
-  --color-primary-300: var(--color-dark-primary-300);
-  --color-primary-400: var(--color-dark-primary-400);
-  --color-primary-500: var(--color-dark-primary-500);
-  --color-primary-600: var(--color-dark-primary-600);
-  --color-primary-700: var(--color-dark-primary-700);
-  --color-primary-800: var(--color-dark-primary-800);
-  --color-primary-900: var(--color-dark-primary-900);
+
+
 
   --color-secondary: var(--color-dark-secondary);
   --color-secondary-50: var(--color-dark-secondary-50);
@@ -523,17 +517,17 @@
   --color-info-800: var(--color-dark-info-800);
   --color-info-900: var(--color-dark-info-900);
 
-  /* Background system */
+
   --color-background-light: var(--color-dark-background-light);
   --color-background-dark: var(--color-dark-background-dark);
   --color-background: var(--color-dark-background);
 
-  /* Gradients */
+
   --color-gradientStart: var(--color-dark-gradientStart);
   --color-gradientEnd: var(--color-dark-gradientEnd);
   --color-gradient: var(--color-dark-gradient);
 
-  /* Text colors */
+
   --color-text: var(--color-dark-text);
   --color-text-primary: var(--color-dark-text-primary);
   --color-text-primary-hover: var(--color-dark-text-primary-hover);
@@ -546,7 +540,7 @@
   --color-text-warning: var(--color-dark-text-warning);
   --color-text-info: var(--color-dark-text-info);
 
-  /* Surface overrides */
+
   --color-surface-50: var(--color-dark-surface-50);
   --color-surface-100: var(--color-dark-surface-100);
   --color-surface-200: var(--color-dark-surface-200);
@@ -571,7 +565,7 @@
   --color-success-800: var(--color-dark-success-800);
   --color-success-900: var(--color-dark-success-900);
 
-  /* Warning color overrides */
+
   --color-warning: var(--color-dark-warning);
   --color-warning-50: var(--color-dark-warning-50);
   --color-warning-100: var(--color-dark-warning-100);
@@ -584,7 +578,7 @@
   --color-warning-800: var(--color-dark-warning-800);
   --color-warning-900: var(--color-dark-warning-900);
 
-  /* Text Surface overrides */
+
   --color-text-surface: var(--color-dark-text-surface);
   --color-text-surface-inverted: var(--color-dark-text-surface-inverted);
 }
@@ -595,8 +589,7 @@
     --foreground: var(--color-text);
   }
 
-  /* Class-driven, matching the token flip above — the OS media query would
-     desync from an explicit theme toggle. */
+
   .dark {
     --background: var(--color-dark-background-light);
     --foreground: var(--color-dark-text-primary);
@@ -638,8 +631,7 @@
     linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
 }
 
-/* In @layer base so per-component utilities (e.g. a terminal prompt's
-   outline-none) can override the default focus ring. */
+
 @layer base {
   :focus-visible {
     outline: 2px solid var(--color-primary-500);
@@ -668,7 +660,7 @@
   }
 }
 
-/* light */
+
 .bg-dot-pattern {
   --dot-size: 1px;
   --dot-gap: 16px;
@@ -680,12 +672,12 @@
   background-size: var(--dot-gap) var(--dot-gap);
 }
 
-/* dark */
+
 .dark .bg-dot-pattern {
   --dot-color: rgba(255, 255, 255, 0.12);
 }
 
-/* Terminal block cursor (TerminalPromptInput). */
+
 @keyframes contenoxTerminalCursorBlink {
   0%,
   49% {

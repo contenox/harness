@@ -19,10 +19,12 @@ const meta: Meta<typeof Card> = {
       control: "select",
       options: [undefined, "default", "success", "error", "warning", "info"],
     },
+    interactive: { control: "boolean" },
   },
   args: {
     variant: "default",
     layout: "default",
+    interactive: false,
     children: (
       <>
         <H3>Card title</H3>
@@ -44,6 +46,11 @@ export const Surface: Story = { args: { variant: "surface" } };
 export const Bordered: Story = { args: { variant: "bordered" } };
 
 export const Dotted: Story = { args: { variant: "dotted" } };
+
+
+export const Interactive: Story = {
+  args: { variant: "filled", interactive: true },
+};
 
 export const SpaceBetween: Story = {
   args: {

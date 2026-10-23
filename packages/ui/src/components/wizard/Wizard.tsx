@@ -11,7 +11,7 @@ export type WizardProps = {
 };
 
 /**
- * Vertical setup / onboarding container. Presentational only — pass step state from the app.
+ * Vertical setup / onboarding container.
  */
 export function Wizard({
   title,

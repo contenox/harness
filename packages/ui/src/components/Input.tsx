@@ -19,17 +19,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           className={cn(
-            // Base styles
+
             "bg-surface-50 text-text placeholder:text-text-muted h-9 w-full rounded-lg border px-3 py-1 text-sm transition-colors",
             "focus:ring-primary-500 focus:ring-2 focus:ring-offset-2 focus:outline-none",
             "focus:ring-offset-surface-50 dark:focus:ring-offset-dark-surface-100",
 
-            // Dark mode styles
+
             "dark:bg-dark-surface-50 dark:text-dark-text dark:placeholder:text-dark-text-muted dark:focus:ring-dark-primary-500 dark:focus:ring-offset-dark-surface-50",
-            // Icon padding
+
             startIcon && "pl-10",
             endIcon && "pr-10",
-            // Error and default border states
+
             error
               ? "border-error-300 focus:border-error-500 focus:ring-error-500 dark:border-dark-error-400 dark:focus:border-dark-error-500 dark:focus:ring-dark-error-500"
               : "border-surface-300 dark:border-dark-surface-600 focus:border-primary-500",

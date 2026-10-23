@@ -20,7 +20,7 @@ type TypographyProps = {
   children: ReactNode;
   className?: string;
   variant?: TypographyVariant;
-  /** DOM id, e.g. as an aria-labelledby target. */
+
   id?: string;
 };
 

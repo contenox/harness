@@ -1,4 +1,4 @@
-// components/Dialog.tsx
+
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
@@ -13,7 +13,7 @@ type DialogProps = {
   title: string;
   children: React.ReactNode;
   className?: string;
-  /** Accessible name of the icon-only close button. */
+
   closeLabel?: string;
 };
 
@@ -30,13 +30,13 @@ export function Dialog({
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  // Ref so the trap effect doesn't tear down and re-run when a consumer passes
-  // a new onClose identity every render.
+
+
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  // Focus management while open: move focus into the panel, trap Tab inside,
-  // close on Escape, and restore focus to the opener on close/unmount.
+
+
   useEffect(() => {
     if (!open) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -77,7 +77,7 @@ export function Dialog({
     };
   }, [open]);
 
-  // Scroll lock: the page behind a modal must not scroll.
+
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;

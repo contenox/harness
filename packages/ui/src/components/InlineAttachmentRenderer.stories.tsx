@@ -28,9 +28,9 @@ const fileView: InlineAttachment = {
 const terminalExcerpt: InlineAttachment = {
   kind: "terminal_excerpt",
   command: "go test ./...",
-  output: `ok  	github.com/contenox/harness/libtracker	0.182s
-ok  	github.com/contenox/harness/taskengine	1.044s
-FAIL	github.com/contenox/harness/hookengine	0.301s
+  output: `ok  	github.com/contenox/contenox/libtracker	0.182s
+ok  	github.com/contenox/contenox/taskengine	1.044s
+FAIL	github.com/contenox/contenox/hookengine	0.301s
 --- FAIL: TestHookDispatch (0.10s)
     hook_test.go:42: expected 3 dispatches, got 2`,
   capturedAt: "2026-05-14T10:14:22Z",
@@ -120,7 +120,7 @@ export const StateUnit: Story = {
   ),
 };
 
-// A 1x1 transparent PNG — enough to exercise the data-URI assembly.
+
 const image: InlineAttachment = {
   kind: "image",
   mimeType: "image/png",

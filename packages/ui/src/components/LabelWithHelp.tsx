@@ -4,28 +4,19 @@ import { Label } from "./Label";
 import { Tooltip } from "./Tooltip";
 
 export type LabelWithHelpProps = {
-  /** Text of the label. */
+
   label: string;
-  /** Distilled 1-3 sentence explanation shown in a hover/focus tooltip. */
+
   tooltip?: string;
   required?: boolean;
   className?: string;
-  /**
-   * Rendering element: "label" for form fields (pairs with an input via
-   * htmlFor), "span" for read-only captions above a value/badge. Defaults to
-   * "span" since this component is most useful outside of <FormField> —
-   * FormField already has its own built-in tooltip affordance for inputs.
-   */
+
   as?: "label" | "span";
   htmlFor?: string;
 };
 
 /**
  * A label (or read-only caption) paired with an optional info-icon tooltip.
- * Mirrors the tooltip affordance already built into FormField, for places
- * that show a labeled value without an input — status badges, table row
- * captions, button hints, etc. Keeping both call sites visually consistent
- * (HelpCircle + Tooltip) is the point: one help pattern across the app.
  */
 export function LabelWithHelp({
   label,

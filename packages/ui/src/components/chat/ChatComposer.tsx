@@ -24,33 +24,26 @@ export type ChatComposerProps = {
   title?: string;
   className?: string;
   variant?: "default" | "compact" | "workbench";
-  /** Outer shell: panel (default) or plain border-top (workbench). */
+
   shell?: "panel" | "plain";
-  /**
-   * Soft reference for character count and warning styling only — input is not hard-capped.
-   * @default 131072 (128 KiB)
-   */
+
   softMax?: number;
-  /** @deprecated Use softMax — if set, treated as softMax for backward compatibility. */
+
   maxLength?: number;
   showCharCount?: boolean;
   charCountFormatter?: (length: number, softMax: number) => string;
-  /** When false, submit is disabled regardless of value */
+
   canSubmit?: boolean;
-  /** When true, an empty message can be submitted (e.g. build mode). */
+
   allowEmptyMessage?: boolean;
   footerStart?: React.ReactNode;
-  /** Extra controls after footerStart (e.g. expand editor). */
+
   footerEnd?: React.ReactNode;
-  /**
-   * Pending-attachment strip rendered above the textarea, inside the composer
-   * shell (e.g. removable image thumbnails). Layout/styling belongs to the
-   * caller — this is a plain slot, like footerStart/footerEnd.
-   */
+
   attachments?: React.ReactNode;
-  /** When set, wraps the character counter in a Tooltip */
+
   charCountTooltip?: string;
-  /** Shown under the composer when length exceeds softMax (e.g. model context hint). */
+
   softLimitExceededNote?: string;
   textareaProps?: Omit<
     React.TextareaHTMLAttributes<HTMLTextAreaElement>,
@@ -119,16 +112,16 @@ export function ChatComposer({
 
   const countWarning = isComposerCharCountWarning(value.length, softMax);
   const overSoftMax = isOverComposerSoftMax(value.length, softMax);
-  // The soft max is a large safety ceiling; spelling it out on every keystroke
-  // (e.g. "51/131072") is noise. By default show a bare count while composing and
-  // only reveal the ceiling once you approach it. A custom formatter, if provided,
-  // is always honored.
+
+
+
+
   const countStr = charCountFormatter
     ? charCountFormatter(value.length, softMax)
     : countWarning
       ? `${value.length}/${softMax}`
       : `${value.length}`;
-  // Hide the badge entirely on an empty composer — "0/131072" signals nothing.
+
   const showCount = showCharCount && value.length > 0;
 
   const textareaBlock = (
@@ -253,7 +246,7 @@ export function ChatComposer({
         className={cn(
           "border-surface-200 dark:border-dark-surface-600 bg-surface-50/80 dark:bg-dark-surface-100/80 border-t px-3 py-3 transition-all duration-300 sm:px-4",
           isFocused &&
-            "ring-primary-500/40 dark:ring-primary-500/40 ring-2 ring-inset shadow-[0_0_15px_rgba(99,102,241,0.1)] dark:shadow-[0_0_15px_rgba(99,102,241,0.2)]",
+            "ring-primary-500/40 dark:ring-primary-500/40 ring-2 ring-inset shadow-[0_0_15px_color-mix(in_oklab,var(--color-primary-500)_10%,transparent)] dark:shadow-[0_0_15px_color-mix(in_oklab,var(--color-primary-500)_20%,transparent)]",
           className,
         )}
       >
@@ -268,7 +261,7 @@ export function ChatComposer({
         "rounded-2xl border transition-all duration-300 backdrop-blur-md p-2 sm:p-3 shadow-xl shadow-black/5 dark:shadow-black/20",
         "bg-surface-50/70 border-surface-200/50 dark:bg-dark-surface-100/70 dark:border-dark-surface-300/30",
         isFocused
-          ? "border-primary-500/50 dark:border-primary-500/50 ring-2 ring-primary-500/20 dark:ring-primary-500/20 shadow-[0_0_20px_rgba(99,102,241,0.15)] dark:shadow-[0_0_20px_rgba(99,102,241,0.25)]"
+          ? "border-primary-500/50 dark:border-primary-500/50 ring-2 ring-primary-500/20 dark:ring-primary-500/20 shadow-[0_0_20px_color-mix(in_oklab,var(--color-primary-500)_15%,transparent)] dark:shadow-[0_0_20px_color-mix(in_oklab,var(--color-primary-500)_25%,transparent)]"
           : "hover:border-surface-300/60 dark:hover:border-dark-surface-400/50",
         className,
       )}

@@ -4,15 +4,25 @@ import { sanitizeTerminalText } from "../ansi";
 
 export interface TerminalOutputProps
   extends React.HTMLAttributes<HTMLDivElement> {
-  /** Lines to render. Each entry is one line of output. */
+  /**
+   * Lines to render.
+   */
   lines: string[];
-  /** Auto-scroll to bottom when new lines arrive. Default true. */
+  /**
+   * Auto-scroll to bottom when new lines arrive.
+   */
   autoScroll?: boolean;
-  /** Optional title shown in the top bar (e.g. "Shell — build"). */
+  /**
+   * Optional title shown in the top bar (e.g. "Shell — build").
+   */
   title?: string;
-  /** Optional trailing element in the title bar (e.g. a stop button). */
+  /**
+   * Optional trailing element in the title bar (e.g. a stop button).
+   */
   actions?: React.ReactNode;
-  /** Max height CSS value. Defaults to "100%". */
+  /**
+   * Max height CSS value.
+   */
   maxHeight?: string;
 }
 
@@ -87,13 +97,12 @@ export const TerminalOutput = forwardRef<HTMLDivElement, TerminalOutputProps>(
   },
 );
 
-/* ------------------------------------------------------------------ */
-/* Minimal ANSI color support                                          */
-/* ------------------------------------------------------------------ */
+
+
+
 
 const ANSI_CLASSES: Record<string, string> = {
-  /* The terminal surface is dark in BOTH themes (bg-surface-900 /
-     dark-surface-50), so the light-theme classes must also read on dark. */
+
   "30": "text-surface-600 dark:text-dark-surface-900",       // black (dim)
   "31": "text-error-400 dark:text-dark-error",               // red
   "32": "text-success dark:text-dark-success",               // green
@@ -112,9 +121,9 @@ const ANSI_CLASSES: Record<string, string> = {
 const ANSI_RE = /\x1b\[([0-9;]*)m/g;
 
 function colorize(rawText: string): React.ReactNode {
-  // Drop non-SGR control sequences (bracketed paste, OSC titles, cursor
-  // moves) first so only color codes remain for the parser below; otherwise
-  // they render as literal garbage.
+
+
+
   const text = sanitizeTerminalText(rawText);
   if (!text.includes("\x1b[")) return text;
 
@@ -123,11 +132,11 @@ function colorize(rawText: string): React.ReactNode {
   let activeClasses = "";
   let match: RegExpExecArray | null;
 
-  // Reset regex state
+
   ANSI_RE.lastIndex = 0;
 
   while ((match = ANSI_RE.exec(text)) !== null) {
-    // Push text before this escape
+
     if (match.index > lastIndex) {
       const chunk = text.slice(lastIndex, match.index);
       parts.push(
@@ -154,7 +163,7 @@ function colorize(rawText: string): React.ReactNode {
     }
   }
 
-  // Remaining text
+
   if (lastIndex < text.length) {
     const chunk = text.slice(lastIndex);
     parts.push(
