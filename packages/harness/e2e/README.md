@@ -2,9 +2,31 @@
 
 Screenshot tests for the harness SPA, for review rather than for gates.
 
-`run.sh` builds the UI, embeds it in the `contenox` binary, starts `contenox
-serve` with a throwaway `$HOME`, and lets Playwright capture one full-page
+`run.sh` builds the UI, embeds it in the `contenox` binary, seeds a throwaway
+`$HOME` with a **scripted-test backend** and one ACP conversation, starts
+`contenox serve` against it, and lets Playwright capture one full-page
 screenshot per top-level surface.
+
+Seeding is what makes the captures worth reviewing: an unconfigured instance
+renders the first-run setup wizard on every route (ten identical screenshots).
+The scripted backend replays a fixed dialog — no model, GPU, key or network —
+so the chat transcript is deterministic across machines, and it keeps the
+surfaces out of their empty/setup states. The conversation is created over the
+ACP surface (`seed_acp_session.py`), because the sidebar is fed by ACP
+`session/list`; a session created with `contenox "<prompt>"` would not appear
+there. `contenox acp` resolves its workspace from `$HOME/.contenox-harness`
+while `serve` resolves it from the launch directory, so the seeder is handed the
+serve workspace id explicitly.
+
+The SPA routes on the **URL hash** (`#/chat`, `#/backends`, …); the tests
+address those hash routes directly, since a plain path only loads the shell and
+the router falls back to `#/chat`.
+
+One product detail the seeding papers over: `contenox init` registers `llama`
+and `openvino` backends for a modeld install, which this build reports as
+"Unsupported backend type". `run.sh` removes them so the capture shows the state
+a configured user actually has; the registration itself is worth fixing in
+`init`.
 
 ```bash
 packages/harness/e2e/run.sh                    # first run seeds, later runs compare
