@@ -80,6 +80,9 @@ jobs:
           rpm=$(find desktop/dist -maxdepth 1 -name '*.rpm' -print -quit)
           test -n "$rpm"
           rpmsign --define "_gpg_name $RELEASE_GPG_FINGERPRINT" --define "_gpg_path $GNUPGHOME" --addsign "$rpm"
+          signature=$(rpm -qp --qf '%{SIGPGP:pgpsig}' "$rpm")
+          test "$signature" != "(none)"
+          echo "RPM signed: $signature"
 
       - uses: actions/upload-artifact@v4
         with:
