@@ -3,7 +3,7 @@ NPM ?= npm
 NODE_OPTIONS ?= --max-old-space-size=4096
 export NODE_OPTIONS
 
-.PHONY: help install install-web desktop-install build build-ui build-harness test test-ui test-harness test-acp-client typecheck lint runtime-fetch dev desktop\:dev desktop-dev desktop-stage desktop-verify desktop-checksums desktop-package-dir desktop-package website-dev website-build ci clean
+.PHONY: help install install-web desktop-install build build-ui build-harness test test-ui test-harness test-acp-client typecheck lint runtime-fetch dev desktop\:dev desktop-dev desktop-stage desktop-verify desktop-checksums desktop-package-dir desktop-package ci clean
 
 help:
 	@echo "install          install web and desktop dependencies"
@@ -21,8 +21,6 @@ help:
 	@echo "desktop-package-dir  build an unpacked desktop app"
 	@echo "desktop-package  build host installers"
 	@echo "dev              alias for desktop-dev"
-	@echo "website-dev      website dev server"
-	@echo "website-build    build website and docs"
 	@echo "ci               install, build, typecheck, lint, test"
 	@echo "clean            remove build and runtime output"
 
@@ -32,7 +30,6 @@ install-web:
 	$(NPM) --prefix $(PROJECT_ROOT)packages/ui ci
 	$(NPM) --prefix $(PROJECT_ROOT)packages/harness ci
 	$(NPM) --prefix $(PROJECT_ROOT)packages/acp-client ci
-	$(NPM) --prefix $(PROJECT_ROOT)website ci
 
 build: build-ui build-harness
 
@@ -93,13 +90,7 @@ desktop-package: desktop-stage
 
 desktop\:package: desktop-package
 
-website-dev:
-	$(NPM) --prefix $(PROJECT_ROOT)website run dev
-
-website-build:
-	$(NPM) --prefix $(PROJECT_ROOT)website run build
-
 ci: install-web build typecheck lint test
 
 clean:
-	rm -rf $(PROJECT_ROOT)packages/ui/dist $(PROJECT_ROOT)packages/harness/dist $(PROJECT_ROOT)desktop/node_modules $(PROJECT_ROOT).runtime $(PROJECT_ROOT)website/dist
+	rm -rf $(PROJECT_ROOT)packages/ui/dist $(PROJECT_ROOT)packages/harness/dist $(PROJECT_ROOT)desktop/node_modules $(PROJECT_ROOT).runtime
