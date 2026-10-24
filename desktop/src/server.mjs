@@ -17,6 +17,9 @@ const types = {
 
 export async function startUiServer({ uiDir, runtimeOrigin }) {
   const proxy = httpProxy.createProxyServer({ target: runtimeOrigin, changeOrigin: true, ws: true });
+  proxy.on('proxyReq', proxyReq => {
+    proxyReq.setHeader('origin', new URL(runtimeOrigin).origin);
+  });
   proxy.on('error', (error, _request, response) => {
     if (response && !response.headersSent) response.writeHead(502, { 'content-type': 'text/plain' });
     if (response) response.end(`runtime proxy error: ${error.message}`);
