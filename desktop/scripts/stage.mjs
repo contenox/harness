@@ -1,0 +1,22 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.resolve(desktop, '..');
+const lock = JSON.parse(fs.readFileSync(path.join(root, 'runtime.lock.json'), 'utf8'));
+const platform = { linux: 'linux', darwin: 'darwin', win32: 'windows' }[process.platform];
+const arch = { x64: 'amd64', arm64: 'arm64' }[process.arch];
+if (!platform || !arch) throw new Error(`unsupported host ${process.platform}/${process.arch}`);
+const suffix = platform === 'windows' ? '.exe' : '';
+const source = path.join(root, '.runtime', lock.version, `contenox-runtime-${platform}-${arch}${suffix}`);
+if (!fs.existsSync(source)) throw new Error(`missing runtime: ${source}; run make runtime-fetch`);
+const runtime = path.join(desktop, 'resources', 'runtime');
+const ui = path.join(desktop, 'resources', 'ui');
+fs.rmSync(runtime, { recursive: true, force: true });
+fs.rmSync(ui, { recursive: true, force: true });
+fs.mkdirSync(runtime, { recursive: true });
+fs.copyFileSync(source, path.join(runtime, `contenox-runtime${suffix}`));
+if (platform !== 'windows') fs.chmodSync(path.join(runtime, `contenox-runtime${suffix}`), 0o755);
+fs.cpSync(path.join(root, 'packages', 'harness', 'dist'), ui, { recursive: true });
+console.log(`staged runtime ${lock.version} and harness UI`);

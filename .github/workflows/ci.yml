@@ -1,46 +1,33 @@
-# CI: harness build/test/embed smoke, contenox compile smoke, Windows cross-compile smoke, and cheap TestUnit_* Go tests.
-# No TestSystem_* / Docker / LLM integration tests.
 name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
+    branches: [main]
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  test:
+  web:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
-
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: 22
           cache: npm
           cache-dependency-path: |
             packages/ui/package-lock.json
             packages/harness/package-lock.json
+            packages/acp-client/package-lock.json
+            website/package-lock.json
 
-      - name: Build, test, and verify harness UI
-        run: make build-ui test-ui verify-ui-embed
-
-      - name: Build contenox (compile smoke)
-        run: make build-contenox
-
-      - name: Build contenox for Windows (compile smoke)
-        run: make build-contenox-windows
-
-      - name: CLI help smoke
-        run: make test-contenox-help
-
-      - name: Cheap Go tests (TestUnit_* + -short only)
-        run: make test-unit
+      - run: make install-web
+      - run: make build
+      - run: make typecheck
+      - run: make lint
+      - run: make test

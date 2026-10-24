@@ -1,0 +1,36 @@
+{
+  "name": "contenox-harness",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/main.mjs",
+  "scripts": {
+    "dev": "node src/dev.mjs",
+    "start": "electron .",
+    "stage": "node scripts/stage.mjs",
+    "package:dir": "npm run stage && electron-builder --dir",
+    "package": "npm run stage && electron-builder",
+    "verify:package": "node scripts/verify-package.mjs",
+    "checksums": "node scripts/package-checksums.mjs"
+  },
+  "devDependencies": {
+    "electron": "42.8.1",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "http-proxy": "^1.18.1"
+  },
+  "description": "Contenox desktop harness",
+  "author": {
+    "name": "Contenox",
+    "email": "hello@contenox.com"
+  },
+  "homepage": "https://contenox.com",
+  "desktopName": "com.contenox.harness.desktop",
+  "productName": "Contenox",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/contenox/harness"
+  }
+}

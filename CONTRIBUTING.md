@@ -133,7 +133,6 @@ Keep these files in sync when changing public surface area:
 - `docs/development/blueprints/v1-feature-map.md`
 - `docs/reference/contenox-cli.md`
 - `docs/development/windows-development.md`
-- `docs/development/blueprints/acp/registry-submission/README.md`
 
 ## Local development setup
 

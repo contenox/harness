@@ -25,7 +25,7 @@ export interface LandingStrings {
 interface Props {
   t: LandingStrings;
 }
-import InstallCommand from './InstallCommand.astro';
+import DesktopDownload from './DesktopDownload.astro';
 import showcase from '../data/showcase.json';
 const { t } = Astro.props;
 // Heavy product media lives in the website assets bucket, never in the repo.
@@ -112,7 +112,7 @@ const foundation = [
     </div>
     <div class="download-area">
       <div class="download-install">
-        <InstallCommand posixLabel="macOS / Linux" windowsLabel="Windows" copyLabel="Copy" />
+        <DesktopDownload />
       </div>
     </div>
   </section>

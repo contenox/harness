@@ -1,17 +1,16 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'path';
 import type { Plugin } from 'vite';
 import { defineConfig, loadEnv } from 'vite';
 
 const harnessPackageRoot = path.dirname(fileURLToPath(import.meta.url));
-const harnessDistDir = path.resolve(harnessPackageRoot, '../../runtime/internal/web/harness/dist');
+const harnessDistDir = path.resolve(harnessPackageRoot, 'dist');
 
 function harnessSpaFallback(): Plugin {
   return {
-    name: 'beam-spa-fallback',
+    name: 'harness-spa-fallback',
     enforce: 'pre',
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
@@ -48,21 +47,10 @@ function harnessSpaFallback(): Plugin {
   };
 }
 
-function keepBeamDistDir(): Plugin {
-  return {
-    name: 'beam-keep-dist-dir',
-    apply: 'build',
-    closeBundle() {
-      fs.mkdirSync(harnessDistDir, { recursive: true });
-      fs.writeFileSync(path.join(harnessDistDir, '.gitkeep'), '');
-    },
-  };
-}
-
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, harnessPackageRoot, '');
-  const devApiProxy = env.VITE_DEV_API_PROXY === '1' || env.VITE_DEV_API_PROXY === 'true';
-  const proxyTarget = env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:32123';
+  const devApiProxy = env.VITE_DEV_API_PROXY === '1' || env.VITE_DEV_API_PROXY === 'true' || process.env.VITE_DEV_API_PROXY === '1';
+  const proxyTarget = env.VITE_DEV_PROXY_TARGET || process.env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:32123';
 
   return {
     envDir: harnessPackageRoot,
@@ -70,7 +58,6 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       ...(devApiProxy ? [harnessSpaFallback()] : []),
-      keepBeamDistDir(),
     ],
     resolve: {
       alias: {

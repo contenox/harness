@@ -1,0 +1,16 @@
+---
+const releaseUrl = 'https://github.com/contenox/harness/releases/latest';
+const platforms = [
+  { name: 'Linux', detail: '.deb / .rpm' },
+  { name: 'Windows', detail: '.exe / .zip' },
+  { name: 'macOS', detail: '.dmg / .zip' },
+];
+---
+<div class="download-platforms">
+  {platforms.map(({ name, detail }) => (
+    <a class="download-platform" href={releaseUrl}>
+      <span class="download-platform-heading">{name}</span>
+      <span class="download-platform-arch">{detail}</span>
+    </a>
+  ))}
+</div>

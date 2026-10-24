@@ -1,0 +1,60 @@
+appId: com.contenox.harness
+productName: Contenox
+artifactName: Contenox-${version}-${os}-${arch}.${ext}
+asar: true
+directories:
+  output: dist
+  buildResources: build
+files:
+  - src
+  - package.json
+extraResources:
+  - from: resources/runtime
+    to: runtime
+  - from: resources/ui
+    to: ui
+linux:
+  target:
+    - deb
+    - rpm
+  category: Development
+  executableName: contenox
+  syncDesktopName: true
+  icon: build/icons/512x512.png
+deb:
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0
+    - libgbm1
+    - libasound2
+rpm:
+  depends:
+    - gtk3
+    - libnotify
+    - nss
+    - libXScrnSaver
+    - (libXtst or libXtst6)
+    - xdg-utils
+    - at-spi2-core
+    - (libuuid or libuuid1)
+    - libgbm.so.1()(64bit)
+    - libasound.so.2()(64bit)
+    - libsecret-1.so.0()(64bit)
+win:
+  icon: build/icons/contenox.ico
+  target:
+    - nsis
+    - zip
+mac:
+  icon: build/icons/contenox.icns
+  target:
+    - dmg
+    - zip
+  category: public.app-category.developer-tools

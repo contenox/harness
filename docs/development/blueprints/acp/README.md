@@ -14,7 +14,6 @@ docs cover both directions, plus the fleet/mission machinery built on them.
 | [fleet-consolidation.md](fleet-consolidation.md) | executed record | Fleet and mission mode: dispatch, the supervision edge, reports, the attention inbox, session adoption — the slices behind `fleetservice`/`missionservice` |
 | [mission-plans.md](mission-plans.md) | building | The plan engine as a resident planner: plan revisions, step progress, prompt surface |
 | [envelope-compute-bounds.md](envelope-compute-bounds.md) | building | The mission envelope as a unit's TOTAL boundary: compute bounds (turns, tool calls, tokens) alongside HITL action bounds |
-| [registry-submission/](registry-submission/README.md) | artifacts | The `agent.json` + icon to copy into an `agentclientprotocol/registry` fork, with validation steps |
 
 and the ACP slash-command
 surface documented in `docs/reference/contenox-cli.md`.
