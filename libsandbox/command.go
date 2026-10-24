@@ -20,7 +20,7 @@ import (
 //
 // It does not start the process, and — deliberately — does not bind its lifetime
 // to ctx: the returned command is handed to whatever runs and supervises it
-// (e.g. libprocess or acpexec.Spawn), which owns start, stop, and teardown, just
+// (e.g. acpexec.Spawn), which owns start, stop, and teardown, just
 // as the existing external-agent spawn builds a bare exec.Command and lets its
 // runner own the lifetime. ctx scopes the assembly instead: it drives the
 // ActivityTracker lifecycle and is available to the isolation seam for setup

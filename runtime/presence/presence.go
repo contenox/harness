@@ -25,9 +25,9 @@
 // store ages the row out entirely after N×TTL — no explicit deregistration is
 // needed for correctness. A clean shutdown ALSO best-effort deregisters so a row
 // vanishes promptly rather than lingering stale, but that is an optimization, not
-// a requirement. This is the same liveness-not-safety shape liblease/owner use
-// for the modeld daemon, adapted from single-holder to the many-holders a fleet
-// of editors needs.
+// a requirement. This is the same liveness-not-safety shape the modeld owner
+// lease uses, adapted from single-holder to the many-holders a fleet of editors
+// needs.
 //
 // # Best-effort, always
 //
@@ -41,7 +41,7 @@
 // Presence is inherently MANY records that a reader enumerates, so it rides the
 // shared-SQLite KV store (libkvstore over $HOME/.contenox-harness/local.db): one keyed
 // row per instance, listed by glob, each with a native per-row TTL. That is the
-// multi-holder shape a fleet needs — liblease is single-holder-per-path and would
+// multi-holder shape a fleet needs — a single-holder-per-path file lease would
 // have to reinvent a directory scheme on top of its atomic-write helper to hold
 // many rows. Both writers (`contenox acp`, `vscode-agent`) and the reader
 // (`contenox serve`) already hold a handle to this one shared db, and the

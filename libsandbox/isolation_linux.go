@@ -35,7 +35,7 @@ import (
 //     agent never sees them.
 //   - SysProcAttr gets Pdeathsig=SIGKILL (die with the supervisor) and Setpgid
 //     (confine the whole agent → Bash → git tree to one group), matching the
-//     libprocess supervision idiom.
+//     external-agent supervision idiom.
 //   - SysProcAttr also gets CLONE_NEWUSER|CLONE_NEWNET (setgroups disabled), so
 //     the child is cloned straight into a fresh, empty network namespace — no
 //     external interface, no route — the deny-by-construction network wall

@@ -95,7 +95,7 @@ shared config and applied to a running serve live via a reload doorbell;
 against the local database directly.)
 
 All AI workflow packages live under `runtime/`. Infrastructure libraries
-(`libauth`, `libbus`, `libcipher`, `libdbexec`, `libkvstore`, `libprocess`,
+(`libauth`, `libbus`, `libcipher`, `libdbexec`, `libkvstore`,
 `libroutine`, `libtracker`) stay at the module root.
 
 ```text
