@@ -60,33 +60,9 @@ def main():
     directory.mkdir(parents=True)
 
     if args.platform == 'linux-amd64':
-        if not args.gnupg_home or not args.public_key:
-            raise SystemExit('linux publication requires the signing key')
-        key_text = subprocess.run(
-            ['gpg', '--batch', '--homedir', str(args.gnupg_home), '--with-colons', '--list-secret-keys'],
-            check=True, capture_output=True, text=True).stdout
-        fingerprint = next(line.split(':')[9] for line in key_text.splitlines() if line.startswith('fpr:'))
-        rpm = next(path for path in files if path.suffix == '.rpm')
-        target = directory / rpm.name
-        shutil.copy2(rpm, target)
-        subprocess.run(['rpm', '--delsign', str(target)], check=False,
-                       capture_output=True, text=True)
-        subprocess.run(['rpmsign', '--define', f'_gpg_name {fingerprint}',
-                        '--define', f'_gpg_path {args.gnupg_home.resolve()}',
-                        '--addsign', str(target)], check=True)
-        database = temporary / 'rpmdb'
-        database.mkdir()
-        subprocess.run(['rpm', '--dbpath', str(database), '--initdb'], check=True)
-        subprocess.run(['rpm', '--dbpath', str(database), '--import', str(args.public_key)], check=True)
-        checked = subprocess.run(['rpmkeys', '--dbpath', str(database), '--checksig', str(target)],
-                                 check=True, capture_output=True, text=True)
-        if 'signatures OK' not in checked.stdout:
-            raise SystemExit(f'local RPM is unsigned: {checked.stdout}')
-        header = subprocess.run(['rpm', '-qp', '--qf', '%{RSAHEADER:pgpsig}', str(target)],
-                                check=True, capture_output=True, text=True).stdout.strip()
-        if not header or header == '(none)':
-            raise SystemExit('local RPM has no RSAHEADER signature')
-        files[files.index(rpm)] = target
+        for path in files:
+            shutil.copy2(path, directory / path.name)
+        files = [directory / path.name for path in files]
     else:
         for path in files:
             shutil.copy2(path, directory / path.name)

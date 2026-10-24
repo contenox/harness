@@ -84,6 +84,10 @@ jobs:
           RELEASE_GPG_PUBLIC_KEY: ${{ vars.RELEASE_GPG_PUBLIC_KEY }}
         run: printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
 
+      - name: Sign Linux package
+        if: runner.os == 'Linux'
+        run: python scripts/release-sign.py desktop/dist --gnupg-home "$GNUPGHOME" --public-key "$RUNNER_TEMP/release.asc"
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
