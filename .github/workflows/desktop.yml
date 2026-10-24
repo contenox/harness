@@ -102,6 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
 
@@ -163,3 +164,8 @@ jobs:
           else
             gh release create "$TAG" ./*               --title "Contenox v${VERSION}"               --generate-notes
           fi
+
+      - name: Rebuild website
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run Website.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"
