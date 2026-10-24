@@ -174,12 +174,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create "$TAG" \
-            --draft \
-            --target "$GITHUB_SHA" \
-            --title "Contenox ${TAG}" \
-            --generate-notes
-          release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq ".[] | select(.tag_name == \"$TAG\") | .id" | head -1)
+          release_id=$(gh api -X POST "repos/$GITHUB_REPOSITORY/releases" \
+            -f tag_name="$TAG" \
+            -f target_commitish="$GITHUB_SHA" \
+            -f name="Contenox ${TAG}" \
+            -F draft=true \
+            -F generate_release_notes=true \
+            --jq '.id')
           test -n "$release_id"
           echo "RELEASE_ID=$release_id" >> "$GITHUB_ENV"
           if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
