@@ -20,11 +20,15 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            platform: linux-amd64
           - os: windows-latest
+            platform: windows-amd64
           - os: macos-14
+            platform: macos-arm64
     runs-on: ${{ matrix.os }}
     env:
-      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+      PLATFORM: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,11 +37,14 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: |
-            packages/ui/package-lock.json
             packages/harness/package-lock.json
+            packages/ui/package-lock.json
             packages/acp-client/package-lock.json
-            website/package-lock.json
             desktop/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Install make
         if: runner.os == 'Windows'
@@ -45,7 +52,18 @@ jobs:
 
       - name: Install Linux packaging tools
         if: runner.os == 'Linux'
-        run: sudo apt-get update -qq && sudo apt-get install -y rpm
+        run: sudo apt-get update -qq && sudo apt-get install -y rpm awscli
+
+      - name: Install AWS CLI
+        if: runner.os == 'Windows'
+        run: choco install awscli -y --no-progress
+
+      - name: Install AWS CLI
+        if: runner.os == 'macOS'
+        run: command -v aws >/dev/null || brew install awscli
+
+      - run: make install-web
+      - run: make desktop-package
 
       - name: Import release signing key
         if: runner.os == 'Linux'
@@ -59,35 +77,27 @@ jobs:
           FPR=$(gpg --batch --homedir "$RUNNER_TEMP/gnupg" --with-colons --list-secret-keys | awk -F: '/^fpr:/ {print $10; exit}')
           test "$FPR" = "$RELEASE_GPG_FINGERPRINT"
           echo "GNUPGHOME=$RUNNER_TEMP/gnupg" >> "$GITHUB_ENV"
-          echo "RELEASE_GPG_FINGERPRINT=$FPR" >> "$GITHUB_ENV"
 
-      - run: make install-web
-      - run: make desktop-package
-
-      - name: Sign RPM
+      - name: Write release public key
         if: runner.os == 'Linux'
         env:
           RELEASE_GPG_PUBLIC_KEY: ${{ vars.RELEASE_GPG_PUBLIC_KEY }}
-        run: |
-          set -euo pipefail
-          rpm=$(find desktop/dist -maxdepth 1 -name '*.rpm' -print -quit)
-          test -n "$rpm"
-          rpmsign --define "_gpg_name $RELEASE_GPG_FINGERPRINT" --define "_gpg_path $GNUPGHOME" --addsign "$rpm"
-          printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
-          rpm --dbpath "$RUNNER_TEMP/rpmdb" --initdb
-          rpm --dbpath "$RUNNER_TEMP/rpmdb" --import "$RUNNER_TEMP/release.asc"
-          rpmkeys --dbpath "$RUNNER_TEMP/rpmdb" --checksig "$rpm" | tee "$RUNNER_TEMP/rpmcheck.txt"
-          grep -q 'signatures OK' "$RUNNER_TEMP/rpmcheck.txt"
+        run: printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
 
-      - uses: actions/upload-artifact@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          name: contenox-desktop-${{ runner.os }}
-          path: |
-            desktop/dist/Contenox-*
-            desktop/dist/SHA256SUMS
-          if-no-files-found: error
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
 
-  release:
+      - name: Publish platform to S3
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          S3_RELEASE_PREFIX: ${{ vars.S3_RELEASE_PREFIX }}
+          S3_PUBLIC_BASE: ${{ vars.S3_PUBLIC_BASE }}
+        run: python scripts/publish-platform.py
+
+  index:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: package
     runs-on: ubuntu-latest
@@ -96,16 +106,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: contenox-desktop-*
-          merge-multiple: true
-          path: artifacts
-
       - name: Install release tools
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y rpm awscli
+        run: sudo apt-get update -qq && sudo apt-get install -y rpm awscli
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -124,29 +126,27 @@ jobs:
           FPR=$(gpg --batch --homedir "$RUNNER_TEMP/gnupg" --with-colons --list-secret-keys | awk -F: '/^fpr:/ {print $10; exit}')
           test "$FPR" = "$RELEASE_GPG_FINGERPRINT"
           echo "GNUPGHOME=$RUNNER_TEMP/gnupg" >> "$GITHUB_ENV"
-          echo "RELEASE_GPG_FINGERPRINT=$FPR" >> "$GITHUB_ENV"
 
       - name: Write release public key
         env:
           RELEASE_GPG_PUBLIC_KEY: ${{ vars.RELEASE_GPG_PUBLIC_KEY }}
         run: printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
 
-      - name: Publish to S3
+      - name: Build release index
         env:
           S3_BUCKET: ${{ vars.S3_BUCKET }}
           S3_RELEASE_PREFIX: ${{ vars.S3_RELEASE_PREFIX }}
           S3_PUBLIC_BASE: ${{ vars.S3_PUBLIC_BASE }}
         run: |
           set -euo pipefail
-          VERSION="v$(node -p "require('./desktop/package.json').version")"
+          VERSION=$(node -p "'v' + require('./desktop/package.json').version")
           TAG="$VERSION"
           if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
             echo "tag $TAG already exists" >&2
             exit 1
           fi
-          python3 scripts/publish-desktop-s3.py \
+          python3 scripts/publish-desktop-index.py \
             --version "$VERSION" \
-            --artifacts artifacts \
             --bucket "$S3_BUCKET" \
             --prefix "$S3_RELEASE_PREFIX" \
             --public-base "$S3_PUBLIC_BASE" \
@@ -159,8 +159,7 @@ jobs:
           S3_PUBLIC_BASE: ${{ vars.S3_PUBLIC_BASE }}
         run: |
           set -euo pipefail
-          VERSION=$(node -p "require('./desktop/package.json').version")
-          TAG="v${VERSION}"
+          VERSION=$(node -p "'v' + require('./desktop/package.json').version")
           cat > "$RUNNER_TEMP/notes.md" <<NOTES
           Installers are published at:
 
@@ -169,7 +168,7 @@ jobs:
           Release index:
           ${S3_PUBLIC_BASE}/index.json
           NOTES
-          gh release create "$TAG" \
+          gh release create "$VERSION" \
             --target "$GITHUB_SHA" \
-            --title "Contenox ${TAG}" \
+            --title "Contenox ${VERSION}" \
             --notes-file "$RUNNER_TEMP/notes.md"
