@@ -169,18 +169,17 @@ jobs:
           done
           printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > contenox-release.asc
 
-      - name: Create empty draft
+      - name: Create draft with signed RPM
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          release_id=$(gh api -X POST "repos/$GITHUB_REPOSITORY/releases" \
-            -f tag_name="$TAG" \
-            -f target_commitish="$GITHUB_SHA" \
-            -f name="Contenox ${TAG}" \
-            -F draft=true \
-            -F generate_release_notes=true \
-            --jq '.id')
+          gh release create "$TAG" "$SIGNED_RPM" \
+            --draft \
+            --target "$GITHUB_SHA" \
+            --title "Contenox ${TAG}" \
+            --generate-notes
+          release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq ".[] | select(.tag_name == \"$TAG\") | .id" | head -1)
           test -n "$release_id"
           echo "RELEASE_ID=$release_id" >> "$GITHUB_ENV"
           if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
@@ -202,7 +201,6 @@ jobs:
               --data-binary @"$file" \
               "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$name" >/dev/null
           }
-          upload_asset "$SIGNED_RPM"
           find release -maxdepth 1 -type f ! -name '*.rpm' -print0 | while IFS= read -r -d '' file; do
             upload_asset "$file"
           done
@@ -242,4 +240,4 @@ jobs:
       - name: Rebuild website
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run Website.yml --repo "$GITHUB_REPOSITORY" --ref main
+        run: gh workflow run Website --repo "$GITHUB_REPOSITORY" --ref main
