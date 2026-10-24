@@ -111,6 +111,9 @@ jobs:
           merge-multiple: true
           path: artifacts
 
+      - name: Install RPM tools
+        run: sudo apt-get update -qq && sudo apt-get install -y rpm
+
       - name: Import release signing key
         env:
           RELEASE_GPG_PRIVATE_KEY: ${{ secrets.RELEASE_GPG_PRIVATE_KEY }}
@@ -123,6 +126,21 @@ jobs:
           test "$FPR" = "$RELEASE_GPG_FINGERPRINT"
           echo "GNUPGHOME=$RUNNER_TEMP/gnupg" >> "$GITHUB_ENV"
           echo "RELEASE_GPG_FINGERPRINT=$FPR" >> "$GITHUB_ENV"
+
+      - name: Sign RPM final artifacts
+        env:
+          RELEASE_GPG_PUBLIC_KEY: ${{ vars.RELEASE_GPG_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
+          for rpm in artifacts/*.rpm; do
+            test -e "$rpm" || continue
+            rpmsign --define "_gpg_name $RELEASE_GPG_FINGERPRINT" --define "_gpg_path $GNUPGHOME" --addsign "$rpm"
+            rpm --dbpath "$RUNNER_TEMP/rpmdb" --initdb
+            rpm --dbpath "$RUNNER_TEMP/rpmdb" --import "$RUNNER_TEMP/release.asc"
+            rpmkeys --dbpath "$RUNNER_TEMP/rpmdb" --checksig "$rpm" | tee "$RUNNER_TEMP/rpmcheck.txt"
+            grep -q 'signatures OK' "$RUNNER_TEMP/rpmcheck.txt"
+          done
 
       - name: Create GitHub Release
         env:
