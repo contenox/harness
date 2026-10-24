@@ -69,6 +69,8 @@ def main():
         rpm = next(path for path in files if path.suffix == '.rpm')
         target = directory / rpm.name
         shutil.copy2(rpm, target)
+        subprocess.run(['rpm', '--delsign', str(target)], check=False,
+                       capture_output=True, text=True)
         subprocess.run(['rpmsign', '--define', f'_gpg_name {fingerprint}',
                         '--define', f'_gpg_path {args.gnupg_home.resolve()}',
                         '--addsign', str(target)], check=True)
@@ -80,6 +82,10 @@ def main():
                                  check=True, capture_output=True, text=True)
         if 'signatures OK' not in checked.stdout:
             raise SystemExit(f'local RPM is unsigned: {checked.stdout}')
+        header = subprocess.run(['rpm', '-qp', '--qf', '%{RSAHEADER:pgpsig}', str(target)],
+                                check=True, capture_output=True, text=True).stdout.strip()
+        if not header or header == '(none)':
+            raise SystemExit('local RPM has no RSAHEADER signature')
         files[files.index(rpm)] = target
     else:
         for path in files:

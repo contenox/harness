@@ -41,6 +41,10 @@ def verify_rpm(url, public_key, temporary):
                             check=True, capture_output=True, text=True)
     if 'signatures OK' not in result.stdout:
         raise SystemExit(f'public RPM is unsigned: {result.stdout}')
+    header = subprocess.run(['rpm', '-qp', '--qf', '%{RSAHEADER:pgpsig}', str(target)],
+                            check=True, capture_output=True, text=True).stdout.strip()
+    if not header or header == '(none)':
+        raise SystemExit('public RPM has no RSAHEADER signature')
 
 
 def main():
