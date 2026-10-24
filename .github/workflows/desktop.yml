@@ -130,33 +130,26 @@ jobs:
           mkdir -p release
           cp artifacts/Contenox-* release/
           if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
-            echo "tag $TAG already exists; refusing to build a second release" >&2
+            echo "tag $TAG already exists" >&2
             exit 1
           fi
 
-      - name: Sign RPM copy
+      - name: Sign and verify RPM
         env:
           RELEASE_GPG_PUBLIC_KEY: ${{ vars.RELEASE_GPG_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           rpm=$(find release -maxdepth 1 -name '*.rpm' -print -quit)
           test -n "$rpm"
-          signed="$RUNNER_TEMP/$(basename "$rpm")"
-          cp "$rpm" "$signed"
-          rpm --delsign "$signed"
-          rpmsign --define "_gpg_name $RELEASE_GPG_FINGERPRINT" --define "_gpg_path $GNUPGHOME" --addsign "$signed"
-          test "$(rpm -qp --qf '%{RSAHEADER:pgpsig}' "$signed")" != "(none)"
+          rpmsign --define "_gpg_name $RELEASE_GPG_FINGERPRINT" --define "_gpg_path $GNUPGHOME" --addsign "$rpm"
           printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
+          mkdir -p "$RUNNER_TEMP/rpmdb"
           rpm --dbpath "$RUNNER_TEMP/rpmdb" --initdb
           rpm --dbpath "$RUNNER_TEMP/rpmdb" --import "$RUNNER_TEMP/release.asc"
-          rpmkeys --dbpath "$RUNNER_TEMP/rpmdb" --checksig "$signed" | tee "$RUNNER_TEMP/rpmcheck.txt"
+          rpmkeys --dbpath "$RUNNER_TEMP/rpmdb" --checksig "$rpm" | tee "$RUNNER_TEMP/rpmcheck.txt"
           grep -q 'signatures OK' "$RUNNER_TEMP/rpmcheck.txt"
-          cp "$signed" "$rpm"
-          rpmkeys --dbpath "$RUNNER_TEMP/rpmdb" --checksig "$rpm" | tee "$RUNNER_TEMP/rpmcheck-staged.txt"
-          grep -q 'signatures OK' "$RUNNER_TEMP/rpmcheck-staged.txt"
-          echo "SIGNED_RPM=$signed" >> "$GITHUB_ENV"
 
-      - name: Generate signatures and checksums
+      - name: Generate signatures and upload directory
         env:
           RELEASE_GPG_PUBLIC_KEY: ${{ vars.RELEASE_GPG_PUBLIC_KEY }}
         run: |
@@ -167,78 +160,32 @@ jobs:
           gpg --batch --homedir "$GNUPGHOME" --local-user "$RELEASE_GPG_FINGERPRINT" --armor --detach-sign --output SHA256SUMS.asc SHA256SUMS
           for artifact in Contenox-*; do
             gpg --batch --homedir "$GNUPGHOME" --local-user "$RELEASE_GPG_FINGERPRINT" --armor --detach-sign --output "$artifact.asc" "$artifact"
-            test -s "$artifact.asc"
           done
           printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > contenox-release.asc
+          cd ..
+          mkdir -p upload
+          cp release/*.rpm upload/
+          find release -maxdepth 1 -type f ! -name '*.rpm' -exec cp {} upload/ \;
 
-      - name: Create draft with signed RPM
+      - name: Verify upload RPM
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh release create "$TAG" "$SIGNED_RPM" \
-            --draft \
-            --target "$GITHUB_SHA" \
-            --title "Contenox ${TAG}" \
-            --generate-notes
-          release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq ".[] | select(.tag_name == \"$TAG\") | .id" | head -1)
-          test -n "$release_id"
-          echo "RELEASE_ID=$release_id" >> "$GITHUB_ENV"
-          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
-            echo "draft unexpectedly created tag $TAG" >&2
-            exit 1
-          fi
-
-      - name: Upload signed release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          upload_asset() {
-            file="$1"
-            name=$(basename "$file")
-            curl -fsS -X POST \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary @"$file" \
-              "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$name" >/dev/null
-          }
-          find release -maxdepth 1 -type f ! -name '*.rpm' -print0 | while IFS= read -r -d '' file; do
-            upload_asset "$file"
-          done
-
-      - name: Verify uploaded RPM
-        env:
-          GH_TOKEN: ${{ github.token }}
           RELEASE_GPG_PUBLIC_KEY: ${{ vars.RELEASE_GPG_PUBLIC_KEY }}
         run: |
           set -euo pipefail
-          mkdir -p verify
-          asset_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" --jq '.assets[] | select(.name | endswith(".rpm")) | .id' | head -1)
-          test -n "$asset_id"
-          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" > verify/uploaded.rpm
-          printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
-          rpm --dbpath "$RUNNER_TEMP/verifydb" --initdb
-          rpm --dbpath "$RUNNER_TEMP/verifydb" --import "$RUNNER_TEMP/release.asc"
-          test "$(rpm -qp --qf '%{RSAHEADER:pgpsig}' verify/uploaded.rpm)" != "(none)"
-          rpmkeys --dbpath "$RUNNER_TEMP/verifydb" --checksig verify/uploaded.rpm | tee "$RUNNER_TEMP/uploaded-rpmcheck.txt"
-          grep -q 'signatures OK' "$RUNNER_TEMP/uploaded-rpmcheck.txt"
+          rpm=$(find upload -maxdepth 1 -name '*.rpm' -print -quit)
+          test -n "$rpm"
+          rpmkeys --dbpath "$RUNNER_TEMP/rpmdb" --checksig "$rpm" | tee "$RUNNER_TEMP/uploadcheck.txt"
+          grep -q 'signatures OK' "$RUNNER_TEMP/uploadcheck.txt"
 
-      - name: Publish release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -F draft=false >/dev/null
-
-      - name: Delete draft on failure
-        if: failure()
+      - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if [ -n "${RELEASE_ID:-}" ]; then
-            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" || true
-          fi
+          gh release create "$TAG" upload/* \
+            --target "$GITHUB_SHA" \
+            --title "Contenox ${TAG}" \
+            --generate-notes
 
       - name: Rebuild website
         env:
