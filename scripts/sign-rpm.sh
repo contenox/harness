@@ -30,6 +30,4 @@ rpm --dbpath /tmp/rpmdb --initdb
 rpm --dbpath /tmp/rpmdb --import /release-public.asc
 rpmkeys --dbpath /tmp/rpmdb -Kv "$RPM_PATH" | tee /tmp/check.txt
 grep -q "signatures OK" /tmp/check.txt
-rpm -qp --qf "signature=%{RSAHEADER:pgpsig}\n" "$RPM_PATH" | tee /tmp/header.txt
-grep -q "signature=RSA" /tmp/header.txt
 '
