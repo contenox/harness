@@ -183,15 +183,18 @@ jobs:
 
       - name: Verify uploaded RPM
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_GPG_PUBLIC_KEY: ${{ vars.RELEASE_GPG_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           mkdir -p verify
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.rpm' -D verify
+          asset_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets[] | select(.name | endswith(".rpm")) | .id' | head -1)
+          test -n "$asset_id"
+          gh api -H "Accept: application/octet-stream" "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" > verify/uploaded.rpm
           printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
           rpm --dbpath "$RUNNER_TEMP/verifydb" --initdb
           rpm --dbpath "$RUNNER_TEMP/verifydb" --import "$RUNNER_TEMP/release.asc"
-          rpmkeys --dbpath "$RUNNER_TEMP/verifydb" --checksig verify/*.rpm | tee "$RUNNER_TEMP/uploaded-rpmcheck.txt"
+          rpmkeys --dbpath "$RUNNER_TEMP/verifydb" --checksig verify/uploaded.rpm | tee "$RUNNER_TEMP/uploaded-rpmcheck.txt"
           grep -q 'signatures OK' "$RUNNER_TEMP/uploaded-rpmcheck.txt"
 
       - name: Publish release
@@ -205,8 +208,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if [ -n "${TAG:-}" ] && gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft' | grep -q true; then
-            gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+          if [ -n "${TAG:-}" ]; then
+            release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.id' 2>/dev/null || true)
+            if [ -n "$release_id" ]; then
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"
+            fi
           fi
 
       - name: Rebuild website
