@@ -3,7 +3,7 @@ NPM ?= npm
 NODE_OPTIONS ?= --max-old-space-size=4096
 export NODE_OPTIONS
 
-.PHONY: help install install-web desktop-install build build-ui build-harness test test-ui test-harness test-acp-client typecheck lint runtime-fetch dev desktop\:dev desktop-dev desktop-stage desktop-verify desktop-checksums desktop-package-dir desktop-package ci clean
+.PHONY: help install install-web desktop-install build build-ui build-harness test test-ui test-harness test-acp-client typecheck lint runtime-fetch dev desktop\:dev desktop-dev desktop-stage desktop-verify desktop-checksums desktop-package-dir desktop-package desktop-sign-rpm ci clean
 
 help:
 	@echo "install          install web and desktop dependencies"
@@ -89,6 +89,9 @@ desktop-package: desktop-stage
 	$(NPM) --prefix $(PROJECT_ROOT)desktop run checksums
 
 desktop\:package: desktop-package
+
+desktop-sign-rpm:
+	GNUPGHOME="$(GNUPGHOME)" RELEASE_PUBLIC_KEY_FILE="$(RELEASE_PUBLIC_KEY_FILE)" scripts/sign-rpm.sh desktop/dist
 
 ci: install-web build typecheck lint test
 

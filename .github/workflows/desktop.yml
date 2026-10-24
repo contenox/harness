@@ -86,7 +86,10 @@ jobs:
 
       - name: Sign Linux package
         if: runner.os == 'Linux'
-        run: python scripts/release-sign.py desktop/dist --gnupg-home "$GNUPGHOME" --public-key "$RUNNER_TEMP/release.asc"
+        env:
+          GNUPGHOME: ${{ env.GNUPGHOME }}
+          RELEASE_PUBLIC_KEY_FILE: ${{ runner.temp }}/release.asc
+        run: make desktop-sign-rpm
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
