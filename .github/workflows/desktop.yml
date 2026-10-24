@@ -216,7 +216,7 @@ jobs:
           mkdir -p verify
           asset_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" --jq '.assets[] | select(.name | endswith(".rpm")) | .id' | head -1)
           test -n "$asset_id"
-          curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" > verify/uploaded.rpm
           printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
           rpm --dbpath "$RUNNER_TEMP/verifydb" --initdb
