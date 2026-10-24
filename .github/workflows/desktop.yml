@@ -87,7 +87,6 @@ jobs:
       - name: Sign Linux package
         if: runner.os == 'Linux'
         env:
-          GNUPGHOME: ${{ env.GNUPGHOME }}
           RELEASE_PUBLIC_KEY_FILE: ${{ runner.temp }}/release.asc
         run: make desktop-sign-rpm
 
