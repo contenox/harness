@@ -1,5 +1,7 @@
 PROJECT_ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 NPM ?= npm
+NODE_OPTIONS ?= --max-old-space-size=4096
+export NODE_OPTIONS
 
 .PHONY: help install install-web desktop-install build build-ui build-harness test test-ui test-harness test-acp-client typecheck lint runtime-fetch dev desktop\:dev desktop-dev desktop-stage desktop-verify desktop-checksums desktop-package-dir desktop-package website-dev website-build ci clean
 

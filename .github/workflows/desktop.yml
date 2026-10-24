@@ -19,6 +19,9 @@ concurrency:
   group: desktop-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  NODE_OPTIONS: --max-old-space-size=4096
+
 jobs:
   package:
     strategy:
@@ -85,12 +88,12 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(node -p "require('./desktop/package.json').version")
-          TAG="desktop-v${VERSION}"
+          TAG="v${VERSION}"
           cd artifacts
           find . -name SHA256SUMS -delete
           sha256sum Contenox-* > SHA256SUMS
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" ./* --clobber
           else
-            gh release create "$TAG" ./*               --title "Contenox Desktop v${VERSION}"               --generate-notes
+            gh release create "$TAG" ./*               --title "Contenox v${VERSION}"               --generate-notes
           fi

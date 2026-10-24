@@ -10,6 +10,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  NODE_OPTIONS: --max-old-space-size=4096
+
 jobs:
   web:
     runs-on: ubuntu-latest
