@@ -75,14 +75,18 @@ jobs:
 
       - name: Sign RPM
         if: runner.os == 'Linux'
+        env:
+          RELEASE_GPG_PUBLIC_KEY: ${{ vars.RELEASE_GPG_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           rpm=$(find desktop/dist -maxdepth 1 -name '*.rpm' -print -quit)
           test -n "$rpm"
           rpmsign --define "_gpg_name $RELEASE_GPG_FINGERPRINT" --define "_gpg_path $GNUPGHOME" --addsign "$rpm"
-          signature=$(rpm -qp --qf '%{RSAHEADER:pgpsig}' "$rpm")
-          test "$signature" != "(none)"
-          echo "RPM signed: $signature"
+          printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
+          rpm --dbpath "$RUNNER_TEMP/rpmdb" --initdb
+          rpm --dbpath "$RUNNER_TEMP/rpmdb" --import "$RUNNER_TEMP/release.asc"
+          rpmkeys --dbpath "$RUNNER_TEMP/rpmdb" --checksig "$rpm" | tee "$RUNNER_TEMP/rpmcheck.txt"
+          grep -q 'signatures OK' "$RUNNER_TEMP/rpmcheck.txt"
 
       - uses: actions/upload-artifact@v4
         with:
