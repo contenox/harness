@@ -5,9 +5,6 @@ import { useState, type ReactNode } from 'react';
 import { ScreenError } from './ScreenState';
 import { TextField } from '../../components/forms/Fields';
 
-/**
- * The one shape a destructive confirmation takes in this app.
- */
 export function ConfirmDialog({
   open,
   onClose,
@@ -79,9 +76,6 @@ export function ConfirmDialog({
   );
 }
 
-/**
- * A consequence stated as a number and a noun.
- */
 export function Consequence({ count, one, many }: { count: number; one: string; many: string }) {
   return (
     <P className="text-sm">

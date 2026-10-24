@@ -4,9 +4,6 @@ import type { ProductMutation, ProductQuery } from '../ports';
 import { ScreenError, ScreenLoading } from '../saas/ScreenState';
 import { ScreenHeader } from './ScreenHeader';
 
-/**
- * An account's billing position, as the server reports it.
- */
 export interface SubscriptionStatus {
   accountID: string;
   source: string;
@@ -18,20 +15,11 @@ export interface SubscriptionStatus {
   reconciled: boolean;
 }
 
-/**
- * What the account's tier actually grants, as the entitlement fold reports it.
- */
 export interface PlanEntitlement {
-  /**
-   * The live roles the account holds: membership, not a rank.
-   */
   roles: string[];
   allowance: Record<string, number>;
   consumed: Record<string, number>;
   capabilities: string[];
-  /**
-   * Withheld by a role, in which case nothing above is in force.
-   */
   denied?: boolean;
   deniedBy?: string;
 	reason?: string;
@@ -50,9 +38,6 @@ const STATE_LABELS: Record<string, string> = {
   expired: 'Ended',
 };
 
-/**
- * The plan, and the two things that can be done about it.
- */
 export function BillingPlanCard({
   status,
   entitlement,
@@ -92,9 +77,7 @@ export function BillingPlanCard({
         />
       )}
       {capabilities.length > 0 && <KeyValue label="Includes" value={capabilities.join(', ')} />}
-      {/* A withheld account says so where its plan would be, in the operator's own
-          words: showing the allowance rows beside it would read as headroom that
-          cannot be used. */}
+
       {entitlement?.data?.denied && (
         <InlineNotice variant="warning" role="alert">
           {entitlement.data.reason ?? 'This account\'s access is withheld.'}
@@ -121,9 +104,6 @@ export function BillingPlanCard({
   );
 }
 
-/**
- * The billing page: the account's plan, and where to go to change it.
- */
 export function BillingScreen({
   status,
   entitlement,
@@ -167,9 +147,6 @@ export function BillingScreen({
   );
 }
 
-/**
- * Payment trouble, said while the subscription is still being honoured instead of after it stops.
- */
 export function PaymentFailureBanner({
   status,
   canManageBilling,

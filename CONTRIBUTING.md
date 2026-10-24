@@ -120,7 +120,6 @@ Run `make help` at the repo root for the full list.
 | `test-*` | Go unit tests, explicit integration suites, and CLI help checks |
 | `dev-*` | local binary install helpers |
 | `deps-*` | UI dependencies |
-| `openapi` | regenerate the embedded OpenAPI spec (`runtime/internal/openapidocs/openapi.json`) from route annotations |
 | `clean*` | remove generated binaries and build artifacts |
 
 Version bumps and release notes for the **contenox runtime** live in
@@ -268,7 +267,4 @@ If command names, flags, README examples, or user-facing help changed, also run
 - Wide interfaces are a smell. New code should accept the narrowest interface
   slice it actually needs.
 - Public-surface changes (new commands, HTTP routes, compatibility endpoints)
-  need matching updates to the surface docs and a regenerated OpenAPI spec
-  (`make openapi` — see `docs/development/api_spec_generation.md`). The unit
-  suite fails when the embedded spec is stale, and the generator itself fails
-  when a route lacks request/response annotations.
+  need matching updates to the user-facing docs.

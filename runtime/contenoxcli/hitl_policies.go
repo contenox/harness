@@ -22,8 +22,6 @@ var hitlPolicyACP string
 //go:embed hitl-policy-acpx.json
 var hitlPolicyACPX string
 
-// HITLPolicyPresets lists the names and content of all embedded HITL policy presets
-// in the order they should be written to disk.
 var HITLPolicyPresets = []struct {
 	Name    string
 	Content string
@@ -35,8 +33,6 @@ var HITLPolicyPresets = []struct {
 	{"hitl-policy-acpx.json", hitlPolicyACPX},
 }
 
-// embeddedPolicyNames returns the preset file names in preset order, for the
-// ACP /policy listing.
 func embeddedPolicyNames() []string {
 	names := make([]string, len(HITLPolicyPresets))
 	for i, p := range HITLPolicyPresets {
@@ -45,8 +41,6 @@ func embeddedPolicyNames() []string {
 	return names
 }
 
-// writeEmbeddedHITLPolicies writes the embedded policy presets to contenoxDir.
-// If overwrite is false, existing files are left untouched (returns false for that file).
 func writeEmbeddedHITLPolicies(contenoxDir string, overwrite bool) error {
 	if err := os.MkdirAll(contenoxDir, 0750); err != nil {
 		return fmt.Errorf("failed to create config dir: %w", err)

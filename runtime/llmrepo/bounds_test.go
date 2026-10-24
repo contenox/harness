@@ -22,7 +22,6 @@ func providerNamed(model string) libmodelprovider.Provider {
 	return &libmodelprovider.MockProvider{Name: model, ID: model, CanChatFlag: true}
 }
 
-// A unit whose envelope forbids a model cannot use it; the refusal names the bound, what's permitted, and what was picked.
 func TestUnit_ResolutionBounds_RefusesModelOutsideAllowlist(t *testing.T) {
 	mm := boundedManager()
 	ctx := WithResolutionBounds(context.Background(), ResolutionBounds{
@@ -39,7 +38,6 @@ func TestUnit_ResolutionBounds_RefusesModelOutsideAllowlist(t *testing.T) {
 	require.Contains(t, err.Error(), "Nothing was sent")
 }
 
-// The allowed case must pass cleanly, including whitespace/case slack from a hand-edited envelope.
 func TestUnit_ResolutionBounds_AdmitsListedModel(t *testing.T) {
 	mm := boundedManager()
 	ctx := WithResolutionBounds(context.Background(), ResolutionBounds{
@@ -49,7 +47,6 @@ func TestUnit_ResolutionBounds_AdmitsListedModel(t *testing.T) {
 	require.NoError(t, mm.enforceResolutionBounds(ctx, "stream", providerNamed("gpt-5"), "backend-1"))
 }
 
-// Matching must not use the resolver's NormalizeModelName, which strips version tags/punctuation and would silently widen a security boundary.
 func TestUnit_ResolutionBounds_DoesNotWidenByNormalization(t *testing.T) {
 	mm := boundedManager()
 	ctx := WithResolutionBounds(context.Background(), ResolutionBounds{
@@ -62,7 +59,6 @@ func TestUnit_ResolutionBounds_DoesNotWidenByNormalization(t *testing.T) {
 	require.ErrorIs(t, mm.enforceResolutionBounds(ctx, "chat", providerNamed("gpt4"), "b"), ErrResolutionOutOfBounds)
 }
 
-// An envelope with no compute block must resolve exactly as it did before bounds existed.
 func TestUnit_ResolutionBounds_AbsentBoundsAreUnbounded(t *testing.T) {
 	mm := boundedManager()
 	require.NoError(t, mm.enforceResolutionBounds(context.Background(), "chat", providerNamed("anything-at-all"), "any-backend"))
@@ -72,7 +68,6 @@ func TestUnit_ResolutionBounds_AbsentBoundsAreUnbounded(t *testing.T) {
 	require.NoError(t, mm.enforceResolutionBounds(ctx, "chat", providerNamed("anything-at-all"), "any-backend"))
 }
 
-// Bounding models alone must leave backend choice free, and vice versa.
 func TestUnit_ResolutionBounds_DimensionsAreIndependent(t *testing.T) {
 	mm := boundedManager()
 
@@ -86,7 +81,6 @@ func TestUnit_ResolutionBounds_DimensionsAreIndependent(t *testing.T) {
 	require.Contains(t, err.Error(), "backendAllowlist")
 }
 
-// A backend the runtime cannot name matches by id only — fails closed rather than admitting an unidentifiable backend.
 func TestUnit_ResolutionBounds_UnnamedBackendMatchesByIDOnly(t *testing.T) {
 	mm := boundedManager()
 
@@ -97,7 +91,6 @@ func TestUnit_ResolutionBounds_UnnamedBackendMatchesByIDOnly(t *testing.T) {
 	require.ErrorIs(t, mm.enforceResolutionBounds(byName, "chat", providerNamed("m"), "openai-backend"), ErrResolutionOutOfBounds)
 }
 
-// A name in the allowlist must admit the backend the resolver returns by id; runs against real runtime state so the id->name lookup is proven, not mocked.
 func TestUnit_ResolutionBounds_BackendMatchesOperatorFacingName(t *testing.T) {
 	ctx, state, db := newReconcileTestState(t, runtimestate.WithAutoDiscoverModels())
 	mm := &modelManager{runtime: state, tracker: libtracker.NoopTracker{}}
@@ -132,7 +125,6 @@ func TestUnit_ResolutionBounds_BackendMatchesOperatorFacingName(t *testing.T) {
 	require.Contains(t, rErr.Error(), "backend-uuid-1")
 }
 
-// The refusal text must be stable across runs since it lands in a durable mission record.
 func TestUnit_ResolutionBounds_RefusalTextIsDeterministic(t *testing.T) {
 	mm := boundedManager()
 	ctx := WithResolutionBounds(context.Background(), ResolutionBounds{
@@ -145,7 +137,6 @@ func TestUnit_ResolutionBounds_RefusalTextIsDeterministic(t *testing.T) {
 	require.Contains(t, first, `"alpha", "mid", "zeta"`)
 }
 
-// A bounded context must stop Chat/Stream/PromptExecute/Embed before anything is sent, even though the backend would happily serve the request.
 func TestUnit_ResolutionBounds_EnforcedOnEveryCallPath(t *testing.T) {
 	ctx, state, db := newReconcileTestState(t, runtimestate.WithAutoDiscoverModels())
 	mm := &modelManager{runtime: state, tracker: libtracker.NoopTracker{}}

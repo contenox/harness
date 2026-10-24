@@ -3,43 +3,19 @@ import { audioContent, imageContent, textContent, type ContentBlock } from '@con
 import type { PendingAudioAttachment } from './audioAttachments';
 import type { PendingImageAttachment } from './imageAttachments';
 
-/**
- * A workspace file the user can mention: its root-relative path and display name.
- */
 export interface WorkspaceFileRef {
-  /**
-   * Path relative to the session workspace root (what `local_fs` resolves).
-   */
   path: string;
-  /**
-   * Display name (basename).
-   */
   name: string;
 }
 
-/**
- * One entry the `@`-menu can show: a file (insertable as a mention) or a directory (navigable — picking it drills the menu into that folder rather than inserting anything).
- */
 export interface MentionCandidate extends WorkspaceFileRef {
   isDirectory: boolean;
 }
 
 export interface MentionQuery {
-  /**
-   * Whether an `@query` is active at the caret.
-   */
   active: boolean;
-  /**
-   * The text typed after `@` up to the caret.
-   */
   query: string;
-  /**
-   * Index of the `@` in the draft.
-   */
   start: number;
-  /**
-   * Caret index (end of the query span).
-   */
   end: number;
 }
 
@@ -51,9 +27,6 @@ export interface MentionQuery {
 
 const MENTION_TOKEN_RE = /(^|\s)@(?:"([^"]*)|([\w./-]*))$/;
 
-/**
- * Derives the active `@query` from the draft text up to the caret.
- */
 export function deriveMentionQuery(text: string, caret: number): MentionQuery {
   const upto = text.slice(0, Math.max(0, Math.min(caret, text.length)));
   const m = MENTION_TOKEN_RE.exec(upto);
@@ -70,25 +43,16 @@ function needsQuoting(path: string): boolean {
   return /\s/.test(path);
 }
 
-/**
- * The token inserted into the draft for a mention — `@path`, or `@"path"` when the path contains whitespace so the reference stays one lexeme.
- */
 export function mentionToken(file: WorkspaceFileRef): string {
   return needsQuoting(file.path) ? `@"${file.path}"` : `@${file.path}`;
 }
 
-/**
- * Splits an active `@query` into the directory being browsed and the leaf filter within it.
- */
 export function splitMentionQuery(query: string): { dir: string; leaf: string } {
   const slash = query.lastIndexOf('/');
   if (slash === -1) return { dir: '', leaf: query };
   return { dir: query.slice(0, slash), leaf: query.slice(slash + 1) };
 }
 
-/**
- * The candidates shown for a browse scope: the directory's entries whose name starts-with, then contains, the leaf filter — directories first (they are navigation), files second, each group alphabetical.
- */
 export function mentionCandidatesForScope(
   entries: MentionCandidate[],
   leaf: string,
@@ -130,9 +94,6 @@ function browseToken(dir: string): string {
   return needsQuoting(inner) ? `@"${inner}` : `@${inner}`;
 }
 
-/**
- * Drills the draft into a directory: replaces the active `@query` span with `@<dir>/` — quoted (`@"<dir>/`, open quote, no closing) when the directory path contains whitespace, so browsing continues inside a spaced path.
- */
 export function applyMentionFolder(
   text: string,
   q: MentionQuery,
@@ -143,18 +104,12 @@ export function applyMentionFolder(
   return { text: next, caret: q.start + token.length };
 }
 
-/**
- * Ascends the browse one directory: rewrites the active `@query` to browse the PARENT of the directory currently in scope (dropping any leaf filter).
- */
 export function applyMentionAscend(text: string, q: MentionQuery): { text: string; caret: number } {
   const token = browseToken(parentDir(queryScope(q.query)));
   const next = text.slice(0, q.start) + token + text.slice(q.end);
   return { text: next, caret: q.start + token.length };
 }
 
-/**
- * Keyboard actions for the `@`-mention FILE BROWSER.
- */
 export type MentionMenuKeyAction =
   | { type: 'move'; delta: 1 | -1 }
   | { type: 'drill' }
@@ -182,9 +137,6 @@ export function mentionMenuKeyFromEvent(key: string): MentionMenuKeyAction | nul
   }
 }
 
-/**
- * The path that should be live-previewed while browsing the `@`-menu: the highlighted candidate's path when it is a FILE, otherwise `null` (directories are navigation, not content, so they get no preview).
- */
 export function mentionPreviewPath(
   entries: MentionCandidate[],
   activeIndex: number,
@@ -194,9 +146,6 @@ export function mentionPreviewPath(
   return entry.path;
 }
 
-/**
- * Case-insensitive filter of the workspace file list by the query, matched against both the display name and the full path.
- */
 export function filterMentionFiles(files: WorkspaceFileRef[], query: string): WorkspaceFileRef[] {
   const q = query.trim().toLowerCase();
   if (q === '') return files;
@@ -214,9 +163,6 @@ export function filterMentionFiles(files: WorkspaceFileRef[], query: string): Wo
   return scored.map(x => x.f);
 }
 
-/**
- * Replaces the active `@query` span with the chosen file's token followed by a space, returning the new draft and the caret position after the inserted token.
- */
 export function applyMention(
   text: string,
   q: MentionQuery,
@@ -227,9 +173,6 @@ export function applyMention(
   return { text: next, caret: q.start + token.length };
 }
 
-/**
- * Returns the subset of `selected` mentions whose token still appears in the final draft (the user may have deleted a token after selecting it), de-duplicated by path.
- */
 export function activeMentions(text: string, selected: WorkspaceFileRef[]): WorkspaceFileRef[] {
   const seen = new Set<string>();
   const out: WorkspaceFileRef[] = [];
@@ -242,9 +185,6 @@ export function activeMentions(text: string, selected: WorkspaceFileRef[]): Work
   return out;
 }
 
-/**
- * Serializes a draft into ACP prompt content blocks: the text block (the draft as typed, tokens included), one `resource_link` block per mention, then one `image` block per pending image and one `audio` block per pending clip (base64 `data` + `mimeType`, exactly the libacp `ContentBlock` wire form — no `data:` URI prefix).
- */
 export function promptBlocksFromDraft(
   text: string,
   mentions: WorkspaceFileRef[],

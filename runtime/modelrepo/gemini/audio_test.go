@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_BuildGeminiRequest_AudioInputAddsInlineDataPart checks audio attachments become inlineData parts with base64 payload and mime type on the wire.
 func TestUnit_BuildGeminiRequest_AudioInputAddsInlineDataPart(t *testing.T) {
 	t.Parallel()
 
@@ -43,7 +42,6 @@ func TestUnit_BuildGeminiRequest_AudioInputAddsInlineDataPart(t *testing.T) {
 	require.Contains(t, js, `"data":"`+wantB64+`"`)
 }
 
-// TestUnit_BuildGeminiRequest_AudioRefusals checks the accepted media-type set and the inline size cap.
 func TestUnit_BuildGeminiRequest_AudioRefusals(t *testing.T) {
 	t.Parallel()
 

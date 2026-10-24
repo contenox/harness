@@ -39,7 +39,6 @@ func (p *catalogProvider) baseURL() string {
 	return defaultBaseURL
 }
 
-// orModel is the wire shape of one model from GET /api/v1/models.
 type orModel struct {
 	ID            string `json:"id"`
 	ContextLength int    `json:"context_length"`
@@ -92,14 +91,10 @@ func (p *catalogProvider) ProviderFor(model modelrepo.ObservedModel) modelrepo.P
 	return newOpenRouterProvider(p.spec.APIKey, model.Name, p.baseURL(), model.CapabilityConfig, p.httpClient, p.tracker)
 }
 
-// toObservedModel converts an OpenRouter model entry into an ObservedModel.
-// Models that cannot generate text (image/audio generation, video) are dropped.
 func toObservedModel(m orModel) (modelrepo.ObservedModel, bool) {
 	modality := strings.ToLower(m.Architecture.Modality)
 	lower := strings.ToLower(m.ID)
 
-	// Prefer top_provider.context_length when available (it is the effective window
-	// for the underlying provider rather than the envelope OpenRouter supports).
 	ctxLen := m.TopProvider.ContextLength
 	if ctxLen == 0 {
 		ctxLen = m.ContextLength
@@ -120,15 +115,11 @@ func toObservedModel(m orModel) (modelrepo.ObservedModel, bool) {
 		om.CanStream = true
 		om.CanVision = orAcceptsImageInput(m)
 	default:
-		// Non-text-generation models (image, audio, video) — skip.
 		return modelrepo.ObservedModel{}, false
 	}
 	return om, true
 }
 
-// orAcceptsImageInput reports whether the model takes image input, read from
-// the provider's own metadata: the architecture.input_modalities list when
-// present, else the legacy "input->output" modality string's input side.
 func orAcceptsImageInput(m orModel) bool {
 	for _, mod := range m.Architecture.InputModalities {
 		if strings.EqualFold(strings.TrimSpace(mod), "image") {

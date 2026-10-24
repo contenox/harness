@@ -82,9 +82,6 @@ function StepIndicator({
   );
 }
 
-/**
- * One row in a vertical wizard: rail (number / icon) + title, description, and slot content.
- */
 export function WizardStep({
   step,
   status,

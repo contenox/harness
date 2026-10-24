@@ -7,15 +7,6 @@ import type { RankedItem } from '../../lib/palette/paletteState';
 import type { PaletteItem, PaletteItemType } from '../../lib/palette/types';
 import { cn } from '../../lib/utils';
 
-/**
- * The palette's presentation: a top-anchored modal on desktop, a full-screen
- * sheet on mobile. Deliberately prop-driven and free of the open/query/frecency
- * state (that lives in {@link CommandPalette} and the pure reducer), so the
- * layout, highlighting, type badges, and empty state can be pinned with a static
- * render. A flat, ranked, badge-tagged list is used rather than type-grouped
- * sections: grouping would fight the cross-type fuzzy+frecency ranking, and the
- * house already reads flat rows with trailing badges everywhere.
- */
 
 const TYPE_LABEL_KEY: Record<PaletteItemType, TranslationKey> = {
   action: 'palette.type_action',
@@ -61,7 +52,6 @@ export function PaletteOverlay(props: PaletteOverlayProps) {
     inputRef.current?.focus();
   }, []);
 
-  // Keep the highlighted row visible as the selection moves with the keyboard.
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>(`#palette-opt-${selected}`);
     el?.scrollIntoView({ block: 'nearest' });
@@ -179,7 +169,6 @@ export function PaletteOverlay(props: PaletteOverlayProps) {
   );
 }
 
-/** Renders `text` with the matched character positions emphasized. */
 export function Highlighted({ text, indexes }: { text: string; indexes: number[] }): ReactNode {
   if (indexes.length === 0) return text;
   const set = new Set(indexes);

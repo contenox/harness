@@ -8,9 +8,6 @@ import { AuthForm, AuthLink, AuthScreen } from './AuthScreen';
 
 const FIELDS = ['email'] as const;
 
-/**
- * Requests a reset mail.
- */
 export function ForgotPasswordScreen() {
   const { routes, useRequestPasswordReset } = useProductPorts();
   const [email, setEmail] = useState('');

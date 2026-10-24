@@ -122,7 +122,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
     <div
       className={`bg-surface-50 dark:bg-dark-surface-50 flex h-full w-96 flex-col border-l border-surface-300 dark:border-dark-surface-300 shadow-xl ${className}`}
     >
-      {/* Header */}
+
       <div className="flex items-center justify-between border-b border-surface-300 dark:border-dark-surface-300 p-4">
         <div>
           <h4 className="text-lg font-semibold text-text dark:text-dark-text">
@@ -164,7 +164,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
         </div>
       </div>
 
-      {/* Content */}
+
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {fields.map((field) => (
           <Panel key={field.key} variant="surface">
@@ -176,7 +176,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
         ))}
       </div>
 
-      {/* Action Buttons */}
+
       {isEditMode && (
         <div className="border-t border-surface-300 dark:border-dark-surface-300 p-4">
           <div className="flex gap-2">

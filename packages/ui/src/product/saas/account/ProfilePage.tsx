@@ -16,9 +16,6 @@ const IDENTITY_FIELDS = ['email', 'display_name'] as const;
 
 const PASSWORD_FIELDS = ['current_password', 'new_password'] as const;
 
-/**
- * The signed-in person: their address, their name, their password.
- */
 export default function ProfilePage() {
   const { routes } = useProductPorts();
   return (

@@ -22,12 +22,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ─── test scaffolding: a real hitlservice+approvalapi behind httptest,
-// mounted at "/api" exactly like `contenox serve` mounts it (server.go's
-// registerProductRoutes + serve_cmd.go's rootMux.Handle("/api/",
-// http.StripPrefix("/api", apiMux))). This exercises serveClient against the
-// real wire contract without spawning a `contenox serve` process. ───────────
-
 func setupApprovalsTestServer(t *testing.T) (context.Context, runtimetypes.Store, hitlservice.Service, *httptest.Server) {
 	t.Helper()
 	ctx := context.Background()
@@ -94,10 +88,8 @@ func newApprovalsAnswerTestCmd() *cobra.Command {
 	return c
 }
 
-// ─── serveClient ────────────────────────────────────────────────────────
-
 func TestUnit_NewServeClient_DefaultsToServeAddrPort(t *testing.T) {
-	t.Setenv("HOME", t.TempDir()) // isolate ~/.contenox-harness so no persisted serve-token.txt leaks in
+	t.Setenv("HOME", t.TempDir())
 	c := newApprovalsListTestCmd()
 	c.SetArgs([]string{})
 	require.NoError(t, c.ParseFlags(nil))
@@ -181,10 +173,6 @@ func TestUnit_NewServeClient_InvalidServerURLErrors(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestUnit_NewServeClient_DefaultedTargetIsSurfaced pins the cross-instance
-// safety hint: when the URL is silently defaulted, the resolved target is
-// announced on STDERR (never stdout, to keep the `-q` id contract clean); when
-// the operator set --server/CONTENOX_SERVER_URL, no hint is printed.
 func TestUnit_NewServeClient_DefaultedTargetIsSurfaced(t *testing.T) {
 	var stderr bytes.Buffer
 	c := newApprovalsListTestCmd()
@@ -254,8 +242,6 @@ func TestUnit_ServeClient_DoUnreachableServerReportsConnectError(t *testing.T) {
 	require.Contains(t, err.Error(), "contenox serve")
 }
 
-// ─── list ───────────────────────────────────────────────────────────────
-
 func TestUnit_ApprovalsList_EmptyInboxPrintsHint(t *testing.T) {
 	_, _, _, srv := setupApprovalsTestServer(t)
 
@@ -285,7 +271,7 @@ func TestUnit_ApprovalsList_TableShowsDecisionFields(t *testing.T) {
 		"local_fs.write_file",
 		"/workspace/main.go",
 		"hitl-policy-default.json",
-		"yes (3 lines)", // the diff column: presence + size, not the raw diff text
+		"yes (3 lines)",
 	} {
 		require.Contains(t, out, want)
 	}
@@ -345,8 +331,6 @@ func TestUnit_ApprovalsList_UnreachableServerFailsWithNonZeroExit(t *testing.T) 
 	err := cmd.Execute()
 	require.Error(t, err)
 }
-
-// ─── answer ─────────────────────────────────────────────────────────────
 
 func TestUnit_ApprovalsAnswer_ApproveResolvesTheRowAndPrintsConfirmation(t *testing.T) {
 	ctx, store, _, srv := setupApprovalsTestServer(t)
@@ -429,18 +413,11 @@ func TestUnit_ApprovalsAnswer_AlreadyResolvedFailsNonZeroAndSaysSo(t *testing.T)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "already answered")
 
-	// The first answer must stand.
 	got, getErr := store.GetHITLApproval(ctx, "appr-twice")
 	require.NoError(t, getErr)
 	require.Equal(t, runtimetypes.HITLApprovalApproved, got.State)
 }
 
-// TestUnit_ApprovalsAnswer_ExpiredFailsNonZeroAndSaysSo seeds a row whose
-// deadline has already passed, sweeps it (exactly what
-// serve_cmd.go's startHITLApprovalSweeper does on its own tick) so it is
-// already in the terminal 'expired' state, and then proves `contenox
-// approvals answer` reports that distinctly rather than as a generic
-// failure or a false success.
 func TestUnit_ApprovalsAnswer_ExpiredFailsNonZeroAndSaysSo(t *testing.T) {
 	ctx, store, svc, srv := setupApprovalsTestServer(t)
 	past := time.Now().UTC().Add(-2 * time.Hour)
@@ -481,8 +458,6 @@ func TestUnit_ApprovalsAnswer_RejectsBothApproveAndDeny(t *testing.T) {
 	require.Error(t, err)
 }
 
-// ─── table helpers (pure) ───────────────────────────────────────────────
-
 func TestUnit_ApprovalsTableHelpers(t *testing.T) {
 	require.Equal(t, "-", stringOrDash(""))
 	require.Equal(t, "x", stringOrDash("x"))
@@ -501,14 +476,6 @@ func TestUnit_ApprovalsTableHelpers(t *testing.T) {
 
 	require.Equal(t, "-", formatApprovalTime(time.Time{}))
 }
-
-// ─── attribution columns ───────────────────────────────────────────────────
-
-// An inbox of one can get away with naming only the tool. An inbox of many
-// cannot: two units doing the same thing produce identical rows, and the
-// operator cannot tell which one is being held up. These pin that the
-// attribution reaches the table, and that an ask raised outside the fleet
-// renders as absent rather than as an empty column that looks like a bug.
 
 func TestUnit_ApprovalsList_TableShowsAttribution(t *testing.T) {
 	ctx, store, _, srv := setupApprovalsTestServer(t)
@@ -560,8 +527,6 @@ func TestUnit_ApprovalsList_UnattributedRowRendersDashes(t *testing.T) {
 	cmd.SetArgs([]string{"--server", srv.URL})
 	require.NoError(t, cmd.Execute())
 
-	// An ask raised by a native chain turn has no unit behind it: the columns
-	// exist and read as absent, which is a different statement from "unknown".
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
 	require.Len(t, lines, 2)
 
@@ -574,9 +539,6 @@ func TestUnit_ApprovalsList_UnattributedRowRendersDashes(t *testing.T) {
 	}
 }
 
-// splitTableRow splits one tabwriter-padded line into its cells. Columns are
-// separated by two-or-more spaces, which keeps single-space cell contents (a
-// timestamp, "yes (3 lines)") intact.
 func splitTableRow(line string) []string {
 	return tableCellSplitter.Split(strings.TrimSpace(line), -1)
 }

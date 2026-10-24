@@ -6,7 +6,6 @@ export type SetupWizardStepId = 'defaults' | 'register' | 'health';
 export type SetupWizardDerivedStep = {
   id: SetupWizardStepId;
   status: WizardStepStatus;
-  /** First incomplete step (for aria-current). */
   active: boolean;
 };
 
@@ -20,16 +19,12 @@ function issuesForCategory(setup: SetupStatus, category: string) {
   return issues.filter(issue => issue.category === category);
 }
 
-/** 0-based index of the first step that still needs attention; 0 if unsure. */
 export function getRecommendedSetupStepIndex(setup: SetupStatus): number {
   const steps = deriveSetupWizardSteps(setup);
   const i = steps.findIndex(s => s.active);
   return i >= 0 ? i : 0;
 }
 
-/**
- * Maps GET /setup-status payload to three fixed wizard steps (defaults → register backend → health).
- */
 export function deriveSetupWizardSteps(setup: SetupStatus): SetupWizardDerivedStep[] {
   const codes = issueCodes(setup);
   const defaultIssues = issuesForCategory(setup, 'defaults');

@@ -56,10 +56,6 @@ func TestUnit_KVJournalTaskEventSink_SkipsChunksAndAnonymousEvents(t *testing.T)
 	require.Empty(t, replayed)
 }
 
-// TestUnit_KVJournalTaskEventSink_JournalingMatrix pins the per-kind
-// journaling decision for every kind in AllTaskEventKinds: step_chunk is the
-// only unjournaled kind; step_stream_end is journaled (replay carries stream
-// brackets).
 func TestUnit_KVJournalTaskEventSink_JournalingMatrix(t *testing.T) {
 	kv := journalTestKV(t)
 	sink := NewKVJournalTaskEventSink(nil, kv, libtracker.NoopTracker{})
@@ -92,9 +88,6 @@ func TestUnit_KVJournalTaskEventSink_JournalingMatrix(t *testing.T) {
 	require.Equal(t, want, got, "journal must keep arrival order and drop exactly step_chunk")
 }
 
-// TestUnit_KVJournalTaskEventSink_StreamEndBracketFieldsSurvive asserts the
-// replayed stream bracket keeps its payload — the reason step_stream_end
-// exists (a replayed run could not previously tell streaming happened).
 func TestUnit_KVJournalTaskEventSink_StreamEndBracketFieldsSurvive(t *testing.T) {
 	kv := journalTestKV(t)
 	sink := NewKVJournalTaskEventSink(nil, kv, libtracker.NoopTracker{})

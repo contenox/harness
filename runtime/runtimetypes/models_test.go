@@ -13,13 +13,12 @@ import (
 
 func TestUnit_Models_AppendAndGetAllModels(t *testing.T) {
 	ctx, s := runtimetypes.SetupStore(t)
-	limit := 100 // Use a large limit to fetch all models
+	limit := 100
 
 	models, err := s.ListModels(ctx, nil, limit)
 	require.NoError(t, err)
 	require.Empty(t, models)
 
-	// Append a new model with capability fields
 	model := &runtimetypes.Model{
 		ID:            uuid.New().String(),
 		Model:         "test-model",
@@ -138,10 +137,9 @@ func TestUnit_Models_AppendDuplicateModel(t *testing.T) {
 	err := s.AppendModel(ctx, model)
 	require.NoError(t, err)
 
-	// Attempt to append duplicate model with same capabilities
 	duplicate := &runtimetypes.Model{
 		Model:         "duplicate-model",
-		ContextLength: 4096, // Same capabilities
+		ContextLength: 4096,
 		CanChat:       true,
 		CanEmbed:      false,
 		CanPrompt:     true,
@@ -182,13 +180,12 @@ func TestUnit_Models_GetModelByName(t *testing.T) {
 func TestUnit_Models_ListHandlesPagination(t *testing.T) {
 	ctx, s := runtimetypes.SetupStore(t)
 
-	// Create 5 models with capability fields
 	var createdModels []*runtimetypes.Model
 	for i := range 5 {
 		model := &runtimetypes.Model{
 			ID:            uuid.New().String(),
 			Model:         fmt.Sprintf("model%d", i),
-			ContextLength: 1024 + i*1024, // Vary context length
+			ContextLength: 1024 + i*1024,
 			CanChat:       i%2 == 0,
 			CanEmbed:      i%3 == 0,
 			CanPrompt:     i%4 == 0,
@@ -202,12 +199,10 @@ func TestUnit_Models_ListHandlesPagination(t *testing.T) {
 		createdModels = append(createdModels, model)
 	}
 
-	// Paginate through the results with a limit of 2
 	var receivedModels []*runtimetypes.Model
 	var lastCursor *time.Time
 	limit := 2
 
-	// Fetch first page
 	page1, err := s.ListModels(ctx, lastCursor, limit)
 	require.NoError(t, err)
 	require.Len(t, page1, 2)
@@ -215,7 +210,6 @@ func TestUnit_Models_ListHandlesPagination(t *testing.T) {
 
 	lastCursor = &page1[len(page1)-1].CreatedAt
 
-	// Fetch second page
 	page2, err := s.ListModels(ctx, lastCursor, limit)
 	require.NoError(t, err)
 	require.Len(t, page2, 2)
@@ -223,23 +217,19 @@ func TestUnit_Models_ListHandlesPagination(t *testing.T) {
 
 	lastCursor = &page2[len(page2)-1].CreatedAt
 
-	// Fetch third page (the last one)
 	page3, err := s.ListModels(ctx, lastCursor, limit)
 	require.NoError(t, err)
 	require.Len(t, page3, 1)
 	receivedModels = append(receivedModels, page3...)
 
-	// Fetch a fourth page, which should be empty
 	page4, err := s.ListModels(ctx, &page3[0].CreatedAt, limit)
 	require.NoError(t, err)
 	require.Empty(t, page4)
 
-	// Verify all models were retrieved in the correct order
 	require.Len(t, receivedModels, 5)
 
-	// Check capability fields for each retrieved model
 	for i, received := range receivedModels {
-		expected := createdModels[4-i] // Reverse order (newest first)
+		expected := createdModels[4-i]
 		require.Equal(t, expected.Model, received.Model)
 		require.Equal(t, expected.ContextLength, received.ContextLength)
 		require.Equal(t, expected.CanChat, received.CanChat)
@@ -249,13 +239,9 @@ func TestUnit_Models_ListHandlesPagination(t *testing.T) {
 	}
 }
 
-// TestUnit_Models_ZeroContextLength verifies that context_length=0 is accepted
-// as an auto-detect placeholder (capabilities will be filled by the backend cycle
-// via Ollama /api/show). Only the model name is required.
 func TestUnit_Models_ZeroContextLength(t *testing.T) {
 	ctx, s := runtimetypes.SetupStore(t)
 
-	// Zero context length is now valid — backend cycle will populate it via Show.
 	model := &runtimetypes.Model{
 		ID:            uuid.New().String(),
 		Model:         "auto-detect-model",
@@ -265,7 +251,6 @@ func TestUnit_Models_ZeroContextLength(t *testing.T) {
 	err := s.AppendModel(ctx, model)
 	require.NoError(t, err)
 
-	// Model name is still required.
 	noName := &runtimetypes.Model{
 		ID:            uuid.New().String(),
 		ContextLength: 0,

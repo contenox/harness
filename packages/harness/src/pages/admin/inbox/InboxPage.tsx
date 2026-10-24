@@ -56,10 +56,6 @@ import {
   type StalledUnit,
 } from './inboxPresentation';
 
-// The newest report time the operator has already seen, persisted so a return
-// visit shows what arrived since — the "what is new in the last hour" the hourly
-// skim runs on. localStorage is guarded so a non-browser render (tests, SSR)
-// simply treats every visit as a first look.
 const LAST_SEEN_KEY = 'contenox:inbox:lastSeenReportAt';
 
 function readLastSeen(): string | undefined {
@@ -76,28 +72,9 @@ function writeLastSeen(iso?: string): void {
     if (typeof localStorage === 'undefined' || !iso) return;
     localStorage.setItem(LAST_SEEN_KEY, iso);
   } catch {
-    /* private mode / disabled storage — the badge just resets to "all seen". */
   }
 }
 
-/**
- * The attention inbox (docs/development/blueprints/acp/fleet-consolidation.md,
- * slices C2 + M3) — the operating console for an overnight batch. The operator
- * fires many units in the evening and skims this page about once an hour,
- * operating entirely from here until everything lands, then reads the reports.
- * The page is ordered for that skim, top to bottom:
- *
- *   1. Pending asks — loudest. A blocked unit wastes the night; answering asks
- *      inline is the core operate-from-here action.
- *   2. Stalled / failed units — what fell over while unattended.
- *   3. What came back — reports, newest-first, "new since last look" marked.
- *   4. A compact still-running line linking to the fleet board (not duplicated).
- *
- * Counts sit in the header so the skim can start before the scroll, and asks and
- * reports are grouped by mission so concurrent missions do not interleave.
- * Loading/error gate on the approvals feed (the primary signal); the report and
- * fleet feeds degrade within their own sections.
- */
 export default function InboxPage() {
   const { t, i18n } = useTranslation();
   const approvalsQuery = useApprovals();
@@ -107,15 +84,11 @@ export default function InboxPage() {
   const answer = useAnswerApproval();
   const reply = useReplyToAsk();
 
-  // Captured once at mount; the report feed keeps polling, so anything newer
-  // than this is "new" for the whole visit. Persisted on unmount.
   const [lastSeen] = useState<string | undefined>(readLastSeen);
   const newestSeenRef = useRef<string | undefined>(undefined);
   newestSeenRef.current = newestReportAt(reports.items);
   useEffect(() => () => writeLastSeen(newestSeenRef.current), []);
 
-  // One mutation serves every ask, so pending/error is scoped back to a row by
-  // comparing the in-flight `variables.id` — the FleetPage idiom.
   const answerPending = (id: string) =>
     (answer.isPending && answer.variables?.id === id) ||
     (reply.isPending && reply.variables?.id === id);
@@ -160,8 +133,6 @@ export default function InboxPage() {
   const running = runningSummary(fleet);
   const reportGroups = groupReportsByMission(reports.items, lastSeen);
   const newReportCount = countNewReports(reports.items, lastSeen);
-  // Missions whose latest report is a blocker — the same signal the board and
-  // mission pages surface, folded into each stalled unit's composed status.
   const blocked = blockedMissionIds(reports.items.map(i => i.report));
 
   const attentionClear = approvals.length === 0 && stalled.length === 0;
@@ -174,7 +145,7 @@ export default function InboxPage() {
           <P variant="muted" className="mt-2">
             {t('inbox.description')}
           </P>
-          {/* Counts, so the skim starts before the scroll. */}
+
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge variant={approvals.length > 0 ? 'error' : 'secondary'} size="sm">
               {t('inbox.count_pending', { n: approvals.length })}
@@ -191,7 +162,7 @@ export default function InboxPage() {
           </div>
         </div>
 
-        {/* 1 — Pending asks, loudest, grouped by mission. */}
+
         {approvals.length > 0 && (
           <Section
             variant="empty"
@@ -215,7 +186,7 @@ export default function InboxPage() {
           </Section>
         )}
 
-        {/* 2 — Stalled / failed units. */}
+
         {stalled.length > 0 && (
           <Section variant="empty" title={t('inbox.stalled_title')} description={t('inbox.stalled_description')}>
             <div className="mt-4 space-y-2">
@@ -231,7 +202,7 @@ export default function InboxPage() {
           </Section>
         )}
 
-        {/* All-clear: operationally true, not a generic "nothing here". */}
+
         {attentionClear && (
           <InlineNotice variant="info">
             <span className="font-medium">{t('inbox.all_clear_title')}</span>{' '}
@@ -239,7 +210,7 @@ export default function InboxPage() {
           </InlineNotice>
         )}
 
-        {/* 3 — What came back, grouped by mission, newest-first. */}
+
         <Section variant="empty" title={t('inbox.reports_title')} description={t('inbox.reports_description')}>
           <div className="mt-4 space-y-6">
             {reports.isLoading ? (
@@ -262,8 +233,7 @@ export default function InboxPage() {
           </div>
         </Section>
 
-        {/* 4 — Compact still-running summary, linking to the board it does not
-            duplicate. */}
+
         {running.live > 0 && (
           <P variant="muted" className="text-sm">
             {t('inbox.running_summary', { n: running.live })}{' '}
@@ -277,8 +247,6 @@ export default function InboxPage() {
   );
 }
 
-/** A mission's pending asks under one header — its intent, linked, or the
- *  trailing "not tied to a mission" cluster for asks that carry no mission. */
 function ApprovalMissionGroup({
   group,
   answerPending,
@@ -324,8 +292,6 @@ function ApprovalMissionGroup({
   );
 }
 
-/** The header above a mission's grouped asks: its intent linked to the mission,
- *  the raw id when the record was not loaded, or the unattributed label. */
 function MissionGroupHeader({ mission, missionId }: { mission?: Mission; missionId?: string }) {
   const { t } = useTranslation();
   if (mission) {
@@ -354,14 +320,6 @@ function MissionGroupHeader({ mission, missionId }: { mission?: Mission; mission
   );
 }
 
-/**
- * One pending ask. Answering is a direct click — no confirm gate — because
- * allow/deny IS the intended primary action here (unlike FleetPage's Stop,
- * which destroys state and is gated). Mirrors the chat PermissionCard: the only
- * way to answer is an explicit button, and an unanswered ask stays pending. The
- * card always names the tool and, when the ask carries them, the policy that
- * gated it and who is asking.
- */
 function ApprovalCard({
   approval,
   pending,
@@ -392,9 +350,6 @@ function ApprovalCard({
     <Card
       variant="surface"
       statusBorder="warning"
-      // A QUESTION spans the row. The two-up grid is right for a permission ask —
-      // tool, args, allow/deny — but a question is prose plus a text field, and at
-      // half width the answer box is a slot you type a sentence into sideways.
       className={attention ? 'sm:col-span-2' : undefined}>
       <div className="flex items-center justify-between gap-3">
         <Span variant="status" className="text-warning-800 dark:text-dark-text-muted">
@@ -451,10 +406,7 @@ function ApprovalCard({
         </InlineNotice>
       )}
 
-      {/* A QUESTION is answered with words, not a verdict: the unit is parked on
-          the tool call that asked it and takes this text as the call's result,
-          continuing on the same turn. Allow/deny would resolve the ask with
-          nothing it can act on, so the two are never offered together. */}
+
       {attention ? (
         <form
           className="mt-4 flex flex-col gap-2"
@@ -515,8 +467,6 @@ function ApprovalCard({
   );
 }
 
-/** A failed/stalled unit as a compact row: its state, agent, the mission it was
- *  on, and a link to the board where it can be stopped. */
 function StalledUnitRow({
   unit,
   blocked,
@@ -570,8 +520,6 @@ function StalledUnitRow({
   );
 }
 
-/** A mission's reports clustered under its intent, with a "new" count when the
- *  cluster has reports the operator has not seen. */
 function ReportMissionGroup({
   group,
   lastSeen,
@@ -604,11 +552,6 @@ function ReportMissionGroup({
       <div className="space-y-3">
         {group.items.map(({ report, operatorInbox }) => {
           const fresh = isNewReport(report.createdAt, lastSeen);
-          // The louder case of the operator inbox (runtime/operatorinbox): the
-          // report's parent session had already ended by the time it arrived,
-          // so it landed here instead of with a live supervisor. Marked, not
-          // alarmed — a warning-tinted card and a named badge, matching the
-          // "slightly louder than ordinary reports" ask.
           const supervisorGone = operatorInbox?.reason === 'parent_gone';
           return (
             <div

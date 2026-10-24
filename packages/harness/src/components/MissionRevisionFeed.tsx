@@ -4,17 +4,6 @@ import { relativeTime } from '../lib/relativeTime';
 import { formatRevisionDelta, revisionsNewestFirst } from '../lib/planRevisions';
 import type { PlanRevisionSummary } from '../lib/types';
 
-/**
- * A mission's plan-revision history on the detail surface — the durable
- * "+2/−1 — why" feed (component roadmap Tier 2 item 6), newest-first, so the
- * overnight skim can read HOW the plan moved, not only where it landed. Each
- * line is the entry delta, the agent's own explanation for that revision, and
- * the relative time it was stored.
- *
- * Renders NOTHING when there is no history — an absent ring (a legacy or
- * never-planned mission) — matching the plan panel's "fabricate nothing" stance:
- * no empty shell, just no feed.
- */
 export function MissionRevisionFeed({ revisions }: { revisions?: PlanRevisionSummary[] | null }) {
   const { t, i18n } = useTranslation();
   const ordered = revisionsNewestFirst(revisions);
@@ -49,12 +38,6 @@ export function MissionRevisionFeed({ revisions }: { revisions?: PlanRevisionSum
   );
 }
 
-/**
- * The compact one-line latest-revision marker for the inbox's per-mission groups
- * (Part D's minimal inbox extension): "+2/−1 — why", the newest revision only,
- * rendered inline beside the group's PlanProgress. Renders nothing when the
- * mission has no revision history.
- */
 export function PlanRevisionLine({ revisions }: { revisions?: PlanRevisionSummary[] | null }) {
   const { t } = useTranslation();
   const ordered = revisionsNewestFirst(revisions);

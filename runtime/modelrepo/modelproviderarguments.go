@@ -56,9 +56,6 @@ func WithTools(tools ...Tool) ChatArgument {
 	}
 }
 
-// WithCacheHints declares the request's stable/volatile boundary for
-// provider-side prompt caching (see CacheHints). The hints are copied so the
-// caller's value cannot be mutated through the config afterwards.
 func WithCacheHints(hints CacheHints) ChatArgument {
 	return &chatArgument{
 		applyFunc: func(config *ChatConfig) {
@@ -68,8 +65,6 @@ func WithCacheHints(hints CacheHints) ChatArgument {
 	}
 }
 
-// WithStopSequences bounds generation at the provider; the sequences are
-// copied, and more than MaxStopSequences are refused at request build time.
 func WithStopSequences(sequences ...string) ChatArgument {
 	return &chatArgument{
 		applyFunc: func(config *ChatConfig) {
@@ -78,7 +73,6 @@ func WithStopSequences(sequences ...string) ChatArgument {
 	}
 }
 
-// WithToolChoice selects which tool the model may call.
 func WithToolChoice(choice ToolChoice) ChatArgument {
 	return &chatArgument{
 		applyFunc: func(config *ChatConfig) {
@@ -88,7 +82,6 @@ func WithToolChoice(choice ToolChoice) ChatArgument {
 	}
 }
 
-// WithParallelToolCalls controls whether one turn may contain several tool calls.
 func WithParallelToolCalls(enabled bool) ChatArgument {
 	return &chatArgument{
 		applyFunc: func(config *ChatConfig) {
@@ -97,8 +90,6 @@ func WithParallelToolCalls(enabled bool) ChatArgument {
 	}
 }
 
-// WithResponseFormat constrains the response to a JSON shape; the format is
-// copied so the caller's value cannot be mutated through the config afterwards.
 func WithResponseFormat(format ResponseFormat) ChatArgument {
 	return &chatArgument{
 		applyFunc: func(config *ChatConfig) {

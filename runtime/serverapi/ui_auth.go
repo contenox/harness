@@ -10,35 +10,11 @@ import (
 	"time"
 )
 
-// Beam remote-access login.
-//
-// These three routes back the Beam login page: a browser POSTs the configured
-// shared secret to /ui/login, the server verifies it and hands back an HttpOnly
-// session cookie, and every subsequent request (API mutations, the terminal, the
-// /acp WebSocket upgrade) authenticates from that cookie automatically — no
-// URL-param or localStorage token plumbing on the UI path.
-//
-// Cookie value choice: the cookie carries a short-lived signed session JWT (see
-// session_auth.go), NOT the raw TOKEN. On a correct login the server mints a JWT
-// emulating a fixed admin principal ("local-operator"), signed with a secret
-// HKDF-derived from the configured TOKEN. Every request then authenticates via
-// AuthenticateCredential, which accepts either that cookie JWT (browser path) or
-// the raw TOKEN as a Bearer/X-API-Key header (programmatic path). The raw secret
-// therefore never lands in the browser: the cookie is HttpOnly (script cannot
-// read it), SameSite=Strict (not sent cross-site), Secure over TLS, and expires
-// on its own within 24h even if exfiltrated. terminalapi and the /acp handler
-// read the same `auth_token` cookie, so one login satisfies all three surfaces.
-
 const (
 	defaultLoginMaxAttempts = 20
 	defaultLoginWindow      = time.Minute
 )
 
-// AddUIAuthRoutes registers the Beam login endpoints on mux. Wire it on the
-// serve root mux only (outside the /api protection wrapper, so /ui/login is
-// reachable without already holding the cookie it issues). token is the
-// configured shared secret; when empty, login is not required and the endpoints
-// report so while remaining harmless no-ops.
 func AddUIAuthRoutes(mux *http.ServeMux, token string) {
 	token = strings.TrimSpace(token)
 	limiter := newLoginLimiter(defaultLoginMaxAttempts, defaultLoginWindow)
@@ -58,12 +34,6 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	_ = json.NewEncoder(w).Encode(body)
 }
 
-// requestIsSecure reports whether the browser reached us over TLS, so the
-// session cookie is marked Secure only when it will actually be sent back.
-// Direct TLS sets r.TLS; a TLS-terminating reverse proxy (the common remote
-// deployment) forwards plain HTTP but sets X-Forwarded-Proto=https. Marking a
-// cookie Secure over plain HTTP would silently drop it and break login, so we
-// gate strictly on observed HTTPS.
 func requestIsSecure(r *http.Request) bool {
 	if r.TLS != nil {
 		return true
@@ -79,8 +49,6 @@ func setSessionCookie(w http.ResponseWriter, r *http.Request, value string) {
 		HttpOnly: true,
 		Secure:   requestIsSecure(r),
 		SameSite: http.SameSiteStrictMode,
-		// No Expires/MaxAge: a session cookie, cleared when the browser closes or
-		// on explicit /ui/logout.
 	})
 }
 
@@ -99,8 +67,6 @@ func clearSessionCookie(w http.ResponseWriter, r *http.Request) {
 func uiLoginHandler(token string, limiter *loginLimiter) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if token == "" {
-			// No secret configured: nothing to authenticate against. Report the
-			// state truthfully rather than issuing a meaningless cookie.
 			writeJSON(w, http.StatusOK, authStatusResponse{Required: false, Authenticated: true})
 			return
 		}
@@ -115,14 +81,10 @@ func uiLoginHandler(token string, limiter *loginLimiter) http.Handler {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 			return
 		}
-		// Constant-time compare so a wrong token leaks no timing signal about how
-		// many leading bytes matched.
 		if subtle.ConstantTimeCompare([]byte(strings.TrimSpace(body.Token)), []byte(token)) != 1 {
 			writeJSON(w, http.StatusUnauthorized, authStatusResponse{Required: true, Authenticated: false})
 			return
 		}
-		// Mint a short-lived session JWT (fixed admin principal) instead of storing
-		// the raw secret in the browser — see session_auth.go.
 		jwtStr, _, err := mintSessionToken(token)
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not create session"})
@@ -156,9 +118,6 @@ func clientIP(r *http.Request) string {
 	return host
 }
 
-// loginLimiter is a fixed-window per-client-IP throttle on /ui/login. It bounds
-// online brute-force attempts against the shared secret (the constant-time
-// compare already defeats timing side channels; this caps raw guess volume).
 type loginLimiter struct {
 	mu     sync.Mutex
 	max    int
@@ -181,9 +140,6 @@ func newLoginLimiter(max int, window time.Duration) *loginLimiter {
 	}
 }
 
-// allow records an attempt for key and reports whether it is within the current
-// window's budget. Both successful and failed logins consume budget, so a flood
-// of guesses from one IP is capped regardless of outcome.
 func (l *loginLimiter) allow(key string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()

@@ -7,8 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_ProviderMessagesFromEngine_ThreadsAudio asserts audio attachments
-// travel with their message and never leak into prelude messages.
 func TestUnit_ProviderMessagesFromEngine_ThreadsAudio(t *testing.T) {
 	t.Parallel()
 
@@ -41,8 +39,6 @@ func TestUnit_ProviderMessagesFromEngine_ThreadsAudio(t *testing.T) {
 	require.True(t, libmodelprovider.MessagesHaveAudio(got))
 }
 
-// TestUnit_ProviderMessagesFromEngine_TextOnlyStaysAudioFree asserts a
-// message without attachments never reports audio.
 func TestUnit_ProviderMessagesFromEngine_TextOnlyStaysAudioFree(t *testing.T) {
 	t.Parallel()
 

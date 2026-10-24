@@ -2,18 +2,10 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-/**
- * Design-token guard: components must use the semantic tokens from
- * @contenox/ui (text-error, bg-surface-100, ...), never raw Tailwind palette
- * classes — those don't follow the .dark theme flip and are exactly what made
- * beam look inconsistent. Also bans the invalid `@dark` at-rule (browsers
- * silently drop it; the theme flip is the unlayered `.dark { }` rule).
- */
 
 const BEAM_SRC = join(__dirname, '..');
 const UI_SRC = join(__dirname, '..', '..', '..', 'ui', 'src');
 
-/** Theme bridges (hex-by-design) and intentionally garish debug UI. */
 const ALLOWLIST = ['lib/monacoAppTheme.ts', 'lib/xtermTheme.ts', 'components/visualization/WorkflowVisualizer.tsx'];
 
 const RAW_PALETTE =

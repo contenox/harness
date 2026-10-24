@@ -32,7 +32,6 @@ func newReconcileTestState(t *testing.T, opts ...runtimestate.Option) (context.C
 	return ctx, state, db
 }
 
-// reconcileForResolution must only fire for the resolver's no-models/no-match errors, and must debounce repeated failures.
 func TestUnit_ReconcileForResolution_OnlyResolutionErrorsAndDebounced(t *testing.T) {
 	ctx, state, _ := newReconcileTestState(t)
 	mm := &modelManager{runtime: state, tracker: libtracker.NoopTracker{}}
@@ -60,7 +59,6 @@ func TestUnit_ReconcileForResolution_OnlyResolutionErrorsAndDebounced(t *testing
 	}
 }
 
-// When a backend becomes available after the runtime reconciled to an empty state, a resolution failure must re-scan and discover it.
 func TestUnit_ReconcileForResolution_DiscoversBackendThatAppearsLater(t *testing.T) {
 	ctx, state, db := newReconcileTestState(t, runtimestate.WithAutoDiscoverModels())
 	mm := &modelManager{runtime: state, tracker: libtracker.NoopTracker{}}

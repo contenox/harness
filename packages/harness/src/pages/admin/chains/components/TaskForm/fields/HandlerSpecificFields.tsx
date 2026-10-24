@@ -30,11 +30,10 @@ export default function HandlerSpecificFields({ task, onChange }: HandlerSpecifi
         }
         placeholder={placeholder}
       />
-      {/*{help ? <p className="text-text-muted mt-1 text-xs">{t(help)}</p> : null}*/}
+
     </div>
   );
 
-  // LLM-like
   if (task.handler === HandleChatCompletion || task.handler === HandleExecuteToolCalls) {
     return (
       <Panel variant="surface" className="p-4">
@@ -52,7 +51,6 @@ export default function HandlerSpecificFields({ task, onChange }: HandlerSpecifi
     );
   }
 
-  // raise_error
   if (task.handler === HandleRaiseError) {
     return (
       <Panel variant="surface" className="space-y-2 p-4">
@@ -70,7 +68,6 @@ export default function HandlerSpecificFields({ task, onChange }: HandlerSpecifi
     );
   }
 
-  // noop / default
   if (task.handler === HandleNoop) {
     return (
       <Panel variant="surface" className="p-4">

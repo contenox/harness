@@ -18,18 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// These cover the answerer's DECISIONS with the HITL service and mission store
-// faked out, so each branch is provable in isolation: which policy governs a
-// request, when an evaluation is trusted, and — the one that matters most —
-// that every way of failing to understand a request costs a human's attention
-// instead of granting one. The wire behavior these decisions produce is covered
-// end to end in e2e_unattended_permission_test.go.
-
-// ─── fakes ────────────────────────────────────────────────────────────────
-
-// fakeHITL records what it was asked to evaluate and what ask it was handed,
-// and answers from preset values. It implements only what the answerer calls;
-// the rest satisfies the interface.
 type fakeHITL struct {
 	mu sync.Mutex
 
@@ -75,8 +63,6 @@ func (f *fakeHITL) RequestApproval(_ context.Context, req hitlservice.ApprovalRe
 
 func (f *fakeHITL) Respond(context.Context, string, bool) error { return nil }
 
-// The attention-ask half of the Service: this double covers the PERMISSION path
-// only, so both are inert here.
 func (f *fakeHITL) RequestAttention(context.Context, hitlservice.AttentionRequest, taskengine.TaskEventSink) (string, error) {
 	return "", nil
 }
@@ -116,7 +102,6 @@ func (f *fakeHITL) lastEval(t *testing.T) evalCall {
 	return f.evalCalls[len(f.evalCalls)-1]
 }
 
-// fakeMissions answers GetByInstance from a map; everything else is unused here.
 type fakeMissions struct {
 	missionservice.Service
 	byInstance map[string]*missionservice.Mission
@@ -133,8 +118,6 @@ func (f *fakeMissions) GetByInstance(_ context.Context, instanceID string) (*mis
 	}
 	return m, nil
 }
-
-// ─── helpers ──────────────────────────────────────────────────────────────
 
 func namedRequest(t *testing.T, toolsName, toolName string, args map[string]any) libacp.RequestPermissionRequest {
 	t.Helper()
@@ -184,10 +167,6 @@ func missionsWith(m *missionservice.Mission) *fakeMissions {
 	return &fakeMissions{byInstance: map[string]*missionservice.Mission{"inst-1": m}}
 }
 
-// ─── tests ────────────────────────────────────────────────────────────────
-
-// The mission's envelope is what governs the unit — not the process-global
-// active policy, and not a rule set invented for the headless case.
 func TestUnit_Unattended_EvaluatesTheMissionsEnvelope(t *testing.T) {
 	hitl := &fakeHITL{verdict: hitlservice.EvaluationResult{Action: hitlservice.ActionAllow}}
 	missions := missionsWith(&missionservice.Mission{
@@ -207,8 +186,6 @@ func TestUnit_Unattended_EvaluatesTheMissionsEnvelope(t *testing.T) {
 	require.Equal(t, "/x", eval.args["path"])
 }
 
-// A unit with no mission behind it is still unattended, and is governed by the
-// configured default rather than by a second rule set.
 func TestUnit_Unattended_NoMissionUsesDefaultPolicy(t *testing.T) {
 	hitl := &fakeHITL{verdict: hitlservice.EvaluationResult{Action: hitlservice.ActionAllow}}
 	missions := &fakeMissions{}
@@ -220,8 +197,6 @@ func TestUnit_Unattended_NoMissionUsesDefaultPolicy(t *testing.T) {
 	require.Zero(t, hitl.askCount())
 }
 
-// A mission lookup that FAILS is not a reason to fail open: the default policy
-// applies, and the request is still judged.
 func TestUnit_Unattended_MissionLookupFailureFallsBackSafely(t *testing.T) {
 	hitl := &fakeHITL{verdict: hitlservice.EvaluationResult{Action: hitlservice.ActionApprove}}
 	missions := &fakeMissions{err: fmt.Errorf("store unavailable")}
@@ -234,8 +209,6 @@ func TestUnit_Unattended_MissionLookupFailureFallsBackSafely(t *testing.T) {
 	require.Empty(t, hitl.lastAsk(t).MissionID, "an unresolvable mission is recorded as none, not guessed")
 }
 
-// A denied action is refused without creating an ask: there is nothing for a
-// human to decide about an action the envelope forbids outright.
 func TestUnit_Unattended_DeniedNeedsNoAsk(t *testing.T) {
 	hitl := &fakeHITL{verdict: hitlservice.EvaluationResult{Action: hitlservice.ActionDeny}}
 	missions := missionsWith(&missionservice.Mission{ID: "mission-1", InstanceID: "inst-1", HITLPolicyName: "envelope.json"})
@@ -247,18 +220,13 @@ func TestUnit_Unattended_DeniedNeedsNoAsk(t *testing.T) {
 	require.Zero(t, hitl.askCount())
 }
 
-// THE GAP RULE, half one: a request whose contenox tool identity cannot be
-// established is never evaluated and never allowed — it is escalated.
 func TestUnit_Unattended_UnmappableRequestEscalates(t *testing.T) {
 	hitl := &fakeHITL{
-		// Deliberately hostile: an evaluator that would ALLOW anything. If the
-		// answerer consulted it for an unnamed request, this test would grant.
 		verdict:  hitlservice.EvaluationResult{Action: hitlservice.ActionAllow},
 		approved: false,
 	}
 	missions := missionsWith(&missionservice.Mission{ID: "mission-1", InstanceID: "inst-1", HITLPolicyName: "envelope.json"})
 
-	// A foreign agent's request: a title and arguments, no contenox envelope.
 	req := libacp.RequestPermissionRequest{
 		SessionID: "sess-1",
 		ToolCall: libacp.PermissionToolCall{
@@ -284,21 +252,17 @@ func TestUnit_Unattended_UnmappableRequestEscalates(t *testing.T) {
 	require.Equal(t, "mission-1", ask.MissionID)
 }
 
-// THE GAP RULE, half two: an ALLOW verdict reached without arguments is not
-// trusted, because condition-bearing deny rules could not have been evaluated.
 func TestUnit_Unattended_AllowWithoutArgsEscalates(t *testing.T) {
 	hitl := &fakeHITL{verdict: hitlservice.EvaluationResult{Action: hitlservice.ActionAllow}, approved: true}
 	missions := missionsWith(&missionservice.Mission{ID: "mission-1", InstanceID: "inst-1", HITLPolicyName: "envelope.json"})
 
-	req := namedRequest(t, "local_fs", "read_file", nil) // no rawInput at all
+	req := namedRequest(t, "local_fs", "read_file", nil)
 	resp, err := answerer(hitl, missions, "")(context.Background(), unattended(req))
 	require.NoError(t, err)
 	require.Equal(t, 1, hitl.askCount(), "an allow that could not see the arguments must still ask")
 	require.Equal(t, "yes", resp.Outcome.OptionID, "and the human's approval is honored")
 }
 
-// A DENY verdict reached without arguments is honored as-is: the unsafe
-// direction is permitting, not refusing.
 func TestUnit_Unattended_DenyWithoutArgsStandsWithoutAsking(t *testing.T) {
 	hitl := &fakeHITL{verdict: hitlservice.EvaluationResult{Action: hitlservice.ActionDeny}}
 	missions := missionsWith(&missionservice.Mission{ID: "mission-1", InstanceID: "inst-1", HITLPolicyName: "envelope.json"})
@@ -310,7 +274,6 @@ func TestUnit_Unattended_DenyWithoutArgsStandsWithoutAsking(t *testing.T) {
 	require.Zero(t, hitl.askCount())
 }
 
-// An evaluator that ERRORS escalates rather than guessing.
 func TestUnit_Unattended_PolicyErrorEscalates(t *testing.T) {
 	hitl := &fakeHITL{evalErr: fmt.Errorf("policy source unavailable"), approved: false}
 	missions := missionsWith(&missionservice.Mission{ID: "mission-1", InstanceID: "inst-1", HITLPolicyName: "envelope.json"})
@@ -322,8 +285,6 @@ func TestUnit_Unattended_PolicyErrorEscalates(t *testing.T) {
 	require.Equal(t, "no", resp.Outcome.OptionID)
 }
 
-// The ask carries the full attribution set, so an inbox row can name the unit,
-// the session, the agent and the mission — not just the tool.
 func TestUnit_Unattended_AskCarriesAttribution(t *testing.T) {
 	hitl := &fakeHITL{verdict: hitlservice.EvaluationResult{Action: hitlservice.ActionApprove}, approved: true}
 	missions := missionsWith(&missionservice.Mission{ID: "mission-1", InstanceID: "inst-1", HITLPolicyName: "envelope.json"})
@@ -343,8 +304,6 @@ func TestUnit_Unattended_AskCarriesAttribution(t *testing.T) {
 	require.Equal(t, "/workspace/x", ask.Args["path"])
 }
 
-// A half-wired answerer refuses rather than allowing. A wiring defect must not
-// become an open gate.
 func TestUnit_Unattended_UnwiredDepsRefuse(t *testing.T) {
 	fallback := NewUnattendedPermissionAnswerer(UnattendedPermissionDeps{})
 	req := namedRequest(t, "local_fs", "write_file", map[string]any{"path": "/x"})
@@ -353,9 +312,6 @@ func TestUnit_Unattended_UnwiredDepsRefuse(t *testing.T) {
 	require.Equal(t, "no", resp.Outcome.OptionID)
 }
 
-// An ask the requester's context outlived (a cancelled turn) refuses, and the
-// refusal is reported as an answer rather than as an error the kernel would
-// have to interpret.
 func TestUnit_Unattended_RequestApprovalFailureRefuses(t *testing.T) {
 	hitl := &fakeHITL{
 		verdict:    hitlservice.EvaluationResult{Action: hitlservice.ActionApprove},

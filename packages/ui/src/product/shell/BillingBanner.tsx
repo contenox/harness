@@ -20,9 +20,6 @@ function bannerBelongsOn(
 
 const DISMISSED_KEY = 'cnx-billing-banner-dismissed';
 
-/**
- * Payment trouble, said while the relay is still honouring the subscription instead of after it stops.
- */
 export function BillingBanner() {
   const { routes, useAccount, useAuth, useOpenBillingPortal } = useProductPorts();
   const { pathname } = useLocation();

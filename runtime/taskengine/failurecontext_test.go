@@ -21,7 +21,6 @@ func TestUnit_EnsureFailureContext_EmptyHistoryReceivesErrorAsUserMessage(t *tes
 	require.Zero(t, hist.InputTokens, "extended history must be recounted")
 }
 
-// An orphaned-tool-only tail counts as empty after pairing repair strips it.
 func TestUnit_EnsureFailureContext_OrphanedToolTailReceivesErrorAsUserMessage(t *testing.T) {
 	failure := errors.New("root cause")
 	hist := ChatHistory{Messages: []Message{
@@ -51,8 +50,6 @@ func TestUnit_EnsureFailureContext_ContentBearingHistoryUntouched(t *testing.T) 
 	require.Equal(t, 7, got.InputTokens)
 }
 
-// An unanswered assistant tool call is reportable content (pairing repair
-// stubs, not drops, its result).
 func TestUnit_EnsureFailureContext_AssistantToolCallCountsAsContent(t *testing.T) {
 	hist := ChatHistory{Messages: []Message{
 		{Role: "assistant", CallTools: []ToolCall{{ID: "call-1"}}},
@@ -83,7 +80,6 @@ func TestUnit_EnsureFailureContext_NilFailureUntouched(t *testing.T) {
 	require.Empty(t, hist.Messages)
 }
 
-// Routed history sheds audio on a copy; the caller's original keeps it.
 func TestUnit_EnsureFailureContext_AudioStrippedFromRoutedHistory(t *testing.T) {
 	original := ChatHistory{Messages: []Message{
 		{Role: "user", Content: "transcribe this recording", Audio: []AudioPart{{Data: []byte{1, 2, 3}, MimeType: "audio/wav"}}},
@@ -103,8 +99,6 @@ func TestUnit_EnsureFailureContext_AudioStrippedFromRoutedHistory(t *testing.T) 
 		"the caller's history keeps its audio: the strip works on a copy")
 }
 
-// An audio-only history is effectively empty, so the original error still
-// reaches the handler.
 func TestUnit_EnsureFailureContext_AudioOnlyHistoryStillReportsTheError(t *testing.T) {
 	failure := errors.New("no model matched the requirements: no available model supports audio input")
 	hist := ChatHistory{Messages: []Message{

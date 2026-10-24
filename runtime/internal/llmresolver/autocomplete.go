@@ -7,7 +7,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// AutocompleteSelections resolves only native FIM providers on the requested route.
 func AutocompleteSelections(ctx context.Context, req Request, getModels func(context.Context, ...string) ([]modelrepo.Provider, error), policy Policy) ([]Selection, error) {
 	if len(req.ModelNames) != 1 || len(req.ProviderTypes) != 1 || req.ContextLength < 0 {
 		return nil, errors.New("autocomplete requires one explicit provider and model and a non-negative context length")

@@ -31,10 +31,6 @@ impl Pty {
                 None => command.env_remove(key),
             };
         }
-        // Pinned, not inherited: the colour ladder beam picks is read off these
-        // two, so a developer's shell (COLORTERM=truecolor) and a CI runner
-        // (neither set) would otherwise drive the same assertion to different
-        // profiles — truecolor here, ANSI256 there.
         command.env("TERM", "xterm-256color");
         command.env("COLORTERM", "truecolor");
 
@@ -143,7 +139,6 @@ impl Pty {
         self.signal(libc::SIGINT);
     }
 
-    // What the kernel sends the foreground group when its terminal window closes.
     pub fn hangup(&self) {
         self.signal(libc::SIGHUP);
     }

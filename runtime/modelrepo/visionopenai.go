@@ -2,11 +2,6 @@ package modelrepo
 
 import "strings"
 
-// OpenAI's /v1/models carries no modality field, so vision support is maintained
-// here from https://developers.openai.com/api/docs/guides/images-vision. Add new
-// family prefixes to openAIVisionPrefixes / openAITextOnlyPrefixes as OpenAI
-// ships them. Precedence: non-vision markers, legacy vision-preview snapshots,
-// text-only prefixes, vision prefixes, then false.
 var (
 	openAINonVisionMarkers = []string{
 		"embedding", "tts", "whisper", "transcribe", "-audio", "realtime",
@@ -21,9 +16,6 @@ var (
 	}
 )
 
-// OpenAIModelSupportsVision reports whether an OpenAI model id accepts image
-// input, from the maintained list above. It exists because OpenAI's model API
-// reports no modality; the capability override always takes precedence.
 func OpenAIModelSupportsVision(modelName string) bool {
 	n := strings.ToLower(strings.TrimSpace(modelName))
 	for _, m := range openAINonVisionMarkers {
@@ -31,7 +23,6 @@ func OpenAIModelSupportsVision(modelName string) bool {
 			return false
 		}
 	}
-	// Legacy dated vision snapshots (gpt-4-vision-preview, gpt-4-1106-vision-preview).
 	if strings.Contains(n, "vision-preview") {
 		return true
 	}

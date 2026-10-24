@@ -30,17 +30,10 @@ type OpenAIProvider struct {
 	canThink        bool
 	canVision       bool
 	tracker         libtracker.ActivityTracker
-	// thinking is the model's declared thinking controls; nil leaves the
-	// request with the vendor's own literal for the level the caller asked for.
-	thinking *modelrepo.ThinkingTypes
-	// dialect is the model's declared wire dialect; nil is the OpenAI defaults.
-	dialect modelrepo.ChatDialect
+	thinking        *modelrepo.ThinkingTypes
+	dialect         modelrepo.ChatDialect
 }
 
-// NewOpenAIProvider constructs a provider whose requests are restated in the
-// wire dialect the capability declaration names. An unknown dialect is an error
-// rather than a silent fallback to the OpenAI defaults, which would send members
-// the vendor does not declare.
 func NewOpenAIProvider(apiKey, modelName string, backendURLs []string, capability modelrepo.CapabilityConfig, httpClient *http.Client, tracker libtracker.ActivityTracker) modelrepo.Provider {
 	if httpClient == nil {
 		httpClient = modelrepo.SharedHTTPClient
@@ -126,7 +119,6 @@ func (p *OpenAIProvider) CanVision() bool {
 	return p.canVision
 }
 
-// CanAudio always reports false; audio input is refused, not dropped.
 func (p *OpenAIProvider) CanAudio() bool {
 	return false
 }
@@ -212,7 +204,6 @@ func (p *OpenAIProvider) GetStreamConnection(ctx context.Context, backendID stri
 
 func (p *OpenAIProvider) CanAutocomplete() bool { return p.codex == nil && p.canAutocomplete }
 
-// CanNextEdit reports the model's explicit independent edit capability.
 func (p *OpenAIProvider) CanNextEdit() bool {
 	if p.codex != nil || !p.canNextEdit {
 		return false

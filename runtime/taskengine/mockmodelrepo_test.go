@@ -9,7 +9,6 @@ import (
 	"github.com/contenox/harness/runtime/taskengine"
 )
 
-// captureTaskEventSink records every event the engine publishes.
 type captureTaskEventSink struct {
 	events []taskengine.TaskEvent
 }
@@ -21,7 +20,6 @@ func (s *captureTaskEventSink) PublishTaskEvent(ctx context.Context, event taske
 
 func (s *captureTaskEventSink) Wants(taskengine.TaskEventKind) bool { return true }
 
-// mockModelRepo stands in for the model repository in engine tests.
 type mockModelRepo struct {
 	streamFunc func(ctx context.Context, req llmrepo.Request, messages []libmodelprovider.Message, opts ...libmodelprovider.ChatArgument) (<-chan *libmodelprovider.StreamParcel, llmrepo.Meta, error)
 	chatFunc   func(ctx context.Context, req llmrepo.Request, messages []libmodelprovider.Message, opts ...libmodelprovider.ChatArgument) (libmodelprovider.ChatResult, llmrepo.Meta, error)

@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './api';
 
-/**
- * Wire-level tests for the approval inbox verbs, in the same shape as
- * fleetApi.test.ts / authApi.test.ts: `fetch` is stubbed, so these pin the exact
- * path, method, and body of GET /api/approvals and POST /api/approvals/{id}.
- */
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
     ok,
@@ -42,7 +37,6 @@ describe('approvals api', () => {
     const { url, init } = lastCall();
     expect(url).toContain('/api/approvals');
     expect(url).not.toContain('limit');
-    // A GET goes through apiFetch with no explicit method/body.
     expect(init?.body).toBeUndefined();
   });
 

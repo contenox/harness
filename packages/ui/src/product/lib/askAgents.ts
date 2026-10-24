@@ -3,41 +3,20 @@ import type { Ask, AskSubscription, EventConsumer, Instance } from './api/types'
 import { ALL_AGENTS, openAsks, type AskBoard } from './asks';
 import { MAX_SUBSCRIBED_AGENT_BYTES } from './api/types';
 
-/**
- * One agent, as much as the relay lets this app know of it.
- */
 export interface AgentReach {
   name: string;
-  /**
-   * Whether this member is subscribed to the name itself.
-   */
   subscribed: boolean;
-  /**
-   * Machines this agent is asking from or configured on, by instance id, in the order they were met.
-   */
   hosts: string[];
-  /**
-   * How many of this agent's asks are open on the board right now.
-   */
   waiting: number;
-  /**
-   * How many consumers fire this agent.
-   */
   triggers: number;
 }
 
-/**
- * What the catalogue is folded from — three listings the app already reads.
- */
 export interface AgentSources {
   board: AskBoard;
   subscriptions: AskSubscription[] | undefined;
   consumers: EventConsumer[] | undefined;
 }
 
-/**
- * Every agent this app can name, alphabetically.
- */
 export function agentCatalogue({ board, subscriptions, consumers }: AgentSources): AgentReach[] {
   const byName = new Map<string, AgentReach>();
   const reach = (name: string): AgentReach => {
@@ -73,30 +52,18 @@ export function agentCatalogue({ board, subscriptions, consumers }: AgentSources
   return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/**
- * One agent out of the catalogue, or null when this app has never heard the name.
- */
 export function agentReach(catalogue: AgentReach[], name: string): AgentReach | null {
   return catalogue.find(agent => agent.name === name) ?? null;
 }
 
-/**
- * The open asks from one agent, newest first — the board's own order, filtered.
- */
 export function agentAsks(board: AskBoard, name: string): Ask[] {
   return board.asks.filter(ask => (ask.agent_name ?? '').trim() === name);
 }
 
-/**
- * The open asks parked on one machine, newest first.
- */
 export function hostAsks(board: AskBoard, instanceID: string): Ask[] {
   return board.asks.filter(ask => ask.instance_id === instanceID);
 }
 
-/**
- * The consumers that fire one agent — what makes it run at all.
- */
 export function agentTriggers(
   consumers: EventConsumer[] | undefined,
   name: string,
@@ -104,9 +71,6 @@ export function agentTriggers(
   return (consumers ?? []).filter(consumer => (consumer.agent_name ?? '').trim() === name);
 }
 
-/**
- * The consumers delivering to one machine, whether they name an agent or a chain.
- */
 export function hostTriggers(
   consumers: EventConsumer[] | undefined,
   instanceID: string,
@@ -114,9 +78,6 @@ export function hostTriggers(
   return (consumers ?? []).filter(consumer => consumer.instance_id === instanceID);
 }
 
-/**
- * The agents seen on one machine, by the same two sources the catalogue uses.
- */
 export function hostAgents(sources: AgentSources, instanceID: string): AgentReach[] {
   return agentCatalogue({
     board: { asks: hostAsks(sources.board, instanceID), outcomes: sources.board.outcomes },
@@ -125,9 +86,6 @@ export function hostAgents(sources: AgentSources, instanceID: string): AgentReac
   }).filter(agent => agent.waiting > 0 || agent.triggers > 0);
 }
 
-/**
- * The machines an agent reaches, resolved against the fleet listing, connected first and alphabetical within each band — the scanning order every other host list in this app uses, because "which of these can receive right now" is the question being asked of it.
- */
 export function agentInstances(
   hosts: string[],
   instances: Instance[] | undefined,
@@ -143,25 +101,16 @@ export function agentInstances(
   return { known, unknown: hosts.length - known.length };
 }
 
-/**
- * Whether the app has anything to offer before a name is typed.
- */
 export function catalogueIsEmpty(catalogue: AgentReach[]): boolean {
   return catalogue.length === 0;
 }
 
-/**
- * Why a typed agent name cannot be subscribed to, or null when it can.
- */
 export function subscribableAgentName(raw: string): string | null {
   const name = raw.trim();
   if (name === '' || agentNameRefusal(name) !== null) return null;
   return name;
 }
 
-/**
- * What to say about a name the relay would refuse.
- */
 export function agentNameRefusal(raw: string): string | null {
   const name = raw.trim();
   if (name === '') return null;
@@ -171,16 +120,10 @@ export function agentNameRefusal(raw: string): string | null {
   return null;
 }
 
-/**
- * UTF-8 length, because every bound the relay states is in BYTES and a name is not ASCII.
- */
 export function byteLength(value: string): number {
   return new TextEncoder().encode(value).length;
 }
 
-/**
- * Whether a name carries a character that would survive into a log line, which is the only reason the relay refuses one (`askplane.validAgentName`).
- */
 export function hasControlCharacter(value: string): boolean {
   for (const character of value) {
     const code = character.codePointAt(0) ?? 0;

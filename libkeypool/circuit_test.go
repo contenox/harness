@@ -28,9 +28,6 @@ func TestUnit_CircuitBreakerCountsToThresholdThenAdmitsATrial(t *testing.T) {
 	assert.Equal(t, "Closed", cb.State("prov-1", now))
 }
 
-// A failure the caller classifies as terminal for the upstream skips the count:
-// waiting for a threshold spends the caller's latency on an upstream that will
-// keep refusing.
 func TestUnit_CircuitBreakerOpensImmediatelyOnATerminalFailure(t *testing.T) {
 	cb, err := libkeypool.NewProviderCircuitBreaker(5, time.Minute)
 	require.NoError(t, err)

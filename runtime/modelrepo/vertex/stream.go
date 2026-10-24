@@ -18,9 +18,6 @@ type vertexStreamClient struct {
 	vertexClient
 }
 
-// appendVertexTextPart adds a streamed text delta to the replayed turn, so a
-// continuation carries one text part per run of deltas rather than one part per
-// delta.
 func appendVertexTextPart(parts []vertexPart, text string) []vertexPart {
 	if len(parts) > 0 && parts[len(parts)-1].Text != "" && !parts[len(parts)-1].Thought && parts[len(parts)-1].ThoughtSignature == "" {
 		parts[len(parts)-1].Text += text
@@ -29,7 +26,6 @@ func appendVertexTextPart(parts []vertexPart, text string) []vertexPart {
 	return append(parts, vertexPart{Text: text})
 }
 
-// appendVertexThoughtPart adds a streamed reasoning delta to the replayed turn.
 func appendVertexThoughtPart(parts []vertexPart, text string) []vertexPart {
 	if len(parts) > 0 && parts[len(parts)-1].Thought && parts[len(parts)-1].ThoughtSignature == "" {
 		parts[len(parts)-1].Text += text
@@ -133,8 +129,6 @@ func (c *vertexStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 		)
 
 		sc := bufio.NewScanner(resp.Body)
-		// SSE frames carry a whole chunk per line; the bufio.Scanner default
-		// 64KB cap truncates large chunks, so raise it.
 		sc.Buffer(make([]byte, 64*1024), 1024*1024)
 		for sc.Scan() {
 			line := sc.Text()
@@ -196,9 +190,6 @@ func (c *vertexStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 						ArgsFragment: string(argsJSON),
 					}
 					toolCallIndex++
-					// A streamed signature may arrive in its own part ahead of
-					// the function call it belongs to, so the pending signature
-					// is consumed by the next call rather than copied onto it.
 					sig := part.ThoughtSignature
 					if sig == "" {
 						sig, pendingSignature = pendingSignature, ""
@@ -229,10 +220,6 @@ func (c *vertexStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 			return
 		}
 
-		// Same contract as the non-streaming path: a turn that produced
-		// nothing at all is an error, not an empty success, so the caller's
-		// retry fires. A turn that produced only thoughts or a thought
-		// signature is a legal turn and is reported as one.
 		if totalContent.Len() == 0 && toolCallIndex == 0 && thoughtLen == 0 && signatureParts == 0 {
 			reason := finishReason
 			if reason == "" {

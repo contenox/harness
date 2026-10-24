@@ -2,10 +2,6 @@ package libacp
 
 import "strings"
 
-// FlattenContent projects a content block list down to a single string for a
-// consumer that can only accept flat text, dropping block types it cannot
-// represent (image, audio, blob resources, unknown) and returning them,
-// deduplicated in first-seen order, as dropped.
 func FlattenContent(blocks []ContentBlock) (text string, dropped []string) {
 	var b strings.Builder
 	seen := map[string]bool{}

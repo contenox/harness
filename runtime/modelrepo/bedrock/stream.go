@@ -40,9 +40,6 @@ func (c *bedrockStreamClient) Stream(ctx context.Context, messages []modelrepo.M
 		defer stream.Close()
 
 		outcome := relayConverseEvents(ctx, c.model, stream.Events(), toOriginal, parcels)
-		// A ConverseStream failure arrives as the stream's own error — including
-		// the exception events the vendor delivers in band — so it is classified
-		// here like the non-streaming path.
 		if err := stream.Err(); err != nil {
 			err = classifyBedrockError(fmt.Errorf("bedrock stream (model=%s): %w", c.model.name, err))
 			reportErr(err)
@@ -52,9 +49,6 @@ func (c *bedrockStreamClient) Stream(ctx context.Context, messages []modelrepo.M
 			}
 			return
 		}
-		// A refusal is the vendor's outcome, delivered as a normal terminal
-		// event; the caller is told the turn was refused rather than handed the
-		// partial content it produced.
 		if outcome.refusal != nil {
 			reportErr(outcome.refusal)
 			select {
@@ -68,11 +62,6 @@ func (c *bedrockStreamClient) Stream(ctx context.Context, messages []modelrepo.M
 	return parcels, nil
 }
 
-// converseStreamInput restates one Converse request as its streaming form. The
-// streaming API takes GuardrailStreamConfiguration where Converse takes
-// GuardrailConfiguration, so a request carrying guardrails cannot be restated
-// field for field; no request does, because the neutral request has no guardrail
-// control to set.
 func converseStreamInput(in *bedrockruntime.ConverseInput) *bedrockruntime.ConverseStreamInput {
 	if in == nil {
 		return nil
@@ -93,8 +82,6 @@ func converseStreamInput(in *bedrockruntime.ConverseInput) *bedrockruntime.Conve
 	}
 }
 
-// streamOutcome is what one relayed ConverseStream produced: how many content
-// parcels it carried, and the vendor's refusal when the turn was refused.
 type streamOutcome struct {
 	refusal *modelrepo.RefusalError
 	chunks  int
@@ -166,8 +153,6 @@ func relayConverseEvents(ctx context.Context, m converseModel, events <-chan typ
 						return outcome
 					}
 				case *types.ReasoningContentBlockDeltaMemberSignature:
-					// The signature is not displayable text, but it must be
-					// replayed with the reasoning it signs.
 					reasoningItemAt(reasoning, index).Signature += r.Value
 				case *types.ReasoningContentBlockDeltaMemberRedactedContent:
 					reasoningItemAt(reasoning, index).Redacted = base64.StdEncoding.EncodeToString(r.Value)
@@ -192,17 +177,12 @@ func relayConverseEvents(ctx context.Context, m converseModel, events <-chan typ
 			sawTermEvent = true
 
 		case *types.ConverseStreamOutputMemberMetadata:
-			// usageFromConverse recomputes PromptTokens per its normalization rule.
 			if u := usageFromConverse(v.Value.Usage); u != nil {
 				usage = u
 			}
 		}
 	}
 
-	// The terminal parcel is sent whatever the connection did: one that carries
-	// neither the vendor's stop reason nor its end-of-stream marker is the end of
-	// a connection that died mid-turn, which the assembler reports as a
-	// truncation rather than as an empty successful answer.
 	terminal := &modelrepo.StreamTerminal{
 		FinishReason: stopReason,
 		Usage:        usage,

@@ -124,7 +124,7 @@ func TestSystem_ServeWithHandlerError(t *testing.T) {
 	defer sub.Unsubscribe()
 
 	reply, err := ps.Request(ctx, subject, requestMessage)
-	require.NoError(t, err) // the request itself doesn't fail; the handler error becomes the reply body
+	require.NoError(t, err)
 
 	expectedReply := fmt.Appendf(nil, "error: %s", expectedError)
 	require.Equal(t, expectedReply, reply)

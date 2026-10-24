@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '../../i18n';
 
-/**
- * The palette namespace is new, so pin the house rule that every key ships in
- * BOTH languages with an identical key set and no blank German strings — a
- * German operator must never fall through to English or a raw key in the one
- * surface reachable from every page.
- */
 type Bundle = Record<string, Record<string, unknown>>;
 
 describe('palette i18n — en/de parity', () => {

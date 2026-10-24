@@ -104,8 +104,6 @@ func runUpdateInstall(cmd *cobra.Command, _ []string) error {
 	return downloadAndReplace(ctx, cmd, latest)
 }
 
-// isUpdateCheckDisabled returns true when the user has opted out via config.
-// DB errors are ignored — an absent DB means fresh install, updates are enabled.
 func isUpdateCheckDisabled(cmd *cobra.Command, ctx context.Context) bool {
 	db, store, err := openConfigDB(cmd)
 	if err != nil {
@@ -147,8 +145,6 @@ func downloadAndReplace(ctx context.Context, cmd *cobra.Command, tag string) err
 		return fmt.Errorf("could not resolve binary symlinks: %w", err)
 	}
 
-	// Write to a temp file in the same directory so the final rename is atomic
-	// (same filesystem, no cross-device move).
 	tmp, err := os.CreateTemp(filepath.Dir(exe), ".contenox-update-*"+ext)
 	if err != nil {
 		return fmt.Errorf("could not create temp file for download: %w", err)
@@ -156,7 +152,7 @@ func downloadAndReplace(ctx context.Context, cmd *cobra.Command, tag string) err
 	tmpPath := tmp.Name()
 	defer func() {
 		tmp.Close()
-		_ = os.Remove(tmpPath) // no-op after successful rename
+		_ = os.Remove(tmpPath)
 	}()
 
 	if _, err := io.Copy(tmp, resp.Body); err != nil {
@@ -168,9 +164,8 @@ func downloadAndReplace(ctx context.Context, cmd *cobra.Command, tag string) err
 	tmp.Close()
 
 	if goruntime.GOOS == "windows" {
-		// Windows cannot replace a running .exe; rename it aside first.
 		old := exe + ".old"
-		_ = os.Remove(old) // discard any leftover from a previous update attempt
+		_ = os.Remove(old)
 		if err := os.Rename(exe, old); err != nil {
 			return fmt.Errorf("could not move existing binary (try running as Administrator): %w\nDownload manually from https://github.com/contenox/harness/releases", err)
 		}

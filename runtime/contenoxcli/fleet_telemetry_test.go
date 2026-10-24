@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// capturedStart records one tracker.Start span and the reportChange it received,
-// so the adapter test can assert the op/subject/fields a lifecycle Event maps to.
 type capturedStart struct {
 	op       string
 	subject  string
@@ -99,8 +97,6 @@ func TestUnit_InstanceEventSink_OpMapsEachKind(t *testing.T) {
 	require.Equal(t, "unsupervised_permission", tracker.starts[3].op)
 }
 
-// The Noop tracker path (tracing disabled) must be a safe no-op: the sink still
-// records-and-returns without panicking, matching the tracing gate.
 func TestUnit_InstanceEventSink_NoopTrackerIsSafe(t *testing.T) {
 	sink := newInstanceEventSink(libtracker.NoopTracker{})
 	require.NotPanics(t, func() {

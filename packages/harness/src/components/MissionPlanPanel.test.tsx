@@ -39,7 +39,6 @@ describe('MissionPlanPanel — the mission detail plan checklist', () => {
     expect(html).toContain('Clone the repository');
     expect(html).toContain('Reproduce the flake');
     expect(html).toContain('Write the fix');
-    // Status chips for each lifecycle state, and priority markers.
     expect(html).toContain('Done');
     expect(html).toContain('In progress');
     expect(html).toContain('Pending');

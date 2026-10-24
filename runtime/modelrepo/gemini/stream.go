@@ -18,12 +18,6 @@ type GeminiStreamClient struct {
 	geminiClient
 }
 
-// Stream emits raw deltas: text and thinking as they arrive, each functionCall
-// part as one whole-call ToolCallDelta, then one terminal parcel. Assembly
-// belongs to modelrepo.StreamAssembler.
-// appendTextPart adds a streamed text delta to the replayed turn, so a
-// continuation carries one text part per run of deltas rather than one part per
-// delta.
 func appendTextPart(parts []geminiPart, text string) []geminiPart {
 	if len(parts) > 0 && parts[len(parts)-1].Text != "" && !parts[len(parts)-1].Thought && parts[len(parts)-1].ThoughtSignature == "" {
 		parts[len(parts)-1].Text += text
@@ -32,7 +26,6 @@ func appendTextPart(parts []geminiPart, text string) []geminiPart {
 	return append(parts, geminiPart{Text: text})
 }
 
-// appendThoughtPart adds a streamed reasoning delta to the replayed turn.
 func appendThoughtPart(parts []geminiPart, text string) []geminiPart {
 	if len(parts) > 0 && parts[len(parts)-1].Thought && parts[len(parts)-1].ThoughtSignature == "" {
 		parts[len(parts)-1].Text += text
@@ -131,8 +124,6 @@ func (c *GeminiStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 		)
 
 		sc := bufio.NewScanner(resp.Body)
-		// SSE frames carry a whole chunk per line; the bufio.Scanner default
-		// 64KB cap truncates large chunks, so raise it.
 		sc.Buffer(make([]byte, 64*1024), 1024*1024)
 		for sc.Scan() {
 			line := sc.Text()
@@ -192,9 +183,6 @@ func (c *GeminiStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 						ArgsFragment: string(argsJSON),
 					}
 					toolCallIndex++
-					// A streamed signature may arrive in its own part ahead of
-					// the function call it belongs to, so the pending signature
-					// is consumed by the next call rather than copied onto it.
 					sig := part.ThoughtSignature
 					if sig == "" {
 						sig, pendingSignature = pendingSignature, ""
@@ -224,11 +212,6 @@ func (c *GeminiStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 			return
 		}
 
-		// Same contract as the vertex stream: a turn that produced nothing at
-		// all is an error, not an empty success, so the caller's retry fires
-		// (Gemini emits this shape on MALFORMED_FUNCTION_CALL). A turn that
-		// produced only thoughts or a thought signature is a legal turn and is
-		// reported as one.
 		if textLen == 0 && toolCallIndex == 0 && thoughtLen == 0 && signatureParts == 0 {
 			reason := finishReason
 			if reason == "" {

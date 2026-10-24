@@ -1,13 +1,3 @@
-// Package missionapi exposes mission records (runtime/missionservice) over REST:
-// the durable, agent-reportable half of the fleet manager's headless
-// interaction model. Missions are the operator's one-line intent, envelope,
-// and agent — created, listed, edited, and bound to the session/instance they
-// spawn — plus the reports a unit files back while on the mission.
-//
-// The route/handler shape mirrors runtime/internal/agentregistryapi and
-// runtime/internal/fleetapi so the fleet surfaces stay easy to compare, and the
-// `// @request` / `// @response` / param-description annotations are what the
-// OpenAPI generator (tools/openapi-gen) scans for.
 package missionapi
 
 import (
@@ -17,17 +7,6 @@ import (
 	"github.com/contenox/harness/runtime/missionservice"
 )
 
-// MissionPatch is the PATCH body: any subset of intent, status, and a session
-// and/or instance id to bind. Omitted fields are left unchanged.
-//
-// Status accepts any value missionservice validates (open and the terminal set
-// landed | derailed | stuck | abandoned). This route is deliberately the
-// OPERATOR OVERRIDE, and it goes through the unguarded Update path on purpose:
-// an operator relabeling a mission — even correcting a mislabeled terminal one —
-// is a legitimate manual act, so the immutability guard that protects the
-// agent-reportable path lives on missionservice.Finish, not here. The two are a
-// pair by design: Finish is how a unit (or the runtime) records a terminal
-// outcome as hard truth; PATCH is how a human overrides one.
 type MissionPatch struct {
 	Intent     *string `json:"intent,omitempty"`
 	Status     *string `json:"status,omitempty"`
@@ -35,8 +14,6 @@ type MissionPatch struct {
 	InstanceID string  `json:"instanceId,omitempty"`
 }
 
-// AddRoutes registers the mission CRUD routes and the mission report routes
-// on mux.
 func AddRoutes(mux *http.ServeMux, svc missionservice.Service) {
 	h := &missionHandler{svc: svc}
 
@@ -53,10 +30,9 @@ type missionHandler struct {
 	svc missionservice.Service
 }
 
-// create stores a new mission record and returns the created mission.
 func (h *missionHandler) create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	m, err := apiframework.Decode[missionservice.Mission](r) // @request missionservice.Mission
+	m, err := apiframework.Decode[missionservice.Mission](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -65,10 +41,9 @@ func (h *missionHandler) create(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusCreated, m) // @response missionservice.Mission
+	_ = apiframework.Encode(w, r, http.StatusCreated, m)
 }
 
-// list returns mission records newest-first, keyset-paginated by creation time.
 func (h *missionHandler) list(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -83,15 +58,9 @@ func (h *missionHandler) list(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, items) // @response []*missionservice.Mission
+	_ = apiframework.Encode(w, r, http.StatusOK, items)
 }
 
-// get returns one mission record whole. The encoded Mission carries the current
-// Plan (Revision/Explanation/Entries) AND the additive `planRevisions` field —
-// the bounded ring of past revision summaries (missionservice.PlanRevisionSummary)
-// the inbox's "plan revised +2/−1 — why" history feed skims. It is omitempty, so
-// a never-planned or legacy mission simply omits it; no separate route surfaces
-// the history — it rides this GET.
 func (h *missionHandler) get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique ID of the mission.")
@@ -100,15 +69,13 @@ func (h *missionHandler) get(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.GetOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, m) // @response missionservice.Mission
+	_ = apiframework.Encode(w, r, http.StatusOK, m)
 }
 
-// patch updates a mission's intent and/or status, and can bind it to a
-// session and instance in the same call.
 func (h *missionHandler) patch(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique ID of the mission.")
-	p, err := apiframework.Decode[MissionPatch](r) // @request missionapi.MissionPatch
+	p, err := apiframework.Decode[MissionPatch](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
@@ -141,10 +108,9 @@ func (h *missionHandler) patch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_ = apiframework.Encode(w, r, http.StatusOK, m) // @response missionservice.Mission
+	_ = apiframework.Encode(w, r, http.StatusOK, m)
 }
 
-// delete removes the mission record.
 func (h *missionHandler) delete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique ID of the mission.")
@@ -152,19 +118,13 @@ func (h *missionHandler) delete(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.DeleteOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, "deleted") // @response string
+	_ = apiframework.Encode(w, r, http.StatusOK, "deleted")
 }
 
-// addReport files a report against mission id. The path id is authoritative:
-// missionservice.Service.AddReport binds it onto the decoded report
-// regardless of what the body's missionId field says. An unknown mission id
-// surfaces as 404, not a silent insert; an invalid Kind or a multi-line
-// Summary surfaces as 422 via the same validated-CRUD error mapping every
-// other mutation in this package uses.
 func (h *missionHandler) addReport(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique ID of the mission.")
-	rep, err := apiframework.Decode[missionservice.Report](r) // @request missionservice.Report
+	rep, err := apiframework.Decode[missionservice.Report](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -173,10 +133,9 @@ func (h *missionHandler) addReport(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusCreated, rep) // @response missionservice.Report
+	_ = apiframework.Encode(w, r, http.StatusCreated, rep)
 }
 
-// listReports returns mission id's reports newest-first.
 func (h *missionHandler) listReports(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique ID of the mission.")
@@ -192,5 +151,5 @@ func (h *missionHandler) listReports(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, items) // @response []*missionservice.Report
+	_ = apiframework.Encode(w, r, http.StatusOK, items)
 }

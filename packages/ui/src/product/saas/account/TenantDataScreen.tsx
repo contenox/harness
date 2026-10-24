@@ -6,18 +6,12 @@ import { ScreenError, ScreenLoading } from '../ScreenState';
 import { ScreenHeader } from '../../shell/ScreenHeader';
 import { BackTo } from '../../shell/BackTo';
 
-/**
- * One recorded acceptance, as the account and the person each report it.
- */
 export interface AcceptanceRecord {
   document: string;
   version: string;
   acceptedAt: string;
 }
 
-/**
- * The account a person is ending or leaving, as much of it as this screen needs.
- */
 export interface DataSubjectAccount {
   id: string;
   slug: string;
@@ -31,9 +25,6 @@ const DOCUMENT_LABELS: Record<string, string> = {
   withdrawal_waiver: 'Withdrawal waiver',
 };
 
-/**
- * The data rights: read what was agreed to, take a copy of everything, or make it stop existing.
- */
 export function TenantDataScreen({
   account,
   email,
@@ -151,10 +142,7 @@ function DeleteAccountCard({
         Delete this account
       </Button>
 
-      {/* The dialog's verb differs from the button that opened it, and that is not
-          decoration: two controls reading "Delete this account" on one screen are
-          two controls a test cannot tell apart, and neither can anybody reading a
-          screenshot of a half-open dialog. */}
+
       <ConfirmDialog
         open={confirming}
         onClose={() => setConfirming(false)}

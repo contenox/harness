@@ -6,15 +6,9 @@ import path from 'path';
 import type { Plugin } from 'vite';
 import { defineConfig, loadEnv } from 'vite';
 
-/** Always load `.env`, `.env.proxy`, etc. from this package — not `process.cwd()` (monorepo / tooling can start Vite from the repo root). */
 const harnessPackageRoot = path.dirname(fileURLToPath(import.meta.url));
 const harnessDistDir = path.resolve(harnessPackageRoot, '../../runtime/internal/web/harness/dist');
 
-/**
- * When using the dev API proxy, the browser only talks to the Vite origin.
- * Without a fallback, direct navigation to e.g. /chats 404s because there is no static file.
- * Mirrors the Go embed handler’s SPA fallback for non-/api routes.
- */
 function harnessSpaFallback(): Plugin {
   return {
     name: 'beam-spa-fallback',
@@ -87,7 +81,6 @@ export default defineConfig(({ mode }) => {
       outDir: harnessDistDir,
       emptyOutDir: true,
     },
-    /** Root-relative URLs so deep links (e.g. /chat/:id) still load /assets/* from the server root. */
     base: '/',
     server: devApiProxy
       ? {
@@ -96,22 +89,17 @@ export default defineConfig(({ mode }) => {
               target: proxyTarget,
               changeOrigin: true,
               ws: true,
-              // changeOrigin rewrites Host to the API origin; rewrite Origin to
-              // match so the local serve's same-origin mutation guard accepts the
-              // dev page instead of treating it as a cross-site request.
               configure: proxy => {
                 proxy.on('proxyReq', proxyReq => {
                   proxyReq.setHeader('origin', new URL(proxyTarget).origin);
                 });
               },
             },
-            /** ACP chat speaks WebSocket NDJSON on /acp (runtime/contenoxcli/acp_ws.go), outside /api. */
             '/acp': {
               target: proxyTarget,
               changeOrigin: true,
               ws: true,
             },
-            /** Auth (login/logout/auth-status) lives under /ui, outside /api. */
             '/ui': {
               target: proxyTarget,
               changeOrigin: true,

@@ -1,4 +1,3 @@
-// src/pages/admin/chains/components/TaskForm/TaskForm.tsx
 import { Button, Panel, Section, Spinner, Tabs } from '@contenox/ui';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';

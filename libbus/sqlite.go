@@ -16,14 +16,10 @@ type sqlExec interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 }
 
-// SQLiteBus implements Messenger over a SQLite database. The bus_events,
-// bus_requests and bus_replies tables must exist before use.
 type SQLiteBus struct {
 	db     sqlExec
 	mu     sync.Mutex
 	closed bool
-	// ctx bounds every background goroutine this bus owns and is cancelled by
-	// Close; subscriptions bind to it too.
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
@@ -36,23 +32,18 @@ const (
 	defaultEventPoll   = 200 * time.Millisecond
 	defaultRequestPoll = 100 * time.Millisecond
 	defaultTimeout     = 10 * time.Second
-	// Caps how long Unsubscribe hands pending events to a consumer that is not reading.
-	drainTimeout = time.Second
+	drainTimeout       = time.Second
 )
 
-// SQLiteBusOptions overrides poll intervals.
 type SQLiteBusOptions struct {
 	EventPoll   time.Duration
 	RequestPoll time.Duration
 }
 
-// NewSQLite creates a SQLite-backed Messenger over the result of
-// dbManager.WithoutTransaction().
 func NewSQLite(exec sqlExec) *SQLiteBus {
 	return NewSQLiteWithOptions(exec, SQLiteBusOptions{})
 }
 
-// NewSQLiteWithOptions is like NewSQLite but allows tuning poll intervals.
 func NewSQLiteWithOptions(exec sqlExec, opt SQLiteBusOptions) *SQLiteBus {
 	ctx, cancel := context.WithCancel(context.Background())
 	ep := opt.EventPoll
@@ -78,7 +69,6 @@ func NewSQLiteWithOptions(exec sqlExec, opt SQLiteBusOptions) *SQLiteBus {
 	return b
 }
 
-// Publish inserts a row into bus_events so Stream subscribers can pick it up.
 func (b *SQLiteBus) Publish(ctx context.Context, subject string, data []byte) error {
 	b.mu.Lock()
 	closed := b.closed
@@ -96,8 +86,6 @@ func (b *SQLiteBus) Publish(ctx context.Context, subject string, data []byte) er
 	return nil
 }
 
-// Stream starts a polling goroutine that delivers new bus_events for subject to
-// ch. It stops when ctx is cancelled.
 func (b *SQLiteBus) Stream(ctx context.Context, subject string, ch chan<- []byte) (Subscription, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -110,8 +98,6 @@ func (b *SQLiteBus) Stream(ctx context.Context, subject string, ch chan<- []byte
 	}
 	b.mu.Unlock()
 
-	// Snapshot max(id) before returning, so a racing Publish is not skipped as
-	// historical.
 	var cursor int64
 	rows, err := b.db.QueryContext(ctx,
 		`SELECT COALESCE(MAX(id), 0) FROM bus_events WHERE subject = ?`, subject)
@@ -162,7 +148,6 @@ func (b *SQLiteBus) Stream(ctx context.Context, subject string, ch chan<- []byte
 				}
 				select {
 				case ch <- payload:
-					// Advance only on a successful hand-off.
 					cursor = id
 				case <-qCtx.Done():
 					return false
@@ -171,7 +156,6 @@ func (b *SQLiteBus) Stream(ctx context.Context, subject string, ch chan<- []byte
 			return true
 		}
 
-		// finalDrain delivers events published before Unsubscribe, bounded.
 		finalDrain := func() {
 			dCtx, dCancel := context.WithTimeout(context.Background(), drainTimeout)
 			defer dCancel()
@@ -183,8 +167,6 @@ func (b *SQLiteBus) Stream(ctx context.Context, subject string, ch chan<- []byte
 		for {
 			select {
 			case <-subCtx.Done():
-				// Unsubscribe cancels subCtx to interrupt a blocked send; honour
-				// a pending drain request before leaving.
 				select {
 				case <-sub.drain:
 					finalDrain()
@@ -203,8 +185,6 @@ func (b *SQLiteBus) Stream(ctx context.Context, subject string, ch chan<- []byte
 	return sub, nil
 }
 
-// Serve registers a handler for subject. A polling goroutine picks up rows from
-// bus_requests, calls the handler, and writes the reply to bus_replies.
 func (b *SQLiteBus) Serve(ctx context.Context, subject string, handler Handler) (Subscription, error) {
 	b.mu.Lock()
 	if b.closed {
@@ -237,8 +217,6 @@ func (b *SQLiteBus) Serve(ctx context.Context, subject string, handler Handler) 
 	return sub, nil
 }
 
-// bindToBusLifetime cancels a subscription context when the bus is closed, even
-// if the caller's context never ends.
 func (b *SQLiteBus) bindToBusLifetime(subCtx context.Context, subCancel context.CancelFunc) {
 	go func() {
 		select {
@@ -271,20 +249,17 @@ func (b *SQLiteBus) processRequests(ctx context.Context, subject string, handler
 	_ = rows.Close()
 
 	for _, r := range reqs {
-		// DELETE is the atomic claim lock: only the worker that removed the row
-		// proceeds.
 		res, err := b.db.ExecContext(ctx, `DELETE FROM bus_requests WHERE id = ?`, r.id)
 		if err != nil {
 			continue
 		}
 		if affected, _ := res.RowsAffected(); affected == 0 {
-			continue // another worker already claimed this request
+			continue
 		}
 
 		reply, err := handler(ctx, r.data)
 		replyData := reply
 		if err != nil {
-			// Same wire shape as the NATS and in-memory backends.
 			replyData = fmt.Appendf(nil, "error: %s", err.Error())
 		}
 		_, _ = b.db.ExecContext(ctx,
@@ -294,7 +269,6 @@ func (b *SQLiteBus) processRequests(ctx context.Context, subject string, handler
 	}
 }
 
-// Request inserts a request row and polls for the reply until ctx deadline or 10s timeout.
 func (b *SQLiteBus) Request(ctx context.Context, subject string, data []byte) ([]byte, error) {
 	b.mu.Lock()
 	closed := b.closed
@@ -365,7 +339,6 @@ func (b *SQLiteBus) Request(ctx context.Context, subject string, data []byte) ([
 	}
 }
 
-// Close stops all background goroutines. The underlying database is not closed.
 func (b *SQLiteBus) Close() error {
 	b.mu.Lock()
 	if b.closed {
@@ -419,7 +392,6 @@ func (s *sqliteSubscription) Unsubscribe() error {
 	s.drained = true
 	close(s.drain)
 	s.closeMu.Unlock()
-	// The subscriber goroutine may be parked on a send nobody is reading.
 	s.cancel()
 	<-s.done
 	return nil

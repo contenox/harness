@@ -1,9 +1,6 @@
 import { cn } from "../utils";
 import type { ReactNode } from "react";
 
-/**
- * A styled navigation item for sidebar / rail navigation.
- */
 
 export type NavItemProps = {
 

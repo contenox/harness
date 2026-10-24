@@ -4,9 +4,6 @@ import { copyTextToClipboard } from './chat/clipboard';
 import { Small } from './Typography';
 import { useEffect, useState, type ComponentProps } from 'react';
 
-/**
- * A value that exists to be copied into another system — an ingest URL, a form's public link, a snippet.
- */
 export function CopyRow({
   label,
   copyLabel,
@@ -27,9 +24,6 @@ export function CopyRow({
   );
 }
 
-/**
- * Copy with the confirmation-in-the-button pattern the pairing-key panel uses.
- */
 export function CopyValueButton({
   value,
   label,
@@ -62,9 +56,6 @@ export function CopyValueButton({
   );
 }
 
-/**
- * A wire literal inside a sentence, set apart the way PairingKeyPanel sets `/pair` apart.
- */
 export function InlineCode({ children }: { children: React.ReactNode }) {
   return (
     <code className="bg-surface-200 dark:bg-dark-surface-300 rounded px-1.5 py-0.5 font-mono">

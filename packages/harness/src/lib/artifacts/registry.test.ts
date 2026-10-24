@@ -53,7 +53,6 @@ describe('ArtifactRegistry', () => {
     const unregister = reg.register(first);
     const second = source('s', () => Artifact.commandOutput({ command: 'replaced', output: '' }));
     reg.register(second);
-    // The first source's unregister function should no-op now.
     unregister();
     expect(reg.list()).toHaveLength(1);
     expect(reg.list()[0]).toBe(second);

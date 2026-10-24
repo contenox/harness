@@ -8,7 +8,6 @@ import (
 	"strings"
 )
 
-// ConvertToType converts a value to the specified DataType
 func ConvertToType(value interface{}, dataType DataType) (interface{}, error) {
 	switch dataType {
 	case DataTypeChatHistory:
@@ -35,7 +34,6 @@ func ConvertToType(value interface{}, dataType DataType) (interface{}, error) {
 	}
 }
 
-// InferDataType picks the narrowest concrete DataType for a runtime value.
 func InferDataType(v any) DataType {
 	if v == nil {
 		return DataTypeNil
@@ -76,7 +74,6 @@ func InferDataType(v any) DataType {
 	}
 }
 
-// NormalizeDataType upgrades DataTypeAny to a concrete type and coerces the value with ConvertToType.
 func NormalizeDataType(v any, dt DataType) (any, DataType, error) {
 	if dt != DataTypeAny {
 		return v, dt, nil

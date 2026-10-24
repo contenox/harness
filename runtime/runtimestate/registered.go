@@ -15,7 +15,6 @@ import (
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
-// ReconcileDeclarations exposes explicitly registered connection models without performing discovery.
 func (s *State) ReconcileDeclarations(ctx context.Context, id string) error {
 	store := runtimetypes.New(s.dbInstance.WithoutTransaction())
 	backend, err := store.GetBackend(ctx, id)
@@ -108,11 +107,6 @@ func (s *State) ReconcileDeclarations(ctx context.Context, id string) error {
 	return nil
 }
 
-// RegistrationCapabilities reports the operations the connection's adapter can
-// execute without querying its endpoint. The probe states no model: what an
-// adapter does unaided is a fact about its code, while the operations that
-// depend on a model's declared format are answered per declaration by
-// [DeclaredModelCapabilities].
 func RegistrationCapabilities(backend runtimetypes.Backend) ([]string, error) {
 	if backend.Type == "modeld" || backend.Type == "local" {
 		return []string{}, nil
@@ -124,11 +118,6 @@ func RegistrationCapabilities(backend runtimetypes.Backend) ([]string, error) {
 	return providerCapabilities(provider), nil
 }
 
-// DeclaredModelCapabilities reports the operations the adapter executes for one
-// declared model. The adapter is asked with the model's own declaration, so a
-// fill-in-the-middle format only the vendor that speaks it accepts is honoured
-// and one the adapter cannot speak is refused rather than silently degrading to
-// no completion.
 func DeclaredModelCapabilities(backend runtimetypes.Backend, facts runtimetypes.ModelFacts) ([]string, error) {
 	declares := func(capability string) bool { return slices.Contains(facts.Capabilities, capability) }
 	provider, err := declarationProvider(backend, modelrepo.CapabilityConfig{
@@ -152,12 +141,6 @@ func DeclaredModelCapabilities(backend runtimetypes.Backend, facts runtimetypes.
 	return providerCapabilities(provider), nil
 }
 
-// ModelCapabilityIsAdapterOperation reports whether a capability names an
-// operation the adapter executes, as opposed to a property of the model. An
-// adapter is the authority on the operations it implements — including the
-// inline audio extension, which only an Ollama-compatible endpoint carries —
-// while tools, vision and thinking describe the model itself, which is what the
-// operator declares and the upstream's own list does not report.
 func ModelCapabilityIsAdapterOperation(capability string) bool {
 	switch capability {
 	case runtimetypes.CapabilityCompletion, runtimetypes.CapabilityAutocomplete,
@@ -169,8 +152,6 @@ func ModelCapabilityIsAdapterOperation(capability string) bool {
 	}
 }
 
-// declarationProvider constructs the adapter for backend with one capability
-// configuration, which is the only way to ask it what it can execute.
 func declarationProvider(backend runtimetypes.Backend, capabilities modelrepo.CapabilityConfig) (modelrepo.Provider, error) {
 	catalog, err := modelrepo.NewCatalogProvider(modelrepo.BackendSpec{Type: backend.Type, BaseURL: backend.BaseURL}, modelrepo.WithCatalogAuthorizer(func(context.Context) (http.Header, error) {
 		return nil, errors.New("capability inspection cannot authorize a request")

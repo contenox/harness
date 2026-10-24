@@ -2,35 +2,14 @@ import { CheckboxField } from '@contenox/ui';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-/**
- * A published document: what it is called, which version is on show, and where the text lives.
- */
 export interface PublishedDocument {
-  /**
-   * The identifier stored against the acceptance: terms, privacy or withdrawal_waiver.
-   */
   key: 'terms' | 'privacy' | 'withdrawal_waiver';
-  /**
-   * How the document is named on screen.
-   */
   label: string;
-  /**
-   * The published version this application is showing.
-   */
   version: string;
-  /**
-   * Where the text is.
-   */
   href: string;
-  /**
-   * The sentence the checkbox asserts.
-   */
   acceptLabel: string;
 }
 
-/**
- * A link to a published document.
- */
 export function DocumentLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a
@@ -43,9 +22,6 @@ export function DocumentLink({ href, children }: { href: string; children: React
   );
 }
 
-/**
- * The legal links.
- */
 export function LegalLinksNav({
   links,
   ariaLabel = 'Legal',
@@ -69,9 +45,6 @@ export function LegalLinksNav({
   );
 }
 
-/**
- * One checkbox per published document a registration must accept.
- */
 export function LegalConsentFields({
   documents,
   accepted,
@@ -104,18 +77,12 @@ export function LegalConsentFields({
   );
 }
 
-/**
- * The consent payload a registration sends, one version per document.
- */
 export interface RegistrationConsent {
   termsVersion: string;
   privacyVersion: string;
   withdrawalWaiverVersion: string;
 }
 
-/**
- * Builds the consent payload from the documents that were shown.
- */
 export function consentFromDocuments(documents: PublishedDocument[]): RegistrationConsent {
   const versionOf = (key: PublishedDocument['key']) =>
     documents.find(document => document.key === key)?.version ?? '';

@@ -39,11 +39,7 @@ CREATE TABLE IF NOT EXISTS bus_replies (
 
 func newTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	// Use a temp-file SQLite so all connections in the *sql.DB pool see the same data.
-	// :memory: databases are per-connection and cause cross-goroutine isolation issues.
 	dbPath := filepath.Join(t.TempDir(), "bus_test.db")
-	// Match libdbexec.NewSQLiteDBManager: WAL + busy_timeout so concurrent
-	// Request/Serve goroutines do not fail transient SQLITE_BUSY (same as prod).
 	dsn := dbPath
 	if !strings.Contains(dsn, "?") {
 		dsn += "?"
@@ -61,7 +57,6 @@ func newTestDB(t *testing.T) *sql.DB {
 
 func newTestBus(t *testing.T) *libbus.SQLiteBus {
 	t.Helper()
-	// Faster-than-default polls keep tests fast without relying on wall-clock timeouts.
 	b := libbus.NewSQLiteWithOptions(newTestDB(t), libbus.SQLiteBusOptions{
 		RequestPoll: 5 * time.Millisecond,
 		EventPoll:   5 * time.Millisecond,
@@ -98,8 +93,6 @@ func TestUnit_SQLiteBus_Publish_Stream(t *testing.T) {
 func TestUnit_SQLiteBus_Stream_CursorQueryFailureFailsClosed(t *testing.T) {
 	ctx := t.Context()
 
-	// A database without the bus_events table makes the subscribe-time cursor
-	// query fail deterministically.
 	db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "bus_test.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
@@ -114,8 +107,6 @@ func TestUnit_SQLiteBus_Stream_CursorQueryFailureFailsClosed(t *testing.T) {
 	require.ErrorIs(t, err, libbus.ErrStreamSubscriptionFail)
 	require.Nil(t, sub)
 
-	// Fail-closed means no subscription was registered: nothing may ever be
-	// delivered to the channel.
 	select {
 	case msg := <-ch:
 		t.Fatalf("received event %q from a subscription that was never created", msg)
@@ -126,7 +117,6 @@ func TestUnit_SQLiteBus_Stream_CursorQueryFailureFailsClosed(t *testing.T) {
 func TestUnit_SQLiteBus_Publish_NoSubscriberIsNoError(t *testing.T) {
 	ctx := t.Context()
 	b := newTestBus(t)
-	// Publishing without a subscriber should succeed (fire-and-forget).
 	require.NoError(t, b.Publish(ctx, "ghost.subject", []byte("silent")))
 }
 
@@ -167,9 +157,8 @@ func TestUnit_SQLiteBus_Serve_ErrorReply(t *testing.T) {
 	require.NoError(t, err)
 	defer sub.Unsubscribe()
 
-	// Request still returns data (the error is serialised in the reply body).
 	reply, err := b.Request(ctx, "fail.service", []byte("boom"))
-	require.NoError(t, err) // bus itself doesn't fail — error is in the payload
+	require.NoError(t, err)
 	assert.Contains(t, string(reply), "something went wrong")
 }
 
@@ -204,16 +193,12 @@ func TestUnit_SQLiteBus_Publish_AfterClose_Returns_Error(t *testing.T) {
 func TestUnit_SQLiteBus_Close_Idempotent(t *testing.T) {
 	b := libbus.NewSQLite(newTestDB(t))
 	require.NoError(t, b.Close())
-	require.NoError(t, b.Close()) // second close must not panic or error
+	require.NoError(t, b.Close())
 }
 
 func TestUnit_SQLiteBus_Stream_UnsubscribeDrainsPendingEvents(t *testing.T) {
 	ctx := t.Context()
 
-	// Poll interval longer than the publish→unsubscribe window so the ticker
-	// cannot rescue the event mid-flight. Without drain-on-unsubscribe, the
-	// row inserted by Publish below would be left in bus_events when the
-	// subscriber goroutine is cancelled, and the channel would never see it.
 	b := libbus.NewSQLiteWithOptions(newTestDB(t), libbus.SQLiteBusOptions{
 		EventPoll:   500 * time.Millisecond,
 		RequestPoll: 500 * time.Millisecond,

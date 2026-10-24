@@ -53,7 +53,6 @@ func (p *catalogProvider) ProviderFor(model modelrepo.ObservedModel) modelrepo.P
 	return NewProvider(model.Name, p.scriptPath, model.CapabilityConfig, dimensions, p.tracker)
 }
 
-// capabilitiesOf claims every capability by default: a scripted reply is never refused for lack of one, and the type name already says it is not a model.
 func capabilitiesOf(script *Script) modelrepo.CapabilityConfig {
 	return modelrepo.CapabilityConfig{
 		ContextLength:   script.ContextLength,

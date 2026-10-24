@@ -194,7 +194,6 @@ func TestUnit_ClientSideConnection_InitializeSessionPrompt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, libacp.StopReasonEndTurn, promptResp.StopReason)
 
-	// Both session/update chunks must be delivered, in order, before Prompt's response.
 	client.mu.Lock()
 	updates := append([]libacp.SessionNotification(nil), client.updates...)
 	client.mu.Unlock()

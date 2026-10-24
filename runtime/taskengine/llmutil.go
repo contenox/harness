@@ -23,7 +23,6 @@ func stripCodeFences(s string) string {
 
 func StripCodeFences(s string) string { return stripCodeFences(s) }
 
-// ExtractJSONArray strips code fences then scans s for the outermost [...] block and returns it.
 func ExtractJSONArray(s string) string {
 	s = strings.TrimSpace(StripCodeFences(s))
 	start := strings.Index(s, "[")
@@ -34,7 +33,6 @@ func ExtractJSONArray(s string) string {
 	return s[start : end+1]
 }
 
-// ExtractJSONObject strips code fences then scans s for the outermost {...} block and returns it.
 func ExtractJSONObject(s string) string {
 	s = strings.TrimSpace(StripCodeFences(s))
 	start := strings.Index(s, "{")

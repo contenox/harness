@@ -29,15 +29,8 @@ const ConsolePage = lazy(() => import('../pages/admin/console/ConsolePage.tsx'))
 const ByePage = lazy(() => import('../pages/public/bye/Bye.tsx'));
 const AuthPage = lazy(() => import('../pages/public/login/AuthPage.tsx'));
 
-// The old chat surfaces (pages/admin/chats/{ChatPage,ChatLandingPage}.tsx and
-// the FORMER pages/admin/console/ConsolePage.tsx chat console) are gone; the
-// routes that used to point at them now redirect to /chat (below). NOTE:
-// pages/admin/console now hosts a DIFFERENT page — the host-terminal console
-// (ConsolePage, imported above, mounted at /terminal) — so these /console*
-// redirects are unrelated to it.
 const LegacyChatsRedirect = () => <Navigate to="/chat" replace />;
 const LegacyConsoleRedirect = () => <Navigate to="/chat" replace />;
-/** `/chat-acp/:sessionId` -> `/chat/:sessionId`, preserving the id (unlike the other legacy redirects, which all just land bare on /chat). */
 const AcpChatSessionRedirect = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   return <Navigate to={`/chat/${sessionId}`} replace />;
@@ -69,33 +62,14 @@ type AdminRouteDefinition = {
 
 const adminRouteDefinitions: AdminRouteDefinition[] = [
   { path: '/fleet', element: FleetPage, labelKey: 'navbar.fleet', Icon: Radar },
-  // Missions sit next to Fleet, not off in a separate group: mission mode is
-  // the fleet's headless twin (docs/development/blueprints/acp/
-  // fleet-consolidation.md, "Mission mode") — same units, the other way of
-  // driving them. /missions/new and /missions/:id are NOT nav items (they
-  // are reached FROM this list, not from the control-plane menu), so they
-  // are registered directly on `routes` below instead of here.
   { path: '/missions', element: MissionListPage, labelKey: 'navbar.missions', Icon: Rocket },
-  // The attention inbox sits alongside Fleet and Missions: it is the third
-  // fleet surface (docs/development/blueprints/acp/fleet-consolidation.md,
-  // slices C2 + M3) — where the exceptions a unit raises while unattended come
-  // up to be answered, and where its reports come back.
   { path: '/inbox', element: InboxPage, labelKey: 'navbar.inbox', Icon: Inbox },
   { path: '/backends', element: BackendsPage, labelKey: 'navbar.backends', Icon: Database },
-  // The project registry — the folders this runtime may open sessions in. Sits
-  // with the other configuration surfaces (backends, defaults); managed roots
-  // are added/forgotten here, the launch/default roots stay structural.
   { path: '/projects', element: ProjectsPage, labelKey: 'navbar.projects', Icon: Folder },
-  // The host console — a full-page interactive shell on the machine that serves
-  // this runtime, scoped to a chosen project root. Read-only until an explicit
-  // take-over; degrades to an "unavailable" notice when serve has the terminal
-  // feature turned off (TERMINAL_ENABLED). Path is /terminal (bare /console is a
-  // legacy redirect to /chat), navbar label "Console".
   { path: '/terminal', element: ConsolePage, labelKey: 'navbar.console', Icon: SquareTerminal },
   { path: '/settings', element: SettingsPage, labelKey: 'navbar.settings', Icon: Settings },
 ];
 
-/** Admin destinations for the control-plane menu and hub; route paths unchanged. */
 export const adminNavItems: AdminNavItem[] = adminRouteDefinitions.map(({ path, labelKey, Icon }) => ({
   path,
   label: i18n.t(labelKey),
@@ -122,8 +96,6 @@ export const routes: RouteConfig[] = [
     showInShelf: false,
   },
   {
-    // THE chat surface (Stage 4 cutover) — bare /chat lazy-creates a session
-    // on first submit (D5); see pages/chat/AcpChatPage.tsx.
     path: '/chat',
     element: AcpChatPage,
     label: i18n.t('navbar.chat'),
@@ -140,8 +112,6 @@ export const routes: RouteConfig[] = [
     showInShelf: false,
   },
   {
-    // The library workbench: file tree, open files and preview beside the
-    // session. Reached from a session, not the shelf.
     path: '/workbench/:sessionId',
     element: WorkbenchPage,
     label: '',
@@ -166,7 +136,6 @@ export const routes: RouteConfig[] = [
     showInShelf: false,
   },
   {
-    // Pre-Stage-4 opt-in ACP workspace surface — now just an alias for /chat.
     path: '/chat-acp',
     element: LegacyChatsRedirect,
     label: '',
@@ -183,7 +152,6 @@ export const routes: RouteConfig[] = [
     showInShelf: false,
   },
   {
-    // Pre-ACP chat surface, kept reachable (as a redirect) during the transition.
     path: '/chat-legacy/:chatId',
     element: LegacyConsoleRedirect,
     label: '',
@@ -217,7 +185,6 @@ export const routes: RouteConfig[] = [
   },
   ...adminRoutes,
   {
-    // Reached from the mission list's "Fire a mission" button, not from nav.
     path: '/missions/new',
     element: MissionDispatchPage,
     label: '',
@@ -226,8 +193,6 @@ export const routes: RouteConfig[] = [
     showInShelf: false,
   },
   {
-    // Reached from a mission list row, a board row's intent link, or the
-    // dispatch form's on-success redirect — never from nav.
     path: '/missions/:id',
     element: MissionDetailPage,
     label: '',

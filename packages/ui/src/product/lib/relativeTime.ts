@@ -1,9 +1,6 @@
 
 export const UI_LOCALE = 'en';
 
-/**
- * A calendar date for a timestamp [relativeTime] cannot describe.
- */
 export function formatDate(iso: string): string {
   const parsed = Date.parse(iso);
   if (Number.isNaN(parsed)) return iso;
@@ -14,9 +11,6 @@ export function formatDate(iso: string): string {
   });
 }
 
-/**
- * A calendar date AND a clock time, for a future instant close enough that the date alone does not answer the question.
- */
 export function formatDateTime(iso: string): string {
   const parsed = Date.parse(iso);
   if (Number.isNaN(parsed)) return iso;
@@ -26,9 +20,6 @@ export function formatDateTime(iso: string): string {
   });
 }
 
-/**
- * "x ago" for a PAST ISO timestamp: `justNow` below 45 seconds, otherwise `Intl.RelativeTimeFormat` rounded to the coarsest sensible unit (minutes, hours, days, months, years).
- */
 export function relativeTime(iso: string, justNow: string): string {
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return iso;

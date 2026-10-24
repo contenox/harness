@@ -19,8 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// recTracker is a minimal tracker that records the operations it sees so tests
-// can assert webtools opens a span per call.
 type recTracker struct {
 	starts atomic.Int64
 }
@@ -74,8 +72,6 @@ func TestUnit_WebTools_WriteBodySchemaDeclaresType(t *testing.T) {
 	}
 }
 
-// ── happy path ──────────────────────────────────────────────────────────────
-
 func TestUnit_WebTools_Get_ReturnsJSON(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "GET", r.Method)
@@ -124,12 +120,8 @@ func TestUnit_WebTools_RejectsUnknownArgs(t *testing.T) {
 	require.Contains(t, err.Error(), "unexpected")
 }
 
-// ── SSRF / host policy ──────────────────────────────────────────────────────
-
 func TestUnit_WebTools_Get_DeniedHostBlocked(t *testing.T) {
 	tools := newWebTools(t, &recTracker{})
-	// No host is denied by default — host policy is opt-in. Setting _denied_hosts
-	// blocks the call before the URL is ever contacted.
 	ctx := ctxWithPolicy(map[string]string{"_denied_hosts": "localhost"})
 	res, dt, err := execWeb(t, ctx, tools, "web_get", map[string]any{"url": "http://localhost/"})
 	require.NoError(t, err, "soft denial must be a string result, not an error")
@@ -151,11 +143,9 @@ func TestUnit_WebTools_Get_AllowedHostsExclusive(t *testing.T) {
 	})
 	tools := newWebTools(t, &recTracker{})
 
-	// Allowed host: passes.
 	_, _, err := execWeb(t, ctx, tools, "web_get", map[string]any{"url": srv.URL})
 	require.NoError(t, err)
 
-	// Different host: blocked even though denied_hosts is empty.
 	res, _, err := execWeb(t, ctx, tools, "web_get", map[string]any{"url": "http://other.example.invalid/"})
 	require.NoError(t, err)
 	msg, _ := res.(string)
@@ -164,14 +154,11 @@ func TestUnit_WebTools_Get_AllowedHostsExclusive(t *testing.T) {
 
 func TestUnit_WebTools_Get_SchemeBlocked(t *testing.T) {
 	tools := newWebTools(t, &recTracker{})
-	// Default _allowed_schemes = http,https. file:// must be blocked.
 	res, _, err := execWeb(t, context.Background(), tools, "web_get", map[string]any{"url": "file:///etc/passwd"})
 	require.NoError(t, err)
 	msg, _ := res.(string)
 	require.Contains(t, msg, "not in allowed schemes")
 }
-
-// ── size limits ─────────────────────────────────────────────────────────────
 
 func TestUnit_WebTools_Post_RequestBodyTooLarge(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
@@ -211,11 +198,8 @@ func TestUnit_WebTools_Get_ResponseTruncatedAtCap(t *testing.T) {
 	require.Equal(t, taskengine.DataTypeString, dt)
 	out := res.(string)
 	require.Contains(t, out, "truncated to 100 bytes")
-	// First 100 bytes should be the 'a's.
 	require.True(t, strings.HasPrefix(out, strings.Repeat("a", 100)))
 }
-
-// ── retry / status handling ─────────────────────────────────────────────────
 
 func TestUnit_WebTools_Get_RetriesOn5xx(t *testing.T) {
 	var hits atomic.Int64
@@ -264,8 +248,6 @@ func TestUnit_WebTools_Get_NoRetryOn4xx(t *testing.T) {
 	require.EqualValues(t, 1, hits.Load(), "4xx must not retry")
 }
 
-// ── headers shape ──────────────────────────────────────────────────────────
-
 func TestUnit_WebTools_Get_HeadersAsObject(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "bar", r.Header.Get("X-Foo"))
@@ -300,8 +282,6 @@ func TestUnit_WebTools_Get_HeadersAsJSONString(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// ── verb dispatch & body ────────────────────────────────────────────────────
-
 func TestUnit_WebTools_Post_BodyMarshalsAndSends(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "POST", r.Method)
@@ -331,8 +311,6 @@ func TestUnit_WebTools_UnknownToolErrors(t *testing.T) {
 	require.Contains(t, err.Error(), "unknown tool")
 }
 
-// ── tools surface ───────────────────────────────────────────────────────────
-
 func TestUnit_WebTools_SupportsListsAllVerbs(t *testing.T) {
 	tools := newWebTools(t, &recTracker{})
 	names, err := tools.Supports(context.Background())
@@ -349,7 +327,6 @@ func TestUnit_WebTools_SchemasPerVerb(t *testing.T) {
 		require.Len(t, ts, 1, verb)
 		require.Equal(t, verb, ts[0].Function.Name, fmt.Sprintf("expected verb-specific tool %s", verb))
 	}
-	// Bundle name returns all six.
 	all, err := tools.GetToolsForToolsByName(context.Background(), "webtools")
 	require.NoError(t, err)
 	require.Len(t, all, 6)

@@ -19,9 +19,6 @@ function kindsOf(raw: unknown): string[] {
   return [];
 }
 
-/**
- * The content kinds the runtime reported dropping for a turn, de-duplicated and in the order it named them.
- */
 export function droppedContentKinds(meta: Record<string, unknown> | undefined | null): string[] {
   if (!meta) return [];
   const seen = new Set<string>();
@@ -34,16 +31,10 @@ export function droppedContentKinds(meta: Record<string, unknown> | undefined | 
   return out;
 }
 
-/**
- * Whether the turn's images were discarded — one of the two cases the composer can cause and the transcript marks.
- */
 export function droppedImages(meta: Record<string, unknown> | undefined | null): boolean {
   return droppedContentKinds(meta).includes(DROPPED_KIND_IMAGE);
 }
 
-/**
- * Whether the turn's audio was discarded — the other composer-caused case, marked on the message that carried the clip.
- */
 export function droppedAudio(meta: Record<string, unknown> | undefined | null): boolean {
   return droppedContentKinds(meta).includes(DROPPED_KIND_AUDIO);
 }

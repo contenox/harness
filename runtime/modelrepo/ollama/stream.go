@@ -109,7 +109,6 @@ func (c *OllamaStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 	}
 	req.Session = sessionOf(config, c.sessionExtension)
 
-	// Ollama delivers each tool call whole; each gets the next sequential index.
 	ch := make(chan *modelrepo.StreamParcel)
 	go func() {
 		defer close(ch)
@@ -148,10 +147,6 @@ func (c *OllamaStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 				if err != nil {
 					continue
 				}
-				// The id must survive: it is what a tool result quotes back, and
-				// an upstream that pairs calls to results by id refuses a turn
-				// whose result carries none. Ollama itself omits it, so an
-				// id-less call stays id-less for the caller to synthesise.
 				delta := &modelrepo.ToolCallDelta{
 					Index:        toolCallIndex,
 					ID:           tc.ID,
@@ -179,7 +174,6 @@ func (c *OllamaStreamClient) Stream(ctx context.Context, messages []modelrepo.Me
 			return
 		}
 		if terminal == nil {
-			// A truncated stream must not read as success.
 			err := fmt.Errorf("ollama stream for model %s ended without a done response", c.modelName)
 			reportErr(err)
 			send(&modelrepo.StreamParcel{Error: err})

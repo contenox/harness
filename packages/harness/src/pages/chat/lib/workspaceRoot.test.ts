@@ -46,11 +46,6 @@ describe('resolveWorkspaceRoot', () => {
     ).toBe('/srv/default');
   });
 
-  // Regression: an external-agent empty chat exposes no root PICKER (external
-  // sessions advertise no native config options), so its stagedRoot is always
-  // absent — it must resolve to the workspace default root, NOT null, so the
-  // file panel and `@`-mention list work exactly as they do for a native chat.
-  // (The runtime creates the external session under that same default cwd.)
   it('resolves an external empty chat (no staged pick) to the default root, not null', () => {
     expect(
       resolveWorkspaceRoot({

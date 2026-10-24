@@ -100,13 +100,6 @@ func init() {
 	approvalsCmd.AddCommand(approvalsAnswerCmd)
 }
 
-// ─── serveClient convenience wrappers (approvals-shaped; the client itself,
-// in serveclient.go, is not) ─────────────────────────────────────────────
-
-// listPendingApprovals fetches GET /api/approvals?limit=<limit>. limit<=0 is
-// forwarded as-is (the server's own "no cap given" default applies, mirroring
-// hitlservice.Service.ListPending / runtimetypes.ListHITLApprovals's own
-// contract), and the result is always a non-nil slice.
 func (c *serveClient) listPendingApprovals(ctx context.Context, limit int) ([]*runtimetypes.HITLApproval, error) {
 	path := "/approvals?limit=" + strconv.Itoa(limit)
 	var out []*runtimetypes.HITLApproval
@@ -119,32 +112,18 @@ func (c *serveClient) listPendingApprovals(ctx context.Context, limit int) ([]*r
 	return out, nil
 }
 
-// answerApprovalRequest is the POST /api/approvals/{id} body — kept as a
-// tiny duplicate of approvalapi.AnswerRequest's one field rather than an
-// import of that internal package, the same way any other JSON API client
-// would encode the wire contract without depending on the server's Go types.
 type answerApprovalRequest struct {
-	Approved bool `json:"approved"`
-	// Answer carries an attention ask's reply; empty for a permission verdict
-	// (omitempty keeps the permission request byte-identical to before).
-	Answer string `json:"answer,omitempty"`
+	Approved bool   `json:"approved"`
+	Answer   string `json:"answer,omitempty"`
 }
 
-// answerApproval posts an answer for id. A non-2xx response comes back as a
-// *ServeError (see serveclient.go) carrying serve's own status and message,
-// so the id-not-found/already-resolved/expired cases are distinguishable by
-// the caller without re-parsing anything.
 func (c *serveClient) answerApproval(ctx context.Context, id string, approved bool) error {
 	return c.post(ctx, "/approvals/"+url.PathEscape(id), answerApprovalRequest{Approved: approved}, nil)
 }
 
-// replyToAsk answers an ATTENTION ask with text — a unit's question, resolved
-// with the operator's own words (see approvalapi.AnswerRequest.Answer).
 func (c *serveClient) replyToAsk(ctx context.Context, id, text string) error {
 	return c.post(ctx, "/approvals/"+url.PathEscape(id), answerApprovalRequest{Answer: text}, nil)
 }
-
-// ─── list ───────────────────────────────────────────────────────────────
 
 func runApprovalsList(cmd *cobra.Command, args []string) error {
 	ctx := libtracker.WithNewRequestID(context.Background())
@@ -172,10 +151,6 @@ func runApprovalsList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// AGENT/MISSION/INSTANCE/SESSION are the attribution columns: with more than
-	// one unit running, "write_file" identifies nothing, and the row has to say
-	// WHOSE action is being gated. They are empty for an ask raised by a native
-	// chain turn with no fleet unit behind it, which renders as "-".
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tTOOL\tARGS\tPOLICY\tRULE\tDIFF\tAGENT\tMISSION\tINSTANCE\tSESSION\tCREATED\tEXPIRES")
 	for _, a := range approvals {
@@ -197,15 +172,10 @@ func runApprovalsList(cmd *cobra.Command, args []string) error {
 	return w.Flush()
 }
 
-// ─── answer ─────────────────────────────────────────────────────────────
-
 func runApprovalsAnswer(cmd *cobra.Command, args []string) error {
 	ctx := libtracker.WithNewRequestID(context.Background())
 	id := args[0]
 
-	// --approve/--deny/--reply are enforced mutually exclusive and one-required
-	// by cobra (MarkFlags* in init) before RunE ever runs, so reading them
-	// directly is enough to know which was given.
 	approved, _ := cmd.Flags().GetBool("approve")
 	reply, _ := cmd.Flags().GetString("reply")
 	asJSON, _ := cmd.Flags().GetBool("json")
@@ -215,9 +185,6 @@ func runApprovalsAnswer(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// A reply answers a unit's QUESTION: the text goes back to the unit as its
-	// tool result, so it continues on the same turn rather than merely learning
-	// it was heard.
 	if strings.TrimSpace(reply) != "" {
 		if err := client.replyToAsk(ctx, id, reply); err != nil {
 			return fmt.Errorf("reply to ask %q: %w", id, err)
@@ -249,8 +216,6 @@ func runApprovalsAnswer(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// ─── table helpers ──────────────────────────────────────────────────────
-
 func stringOrDash(s string) string {
 	if strings.TrimSpace(s) == "" {
 		return "-"
@@ -258,9 +223,6 @@ func stringOrDash(s string) string {
 	return s
 }
 
-// stringPtrOrDash renders a nullable attribution column (today: mission id),
-// where nil means the ask genuinely has no mission behind it rather than one
-// that could not be looked up — see runtimetypes.HITLApproval.MissionID.
 func stringPtrOrDash(v *string) string {
 	if v == nil {
 		return "-"
@@ -268,9 +230,6 @@ func stringPtrOrDash(v *string) string {
 	return stringOrDash(*v)
 }
 
-// intPtrOrDash renders a matched-rule index, or "-" when nil — which means
-// the policy's default_action applied rather than a named rule (see
-// runtimetypes.HITLApproval.MatchedRule's doc).
 func intPtrOrDash(v *int) string {
 	if v == nil {
 		return "-"
@@ -278,9 +237,6 @@ func intPtrOrDash(v *int) string {
 	return strconv.Itoa(*v)
 }
 
-// approvalDiffColumn keeps the table's columns aligned even when a diff is
-// large or multi-line: it reports presence and size rather than the diff
-// text itself. Use --json to read the full diff content.
 func approvalDiffColumn(diff *string) string {
 	if diff == nil || strings.TrimSpace(*diff) == "" {
 		return "-"

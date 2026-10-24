@@ -10,7 +10,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// SimpleRepo holds a map of locally registered tools.
 type SimpleRepo struct {
 	tools map[string]taskengine.ToolsRepo
 }
@@ -34,7 +33,6 @@ func (m *SimpleRepo) Exec(
 	return nil, taskengine.DataTypeAny, fmt.Errorf("unknown tools type: %s", args.Name)
 }
 
-// Supports returns a list of all tools names registered in the internal map.
 func (m *SimpleRepo) Supports(ctx context.Context) ([]string, error) {
 	supported := make([]string, 0, len(m.tools))
 	for k := range m.tools {
@@ -43,19 +41,15 @@ func (m *SimpleRepo) Supports(ctx context.Context) ([]string, error) {
 	return supported, nil
 }
 
-// GetSchemasForSupportedTools aggregates the schemas from all registered tools.
 func (m *SimpleRepo) GetSchemasForSupportedTools(ctx context.Context) (map[string]*openapi3.T, error) {
 	allSchemas := make(map[string]*openapi3.T)
 
-	// Iterate through each registered tools implementation.
 	for toolsName, toolsImpl := range m.tools {
-		// Get the schemas provided by this specific tools's implementation.
 		implSchemas, err := toolsImpl.GetSchemasForSupportedTools(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error getting schema for tools '%s': %w", toolsName, err)
 		}
 
-		// Merge the returned schemas into our main map.
 		maps.Copy(allSchemas, implSchemas)
 	}
 	return allSchemas, nil

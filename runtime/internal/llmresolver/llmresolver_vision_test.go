@@ -10,10 +10,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// TestUnit_ChatModelResolution_VisionGate covers the vision capability gate:
-// requests carrying images resolve only to CanVision providers, and when none
-// exists the failure is the typed vision error — never a silent fallback to a
-// text-only model.
 func TestUnit_ChatModelResolution_VisionGate(t *testing.T) {
 	getModels := func(providers []modelrepo.Provider) func(context.Context, ...string) ([]modelrepo.Provider, error) {
 		return func(context.Context, ...string) ([]modelrepo.Provider, error) { return providers, nil }
@@ -51,8 +47,6 @@ func TestUnit_ChatModelResolution_VisionGate(t *testing.T) {
 		if !errors.Is(err, llmresolver.ErrNoVisionCapableModel) {
 			t.Fatalf("want ErrNoVisionCapableModel, got %v", err)
 		}
-		// The typed error still wraps the generic no-match error so existing
-		// handling (e.g. the resolution self-heal cycle) keeps firing.
 		if !errors.Is(err, llmresolver.ErrNoSatisfactoryModel) {
 			t.Errorf("vision error must wrap ErrNoSatisfactoryModel, got %v", err)
 		}

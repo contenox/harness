@@ -9,9 +9,6 @@ import { deadlineFromMint, formatRemaining, useCountdown, type Deadline } from '
 import type { Account, MintKeyResponse } from '../../lib/api/types';
 import { canManageMembers } from '../../lib/roles';
 
-/**
- * Mints a pairing key and shows it to be READ OFF THIS SCREEN AND TYPED INTO A MACHINE.
- */
 export function PairingKeyPanel({ accountID }: { accountID: string }) {
   const { routes, useAccount, useAuth, useMintPairingKey } = useProductPorts();
   const mint = useMintPairingKey(accountID);
@@ -138,8 +135,7 @@ export function PairingKeyPanel({ accountID }: { accountID: string }) {
         </>
       )}
       {mint.error && <ScreenError error={mint.error} />}
-      {/* The relay's refusal is already on screen above; when it is the
-          entitlement one, this adds the way forward (lib/refusals.ts). */}
+
       <RefusalCta error={mint.error} />
     </Card>
   );

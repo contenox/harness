@@ -53,7 +53,6 @@ func TestFIMCompletions_Streaming(t *testing.T) {
 		}
 	}
 
-	// Expect: content chunk, stop+usage chunk, [DONE]
 	if len(dataLines) != 3 {
 		t.Fatalf("expected 3 data lines, got %d: %v", len(dataLines), dataLines)
 	}
@@ -225,7 +224,6 @@ func TestFIMCompletions_OverridesSessionAndStopStrings(t *testing.T) {
 	}
 }
 
-// sentinelCapture captures the first user message content from each Prompt call.
 type sentinelCapture struct {
 	lastContent string
 }

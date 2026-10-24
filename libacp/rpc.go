@@ -195,8 +195,6 @@ func ParseIncoming(data []byte) (Incoming, error) {
 		}, nil
 	}
 	if !hasMethod && (raw.Error != nil || raw.Result != nil) {
-		// A response with "id":null (errors answering requests whose id could
-		// not be determined) unmarshals to a nil ID pointer, so hasID is false here.
 		return Incoming{
 			Kind: IncomingKindResponse,
 			Response: Response{

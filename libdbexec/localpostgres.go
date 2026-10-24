@@ -10,8 +10,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// SetupLocalInstance starts an ephemeral PostgreSQL container for tests. It
-// returns a connection string, the container, and a cleanup func.
 func SetupLocalInstance(ctx context.Context, dbName, dbUser, dbPassword string) (string, *postgres.PostgresContainer, func(), error) {
 	cleanup := func() {}
 	container, err := postgres.Run(ctx,

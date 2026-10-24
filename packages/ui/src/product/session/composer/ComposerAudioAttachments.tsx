@@ -22,13 +22,7 @@ import {
   type ActiveRecording,
 } from '../lib/audioRecording';
 
-/**
- * Audio attachments in the composer, mirroring `ComposerImageAttachments.tsx` (whose header carries the wire-budget law both strips live under).
- */
 
-/**
- * What the transient composer notice reports.
- */
 export type AudioAttachmentNotice =
   | 'not_supported'
   | 'message_too_large'
@@ -41,9 +35,6 @@ const RECORDING_TICK_MS = 250;
 
 type WirePart = Pick<ImagePart, 'data' | 'mimeType'>;
 
-/**
- * The live recording as the UI shows it.
- */
 export interface RecordingReadout {
   elapsedSeconds: number;
   limitSeconds: number;
@@ -51,41 +42,17 @@ export interface RecordingReadout {
 
 export interface UseAudioAttachmentsResult {
   clips: PendingAudioAttachment[];
-  /**
-   * Transient rejection notice, or null — render via `AudioAttachmentNoticeView`.
-   */
   notice: AudioAttachmentNotice | null;
-  /**
-   * Validates + stages picked files (rejections surface on `notice`).
-   */
   addFiles: (files: File[]) => Promise<void>;
   removeClip: (id: string) => void;
-  /**
-   * Measures the WHOLE message — text, carried images, clips — and answers whether the send may go on, having raised `message_too_large` when it may not.
-   */
   approveForSend: (text: string) => boolean;
-  /**
-   * Hands the staged clips to the send path and empties the strip.
-   */
   takeForSend: () => PendingAudioAttachment[];
-  /**
-   * Non-null while the microphone is live.
-   */
   recording: RecordingReadout | null;
   startRecording: () => Promise<void>;
-  /**
-   * Stops the capture and stages the clip.
-   */
   stopRecording: () => void;
-  /**
-   * Stops the capture and keeps nothing.
-   */
   cancelRecording: () => void;
 }
 
-/**
- * Pending-audio state for one composer.
- */
 export function useAudioAttachments(
   supported: boolean,
   carriedParts: readonly WirePart[] = [],
@@ -263,9 +230,6 @@ export function useAudioAttachments(
   };
 }
 
-/**
- * The staged clips as removable chips: standard `<audio controls>` preview, name, and a remove button BESIDE the chip — same sideways-scrolling row and reach rules as the image strip.
- */
 export function ComposerAudioAttachments({
   clips,
   onRemove,
@@ -315,9 +279,6 @@ export function ComposerAudioAttachments({
   );
 }
 
-/**
- * Composer-footer audio buttons: file picker and voice-note recorder.
- */
 export function AttachAudioButtons({
   onFiles,
   disabled,
@@ -367,7 +328,7 @@ export function AttachAudioButtons({
   }
   return (
     <>
-      {/* sr-only, not hidden — see ImagePicker for the mobile reasons. */}
+
       <input
         ref={inputRef}
         type="file"
@@ -395,7 +356,7 @@ export function AttachAudioButtons({
         onClick={() => inputRef.current?.click()}>
         <Music className="h-5 w-5" aria-hidden />
       </Button>
-      {/* The mic additionally needs a browser that can capture at all. */}
+
       {canRecordAudio() && (
         <Button
           type="button"
@@ -430,9 +391,6 @@ const NOTICE_TEXT: Record<AudioAttachmentNotice, string> = {
     'This message has no room left for a recording — attachments share one message of about 700 kB. Remove one first.',
 };
 
-/**
- * The transient refusal above the composer — `role="status"`, as `ImageAttachmentNoticeView` and for its reasons.
- */
 export function AudioAttachmentNoticeView({ notice }: { notice: AudioAttachmentNotice | null }) {
   if (!notice) return null;
   return (

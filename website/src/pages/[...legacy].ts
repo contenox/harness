@@ -1,11 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 
-// The previous contenox.com generations were indexed (and scraped) with
-// `.html`-suffixed URLs. Emit a real redirect page for every such URL so
-// legacy links resolve with a 200 + canonical instead of a 404.
-// Entries whose id ends in `index` are skipped: their `.html` path is the
-// file Astro already writes for the directory route.
 
 type Target = { legacy: string; target: string };
 

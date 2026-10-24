@@ -61,8 +61,6 @@ func newGeminiState(t *testing.T, server *httptest.Server) (context.Context, *St
 	return ctx, state, store
 }
 
-// A declared row used to be consulted only by the modeld, ollama, vLLM and
-// OpenAI paths, so a Gemini operator's stated window was silently ignored.
 func TestUnit_RunBackendCycle_GeminiDeclaredContextWins(t *testing.T) {
 	ctx := context.Background()
 	const modelName = "gemini-2.5-pro"

@@ -7,7 +7,6 @@ type McpServerCardProps = {
   onEdit: (server: MCPServer) => void;
   onDelete: (id: string) => void;
   isDeleting: boolean;
-  /** OAuth PKCE: open provider in a new tab (Beam callback stores the token). */
   onStartOAuth?: () => void | Promise<void>;
   oauthStarting?: boolean;
 };

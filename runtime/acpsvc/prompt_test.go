@@ -138,9 +138,6 @@ func TestUnit_Prompt_CancelledParentContextFallback(t *testing.T) {
 	requireSpan(t, rt, 0, 1)
 }
 
-// A cancelled ctx with a "successful" engine response (recovery chains absorb
-// cancellation) must still resolve as cancelled — clients judge cancel
-// conformance by the stop reason, not by what the engine salvaged.
 func TestUnit_Prompt_CancelledCtxOverridesSuccessfulStopReason(t *testing.T) {
 	tr, sid, rt := transportWithFakeAgent(&fakeAgent{
 		resp: &agentservice.PromptResponse{StopReason: agentservice.StopEndTurn},
@@ -173,12 +170,6 @@ func TestUnit_Prompt_GenuineFailureStaysAnError(t *testing.T) {
 	requireSpan(t, rt, 1, 0)
 }
 
-// A hard execution failure that surfaces as a timeout (e.g. modeld refusing to
-// load a model / waiting on a busy GPU slot until an inner LLM call deadlines)
-// must reach the client as a JSON-RPC error, NOT masquerade as a clean user
-// cancellation. agentservice.InferStopReason maps context.DeadlineExceeded to
-// StopCancelled, so this pins that the transport does not trust that alone and
-// keeps the failure visible instead of silently resolving the turn.
 func TestUnit_Prompt_DeadlineExceededFailureIsSurfacedNotSilentlyCancelled(t *testing.T) {
 	tr, sid, rt := transportWithFakeAgent(&fakeAgent{
 		resp: &agentservice.PromptResponse{StopReason: agentservice.StopCancelled},

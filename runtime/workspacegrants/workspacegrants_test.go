@@ -73,7 +73,6 @@ func TestUnit_Add_RejectsBadPaths(t *testing.T) {
 		require.ErrorIs(t, err, workspacegrants.ErrInvalidGrant)
 	})
 
-	// A rejected grant must not have written anything.
 	assert.Empty(t, workspacegrants.ReadGrants(ctx, store))
 }
 
@@ -105,12 +104,10 @@ func TestUnit_Remove(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{filepath.Clean(b)}, roots, "remove drops exactly the named grant")
 
-	// Removing a path that was never granted is an idempotent no-op.
 	roots, err = workspacegrants.Remove(ctx, store, t.TempDir())
 	require.NoError(t, err)
 	require.Equal(t, []string{filepath.Clean(b)}, roots)
 
-	// A grant to a since-deleted directory can still be revoked (no existence check).
 	gone := t.TempDir()
 	_, err = workspacegrants.Add(ctx, store, gone)
 	require.NoError(t, err)
@@ -120,8 +117,6 @@ func TestUnit_Remove(t *testing.T) {
 	require.Equal(t, []string{filepath.Clean(b)}, roots)
 }
 
-// fakePublisher captures the one doorbell publish so a test can assert the
-// subject and decoded payload.
 type fakePublisher struct {
 	subject string
 	data    []byte
@@ -160,20 +155,16 @@ func TestUnit_PublishChanged(t *testing.T) {
 func TestUnit_Add_RefusesBroadParents(t *testing.T) {
 	ctx, store := setupStore(t)
 
-	// The filesystem root and top-level system dirs (single-segment, e.g. /tmp)
-	// are refused: granting them would defeat project scoping.
 	for _, broad := range []string{string(filepath.Separator), filepath.Join(string(filepath.Separator), "tmp")} {
 		_, err := workspacegrants.Add(ctx, store, broad)
 		require.ErrorIs(t, err, workspacegrants.ErrInvalidGrant, "broad parent %q must be refused", broad)
 	}
 
-	// The operator's home directory is refused.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	_, err := workspacegrants.Add(ctx, store, home)
 	require.ErrorIs(t, err, workspacegrants.ErrInvalidGrant, "the home directory must be refused")
 
-	// A specific project directory (>=2 segments deep) is accepted.
 	proj := filepath.Join(home, "proj")
 	require.NoError(t, os.MkdirAll(proj, 0o750))
 	got, err := workspacegrants.Add(ctx, store, proj)

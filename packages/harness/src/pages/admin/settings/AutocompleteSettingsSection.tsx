@@ -6,12 +6,6 @@ import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
 import { AuthContext } from '../../../lib/authContext';
 import type { CLIConfigUpdateRequest } from '../../../lib/types';
 
-/**
- * VS Code ghost-text autocomplete uses its own model/provider, independent
- * from chat (runtime/vscodeagent/server.go reads these fresh per request via
- * clikv.ReadConfig — unlike the ACP chat defaults, there is no restart caveat
- * here).
- */
 export function AutocompleteSettingsSection() {
   const { t } = useTranslation();
   const { user } = useContext(AuthContext);

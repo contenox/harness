@@ -1,4 +1,3 @@
-// Package setupcheck evaluates local runtime readiness (defaults, backends) for the CLI.
 package setupcheck
 
 import (
@@ -20,25 +19,19 @@ const (
 	CategoryHealth       = "health"
 )
 
-// Input is everything needed to compute readiness; callers gather from DB + runtime state.
 type Input struct {
-	DefaultModel       string
-	DefaultProvider    string
-	DefaultAltModel    string
-	DefaultAltProvider string
-	DefaultChain       string
-	HITLPolicyName     string
-	States             []statetype.BackendRuntimeState
-	// RegisteredBackendCount, if non-nil, overrides len(RegisteredBackends) / len(States)
-	// for BackendCount. CLI doctor sets this from ListBackends when runtime state sync is unavailable.
+	DefaultModel           string
+	DefaultProvider        string
+	DefaultAltModel        string
+	DefaultAltProvider     string
+	DefaultChain           string
+	HITLPolicyName         string
+	States                 []statetype.BackendRuntimeState
 	RegisteredBackendCount *int
 	RegisteredBackends     []runtimetypes.Backend
-	// ResolvedFrom records where workspace-scoped keys came from: "workspace" or "global".
-	// Keys are camelCase JSON names: "defaultChain", "hitlPolicyName".
-	ResolvedFrom map[string]string
+	ResolvedFrom           map[string]string
 }
 
-// Issue describes one setup problem and how to fix it.
 type Issue struct {
 	Code       string `json:"code"`
 	Severity   string `json:"severity"`
@@ -48,7 +41,6 @@ type Issue struct {
 	CLICommand string `json:"cliCommand,omitempty"`
 }
 
-// BackendCheck reports the runtime status of one registered backend.
 type BackendCheck struct {
 	ID              string   `json:"id"`
 	Name            string   `json:"name"`
@@ -64,7 +56,6 @@ type BackendCheck struct {
 	Hint            string   `json:"hint,omitempty"`
 }
 
-// Result is returned by GET /setup-status and contenox doctor.
 type Result struct {
 	DefaultModel           string            `json:"defaultModel"`
 	DefaultProvider        string            `json:"defaultProvider"`
@@ -89,7 +80,6 @@ const (
 	backendErrorOther         backendErrorKind = "other"
 )
 
-// Evaluate returns readiness from gathered input (no I/O).
 func Evaluate(in Input) Result {
 	r := Result{
 		DefaultModel:           strings.TrimSpace(in.DefaultModel),
@@ -121,14 +111,10 @@ func Evaluate(in Input) Result {
 
 	if r.DefaultModel == "" {
 		addIssue(&r, Issue{
-			Code:     "missing_default_model",
-			Severity: "error",
-			Category: CategoryDefaults,
-			Message:  "No default model is set. Internal chat and chains using {{var:model}} need it.",
-			// The default model/provider fields live on the Settings page
-			// (GlobalSettingsSection), not Backends — a registered backend
-			// alone never sets a default. See default_model_not_available
-			// below for the same distinction once a default IS set.
+			Code:       "missing_default_model",
+			Severity:   "error",
+			Category:   CategoryDefaults,
+			Message:    "No default model is set. Internal chat and chains using {{var:model}} need it.",
 			FixPath:    "/settings",
 			CLICommand: "contenox config set default-model <name>",
 		})
@@ -181,14 +167,6 @@ func Evaluate(in Input) Result {
 	return r
 }
 
-// OverlayEffectiveDefaults credits an effective default model/provider that was
-// supplied out-of-band (e.g. the CLI's --model/--provider flags) but never
-// persisted to KV config. For each default the persisted config left empty, a
-// non-empty override fills it and clears the corresponding "missing default"
-// blocking issue, so a single-invocation flag is not rejected by preflight just
-// because it was never written to config. Empty overrides are ignored, and a
-// default already set by persisted config is never overwritten. Model/provider
-// availability against a live backend is still validated later at resolution time.
 func OverlayEffectiveDefaults(res Result, model, provider string) Result {
 	model = strings.TrimSpace(model)
 	provider = strings.TrimSpace(provider)
@@ -205,7 +183,6 @@ func OverlayEffectiveDefaults(res Result, model, provider string) Result {
 		return res
 	}
 
-	// Rebuild into a fresh slice so the caller's Issues backing array is untouched.
 	kept := make([]Issue, 0, len(res.Issues))
 	for _, iss := range res.Issues {
 		if dropModel && iss.Code == "missing_default_model" {
@@ -220,8 +197,6 @@ func OverlayEffectiveDefaults(res Result, model, provider string) Result {
 	return res
 }
 
-// ResolveMaxOutputTokens returns the known output-token ceiling for the active
-// provider/model from already-synced runtime state. It returns 0 when unknown.
 func ResolveMaxOutputTokens(states []statetype.BackendRuntimeState, provider, model string) int {
 	provider = modelrepo.CanonicalBackendType(provider)
 	model = strings.TrimSpace(model)
@@ -261,15 +236,10 @@ func providerTypeMatches(provider, backendType string) bool {
 	return provider == "vertex" && strings.HasPrefix(backendType, "vertex-")
 }
 
-// blockingIssue reports whether an issue prevents a usable agent: any
-// error-severity issue, plus no_backends (emitted as a warning, but chat/run/ACP
-// cannot resolve any model without at least one backend).
 func blockingIssue(iss Issue) bool {
 	return iss.Severity == "error" || iss.Code == "no_backends"
 }
 
-// BlockingIssues returns the issues that make the runtime not ready, in the
-// order Evaluate produced them. It performs no I/O.
 func (r Result) BlockingIssues() []Issue {
 	var out []Issue
 	for _, iss := range r.Issues {
@@ -280,17 +250,10 @@ func (r Result) BlockingIssues() []Issue {
 	return out
 }
 
-// Ready reports whether the runtime has a usable default model and provider with
-// a reachable backend. It reads the already-computed Result — no I/O, and never a
-// model completion — and is the shared readiness predicate for doctor, chat/run
-// preflight, and the setup wizard.
 func (r Result) Ready() bool {
 	return len(r.BlockingIssues()) == 0
 }
 
-// Summary renders a concise, human-readable readiness report for a chat/terminal
-// surface (e.g. the ACP /doctor command). It reads the already-computed Result —
-// no I/O and no model completion.
 func (r Result) Summary() string {
 	model := r.DefaultModel
 	if model == "" {
@@ -328,11 +291,6 @@ func addDefaultProviderIssues(r *Result) {
 		return
 	}
 
-	// modeld is one logical local provider whose engine is autodetected, so a
-	// local default (llama/openvino/local/modeld) is satisfied by ANY live local
-	// backend — not only the sub-type the user happened to name. Treat the local
-	// family as one when matching backend checks, mirroring how resolution serves
-	// whichever engine modeld is actually running.
 	localDefault := modelrepo.IsLocalBackendType(defaultProvider)
 	matchesDefault := func(check BackendCheck) bool {
 		if localDefault {
@@ -421,14 +379,10 @@ func addDefaultProviderIssues(r *Result) {
 	available := strings.Join(chatModels, ", ")
 	cmd := fmt.Sprintf("contenox config set default-model %q", chatModels[0])
 	addIssue(r, Issue{
-		Code:     "default_model_not_available",
-		Severity: "error",
-		Category: CategoryHealth,
-		Message:  fmt.Sprintf("Default model %q is not currently available for provider %q. Available chat models: %s.", r.DefaultModel, r.DefaultProvider, available),
-		// The backend is reachable and serving fine — the misconfiguration is
-		// the *default model choice* (e.g. an OpenVINO artifact set as
-		// default while a llama backend is what's actually running), which is
-		// picked on the Settings page (GlobalSettingsSection), not Backends.
+		Code:       "default_model_not_available",
+		Severity:   "error",
+		Category:   CategoryHealth,
+		Message:    fmt.Sprintf("Default model %q is not currently available for provider %q. Available chat models: %s.", r.DefaultModel, r.DefaultProvider, available),
 		FixPath:    "/settings",
 		CLICommand: cmd,
 	})

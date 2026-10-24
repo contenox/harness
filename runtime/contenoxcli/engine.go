@@ -1,8 +1,8 @@
 package contenoxcli
 
 import (
-	"github.com/contenox/harness/runtime/homedir"
 	"context"
+	"github.com/contenox/harness/runtime/homedir"
 	"log/slog"
 	"os"
 
@@ -15,12 +15,6 @@ import (
 	"github.com/contenox/harness/runtime/taskengine"
 )
 
-// ComputeReadiness builds the engine — which runs a read-only backend sync, NOT
-// a model completion — and returns the evaluated setup readiness. It is the
-// shared path behind `contenox doctor` and the setup wizard's final check, so
-// readiness is verified without ever sending a prompt (which would run a chain,
-// spend tokens, and could touch tools/audit trails). opts.EffectiveNoDeleteModels
-// is honored by BuildEngine, so a readiness check never prunes models.
 func ComputeReadiness(ctx context.Context, db libdbexec.DBManager, opts chatOpts) (setupcheck.Result, error) {
 	engine, err := BuildEngine(ctx, db, opts)
 	if err != nil {
@@ -94,17 +88,6 @@ func BuildEngine(ctx context.Context, db libdbexec.DBManager, opts chatOpts) (*E
 	return engine, nil
 }
 
-// readinessDefaults derives the effective default model/provider to credit during
-// setup preflight. It credits the effective value whenever a flag override made it
-// DIFFER from persisted config — not only when config is empty. The setup-readiness
-// check must validate the model/provider the engine will ACTUALLY use for the turn
-// (opts.EffectiveDefault*, which honor --model/--provider), so an explicit override
-// to a healthy backend is not blocked by a broken persisted default: `--provider
-// vertex-google` must run even when default-provider=llama is configured but unservable.
-// A model equal to the hardcoded fallback with no persisted config is still treated
-// as unset (matching the flag-vs-config precedence in cli.go/run_cmd.go); when the
-// effective value equals persisted config, the check sees that value directly and no
-// override is needed.
 func readinessDefaults(opts chatOpts) (model, provider string) {
 	if opts.EffectiveDefaultModel != opts.EffectiveConfiguredModel &&
 		opts.EffectiveDefaultModel != "" &&
@@ -118,8 +101,6 @@ func readinessDefaults(opts chatOpts) (model, provider string) {
 	return model, provider
 }
 
-// hitlPolicySource builds the CLI's HITL policy lookup: the workspace .contenox
-// dir first, then the user's ~/.contenox-harness as fallback.
 func hitlPolicySource(primaryDir string) hitlservice.PolicySource {
 	dirs := []string{primaryDir}
 	if dir, err := homedir.Dir(); err == nil {

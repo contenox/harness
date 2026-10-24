@@ -137,7 +137,6 @@ func TestUnit_AgentSide_UnknownNonExtensionMethod_StillMethodNotFound(t *testing
 
 	agentSide, clientSide := newPipePair()
 	conn := libacp.NewAgentSideConnection(agentSide, func(c *libacp.AgentSideConnection) libacp.Agent {
-		// Catch-all handler that would wrongly answer any method if the "_" gate were bypassed.
 		c.SetExtRequestHandler(func(context.Context, string, json.RawMessage) (json.RawMessage, *libacp.Error) {
 			return json.RawMessage(`{}`), nil
 		})
@@ -343,8 +342,6 @@ func TestUnit_ExtNotification_ClientToAgent_Loopback(t *testing.T) {
 	}
 }
 
-// Invariant: an in-flight extension request participates in
-// "$/cancel_request" cancellation exactly like a core method's handler.
 func TestUnit_ExtRequest_CancelRequest_AbortsInFlightHandler(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

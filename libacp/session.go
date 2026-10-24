@@ -9,32 +9,24 @@ import (
 type SessionID string
 
 type NewSessionRequest struct {
-	Cwd string `json:"cwd"`
-	// AdditionalDirectories are extra workspace roots on top of Cwd; each path
-	// must be absolute.
+	Cwd                   string          `json:"cwd"`
 	AdditionalDirectories []string        `json:"additionalDirectories,omitempty"`
 	McpServers            []McpServer     `json:"mcpServers"`
 	Meta                  json.RawMessage `json:"_meta,omitempty"`
 }
 
 type NewSessionResponse struct {
-	SessionID SessionID         `json:"sessionId"`
-	Modes     *SessionModeState `json:"modes,omitempty"`
-	// Models is the UNSTABLE model-picker surface (see SessionModelState); nil
-	// means the agent exposes no selectable model.
+	SessionID     SessionID             `json:"sessionId"`
+	Modes         *SessionModeState     `json:"modes,omitempty"`
 	Models        *SessionModelState    `json:"models,omitempty"`
 	ConfigOptions []SessionConfigOption `json:"configOptions,omitempty"`
 	Meta          json.RawMessage       `json:"_meta,omitempty"`
 }
 
 type LoadSessionRequest struct {
-	SessionID SessionID `json:"sessionId"`
-	Cwd       string    `json:"cwd"`
-	// SinceSeq, when > 0, replays only the session updates the caller has not
-	// seen (its last received sequence) instead of the full history.
-	SinceSeq uint64 `json:"sinceSeq,omitempty"`
-	// AdditionalDirectories are extra workspace roots on top of Cwd; each path
-	// must be absolute.
+	SessionID             SessionID       `json:"sessionId"`
+	Cwd                   string          `json:"cwd"`
+	SinceSeq              uint64          `json:"sinceSeq,omitempty"`
 	AdditionalDirectories []string        `json:"additionalDirectories,omitempty"`
 	McpServers            []McpServer     `json:"mcpServers"`
 	Meta                  json.RawMessage `json:"_meta,omitempty"`
@@ -47,8 +39,6 @@ type LoadSessionResponse struct {
 	Meta          json.RawMessage       `json:"_meta,omitempty"`
 }
 
-// SessionModeState is the wire shape for `modes` in session/new and
-// session/load responses: an object, not a bare array.
 type SessionModeState struct {
 	CurrentModeID  string          `json:"currentModeId"`
 	AvailableModes []SessionMode   `json:"availableModes"`
@@ -62,8 +52,6 @@ type SessionMode struct {
 	Meta        json.RawMessage `json:"_meta,omitempty"`
 }
 
-// SetSessionModeRequest is session/set_mode's params: switch a session to one
-// of the ids SessionModeState.AvailableModes advertised.
 type SetSessionModeRequest struct {
 	SessionID SessionID       `json:"sessionId"`
 	ModeID    string          `json:"modeId"`
@@ -74,18 +62,12 @@ type SetSessionModeResponse struct {
 	Meta json.RawMessage `json:"_meta,omitempty"`
 }
 
-// SessionModelState is the UNSTABLE model-picker surface: the wire shape of
-// the optional `models` field in session/new, session/load, and
-// session/resume responses, mirroring SessionModeState for modes.
 type SessionModelState struct {
 	CurrentModelID  string          `json:"currentModelId"`
 	AvailableModels []ModelInfo     `json:"availableModels"`
 	Meta            json.RawMessage `json:"_meta,omitempty"`
 }
 
-// ModelInfo describes one selectable model in a SessionModelState (UNSTABLE
-// model-picker surface); ID is the stable identifier passed back in
-// SetSessionModelRequest.
 type ModelInfo struct {
 	ID          string          `json:"modelId"`
 	Name        string          `json:"name"`
@@ -93,36 +75,27 @@ type ModelInfo struct {
 	Meta        json.RawMessage `json:"_meta,omitempty"`
 }
 
-// SetSessionModelRequest is session/set_model's (UNSTABLE model-picker
-// surface) params: switch a session to one of the ids
-// SessionModelState.AvailableModels advertised.
 type SetSessionModelRequest struct {
 	SessionID SessionID       `json:"sessionId"`
 	ModelID   string          `json:"modelId"`
 	Meta      json.RawMessage `json:"_meta,omitempty"`
 }
 
-// SetSessionModelResponse is session/set_model's result: always empty — the
-// requested modelId is authoritative on success, and no session/update kind
-// exists to reconfirm it.
 type SetSessionModelResponse struct {
 	Meta json.RawMessage `json:"_meta,omitempty"`
 }
 
-// Session configuration option type discriminators (SessionConfigOption.Type).
 const (
 	SessionConfigOptionTypeSelect  = "select"
 	SessionConfigOptionTypeBoolean = "boolean"
 )
 
 type SessionConfigOption struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Category    string `json:"category,omitempty"`
-	Type        string `json:"type"`
-	// CurrentValue is always the Go-side string form: the selected
-	// SessionConfigValue.Value id for Select, "true"/"false" for Boolean.
+	ID           string              `json:"id"`
+	Name         string              `json:"name"`
+	Description  string              `json:"description,omitempty"`
+	Category     string              `json:"category,omitempty"`
+	Type         string              `json:"type"`
 	CurrentValue string              `json:"currentValue"`
 	Options      SessionConfigValues `json:"options"`
 	Meta         json.RawMessage     `json:"_meta,omitempty"`
@@ -279,17 +252,13 @@ func (v *SessionConfigValues) UnmarshalJSON(data []byte) error {
 }
 
 type SetSessionConfigOptionRequest struct {
-	SessionID SessionID `json:"sessionId"`
-	ConfigID  string    `json:"configId"`
-	// Type discriminates the value variant: absent/unknown means Value is a
-	// string value id (the default), "boolean" means Value is a bool.
-	Type  string                   `json:"type,omitempty"`
-	Value SessionConfigOptionValue `json:"value"`
-	Meta  json.RawMessage          `json:"_meta,omitempty"`
+	SessionID SessionID                `json:"sessionId"`
+	ConfigID  string                   `json:"configId"`
+	Type      string                   `json:"type,omitempty"`
+	Value     SessionConfigOptionValue `json:"value"`
+	Meta      json.RawMessage          `json:"_meta,omitempty"`
 }
 
-// SessionConfigOptionValue is the value union of session/set_config_option: a
-// plain string value id (default) or a boolean (request Type "boolean").
 type SessionConfigOptionValue struct {
 	IsBool bool
 	Str    string
@@ -304,8 +273,6 @@ func BoolConfigValue(b bool) SessionConfigOptionValue {
 	return SessionConfigOptionValue{IsBool: true, Bool: b}
 }
 
-// AsString renders the value for consumers that key handling off strings;
-// booleans become "true"/"false".
 func (v SessionConfigOptionValue) AsString() string {
 	if v.IsBool {
 		if v.Bool {
@@ -342,18 +309,10 @@ type SetSessionConfigOptionResponse struct {
 	Meta          json.RawMessage       `json:"_meta,omitempty"`
 }
 
-// ResumeSessionRequest reconnects to an existing session without history
-// replay (the client kept its transcript); McpServers is optional here,
-// unlike session/new and session/load.
 type ResumeSessionRequest struct {
-	SessionID SessionID `json:"sessionId"`
-	Cwd       string    `json:"cwd"`
-	// SinceSeq, when > 0, resumes by replaying only the session updates newer
-	// than the caller's last received sequence (its cursor). 0 keeps the old
-	// contract: the client kept its transcript and no replay is sent.
-	SinceSeq uint64 `json:"sinceSeq,omitempty"`
-	// AdditionalDirectories are extra workspace roots on top of Cwd; each path
-	// must be absolute.
+	SessionID             SessionID       `json:"sessionId"`
+	Cwd                   string          `json:"cwd"`
+	SinceSeq              uint64          `json:"sinceSeq,omitempty"`
 	AdditionalDirectories []string        `json:"additionalDirectories,omitempty"`
 	McpServers            []McpServer     `json:"mcpServers,omitempty"`
 	Meta                  json.RawMessage `json:"_meta,omitempty"`
@@ -389,8 +348,6 @@ type CancelNotification struct {
 	Meta      json.RawMessage `json:"_meta,omitempty"`
 }
 
-// CancelRequestNotification is the payload of "$/cancel_request": the JSON-RPC
-// id of the request whose response is no longer awaited.
 type CancelRequestNotification struct {
 	RequestID RequestID       `json:"requestId"`
 	Meta      json.RawMessage `json:"_meta,omitempty"`
@@ -403,9 +360,8 @@ type ListSessionsRequest struct {
 }
 
 type SessionInfo struct {
-	SessionID SessionID `json:"sessionId"`
-	Cwd       string    `json:"cwd,omitempty"`
-	// AdditionalDirectories is the ordered additional-root list, when tracked.
+	SessionID             SessionID       `json:"sessionId"`
+	Cwd                   string          `json:"cwd,omitempty"`
 	AdditionalDirectories []string        `json:"additionalDirectories,omitempty"`
 	Title                 string          `json:"title,omitempty"`
 	UpdatedAt             string          `json:"updatedAt,omitempty"`

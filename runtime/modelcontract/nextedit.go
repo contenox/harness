@@ -10,20 +10,17 @@ import (
 	"unicode/utf8"
 )
 
-// EditHistory is a preceding change supplied as complete before and after source.
 type EditHistory struct {
 	Path   string `json:"path"`
 	Before string `json:"before"`
 	After  string `json:"after"`
 }
 
-// ContextFile is read-only source context for a prediction.
 type ContextFile struct {
 	Path string `json:"path"`
 	Text string `json:"text"`
 }
 
-// NextEditInput identifies a UTF-8 document and its editable half-open byte range.
 type NextEditInput struct {
 	Path    string        `json:"path"`
 	Before  string        `json:"before"`
@@ -35,7 +32,6 @@ type NextEditInput struct {
 	Context []ContextFile `json:"context"`
 }
 
-// Validate rejects malformed source, paths and ranges before model execution.
 func (i NextEditInput) Validate() error {
 	if !validPath(i.Path) || !utf8.ValidString(i.Before) || !utf8.ValidString(i.Current) {
 		return errors.New("next edit requires a path and valid UTF-8 document snapshots")
@@ -69,7 +65,6 @@ func byteBoundary(text string, offset int) bool {
 	return offset >= 0 && offset <= len(text) && (offset == len(text) || utf8.RuneStart(text[offset]))
 }
 
-// TextEdit replaces exactly OldText in the original snapshot at [Start, End).
 type TextEdit struct {
 	Start   int    `json:"start"`
 	End     int    `json:"end"`
@@ -77,7 +72,6 @@ type TextEdit struct {
 	NewText string `json:"newText"`
 }
 
-// ValidateEdits rejects stale, overlapping or out-of-region replacements.
 func ValidateEdits(input NextEditInput, edits []TextEdit) error {
 	if err := input.Validate(); err != nil {
 		return err
@@ -98,7 +92,6 @@ func ValidateEdits(input NextEditInput, edits []TextEdit) error {
 	return nil
 }
 
-// NextEditProfile specifies a declared edit model's format and operation limits.
 type NextEditProfile struct {
 	ID            string
 	Version       int
@@ -108,7 +101,6 @@ type NextEditProfile struct {
 	TextStops     []string
 }
 
-// ResolveNextEdit selects a declared edit protocol independently of model names.
 func ResolveNextEdit(format string) (NextEditProfile, error) {
 	entry, err := declaredFormats.nextEditFormat(format)
 	if err != nil {
@@ -117,7 +109,6 @@ func ResolveNextEdit(format string) (NextEditProfile, error) {
 	return NextEditProfile{ID: entry.ID, Version: entry.Version, ContextTokens: entry.ContextTokens, MaxTokens: entry.MaxTokens, Stops: entry.Stops, TextStops: entry.TextStops}, nil
 }
 
-// NextEditFingerprint identifies prompt, parser and termination semantics.
 func NextEditFingerprint(format string) (string, error) {
 	profile, err := ResolveNextEdit(format)
 	if err != nil {
@@ -131,13 +122,11 @@ func NextEditFingerprint(format string) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-// TextPart distinguishes a model control token from literal source or scaffolding.
 type TextPart struct {
 	Text    string
 	Control bool
 }
 
-// PreparedEdit carries a rendered model request and its exact replacement boundary.
 type PreparedEdit struct {
 	Parts     []TextPart
 	Prefill   string
@@ -147,7 +136,6 @@ type PreparedEdit struct {
 	format    string
 }
 
-// Render assembles the declared prompt for endpoints that accept raw text.
 func (p PreparedEdit) Render() string {
 	var text strings.Builder
 	for _, part := range p.Parts {
@@ -156,12 +144,10 @@ func (p PreparedEdit) Render() string {
 	return text.String()
 }
 
-// EndpointStops combines token and text delimiters for raw completion APIs.
 func (p PreparedEdit) EndpointStops() []string {
 	return append(append([]string{}, p.Stops...), p.TextStops...)
 }
 
-// PrepareNextEdit assembles source and controls without a chat template.
 func PrepareNextEdit(format string, input NextEditInput) (PreparedEdit, error) {
 	profile, err := ResolveNextEdit(format)
 	if err != nil {
@@ -284,7 +270,6 @@ func changedRange(before, after string) (int, int, int) {
 	return start, beforeEnd, afterEnd
 }
 
-// Parse validates a complete model response and returns a minimal exact replacement.
 func (p PreparedEdit) Parse(output, finishReason string) ([]TextEdit, error) {
 	if _, err := ResolveNextEdit(p.format); err != nil {
 		return nil, err
@@ -324,7 +309,6 @@ func (p PreparedEdit) Parse(output, finishReason string) ([]TextEdit, error) {
 	return edits, nil
 }
 
-// TokenizeParts resolves controls independently of source and validates stop token IDs.
 func TokenizeParts(parts []TextPart, stops []string, tokenize func(string, bool) ([]int, error)) ([]int, []int, error) {
 	if tokenize == nil {
 		return nil, nil, errors.New("native code generation requires a tokenizer")

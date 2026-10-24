@@ -4,34 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { TerminalView } from '../../../components/terminal/TerminalView';
 import { useHostTerminalSession } from '../../../hooks/useHostTerminalSession';
 
-/**
- * The break-glass operator console: a full-page interactive shell on the machine
- * that serves this runtime, for manual host intervention — unstick a wedged
- * process, restart or kill a service, free memory, or patch up whatever state an
- * agent left in a bad way. It is the operator's OWN shell (see terminalservice),
- * NOT an agent's terminal — agent command output is the separate ACP/shellsession
- * path rendered inside the chat/mission timeline.
- *
- * Deliberately un-scoped: this is a rescue tool, so it opens ONE shell at serve's
- * default root and you navigate from there — no project picker gating the way to
- * a prompt. (There is no confinement to scope, either: cwd only seeds the shell's
- * starting directory; the PTY runs as serve's OS user and can cd anywhere. Real
- * confinement is an agent concern — libsandbox / goja capabilities — not this
- * human surface.)
- *
- * Responsive by construction: `TerminalView` fits xterm to its container via a
- * FitAddon + ResizeObserver (rotation or the mobile keyboard re-fit and re-send
- * the PTY size), so the only layout job here is to give it a full-height,
- * non-scrolling box (`Page bodyScroll="hidden"`). The shell opens READ-ONLY until
- * an explicit take-over (TerminalView owns that confirmation), and degrades to a
- * graceful "unavailable" state when serve does not expose the terminal feature
- * (404).
- *
- * A single stable session key (`host-console`): `useHostTerminalSession` memoizes
- * one PTY per key, so leaving the page and returning re-attaches to the same
- * still-live shell — your history and half-typed command survive — rather than
- * spawning a duplicate (server-side idle-timeout + max-sessions bound the rest).
- */
 export default function ConsolePage() {
   const { t } = useTranslation();
   const { session, isAbsent, isLoading, error, retry } = useHostTerminalSession('host-console', {

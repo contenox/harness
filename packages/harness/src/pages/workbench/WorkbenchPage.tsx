@@ -30,14 +30,6 @@ function contentUrl(path: string, root: string): string {
   return `/api/files/content?${params.toString()}`;
 }
 
-/**
- * The workbench: the library's session layout (file tree, open files, preview,
- * activity) around a live ACP conversation.
- *
- * The layout and its workspace hook come from `@contenox/ui/session-workspace`;
- * this page only supplies the workspace source (the harness serves files over
- * the HTTP `/files` API, not ACP's fs extension) and the chat column.
- */
 export default function WorkbenchPage() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const {
@@ -50,7 +42,6 @@ export default function WorkbenchPage() {
   } = useAcpWorkspace();
   const [draft, setDraft] = useState('');
 
-  // A deep link can arrive before the session is subscribed; open it once.
   useEffect(() => {
     if (!sessionId) return;
     if (sessionId === session?.sessionId) return;
@@ -96,8 +87,6 @@ export default function WorkbenchPage() {
       if (response.encoding === 'base64') {
         return { content: response.contentBase64 ?? '', isDir: false };
       }
-      // The content endpoint returns text as UTF-8; preview viewers (markdown,
-      // images, PDF) decode base64, so a text file is encoded here.
       const bytes = new TextEncoder().encode(response.content ?? '');
       let binary = '';
       bytes.forEach(byte => {

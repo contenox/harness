@@ -9,7 +9,6 @@ import { api } from '../lib/api';
 import { chainKeys } from '../lib/queryKeys';
 import { ChainDefinition, ChainTask } from '../lib/types';
 
-/** Lists all local task-chain paths (GET /api/taskchains). */
 export function useListChains(): UseQueryResult<string[], Error> {
   return useQuery<string[], Error>({
     queryKey: chainKeys.list(),
@@ -17,7 +16,6 @@ export function useListChains(): UseQueryResult<string[], Error> {
   });
 }
 
-/** Load a single chain JSON from its local path (required query param on GET /api/taskchains). */
 export function useChain(vfsPath: string) {
   return useQuery<ChainDefinition>({
     queryKey: chainKeys.byPath(vfsPath),

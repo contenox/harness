@@ -14,11 +14,6 @@ import (
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
-// Environment variables of the non-interactive ACP setup route. They serve two
-// roles: as process-level config overrides on every `acp`/`acpx` launch
-// ("default envs"), and as the ACP env_var auth method's contract — a client
-// collects them from the user and relaunches the agent with them set, after
-// which setup completes without the terminal wizard.
 const (
 	envDefaultModel       = "CONTENOX_DEFAULT_MODEL"
 	envDefaultProvider    = "CONTENOX_DEFAULT_PROVIDER"
@@ -26,14 +21,9 @@ const (
 	envDefaultAltProvider = "CONTENOX_DEFAULT_ALT_PROVIDER"
 	envDefaultMaxTokens   = "CONTENOX_DEFAULT_MAX_TOKENS"
 	envDefaultThink       = "CONTENOX_DEFAULT_THINK"
-	// envBaseURL supplies the endpoint URL for account-specific providers whose
-	// URL cannot be defaulted (currently vertex-google: project + region).
-	envBaseURL = "CONTENOX_BASE_URL"
+	envBaseURL            = "CONTENOX_BASE_URL"
 )
 
-// configValueWithEnv reads a global config value with environment-first
-// precedence: a set env var overrides the stored config for this process
-// without persisting anything.
 func configValueWithEnv(ctx context.Context, db libdb.DBManager, key, envKey string) string {
 	if v := strings.TrimSpace(os.Getenv(envKey)); v != "" {
 		return v
@@ -41,8 +31,6 @@ func configValueWithEnv(ctx context.Context, db libdb.DBManager, key, envKey str
 	return acpsvc.ReadConfigValue(ctx, db, key)
 }
 
-// acpEnvSetupVars is the variable list advertised via the ACP env_var auth
-// method: which environment the client should collect to configure contenox.
 func acpEnvSetupVars() []libacp.AuthEnvVar {
 	notSecret := false
 	providerKeys := make([]string, 0, len(setupProviders))
@@ -58,18 +46,9 @@ func acpEnvSetupVars() []libacp.AuthEnvVar {
 			vars = append(vars, libacp.AuthEnvVar{Name: sp.envKey, Label: sp.label + " API key", Optional: true})
 		}
 	}
-	// envBaseURL (CONTENOX_BASE_URL) is honored by completeEnvSetup for
-	// account-specific providers (vertex-google) but intentionally not advertised
-	// here: acpEnvSetupVars keeps a fixed shape (provider, model, then per-provider
-	// API keys) that TestUnit_ACPEnvSetupVars_ContractShape guards.
 	return vars
 }
 
-// completeEnvSetup performs the setup wizard's effects non-interactively from
-// the environment: validate the provider, resolve the model and API key,
-// register the provider backend (idempotent), and persist default-provider /
-// default-model. Errors name the exact variable that is missing so an ACP
-// client can show an actionable message.
 func completeEnvSetup(ctx context.Context, db libdb.DBManager) error {
 	provider := strings.ToLower(strings.TrimSpace(os.Getenv(envDefaultProvider)))
 	model := strings.TrimSpace(os.Getenv(envDefaultModel))
@@ -134,8 +113,6 @@ func completeEnvSetup(ctx context.Context, db libdb.DBManager) error {
 	return nil
 }
 
-// backendExists reports whether a backend of the given provider type is
-// already registered (its stored API key then suffices).
 func backendExists(ctx context.Context, db libdb.DBManager, providerType string) bool {
 	svc := backendservice.New(db)
 	backends, err := svc.List(ctx, nil, 100)

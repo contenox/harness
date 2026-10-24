@@ -6,16 +6,12 @@ import (
 	"unicode/utf8"
 )
 
-// TextDecoder buffers incomplete UTF-8 and configured text stops without replacing source bytes.
 type TextDecoder struct {
-	// Stops contains literal generation delimiters, which are withheld from output.
-	Stops []string
-	// Stopped reports that a complete configured delimiter terminated generation.
+	Stops   []string
 	Stopped bool
 	pending string
 }
 
-// Push returns complete UTF-8 text and rejects invalid or unfinished terminal output.
 func (d *TextDecoder) Push(piece string, final bool) (string, error) {
 	if d.Stopped {
 		return "", nil

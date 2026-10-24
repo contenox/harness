@@ -8,12 +8,7 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// LocalProviderAdapter creates providers for self-hosted backends (Ollama, vLLM).
 func LocalProviderAdapter(ctx context.Context, tracker libtracker.ActivityTracker, runtime map[string]BackendRuntimeState) ProviderFromRuntimeState {
-	// One flat list of providers, one per model per backend, reachable under the
-	// backend's implementation type and under the name it is registered with: a
-	// configured provider role states either, and a registered name need not
-	// equal the type it runs as.
 	providersByKey := make(map[string][]modelrepo.Provider)
 	var all []modelrepo.Provider
 
@@ -45,8 +40,6 @@ func LocalProviderAdapter(ctx context.Context, tracker libtracker.ActivityTracke
 		for _, model := range state.PulledModels {
 			p := catalog.ProviderFor(observedModelFromPullStatus(model))
 			if p == nil {
-				// A catalog that cannot build an execution provider for one of
-				// its own observed models must not poison the candidate list.
 				continue
 			}
 			all = append(all, p)
@@ -57,7 +50,6 @@ func LocalProviderAdapter(ctx context.Context, tracker libtracker.ActivityTracke
 	}
 
 	return func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error) {
-		// No specific backend types requested: return providers from every type.
 		hasNonEmpty := false
 		for _, bt := range backendTypes {
 			if bt != "" {
@@ -82,5 +74,4 @@ func LocalProviderAdapter(ctx context.Context, tracker libtracker.ActivityTracke
 	}
 }
 
-// ProviderFromRuntimeState retrieves available model providers
 type ProviderFromRuntimeState func(ctx context.Context, backendTypes ...string) ([]modelrepo.Provider, error)

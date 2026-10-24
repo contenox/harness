@@ -8,12 +8,8 @@ import (
 	"sync/atomic"
 )
 
-// Mirrors the 1024-slot NATS ChanSubscribe buffer, reproducing its
-// drop-under-backpressure policy.
 const inmemStreamBuffer = 1024
 
-// InMem is an in-memory Messenger for single-process use. It reproduces the NATS
-// backend's observable contract.
 type InMem struct {
 	mu       sync.RWMutex
 	closed   bool
@@ -32,13 +28,11 @@ type inmemSubscription struct {
 	inmem   *InMem
 	queue   chan []byte
 	done    chan struct{}
-	// exited is closed by deliver when it returns.
 	exited  chan struct{}
 	once    sync.Once
 	dropped atomic.Uint64
 }
 
-// NewInMem returns a new in-memory Messenger.
 func NewInMem() *InMem {
 	return &InMem{
 		streams:  make(map[string][]*inmemSubscription),
@@ -46,10 +40,7 @@ func NewInMem() *InMem {
 	}
 }
 
-// Publish hands the message to every Stream subscriber's queue and returns. It
-// never blocks on a consumer; a full queue drops the message.
 func (p *InMem) Publish(ctx context.Context, subject string, data []byte) error {
-	// Checked up-front so a cancelled context fails even when nobody is subscribed.
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -69,7 +60,6 @@ func (p *InMem) Publish(ctx context.Context, subject string, data []byte) error 
 	return nil
 }
 
-// enqueue is the non-blocking hand-off; drops are logged once per subscription.
 func (s *inmemSubscription) enqueue(data []byte) {
 	select {
 	case s.queue <- data:
@@ -82,7 +72,6 @@ func (s *inmemSubscription) enqueue(data []byte) {
 	}
 }
 
-// Stream creates a subscription to a subject; messages are delivered to ch.
 func (p *InMem) Stream(ctx context.Context, subject string, ch chan<- []byte) (Subscription, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -118,7 +107,6 @@ func (p *InMem) Stream(ctx context.Context, subject string, ch chan<- []byte) (S
 	return sub, nil
 }
 
-// deliver drains the queue into the caller's channel until the subscription ends.
 func (s *inmemSubscription) deliver() {
 	defer close(s.exited)
 	for {
@@ -157,7 +145,6 @@ func (p *InMem) Request(ctx context.Context, subject string, data []byte) ([]byt
 	}
 
 	reply, err := handler(ctx, data)
-	// The handler runs in-process here, so the cancellation check is explicit.
 	if cerr := ctx.Err(); cerr != nil {
 		return nil, cerr
 	}
@@ -185,7 +172,6 @@ func (p *InMem) Serve(ctx context.Context, subject string, handler Handler) (Sub
 	return sub, nil
 }
 
-// Close marks the messenger closed and releases resources.
 func (p *InMem) Close() error {
 	p.mu.Lock()
 	p.closed = true
@@ -214,12 +200,10 @@ func (s *inmemSubscription) Unsubscribe() error {
 	}
 	s.inmem.mu.Unlock()
 	s.stop()
-	// Wait for deliver to exit: callers routinely close(ch) right after this.
 	<-s.exited
 	return nil
 }
 
-// stop halts the delivery goroutine. Safe to call repeatedly and concurrently.
 func (s *inmemSubscription) stop() {
 	s.once.Do(func() { close(s.done) })
 }

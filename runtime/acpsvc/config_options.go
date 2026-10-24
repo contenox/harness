@@ -29,59 +29,23 @@ const (
 
 	hitlPolicyDefaultValue = "__contenox_default__"
 
-	// WorkspaceConfigOptionsMetaKey is the initialize-response `_meta` key under
-	// which contenox advertises the workspace-level (session-less) config
-	// options. Sessions are minted lazily (on first prompt — see AcpChatPage's
-	// handleSubmit), so a fresh chat has no session and therefore none of the
-	// per-session config options that normally arrive with session/new. This
-	// extension lets a client render the model/think/HITL/token-limit controls
-	// on the empty chat, stage the user's choices, and re-apply them via
-	// set_config_option right after session/new — crucial when the configured
-	// default model is broken and the user must pick a working one BEFORE the
-	// first (failing) turn. It is a contenox extension living in the spec's
-	// reserved `_meta` namespace: conformant clients that don't recognize the
-	// key ignore it entirely and simply wait for the per-session options.
 	WorkspaceConfigOptionsMetaKey = "contenox.workspaceConfigOptions"
 )
 
-// workspaceConfigOptions builds the session-less config options advertised at
-// initialize time. The values mirror exactly what a freshly-minted session
-// will carry: it seeds a throwaway sessionEntry from the same transport
-// defaults session.go's NewSession/LoadSession seed a real entry with, then
-// reuses the per-session builders so there is a single source of truth for the
-// option shapes. All sessionEntry accessors used downstream are nil-safe, but
-// seeding explicitly keeps the workspace snapshot byte-identical to the first
-// session's initial options (in particular Think, which defaults to
-// thinkDefault() rather than the accessor's bare "high" fallback).
 func (t *Transport) workspaceConfigOptions(ctx context.Context) []libacp.SessionConfigOption {
 	seed := &sessionEntry{
 		Provider: t.provider(),
 		Model:    t.model(),
 		Think:    t.thinkDefault(),
 	}
-	// The workspace snapshot mirrors the first (native) session's options, so seed
-	// a native driver: sessionConfigOptions dispatches through the driver, and a
-	// native driver returns exactly the chain-engine selects this advertises.
 	seed.driver = &nativeDriver{t: t}
 	return t.sessionConfigOptions(ctx, seed)
 }
 
-// sessionConfigOptions returns the config options advertised for a session,
-// dispatching to its driver: the native driver returns the chain-engine
-// model/think/token/policy selects; the external driver returns nil, since those
-// configure the chain the downstream agent does not drive.
 func (t *Transport) sessionConfigOptions(ctx context.Context, sess *sessionEntry) []libacp.SessionConfigOption {
 	return sess.driver.ConfigOptions(ctx, sess)
 }
 
-// workspaceRootConfigOption advertises the allowlisted workspace roots a client
-// may choose for a session. Present only when an allowlist is configured
-// (serve); the stdio ACP path (no allowlist) omits it. The chosen root becomes
-// the session's cwd at session/new time and is immutable afterward, so this
-// option is informational for a live session — the picker reads its Options list
-// on the empty chat (via the workspace config options _meta extension) and
-// passes the selection as the new session's cwd. set_config_option for it is
-// refused (see setSessionConfigOption).
 func (t *Transport) workspaceRootConfigOption(sess *sessionEntry) (libacp.SessionConfigOption, bool) {
 	f := t.deps.WorkspaceRoots
 	if f == nil {
@@ -119,9 +83,6 @@ func (t *Transport) workspaceRootConfigOption(sess *sessionEntry) (libacp.Sessio
 }
 
 func workspaceRootDisplayName(root string) string {
-	// A registered project's friendly name (its marker's name), falling back to
-	// the basename — so the session workspace picker lists named projects, matching
-	// the /workspace/roots registry and Beam's project switcher.
 	return project.DisplayName(root)
 }
 
@@ -182,11 +143,6 @@ func (t *Transport) tokenLimitConfigOption(ctx context.Context, sess *sessionEnt
 	if cap > 0 {
 		desc += fmt.Sprintf(" Capped to model max %d if larger.", cap)
 	}
-	// The ACP v1 schema only knows "select" and "boolean" option types (an
-	// earlier revision here invented type:"text", which conformant clients may
-	// drop or mis-render). Offer a ladder of budgets clamped to the model cap;
-	// set_config_option still accepts any non-negative integer, so a custom
-	// current value is folded into the list.
 	return libacp.SessionConfigOption{
 		ID:           configIDTokenLimit,
 		Name:         "Token Limit",
@@ -231,8 +187,6 @@ func formatTokenCount(n int) string {
 	return strconv.Itoa(n) + " tokens"
 }
 
-// modelContextCap returns the hard cap for the session's current model (0 if unknown/unreported).
-// Prefers declared/observed ContextLength from runtime pulled models.
 func (t *Transport) modelContextCap(ctx context.Context, sess *sessionEntry) int {
 	if sess == nil {
 		return 0
@@ -248,7 +202,6 @@ func (t *Transport) modelContextCap(ctx context.Context, sess *sessionEntry) int
 			}
 		}
 	}
-	// Fallback: any matching model name
 	for _, st := range t.runtimeStates(ctx) {
 		for _, pm := range st.PulledModels {
 			if pm.Model == mod || pm.Name == mod {
@@ -403,20 +356,10 @@ func (t *Transport) hitlPolicyConfigValues(sess *sessionEntry) libacp.SessionCon
 	for _, name := range t.deps.KnownPolicies {
 		add(name)
 	}
-	// Fold in the session's current selection so a concrete policy that isn't in
-	// KnownPolicies still validates and renders as the current value. The sentinel
-	// is already seeded above, so hitlPolicy()'s sentinel default is a no-op here.
 	add(sess.hitlPolicy())
 	return libacp.NewSessionConfigValues(values)
 }
 
-// resolveSessionHITLPolicy returns the concrete HITL policy name to ENFORCE for
-// this session's turn, or "" when the session defers to the runtime's configured
-// default. A concrete session selection resolves to its own name; the sentinel
-// (or unset) resolves to the operator-configured default (HITLDefaultPolicyName),
-// which is "" under serve — so a defaulting session injects no context override
-// and enforcement falls through the existing global-KV/fallback chain, byte-
-// identical to pre-per-session behavior. See prompt.go for the injection.
 func (t *Transport) resolveSessionHITLPolicy(sess *sessionEntry) string {
 	name := sess.hitlPolicy()
 	if name == "" || name == hitlPolicyDefaultValue {
@@ -429,12 +372,6 @@ func (t *Transport) runtimeStates(ctx context.Context) []statetype.BackendRuntim
 	if t.deps.Engine == nil || t.deps.Engine.State == nil {
 		return nil
 	}
-	// The runtime reconciles backends at startup and on explicit refresh only;
-	// without this, a backend that comes up after startup (most commonly a
-	// (re)started modeld) stays invisible to the ACP model dropdown until some
-	// other read path (e.g. GET /state) happens to trigger a reconcile first.
-	// Debounced (see ReconcileIfStale), so this is cheap even on a hot config
-	// options read. Best-effort: serve the existing snapshot even if it fails.
 	_ = t.deps.Engine.State.ReconcileIfStale(ctx)
 	states := t.deps.Engine.State.Get(ctx)
 	out := make([]statetype.BackendRuntimeState, 0, len(states))
@@ -460,10 +397,6 @@ func (t *Transport) SetSessionConfigOption(ctx context.Context, req libacp.SetSe
 		return libacp.SetSessionConfigOptionResponse{}, err
 	}
 
-	// Dispatch through the session's driver: the native driver mutates the
-	// chain-engine selection (the historical switch below); the external driver
-	// forwards to the downstream agent's session/set_config_option. Routing here
-	// keeps SetSessionConfigOption blind to which backend a session runs.
 	if err := sess.driver.SetConfigOption(ctx, sess, req.ConfigID, req.Value); err != nil {
 		reportErr(err)
 		return libacp.SetSessionConfigOptionResponse{}, err
@@ -492,11 +425,6 @@ func (t *Transport) setSessionConfigOption(ctx context.Context, sess *sessionEnt
 		if !configOptionHasValue(t.hitlPolicyConfigOption(sess), value) {
 			return libacp.NewErrorf(libacp.ErrInvalidParams, "unknown HITL policy option %q", value)
 		}
-		// Session-scoped, exactly like model/think/token-limit: store the chosen
-		// sentinel-or-name ON THE SESSION and DO NOT write the global
-		// cli.hitl-policy-name KV. Enforcement injects the resolved name into the
-		// prompt context (prompt.go) so two concurrent ACP sessions behind serve's
-		// one shared engine gate under their own policies.
 		sess.setHITLPolicy(value)
 		return nil
 
@@ -529,10 +457,6 @@ func (t *Transport) setSessionConfigOption(ctx context.Context, sess *sessionEnt
 		return nil
 
 	case configIDWorkspaceRoot:
-		// The workspace root is the session's cwd, fixed at session/new time and
-		// immutable afterward (changing it would re-root the agent mid-session).
-		// The picker chooses it before the session exists; a live change is
-		// refused rather than silently ignored.
 		return libacp.NewErrorf(libacp.ErrInvalidParams, "the workspace cannot be changed after the session starts")
 
 	default:

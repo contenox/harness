@@ -81,7 +81,6 @@ func (c *VLLMChatClient) Chat(ctx context.Context, messages []modelrepo.Message,
 	result.FinishReason = choice.FinishReason
 	switch choice.FinishReason {
 	case "stop", "tool_calls", "length":
-		// "length" is a truncated success; partial content is real.
 		reportChange("chat_completed", map[string]any{
 			"finish_reason":    choice.FinishReason,
 			"content_length":   len(message.Content),

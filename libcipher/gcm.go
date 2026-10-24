@@ -18,7 +18,6 @@ type encryptorGCM cryptorGCM
 
 type decryptorGCM cryptorGCM
 
-// NewGCMEncryptor creates a new Encryptor using AES-GCM with the given key.
 func NewGCMEncryptor(encryptionKey []byte, rand io.Reader) (Encryptor, error) {
 	cryptor, err := newGCMCryptor(encryptionKey)
 	if err != nil {
@@ -29,7 +28,6 @@ func NewGCMEncryptor(encryptionKey []byte, rand io.Reader) (Encryptor, error) {
 	return (encryptorGCM)(cryptor), nil
 }
 
-// NewGCMDecryptor creates a new Decryptor using AES-GCM with the given key.
 func NewGCMDecryptor(encryptionKey []byte) (Decryptor, error) {
 	cryptor, err := newGCMCryptor(encryptionKey)
 	if err != nil {
@@ -55,7 +53,6 @@ func newGCMCryptor(encryptionKey []byte) (cryptorGCM, error) {
 	return cryptorGCM{gcm: gcm, blocksize: block.BlockSize}, nil
 }
 
-// Crypt encrypts message with AES-GCM and the provided additional data.
 func (e encryptorGCM) Crypt(message []byte, additionalData []byte) ([]byte, error) {
 	if message == nil {
 		return nil, MessageError("message was nil")
@@ -89,7 +86,6 @@ func (e encryptorGCM) Crypt(message []byte, additionalData []byte) ([]byte, erro
 	return cipherpackage, nil
 }
 
-// Crypt decrypts a cipher package produced by [NewGCMEncryptor].
 func (d decryptorGCM) Crypt(cipherpackage []byte) ([]byte, []byte, error) {
 	nonceSize := d.gcm.NonceSize()
 	const additionalDataHeaderLength = 2

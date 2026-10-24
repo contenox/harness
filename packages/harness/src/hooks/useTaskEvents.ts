@@ -9,21 +9,15 @@ export type TaskEventConnectionState = 'idle' | 'connecting' | 'open' | 'error' 
 
 export type UseTaskEventsOptions = {
   enabled?: boolean;
-  /** Fires when the EventSource has connected (subscribe before POST to avoid missing early events). */
   onConnectionOpen?: () => void;
 };
 
 export type UseTaskEventsResult = {
   state: TaskEventViewState;
   connectionState: TaskEventConnectionState;
-  /** Last transport or parse error (not task chain failure — see state.error). */
   connectionError: string | null;
 };
 
-/**
- * Subscribes to GET /api/task-events for a request-scoped task run.
- * Resets when requestId or enabled changes; closes when chain_completed / chain_failed arrives.
- */
 export function useTaskEvents(
   requestId: string | null,
   options?: UseTaskEventsOptions,

@@ -144,11 +144,6 @@ func TestUnit_ChatService_PersistDiff(t *testing.T) {
 	})
 }
 
-// Regression: SynthesizeHistory may emit overlapping prefixes (the same
-// message twice in one batch — e.g. when system_instruction prepending in
-// taskexec causes outHist[startIdx:] to re-include the last prior message).
-// PersistDiff must dedup within the batch; otherwise the SQLite UNIQUE
-// constraint on (id, idx_id) trips and the whole append fails.
 func TestUnit_ChatService_PersistDiff_WithinBatchDedup(t *testing.T) {
 	ctx, db := setupDB(t)
 	store := messagestore.New(db.WithoutTransaction(), "")
@@ -160,7 +155,7 @@ func TestUnit_ChatService_PersistDiff_WithinBatchDedup(t *testing.T) {
 	dup := taskengine.Message{Role: "user", Content: "same message", Timestamp: now}
 	history := []taskengine.Message{
 		dup,
-		dup, // identical role+ts+content — same generated ID
+		dup,
 		{Role: "assistant", Content: "different", Timestamp: now.Add(time.Millisecond)},
 	}
 
@@ -171,8 +166,6 @@ func TestUnit_ChatService_PersistDiff_WithinBatchDedup(t *testing.T) {
 	require.Len(t, msgs, 2, "duplicate user message must be deduped within the batch; only 2 distinct rows expected")
 }
 
-// Image attachments ride inside the opaque JSON payload, so persistence needs
-// no schema change — this guards the base64 []byte round-trip end to end.
 func TestUnit_ChatService_PersistDiff_RoundTripsImages(t *testing.T) {
 	ctx, db := setupDB(t)
 	store := messagestore.New(db.WithoutTransaction(), "")
@@ -219,7 +212,7 @@ func TestUnit_MessageStore_WithTransaction(t *testing.T) {
 			ID: "rollback-msg", IDX: "idx-tx", Payload: []byte(`"test"`), AddedAt: time.Now().UTC(),
 		}))
 
-		require.NoError(t, release()) // rolls back
+		require.NoError(t, release())
 
 		msgs, err := store.ListMessages(ctx, "idx-tx")
 		require.NoError(t, err)

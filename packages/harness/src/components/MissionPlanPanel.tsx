@@ -8,17 +8,6 @@ import {
 } from '../lib/missionPlan';
 import type { MissionPlan } from '../lib/types';
 
-/**
- * A mission's living plan on the detail surface: the entries as a checklist
- * (each with a status chip and a quiet priority marker), the current revision,
- * and — when the agent recorded one — the latest revision's `explanation` as the
- * "why it changed" line.
- *
- * Renders NOTHING when there is no plan: an absent plan, or the zero Plan a
- * never-planned mission carries (revision 0, no entries). An unplanned mission
- * therefore shows no panel at all, not an empty shell — matching the report
- * section's "say so plainly, fabricate nothing" stance.
- */
 export function MissionPlanPanel({ plan }: { plan?: MissionPlan | null }) {
   const { t } = useTranslation();
   const progress = planProgress(plan);
@@ -38,8 +27,7 @@ export function MissionPlanPanel({ plan }: { plan?: MissionPlan | null }) {
         </span>
       </div>
 
-      {/* The agent's own account of the latest revision — the "why it changed"
-          line, shown plainly rather than as something clickable. */}
+
       {plan.explanation && (
         <P variant="muted" className="mt-3 whitespace-pre-wrap text-sm">
           <span className="font-medium">{t('plan.why_label')}: </span>

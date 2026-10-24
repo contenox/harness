@@ -8,10 +8,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// vllmWireFixture builds the same logical conversation twice: once as it
-// looks when produced natively (no provenance fields) and once as it looks
-// after a provider migration (history carrying thinking traces and tool-call
-// provider_meta such as a Gemini thought_signature).
 func vllmWireFixture(withProvenance bool) []modelrepo.Message {
 	tc := modelrepo.ToolCall{ID: "call_1", Type: "function"}
 	tc.Function.Name = "fs_read"
@@ -31,8 +27,6 @@ func vllmWireFixture(withProvenance bool) []modelrepo.Message {
 }
 
 func TestUnit_VLLMWire_ProvenanceNeverLeaksAndBytesAreStable(t *testing.T) {
-	// Identical conversations must produce byte-identical request bodies
-	// regardless of history provenance, or vLLM's prefix cache misses.
 	reqA, _ := buildChatRequest("m", vllmWireFixture(false), nil)
 	reqB, _ := buildChatRequest("m", vllmWireFixture(true), nil)
 
@@ -55,7 +49,6 @@ func TestUnit_VLLMWire_ProvenanceNeverLeaksAndBytesAreStable(t *testing.T) {
 }
 
 func TestUnit_VLLMWire_KeepsRoleContentToolShape(t *testing.T) {
-	// Must keep role/content, sanitized tool-call names, and tool_call_id.
 	req, _ := buildChatRequest("m", vllmWireFixture(true), nil)
 	raw, err := json.Marshal(req.Messages)
 	if err != nil {
@@ -84,10 +77,6 @@ func TestUnit_VLLMWire_KeepsRoleContentToolShape(t *testing.T) {
 	}
 }
 
-// The stability assertions of a cache hint describe the token prefix, which
-// vLLM's prefix cache keys on server-side, so they add no request member. The
-// session key is different: it is the affinity a deployment fronting several
-// replicas routes on, and it reaches the wire as the vendor's session_id.
 func TestUnit_VLLMCache_StabilityHintsAddNoWireField(t *testing.T) {
 	plain, _ := buildChatRequest("m", vllmWireFixture(false), nil)
 	hinted, _ := buildChatRequest("m", vllmWireFixture(false), []modelrepo.ChatArgument{
@@ -109,7 +98,6 @@ func TestUnit_VLLMCache_StabilityHintsAddNoWireField(t *testing.T) {
 	}
 }
 
-// The session a caller declared reaches the vendor's own session member.
 func TestUnit_VLLMCache_SessionKeyIsSentAsSessionID(t *testing.T) {
 	req, _ := buildChatRequest("m", vllmWireFixture(false), []modelrepo.ChatArgument{
 		modelrepo.WithCacheHints(modelrepo.CacheHints{SessionKey: "session-1"}),

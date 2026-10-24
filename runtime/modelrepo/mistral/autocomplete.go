@@ -110,10 +110,6 @@ func (c *autocompleteClient) Autocomplete(ctx context.Context, input modelrepo.A
 	return out, nil
 }
 
-// fimOutcome maps the vendor's terminal reason onto the runtime's outcome: a
-// bounded generation is a result, a model-length stop is the documented context
-// overflow, and every other documented reason is an error naming what the
-// vendor reported rather than a generic failure.
 func fimOutcome(finishReason, content string) (modelrepo.AutocompleteResult, error) {
 	switch finishReason {
 	case "stop", "length":

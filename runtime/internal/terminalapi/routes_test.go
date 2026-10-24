@@ -108,11 +108,6 @@ func TestAddRoutes_DisabledDoesNotRegister(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, rr.Code)
 }
 
-// TestTerminalRoutes_CreateListGetDelete pins the surviving substrate for the
-// future ACP terminal capability-provider seam: create/list/get/delete plus
-// the WS. PATCH /terminal/sessions/{id} was removed in Stage 6 of the beam
-// ACP unification (zero consumers; resize now rides the WS control frame —
-// see termConn.Read's "resize" message handling) and must 405, not succeed.
 func TestTerminalRoutes_CreateListGetDelete(t *testing.T) {
 	mux := http.NewServeMux()
 	svc := newFakeTerminalService()
@@ -155,11 +150,6 @@ func TestTerminalRoutes_CreateListGetDelete(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, rr.Code)
 }
 
-// TestTerminalRoutes_InvalidInputs pins that malformed pagination parameters
-// are refused with 400. This route was the only one that ever rejected
-// limit < 1, and it did so with 422; parsing now goes through
-// apiframework.ListParams, which classifies every malformed pagination
-// parameter as ErrInvalidParameterValue and so answers 400 everywhere.
 func TestTerminalRoutes_InvalidInputs(t *testing.T) {
 	mux := http.NewServeMux()
 	AddRoutes(mux, newFakeTerminalService(), nil, true, nil)

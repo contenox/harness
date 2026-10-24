@@ -8,9 +8,6 @@ import { useProductPorts } from '../../ports';
 import type { AccountMembership } from '../../lib/api/types';
 import { roleLabel } from '../../lib/roles';
 
-/**
- * The teams this person belongs to, which one the app is acting under, and the way to make another.
- */
 export function TeamsCard() {
   const {
     routes,
@@ -125,9 +122,7 @@ export function TeamsCard() {
               Cancel
             </Button>
           </div>
-          {/* A refusal the sell mapping knows gets ONE rendering — the sell
-              below — so the raw error is suppressed for it, the same rule the
-              invite form follows. */}
+
           {create.error && refusalSell(create.error) === null && (
             <ScreenError error={create.error} />
           )}
@@ -138,11 +133,7 @@ export function TeamsCard() {
           <Button variant="outline" onClick={() => setNaming(true)} disabled={!canCreate}>
             New team
           </Button>
-          {/* A disabled button that says why is a wall; a wall with the way
-              through it is a funnel. The refusal and its CTA are stated here,
-              before the tap, because `can_create` already told us the tap would
-              be refused — offering it only to refuse it is the pattern
-              `RefusalCta` exists to avoid. */}
+
           {!canCreate &&
             (suspended ? (
 
@@ -153,9 +144,7 @@ export function TeamsCard() {
               </Small>
             ) : (
               <div className="flex flex-col gap-2">
-                {/* The price is NOT repeated here. The plan card directly above
-                    already states it, and one screen saying it twice reads as
-                    two different charges. */}
+
                 <Small>
                   Free includes one team. Upgrading to Pro lets you create as many as you need.
                 </Small>

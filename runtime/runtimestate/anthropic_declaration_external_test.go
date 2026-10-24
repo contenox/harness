@@ -18,9 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// haikuModelsListing is the Models API entry the vendor served for
-// claude-haiku-5-5: thinking accepts adaptive and disabled, rejects a
-// caller-set budget, and names every effort level.
 const haikuModelsListing = `{"data":[{"type":"model","id":"claude-haiku-5-5","display_name":"Claude Haiku 5.5",
 "created_at":"2026-10-07T18:00:00Z","max_input_tokens":1000000,"max_tokens":128000,
 "capabilities":{"thinking":{"supported":true,"types":{"enabled":{"supported":false},"adaptive":{"supported":true},"disabled":{"supported":true}}},

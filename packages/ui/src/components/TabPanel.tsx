@@ -1,9 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../utils";
 
-/**
- * Pairs with {@link Tabs}: triggers use `id="tab-${id}"` and `aria-controls="panel-${id}"`.
- */
 export type TabPanelProps<T extends string = string> = {
   tabId: T;
   activeTab: T;
@@ -37,9 +34,6 @@ export function TabPanel<T extends string = string>({
   );
 }
 
-/**
- * Optional layout wrapper around multiple TabPanel siblings (flex column fill).
- */
 export function TabPanels({
   className,
   children,

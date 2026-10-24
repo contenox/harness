@@ -1,14 +1,3 @@
-/**
- * Typed artifact vocabulary that mirrors chatsessionmodes/artifact_kinds.go.
- *
- * Every kind here has a Go-side renderer that turns its payload into a system
- * message before the LLM call. Adding a new kind is a two-sided change:
- * (a) add it here; (b) add a renderer + test in chatsessionmodes/artifact_kinds.go.
- *
- * The server still accepts any regex-valid kind string, so experimental kinds
- * can be sent before they land in this file — they just fall back to the
- * flat `{json}` rendering instead of a typed system message.
- */
 
 import type { ChatContextArtifact } from '../types';
 
@@ -65,11 +54,6 @@ export interface RuntimeStatePayload {
   data?: unknown;
 }
 
-/**
- * Discriminated union over first-party kinds. Use this when you want the
- * compiler to narrow payload shape based on kind. Third-party kinds still flow
- * through the raw [ChatContextArtifact] type.
- */
 export type TypedArtifact =
   | { kind: 'file_excerpt'; payload: FileExcerptPayload }
   | { kind: 'terminal_output'; payload: TerminalOutputPayload }
@@ -78,12 +62,10 @@ export type TypedArtifact =
   | { kind: 'command_output'; payload: CommandOutputPayload }
   | { kind: 'runtime_state'; payload: RuntimeStatePayload };
 
-/** Narrow [ChatContextArtifact] to [TypedArtifact] when kind is first-party. */
 export function isTypedArtifact(a: ChatContextArtifact): a is TypedArtifact {
   return (ARTIFACT_KINDS as readonly string[]).includes(a.kind);
 }
 
-/** Type-safe constructors for each first-party kind. */
 export const Artifact = {
   fileExcerpt(p: FileExcerptPayload): TypedArtifact {
     return { kind: 'file_excerpt', payload: p };

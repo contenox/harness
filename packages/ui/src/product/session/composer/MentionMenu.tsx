@@ -5,22 +5,13 @@ import type { MentionCandidate } from '../lib/mentions';
 
 export interface MentionMenuProps {
   entries: MentionCandidate[];
-  /**
-   * The directory being browsed (root is `''`) — shown as a breadcrumb header.
-   */
   scope: string;
-  /**
-   * Listing not yet loaded for the browsed directory.
-   */
   loading: boolean;
   activeIndex: number;
   onPick: (entry: MentionCandidate) => void;
   onHoverIndex?: (index: number) => void;
 }
 
-/**
- * The `@`-mention browser — pure presentation.
- */
 export function MentionMenu({
   entries,
   scope,

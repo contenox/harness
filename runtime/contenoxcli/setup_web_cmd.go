@@ -29,17 +29,10 @@ import (
 	"github.com/contenox/harness/runtime/version"
 )
 
-// envSetupWebAddr overrides the loopback address the setup-web server binds.
 const envSetupWebAddr = "CONTENOX_SETUP_WEB_ADDR"
 
 const defaultSetupWebAddr = "127.0.0.1:32124"
 
-// runSetupWeb is the browser sibling of the terminal setup wizard: it serves
-// the embedded Beam UI with just enough API for onboarding (setup status,
-// CLI config, backends, providers, runtime state) — no engine required — and
-// returns once setup is complete, so an ACP client that launched it via the
-// "browser" auth method can reconnect to a configured agent. Beam's wizard
-// writes into the same global config/DB that `contenox acp` reads.
 func runSetupWeb(ctx context.Context, out io.Writer, openBrowser bool) error {
 	dbPath, err := globalDBPath()
 	if err != nil {
@@ -120,15 +113,12 @@ func runSetupWeb(ctx context.Context, out io.Writer, openBrowser bool) error {
 		case err := <-errCh:
 			return fmt.Errorf("setup web server: %w", err)
 		case <-ticker.C:
-			// Refresh (not just read) so backend reachability stays current
-			// even when the user doesn't press the wizard's refresh button.
 			res, err := stateSvc.Refresh(ctx)
 			if err != nil {
 				continue
 			}
 			if setupWebComplete(res) {
 				fmt.Fprintln(out, "  ✓ Setup complete — you can close the browser tab and reconnect your editor.")
-				// A beat for the wizard's final status poll before teardown.
 				time.Sleep(2 * time.Second)
 				return nil
 			}
@@ -136,8 +126,6 @@ func runSetupWeb(ctx context.Context, out io.Writer, openBrowser bool) error {
 	}
 }
 
-// setupWebComplete mirrors Beam's own onboarding gate (Layout.tsx): defaults
-// configured, at least one reachable backend, and no error-severity issues.
 func setupWebComplete(res setupcheck.Result) bool {
 	if strings.TrimSpace(res.DefaultModel) == "" {
 		return false
@@ -153,8 +141,6 @@ func setupWebComplete(res setupcheck.Result) bool {
 	return true
 }
 
-// openInBrowser is best effort: setup-web always prints the URL, so a failed
-// launcher only costs the user a copy-paste.
 func openInBrowser(url string) {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {

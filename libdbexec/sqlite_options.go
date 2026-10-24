@@ -8,14 +8,10 @@ import (
 	"time"
 )
 
-// ErrInvalidSQLiteOptions reports a SQLiteOptions value that is rejected at
-// construction.
 var ErrInvalidSQLiteOptions = errors.New("libdb: invalid sqlite options")
 
-// SQLiteJournalMode selects PRAGMA journal_mode. The zero value selects WAL.
 type SQLiteJournalMode string
 
-// SQLite journal modes. SQLiteJournalDefault resolves to SQLiteJournalWAL.
 const (
 	SQLiteJournalDefault  SQLiteJournalMode = ""
 	SQLiteJournalWAL      SQLiteJournalMode = "WAL"
@@ -26,12 +22,8 @@ const (
 	SQLiteJournalOff      SQLiteJournalMode = "OFF"
 )
 
-// SQLiteSynchronous selects PRAGMA synchronous. The zero value emits no pragma
-// at all, leaving the driver default (FULL) in place.
 type SQLiteSynchronous string
 
-// SQLite synchronous levels. SQLiteSynchronousDefault emits no pragma;
-// SQLiteSynchronousNormal and SQLiteSynchronousOff require WAL journal mode.
 const (
 	SQLiteSynchronousDefault SQLiteSynchronous = ""
 	SQLiteSynchronousOff     SQLiteSynchronous = "OFF"
@@ -42,66 +34,33 @@ const (
 
 const defaultSQLiteBusyTimeout = 5000 * time.Millisecond
 
-// SQLiteOptions tunes a SQLite DBManager. The zero value is WAL journal mode, a
-// 5000ms busy timeout, foreign keys enforced, no synchronous or cache_size
-// pragma, and Go's default connection pool. Pointer fields distinguish unset
-// (nil) from an explicit zero.
 type SQLiteOptions struct {
-	// JournalMode selects PRAGMA journal_mode. The zero value selects WAL.
 	JournalMode SQLiteJournalMode
 
-	// TxLock selects how every transaction on the pool begins. The zero value
-	// keeps SQLite's deferred lock. Immediate takes the write lock as the
-	// transaction begins, which rules out SQLITE_BUSY_SNAPSHOT for a
-	// transaction that reads first and writes later — the failure a busy
-	// timeout cannot wait out — at the price of serialising every read-only
-	// transaction on the pool behind the one writer, so it suits a pool that
-	// only ever writes inside transactions.
 	TxLock SQLiteTxLock
 
-	// Synchronous selects PRAGMA synchronous. The zero value emits no pragma
-	// and leaves SQLite's FULL default.
 	Synchronous SQLiteSynchronous
 
-	// BusyTimeout sets PRAGMA busy_timeout. Nil means the 5000ms default; a
-	// pointer to zero fails contended writes immediately.
 	BusyTimeout *time.Duration
 
-	// DisableForeignKeys turns off PRAGMA foreign_keys. The zero value keeps
-	// foreign keys enforced.
 	DisableForeignKeys bool
 
-	// CacheSize sets PRAGMA cache_size. Nil emits no pragma. Negative is a size
-	// in KiB and positive a page count, so prefer SQLiteCacheKiB or
-	// SQLiteCachePages over a bare literal.
 	CacheSize *int
 
-	// MaxOpenConns caps total open connections via sql.DB.SetMaxOpenConns. Nil
-	// leaves the pool unbounded.
 	MaxOpenConns *int
 
-	// MaxIdleConns caps retained idle connections via sql.DB.SetMaxIdleConns.
-	// Nil leaves Go's default of 2.
 	MaxIdleConns *int
 
-	// ConnMaxLifetime bounds how long a connection may be reused via
-	// sql.DB.SetConnMaxLifetime. The zero value means unlimited.
 	ConnMaxLifetime time.Duration
 
-	// ConnMaxIdleTime bounds how long a connection may sit idle via
-	// sql.DB.SetConnMaxIdleTime. The zero value means unlimited.
 	ConnMaxIdleTime time.Duration
 }
 
-// SQLiteCacheKiB returns a CacheSize requesting approximately kib kibibytes of
-// page cache. The argument is a magnitude; its sign is normalised away.
 func SQLiteCacheKiB(kib int) *int {
 	v := -abs(kib)
 	return &v
 }
 
-// SQLiteCachePages returns a CacheSize requesting that many cache pages. The
-// argument is a magnitude; its sign is normalised away.
 func SQLiteCachePages(pages int) *int {
 	v := abs(pages)
 	return &v
@@ -114,12 +73,10 @@ func abs(v int) int {
 	return v
 }
 
-// SQLiteConns returns a pointer to n for the pool limit fields.
 func SQLiteConns(n int) *int {
 	return &n
 }
 
-// SQLiteBusyTimeout returns a pointer to d for SQLiteOptions.BusyTimeout.
 func SQLiteBusyTimeout(d time.Duration) *time.Duration {
 	return &d
 }
@@ -154,9 +111,6 @@ func (o SQLiteOptions) busyTimeout() time.Duration {
 	return *o.BusyTimeout
 }
 
-// validate rejects malformed and unsafe option combinations before any
-// connection is opened. SQLite silently ignores unrecognised pragma values, so
-// these checks are the only place a typo can be caught.
 func (o SQLiteOptions) validate() error {
 	if o.JournalMode != SQLiteJournalDefault && !validSQLiteJournalModes[o.JournalMode] {
 		return fmt.Errorf("%w: unknown journal mode %q", ErrInvalidSQLiteOptions, o.JournalMode)
@@ -202,7 +156,6 @@ func (o SQLiteOptions) validate() error {
 	return nil
 }
 
-// SQLiteTxLock is the lock a transaction takes when it begins.
 type SQLiteTxLock string
 
 const (
@@ -212,9 +165,6 @@ const (
 	SQLiteTxLockExclusive SQLiteTxLock = "exclusive"
 )
 
-// buildSQLiteDSN appends the transaction lock and the pragma query parameters
-// for opts to path, so that every pooled connection inherits them rather than
-// one leased connection.
 func buildSQLiteDSN(path string, opts SQLiteOptions) string {
 	dsn := path
 	if !strings.Contains(dsn, "?") {
@@ -252,7 +202,6 @@ func boolPragma(v bool) int {
 	return 0
 }
 
-// applySQLitePool applies the pool limits in opts to db, skipping unset limits.
 func applySQLitePool(db *sql.DB, opts SQLiteOptions) {
 	if opts.MaxOpenConns != nil {
 		db.SetMaxOpenConns(*opts.MaxOpenConns)

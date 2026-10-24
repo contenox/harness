@@ -13,11 +13,6 @@ import (
 	"io"
 )
 
-// NewCBCHMACEncryptor returns an Encryptor using AES-CBC with PKCS7 padding and
-// an HMAC for integrity. The encryption key and integrity key must be distinct,
-// both kept secret, and rotated simultaneously.
-//
-//	[ MAC | AD-Length | AD | Initialization Vector | Block 1 | Block 2 | ... ]
 func NewCBCHMACEncryptor(encryptionKey []byte, integrityKey []byte, calculateMAC func() hash.Hash, rand io.Reader) (Encryptor, error) {
 	cry, err := newCBCHMACryptor(encryptionKey, integrityKey, calculateMAC)
 	if err != nil {
@@ -28,7 +23,6 @@ func NewCBCHMACEncryptor(encryptionKey []byte, integrityKey []byte, calculateMAC
 	return (encryptorCBCHMAC)(cry), nil
 }
 
-// NewCBCHMACDecryptor returns a Decryptor for data sealed by [NewCBCHMACEncryptor].
 func NewCBCHMACDecryptor(encryptionKey []byte, integrityKey []byte, calculateMAC func() hash.Hash) (Decryptor, error) {
 	cry, err := newCBCHMACryptor(encryptionKey, integrityKey, calculateMAC)
 	if err != nil {
@@ -154,7 +148,6 @@ func newCBCHMACryptor(encryptionKey []byte, integrityKey []byte, calculateMAC fu
 	}, nil
 }
 
-// unpadPKCS7 returns the index of the PKCS7 padding start.
 func unpadPKCS7(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, errors.New("empty input")
@@ -174,7 +167,6 @@ func unpadPKCS7(data []byte) (int, error) {
 	return len(data) - padding, nil
 }
 
-// padPKCS7 pads the data to a multiple of blockSize using PKCS7 padding.
 func padPKCS7(dataLen int, blockSize int) []byte {
 	padding := blockSize - (dataLen % blockSize)
 	padText := bytes.Repeat([]byte{byte(padding)}, padding)

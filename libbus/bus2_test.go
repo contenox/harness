@@ -50,7 +50,7 @@ func TestSystem_Request_ContextCanceled(t *testing.T) {
 	subject := "test.request.canceled"
 
 	handler := func(ctx context.Context, data []byte) ([]byte, error) {
-		time.Sleep(500 * time.Millisecond) // longer than the cancellation delay below
+		time.Sleep(500 * time.Millisecond)
 		return []byte("response"), nil
 	}
 
@@ -64,7 +64,7 @@ func TestSystem_Request_ContextCanceled(t *testing.T) {
 		errCh <- err
 	}()
 
-	time.Sleep(100 * time.Millisecond) // ensure the request is in-flight before cancelling
+	time.Sleep(100 * time.Millisecond)
 	cancel()
 
 	select {
@@ -131,7 +131,6 @@ func TestSystem_Stream_UnsubscribeStopsDelivery(t *testing.T) {
 
 	require.NoError(t, ps.Publish(ctx, subject, []byte("unsubscribed")))
 
-	// Should NOT receive message
 	select {
 	case <-streamCh:
 		t.Fatal("received message after unsubscribe")
@@ -158,7 +157,7 @@ func TestSystem_Serve_ContextCancellation(t *testing.T) {
 	require.NoError(t, err)
 
 	cancel()
-	time.Sleep(100 * time.Millisecond) // allow unsubscription to propagate
+	time.Sleep(100 * time.Millisecond)
 
 	_, err = ps.Request(context.Background(), subject, []byte("request"))
 	require.ErrorIs(t, err, nats.ErrNoResponders)
@@ -220,7 +219,6 @@ func TestSystem_Serve_ConcurrentUnsubscribe(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		// may succeed or fail depending on timing; only absence of a crash is asserted
 		_, _ = ps.Request(ctx, subject, []byte("data"))
 	}()
 

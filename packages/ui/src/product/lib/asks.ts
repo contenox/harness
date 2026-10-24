@@ -12,22 +12,13 @@ import type {
 
 export const ALL_AGENTS = '*';
 
-/**
- * Why an ask on screen is no longer open.
- */
 export type AskClosure = 'answered' | 'expired' | 'superseded' | 'settled-here' | 'already-decided';
 
-/**
- * How an ask closed, with the decision when this browser knows one.
- */
 export interface AskOutcome {
   closure: AskClosure;
   decision?: AskDecision;
 }
 
-/**
- * The inbox as one value: the asks being shown, and the outcome of the ones that have closed while somebody was looking at them.
- */
 export interface AskBoard {
   asks: Ask[];
   outcomes: Record<string, AskOutcome>;
@@ -43,9 +34,6 @@ function byNewest(a: Ask, b: Ask): number {
   return a.ask_id.localeCompare(b.ask_id);
 }
 
-/**
- * Replaces the board's asks with a full read, keeping any card whose outcome this browser produced.
- */
 export function adoptAsks(board: AskBoard, asks: Ask[]): AskBoard {
   const present = new Set(asks.map(ask => ask.ask_id));
   const kept = board.asks.filter(ask => !present.has(ask.ask_id) && ask.ask_id in board.outcomes);
@@ -54,9 +42,6 @@ export function adoptAsks(board: AskBoard, asks: Ask[]): AskBoard {
   return { asks: [...asks, ...kept].sort(byNewest), outcomes };
 }
 
-/**
- * Folds one stream event into the board.
- */
 export function applyAskEvent(board: AskBoard, event: AskStreamEvent): AskBoard {
   if (event.type === 'ask.published') {
     const ask = event.ask;
@@ -92,9 +77,6 @@ function closureFor(reason: string | undefined): AskOutcome {
   }
 }
 
-/**
- * Folds this browser's own answer into the board.
- */
 export function applyAnswer(board: AskBoard, response: AnswerAskResponse): AskBoard {
   const asks = board.asks.map(ask =>
     ask.ask_id === response.ask_id
@@ -114,16 +96,10 @@ export function applyAnswer(board: AskBoard, response: AnswerAskResponse): AskBo
   };
 }
 
-/**
- * The asks still open — nobody has settled them, here or anywhere else.
- */
 export function openAsks(board: AskBoard): Ask[] {
   return board.asks.filter(ask => board.outcomes[ask.ask_id] === undefined);
 }
 
-/**
- * The asks waiting on THIS person — what the bar counts.
- */
 export function asksWaitingOnCaller(board: AskBoard, block?: string | null): Ask[] {
   if (block !== undefined && block !== null && block.trim() !== '') return [];
   return openAsks(board).filter(ask => ask.may_answer && !ask.answered_by_caller);
@@ -133,9 +109,6 @@ export function asksWaitingOnCaller(board: AskBoard, block?: string | null): Ask
 const ATTENTION_TOOLS_NAME = 'mission';
 const ATTENTION_TOOL_NAME = 'mission_ask_attention';
 
-/**
- * What kind of question an ask is.
- */
 export type AskKind = 'approval' | 'question';
 
 export function askKind(ask: Ask): AskKind {
@@ -144,9 +117,6 @@ export function askKind(ask: Ask): AskKind {
   return tools === ATTENTION_TOOLS_NAME && tool === ATTENTION_TOOL_NAME ? 'question' : 'approval';
 }
 
-/**
- * The line at the top of a card: what is about to happen, in the host's own words.
- */
 export function askHeadline(ask: Ask): string {
   const summary = (ask.summary ?? '').trim();
   if (summary !== '') return summary;
@@ -155,25 +125,16 @@ export function askHeadline(ask: Ask): string {
   return ask.ask_id;
 }
 
-/**
- * How many people this ask needs, and how many it has.
- */
 export function quorum(ask: Ask): { required: number; recorded: number } | null {
   const required = ask.approvals_required;
   if (required <= 1) return null;
   return { required, recorded: Math.min(ask.approvals_recorded, required) };
 }
 
-/**
- * The machine an ask is parked on, by the name the team gave it.
- */
 export function askMachineName(instanceID: string, instances: Instance[] | undefined): string {
   return instances?.find(instance => instance.id === instanceID)?.name ?? instanceID;
 }
 
-/**
- * Why no ask in this account can be answered from here, or null when they can.
- */
 export function answeringBlock(account: Account | undefined, role?: string): string | null {
   if (account === undefined) return null;
   if (account.suspended) {
@@ -187,9 +148,6 @@ export function answeringBlock(account: Account | undefined, role?: string): str
   return null;
 }
 
-/**
- * The relay's role names as words.
- */
 export function approverRoleLabel(role: string): string {
   switch (role) {
     case 'tenant_owner':
@@ -203,9 +161,6 @@ export function approverRoleLabel(role: string): string {
   }
 }
 
-/**
- * What a closed card says, in words about the reader rather than about the system.
- */
 export function outcomeSentence(outcome: AskOutcome): string {
   switch (outcome.closure) {
     case 'settled-here':
@@ -233,16 +188,10 @@ export function outcomeSentence(outcome: AskOutcome): string {
   }
 }
 
-/**
- * Whether a closed card should read as a refusal rather than as a completion.
- */
 export function outcomeIsRefusal(outcome: AskOutcome): boolean {
   return outcome.closure === 'expired' || outcome.decision === 'deny';
 }
 
-/**
- * The agents a member is subscribed to, folded for a screen.
- */
 export interface SubscribedAgents {
   all: boolean;
   named: string[];
@@ -258,9 +207,6 @@ export function subscribedAgents(subscriptions: AskSubscription[]): SubscribedAg
   return { all, named: named.sort((a, b) => a.localeCompare(b)) };
 }
 
-/**
- * Whether this member would be shown anything at all.
- */
 export function subscribesToNothing(agents: SubscribedAgents): boolean {
   return !agents.all && agents.named.length === 0;
 }

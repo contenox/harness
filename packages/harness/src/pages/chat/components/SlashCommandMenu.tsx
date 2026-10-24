@@ -20,13 +20,6 @@ export interface UseSlashCommandMenuResult {
   handleKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
 }
 
-/**
- * Registers the agent's `session.availableCommands` into the shared
- * `SlashCommandRegistry` (must be called under `SlashCommandRegistryProvider`)
- * — agent commands are authoritative; this page adds no client-side entries
- * of its own — then derives the popover's open/filter/selection state from
- * the composer draft via the pure helpers in `lib/slashMenuState.ts`.
- */
 export function useSlashCommandMenu({
   draft,
   onDraftChange,
@@ -41,9 +34,6 @@ export function useSlashCommandMenu({
         name: cmd.name,
         description: cmd.description,
         usage: cmd.input?.hint ? `/${cmd.name} ${cmd.input.hint}` : `/${cmd.name}`,
-        // The composer submits slash-command text through sendPrompt verbatim
-        // (acpsvc/commandrunner.go parses it server-side) — accepting a menu
-        // entry only fills the composer; it never executes anything here.
         execute: () => undefined,
       }),
     );
@@ -62,9 +52,6 @@ export function useSlashCommandMenu({
   const { open: derivedOpen, query } = deriveSlashMenuQuery(draft);
   const filtered = useMemo(() => filterSlashCommands(entries, query), [entries, query]);
 
-  // Escape closes the popover for the CURRENT draft text without touching the
-  // draft itself; typing anything (draft changes) re-derives `open` fresh, so
-  // the dismissal doesn't stick past the keystroke that caused it.
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
   const open = derivedOpen && filtered.length > 0 && dismissedFor !== draft;
 
@@ -111,7 +98,6 @@ export interface SlashCommandMenuProps {
   onHoverIndex?: (index: number) => void;
 }
 
-/** The completion popover itself — pure presentation, anchored by the caller (`position: relative` wrapper) above the composer. */
 export function SlashCommandMenu({ entries, activeIndex, onPick, onHoverIndex }: SlashCommandMenuProps) {
   const { t } = useTranslation();
   if (entries.length === 0) return null;
@@ -129,8 +115,6 @@ export function SlashCommandMenu({ entries, activeIndex, onPick, onHoverIndex }:
           role="option"
           aria-selected={i === activeIndex}
           onMouseEnter={() => onHoverIndex?.(i)}
-          // mousedown (not click) + preventDefault so the textarea never
-          // blurs before the pick registers.
           onMouseDown={e => {
             e.preventDefault();
             onPick(entry.name);

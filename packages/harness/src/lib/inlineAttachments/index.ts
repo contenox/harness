@@ -1,14 +1,3 @@
-/**
- * Mapping helpers from artifact kinds (LLM-context shapes) to inline
- * attachment kinds (presentation shapes).
- *
- * The two vocabularies are intentionally distinct: an artifact is what gets
- * injected into the LLM as a system message; an attachment is what gets
- * rendered inline in the chat thread for the human to see. Some artifacts
- * never have a presentation form (e.g. terse runtime_state); some attachments
- * never need to flow into context (e.g. an inline diff with no relevant
- * payload).
- */
 
 import type { ChatContextArtifact } from '../types';
 import type { InlineAttachment } from '../types';
@@ -22,11 +11,6 @@ import {
   type RuntimeStatePayload,
 } from '../artifacts/types';
 
-/**
- * Convert one artifact into an inline attachment for thread rendering.
- * Returns null when the artifact kind has no presentation form (caller
- * filters nulls).
- */
 export function artifactToInlineAttachment(
   artifact: ChatContextArtifact,
 ): InlineAttachment | null {
@@ -79,7 +63,6 @@ export function artifactToInlineAttachment(
   }
 }
 
-/** Map a list of artifacts, dropping any with no inline form. */
 export function artifactsToInlineAttachments(
   artifacts: ChatContextArtifact[],
 ): InlineAttachment[] {

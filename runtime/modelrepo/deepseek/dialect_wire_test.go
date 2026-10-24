@@ -147,9 +147,6 @@ func deepseekStreamServer(t *testing.T, body *map[string]any, frames ...string) 
 	}))
 }
 
-// A model whose list declares no effort accepts no thinking control, so its
-// chat and stream requests carry neither the toggle nor an effort whatever
-// level the session holds.
 func TestUnit_DeepSeekUndeclaredThinkingSendsNoThinkingControl(t *testing.T) {
 	for _, level := range []string{"high", "low", "off"} {
 		var chatBody map[string]any
@@ -179,8 +176,6 @@ func TestUnit_DeepSeekUndeclaredThinkingSendsNoThinkingControl(t *testing.T) {
 	}
 }
 
-// An error frame streamed after partial text fails the turn with the vendor's
-// message; the partial text never reads as an answer.
 func TestUnit_DeepSeekStreamedErrorFrameFailsTheTurn(t *testing.T) {
 	var body map[string]any
 	server := deepseekStreamServer(t, &body,

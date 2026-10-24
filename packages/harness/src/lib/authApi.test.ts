@@ -2,12 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './api';
 import { apiFetch } from './fetch';
 
-/**
- * Wire-level tests for the remote-access endpoints: they assert the client hits
- * the right /ui/* path, method, and body, and parses the JSON back. `fetch` is
- * stubbed so no server is needed (apiFetch resolves the base URL to
- * http://localhost:32123 in the node test env).
- */
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
     ok,
@@ -76,9 +70,6 @@ describe('browser auth is pure-cookie (no localStorage bearer)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('sends no Authorization header even when a stale token sits in localStorage, and uses same-origin credentials', async () => {
-    // Simulate a browser still holding the old token that an earlier build wrote
-    // to localStorage. The request layer must ignore it entirely — the HttpOnly
-    // cookie is the only browser credential now.
     vi.stubGlobal('localStorage', {
       getItem: (k: string) => (k === 'contenox_api_token' ? 'stale-raw-token' : null),
       setItem: () => {},

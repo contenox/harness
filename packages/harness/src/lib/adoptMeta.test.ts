@@ -9,8 +9,6 @@ describe('adoptMeta — the request wire shape', () => {
   });
 
   it('round-trips through adoptResultFromMeta once the server echoes a controller flag', () => {
-    // The server echoes the same ids plus `controller` (see acpsvc/adopt.go's
-    // adoptedSessionMetaJSON). Simulate that echo and confirm the decode reads it.
     const request = adoptMeta('inst-1', 'down-1');
     const ref = (request[ADOPT_META_KEY] as { instanceId: string; sessionId: string });
     const echo = { [ADOPT_META_KEY]: { ...ref, controller: true } };
@@ -44,7 +42,6 @@ describe('adoptResultFromMeta — defensive, mirroring the server parseAdoptResu
     expect(adoptResultFromMeta(undefined)).toBeNull();
     expect(adoptResultFromMeta(null)).toBeNull();
     expect(adoptResultFromMeta({})).toBeNull();
-    // An external (contenox.agent) session that was NOT adopted stays null.
     expect(adoptResultFromMeta({ 'contenox.agent': 'stub-bot' })).toBeNull();
   });
 
@@ -52,16 +49,12 @@ describe('adoptResultFromMeta — defensive, mirroring the server parseAdoptResu
     expect(adoptResultFromMeta({ 'contenox.adopt': null })).toBeNull();
     expect(adoptResultFromMeta({ 'contenox.adopt': 'nope' })).toBeNull();
     expect(adoptResultFromMeta({ 'contenox.adopt': 42 })).toBeNull();
-    // Present but with a blank/absent id — an adopt needs both ids to be real.
     expect(adoptResultFromMeta({ 'contenox.adopt': { instanceId: '  ', sessionId: 's' } })).toBeNull();
     expect(adoptResultFromMeta({ 'contenox.adopt': { sessionId: 's', controller: true } })).toBeNull();
   });
 });
 
 describe('the sidebar delete-guard predicate', () => {
-  // The sidebar withholds session/delete for adopted sessions (deleting one
-  // STOPS the running dispatch — acpsvc/adopt.go). Its decision is exactly
-  // `adoptResultFromMeta(session._meta) != null`, pinned here at that seam.
   const isAdopted = (meta: Record<string, unknown> | undefined) => adoptResultFromMeta(meta) != null;
 
   it('recognizes an adopted session (delete must be hidden)', () => {

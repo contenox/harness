@@ -70,7 +70,6 @@ func TestSpawn_CloseKillsAProcessThatIgnoresStdinClosing(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// sleep ignores stdin close, so Close must escalate to Process.Kill.
 	proc, err := acpexec.Spawn(ctx, exec.Command("sleep", "30"), acpexec.WithKillGrace(200*time.Millisecond))
 	require.NoError(t, err)
 
@@ -80,16 +79,12 @@ func TestSpawn_CloseKillsAProcessThatIgnoresStdinClosing(t *testing.T) {
 	select {
 	case err := <-closeDone:
 		assert.Less(t, time.Since(start), 10*time.Second, "Close should have killed the process well within its 30s sleep")
-		// A kill-induced exit must not surface as a Close error.
 		assert.NoError(t, err)
 	case <-time.After(10 * time.Second):
 		t.Fatal("Close did not kill a subprocess ignoring stdin closing")
 	}
 }
 
-// TestSpawn_CloseKillsTheWholeProcessTree pins that Close kills the whole
-// process group (e.g. an npx-wrapper's backgrounded grandchild), not just
-// the direct child, so no descendant is left holding the pipes open.
 func TestSpawn_CloseKillsTheWholeProcessTree(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -111,9 +106,6 @@ func TestSpawn_CloseKillsTheWholeProcessTree(t *testing.T) {
 	}
 }
 
-// TestSpawn_CloseSurfacesASelfInflictedBadExit pins that a bad exit status
-// from a process that exited on its own (no kill involved) still surfaces
-// from Close.
 func TestSpawn_CloseSurfacesASelfInflictedBadExit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -121,7 +113,6 @@ func TestSpawn_CloseSurfacesASelfInflictedBadExit(t *testing.T) {
 	proc, err := acpexec.Spawn(ctx, exec.Command("sh", "-c", "exit 3"))
 	require.NoError(t, err)
 
-	// Drain to EOF first so Close takes the "already exited" branch, not kill.
 	_, err = io.ReadAll(proc)
 	require.NoError(t, err)
 
@@ -140,8 +131,6 @@ func TestSpawn_CtxCancellationTearsDownTheProcess(t *testing.T) {
 
 	cancel()
 
-	// Spawn's watcher goroutine tears the process down on cancellation; Read
-	// must observe that rather than block forever.
 	readDone := make(chan error, 1)
 	go func() {
 		_, err := proc.Read(make([]byte, 16))
@@ -171,7 +160,7 @@ func TestSpawn_StderrIsForwardedToConfiguredWriter(t *testing.T) {
 	proc, err := acpexec.Spawn(ctx, exec.Command("sh", "-c", "echo oops >&2"), acpexec.WithStderr(&stderr))
 	require.NoError(t, err)
 
-	_, _ = io.ReadAll(proc) // drain stdout so Close (below) doesn't need to
+	_, _ = io.ReadAll(proc)
 	require.NoError(t, proc.Close())
 
 	assert.Equal(t, "oops\n", stderr.String())
@@ -182,7 +171,6 @@ func TestSpawn_PipeSetupFailureLeavesNothingToCleanUp(t *testing.T) {
 	defer cancel()
 
 	cmd := exec.Command("cat")
-	// Pre-claiming Stdin makes cmd.StdinPipe() fail inside Spawn.
 	r, w := io.Pipe()
 	defer func() { _ = r.Close(); _ = w.Close() }()
 	cmd.Stdin = r

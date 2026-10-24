@@ -30,7 +30,7 @@ type backendSummary struct {
 	Type    string `json:"type" example:"ollama"`
 
 	Models       []string                    `json:"models"`
-	PulledModels []statetype.ModelPullStatus `json:"pulledModels" openapi_include_type:"statetype.ModelPullStatus"`
+	PulledModels []statetype.ModelPullStatus `json:"pulledModels"`
 	Error        string                      `json:"error,omitempty" example:"error-message"`
 
 	CreatedAt time.Time `json:"createdAt" example:"2023-01-01T00:00:00Z"`
@@ -42,12 +42,10 @@ type backendManager struct {
 	stateService stateservice.Service
 }
 
-// createBackend registers a new inference backend and returns it with its
-// assigned ID.
 func (b *backendManager) createBackend(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	backend, err := apiframework.Decode[runtimetypes.Backend](r) // @request runtimetypes.Backend
+	backend, err := apiframework.Decode[runtimetypes.Backend](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -58,11 +56,9 @@ func (b *backendManager) createBackend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = apiframework.Encode(w, r, http.StatusCreated, backend) // @response runtimetypes.Backend
+	_ = apiframework.Encode(w, r, http.StatusCreated, backend)
 }
 
-// listBackends returns the registered backends, each merged with its observed
-// runtime state (downloaded models, pull progress, last error).
 func (b *backendManager) listBackends(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -111,7 +107,7 @@ func (b *backendManager) listBackends(w http.ResponseWriter, r *http.Request) {
 		resp = append(resp, item)
 	}
 
-	_ = apiframework.Encode(w, r, http.StatusOK, resp) // @response []backendapi.backendSummary
+	_ = apiframework.Encode(w, r, http.StatusOK, resp)
 }
 
 type backendDetails struct {
@@ -120,14 +116,12 @@ type backendDetails struct {
 	BaseURL      string                      `json:"baseUrl" example:"http://ollama-prod.internal:11434"`
 	Type         string                      `json:"type" example:"ollama"`
 	Models       []string                    `json:"models" example:"[\"mistral:instruct\", \"llama2:7b\", \"nomic-embed-text:latest\"]"`
-	PulledModels []statetype.ModelPullStatus `json:"pulledModels" openapi_include_type:"statetype.ModelPullStatus"`
+	PulledModels []statetype.ModelPullStatus `json:"pulledModels"`
 	Error        string                      `json:"error,omitempty" example:"connection timeout: context deadline exceeded"`
 	CreatedAt    time.Time                   `json:"createdAt" example:"2023-11-15T14:30:45Z"`
 	UpdatedAt    time.Time                   `json:"updatedAt" example:"2023-11-15T14:30:45Z"`
 }
 
-// getBackend returns one backend by ID, merged with its observed runtime
-// state (downloaded models, pull progress, last error).
 func (b *backendManager) getBackend(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique identifier for the backend.")
@@ -175,11 +169,9 @@ func (b *backendManager) getBackend(w http.ResponseWriter, r *http.Request) {
 		resp.Error = itemState.Error
 	}
 
-	_ = apiframework.Encode(w, r, http.StatusOK, resp) // @response backendapi.backendDetails
+	_ = apiframework.Encode(w, r, http.StatusOK, resp)
 }
 
-// updateBackend replaces a backend's stored configuration by ID and returns
-// the updated record.
 func (b *backendManager) updateBackend(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique identifier for the backend.")
@@ -187,7 +179,7 @@ func (b *backendManager) updateBackend(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, fmt.Errorf("missing id parameter %w", apiframework.ErrBadPathValue), apiframework.UpdateOperation)
 		return
 	}
-	backend, err := apiframework.Decode[runtimetypes.Backend](r) // @request runtimetypes.Backend
+	backend, err := apiframework.Decode[runtimetypes.Backend](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
@@ -199,10 +191,9 @@ func (b *backendManager) updateBackend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = apiframework.Encode(w, r, http.StatusOK, backend) // @response runtimetypes.Backend
+	_ = apiframework.Encode(w, r, http.StatusOK, backend)
 }
 
-// deleteBackend removes a backend registration by ID.
 func (b *backendManager) deleteBackend(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique identifier for the backend.")
@@ -215,5 +206,5 @@ func (b *backendManager) deleteBackend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = apiframework.Encode(w, r, http.StatusOK, "backend removed") // @response string
+	_ = apiframework.Encode(w, r, http.StatusOK, "backend removed")
 }

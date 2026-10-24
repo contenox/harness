@@ -8,45 +8,15 @@ export type ToolCallStatus = "pending" | "running" | "success" | "error";
 
 export interface ToolCallCardProps
   extends React.HTMLAttributes<HTMLDivElement> {
-  /**
-   * Tool / hook name (e.g. "local_shell", "linear").
-   */
   tool: string;
-  /**
-   * Short summary of what happened (e.g. "Created DEV-116").
-   */
   title: string;
-  /**
-   * Execution status.
-   */
   status?: ToolCallStatus;
-  /**
-   * Icon shown before the tool name.
-   */
   icon?: React.ReactNode;
-  /**
-   * External link (e.g. Linear issue URL).
-   */
   href?: string;
-  /**
-   * Collapsible detail content (raw JSON, full output, etc.).
-   */
   detail?: React.ReactNode;
-  /**
-   * Duration string (e.g. "1.2s").
-   */
   duration?: string;
-  /**
-   * Override the status badge labels (defaults: "Pending" / "Running" / "Done" / "Error").
-   */
   statusLabels?: Partial<Record<ToolCallStatus, string>>;
-  /**
-   * Accessible label for the external link (default: "Open in external tool").
-   */
   externalLinkLabel?: string;
-  /**
-   * Accessible label for the detail toggle button (default: "Toggle detail").
-   */
   toggleDetailLabel?: string;
 }
 
@@ -92,7 +62,7 @@ export const ToolCallCard = forwardRef<HTMLDivElement, ToolCallCardProps>(
         )}
         {...props}
       >
-        {/* Header */}
+
         <div className="flex items-center gap-2 px-3 py-2">
           {icon && (
             <span className="text-text-muted dark:text-dark-text-muted shrink-0">
@@ -155,7 +125,7 @@ export const ToolCallCard = forwardRef<HTMLDivElement, ToolCallCardProps>(
           )}
         </div>
 
-        {/* Collapsible detail */}
+
         {detail && open && (
           <div
             className={cn(

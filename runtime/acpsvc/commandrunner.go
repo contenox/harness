@@ -65,11 +65,6 @@ func (a *acpCommandRunner) Run(ctx context.Context, spec localtools.CommandSpec,
 		t.sessionMu.Unlock()
 	}
 
-	// The protocol dance — create, wait, kill-on-cancel, fetch output on a
-	// detached context, release, reconcile the exit code from both sources —
-	// is generic and lives in libacp. Everything below it is service policy:
-	// which terminal to surface upstream, how to render the outcome for beam,
-	// and how a truncated output maps onto the tool budget.
 	res, err := libacp.RunTerminal(ctx, t.conn, req, func(terminalID string) {
 		if sid == "" {
 			return
@@ -82,9 +77,6 @@ func (a *acpCommandRunner) Run(ctx context.Context, spec localtools.CommandSpec,
 		return -1, fmt.Errorf("acpsvc terminal: %w", err)
 	}
 
-	// A cancelled or timed-out command still reports why it stopped, even when
-	// the output fetch itself failed — the cause is more useful than the fetch
-	// error, and the model must not be told a user cancellation was a timeout.
 	if err != nil {
 		if res.Cancelled {
 			return -1, fmt.Errorf("acpsvc terminal: command cancelled: %w", context.Canceled)
@@ -97,8 +89,6 @@ func (a *acpCommandRunner) Run(ctx context.Context, spec localtools.CommandSpec,
 	}
 
 	if res.Output != "" {
-		// Trim excessive trailing newlines from terminal output to avoid UI padding.
-		// Preserve at most 2 trailing newlines (common for command output).
 		output := res.Output
 		for strings.HasSuffix(output, "\n\n\n") {
 			output = strings.TrimSuffix(output, "\n")

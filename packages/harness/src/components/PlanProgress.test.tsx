@@ -41,7 +41,6 @@ describe('PlanProgress — the compact step fragment', () => {
       entries: [entry({ id: '1', status: 'in_progress' }), entry({ id: '2', status: 'pending' })],
       revision: 1,
     });
-    // The active-state title names the in-progress count; the idle one does not.
     expect(active).toContain('1 in progress');
 
     const idle = render({

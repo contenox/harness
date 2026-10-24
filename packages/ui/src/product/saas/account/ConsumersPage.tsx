@@ -61,9 +61,6 @@ const SOURCE_OPTIONS = (['generic', 'form'] as const).map(source => ({
   label: sourceLabel(source),
 }));
 
-/**
- * The account's event consumers: endpoints outside systems post events to, each running a chain on a paired machine.
- */
 export default function ConsumersPage() {
   const { routes, useAuth, useConsumers, useHosts } = useProductPorts();
   const accountID = useAuth().accountID ?? '';
@@ -309,10 +306,7 @@ function CreateConsumerForm({
             error={targetRefusal ?? errors.fields.agent_name}
             hint="As declared on the machine."
           />
-          {/* Typed, not picked, and the reason is a property of the product
-              rather than a gap in this screen: an agent is declared on the
-              customer's own machine and the relay never learns the roster.
-              There is no route to populate a picker from. */}
+
           <Small>
             Agents are declared on the machine itself and the relay never sees the list, so this is
             typed rather than chosen. The machine generates the chain from the declaration. It is
@@ -463,9 +457,7 @@ function ConsumerCard({
           {targetSentence(consumer)} on {receiverLabel(consumer.instance_id, instances)}
         </Small>
         <Small>{sessionSentence(consumer)}</Small>
-        {/* The agent's own screen, from the thing that fires it. The consumer
-            list is the one place in the app that knows an agent name before it
-            has ever asked for anything. */}
+
         {(consumer.agent_name ?? '') !== '' && (
           <P className="text-sm">
             <Link

@@ -11,32 +11,15 @@ import { byteSlice, type SearchFileGroup } from '../../../lib/workspaceSearch';
 import { shortenRootPath } from '../../../lib/workspaceRoots';
 
 export interface MissionSearchTabProps {
-  /** The mission's changed files, for click-through routing (a hit in one opens the Changes tab). */
   changedFiles: MissionChangedFile[];
-  /** Route a hit's ABSOLUTE path into the Changes tab, focused. */
   onOpenInChanges: (absolutePath: string) => void;
 }
 
-/**
- * The mission inspector's Search tab (Arc 2). A debounced, streamed
- * workspace-wide literal search: the input stays instant while matches arrive
- * incrementally, grouped per file with count badges and byte-offset-accurate
- * highlights. The two pre-stream refusals are first-class states — a 501 becomes
- * the ripgrep teaching notice, a 422 out-of-bounds root reuses the designed
- * WorkspaceBoundaryNotice — and `done.truncated` offers "refine your search".
- *
- * Click-through honours the meaningful-filter: a hit whose file is one of the
- * mission's changed files routes into the Changes tab focused on it; any other
- * hit shows its matched line inline only — never a general file viewer (that is
- * editor territory, which Beam is not).
- */
 export default function MissionSearchTab({ changedFiles, onOpenInChanges }: MissionSearchTabProps) {
   const [query, setQuery] = useState('');
   const { roots, defaultRoot } = useWorkspaceRoots();
   const [retryNonce, setRetryNonce] = useState(0);
   const state = useWorkspaceSearch({ query, root: defaultRoot?.path, nonce: retryNonce });
-  // Re-issue the current query (the effect keys on nonce too); a no-op for a
-  // still-refusing root, honest for a transient error.
   const retrySearch = () => setRetryNonce(n => n + 1);
 
   return (
@@ -64,8 +47,6 @@ export interface SearchTabViewProps {
   onRetry: () => void;
 }
 
-/** The Search tab as a pure function of its state — extracted so every terminal
- *  state (refusal / dependency / done / truncated / empty) is render-testable. */
 export function SearchTabView({
   state,
   query,
@@ -252,8 +233,6 @@ function SearchFileGroupRow({
   );
 }
 
-/** One match line: the 1-based line number and the preview with the byte-offset
- *  substring highlighted. Inline context only — never a link into a file viewer. */
 function SearchMatchRow({ match }: { match: WorkspaceSearchMatch }) {
   const { before, match: hit, after } = byteSlice(match.preview, match.column, match.length);
   return (

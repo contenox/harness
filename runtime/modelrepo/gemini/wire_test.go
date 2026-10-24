@@ -14,8 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// capture answers every request with a fixed body and records the decoded
-// request bodies in order.
 type capture struct {
 	server *httptest.Server
 	bodies []map[string]any
@@ -53,8 +51,6 @@ func (c *capture) body(t *testing.T, index int) map[string]any {
 	return c.bodies[index]
 }
 
-// chatProvider builds a Gemini provider against the stub endpoint with the
-// thinking capability the vendor publishes for the model.
 func chatProvider(t *testing.T, c *capture, model string, capabilities modelrepo.CapabilityConfig) modelrepo.Provider {
 	t.Helper()
 
@@ -68,8 +64,6 @@ func chatProvider(t *testing.T, c *capture, model string, capabilities modelrepo
 	return gemini.NewGeminiProvider("test-key", model, []string{c.server.URL}, capabilities, c.server.Client(), nil)
 }
 
-// The vendor's REST reference names the request member systemInstruction, so
-// that is the member the adapter sends.
 func TestUnit_GeminiWire_SystemInstructionUsesTheDocumentedName(t *testing.T) {
 	t.Parallel()
 
@@ -93,8 +87,6 @@ func TestUnit_GeminiWire_SystemInstructionUsesTheDocumentedName(t *testing.T) {
 	assert.Equal(t, "be terse", parts[0].(map[string]any)["text"])
 }
 
-// Structured output goes out as the vendor's responseMimeType plus the caller's
-// schema on responseJsonSchema, which accepts JSON Schema whole.
 func TestUnit_GeminiWire_StructuredOutputCarriesTheSchema(t *testing.T) {
 	t.Parallel()
 
@@ -131,9 +123,6 @@ func TestUnit_GeminiWire_StructuredOutputCarriesTheSchema(t *testing.T) {
 	assert.NotContains(t, config, "responseJsonSchema")
 }
 
-// A tool's declared schema reaches the API on parametersJsonSchema, the member
-// the vendor documents as taking JSON Schema, so members the OpenAPI subset had
-// no place for are not trimmed away.
 func TestUnit_GeminiWire_ToolSchemaIsSentWhole(t *testing.T) {
 	t.Parallel()
 
@@ -174,8 +163,6 @@ func TestUnit_GeminiWire_ToolSchemaIsSentWhole(t *testing.T) {
 	assert.NotContains(t, declaration, "parameters")
 }
 
-// A thinking level is the vendor's own enum value, and the model's thoughts come
-// back with its answer.
 func TestUnit_GeminiWire_ThinkingLevelUsesTheVendorEnumAndIncludesThoughts(t *testing.T) {
 	t.Parallel()
 
@@ -194,7 +181,6 @@ func TestUnit_GeminiWire_ThinkingLevelUsesTheVendorEnumAndIncludesThoughts(t *te
 	assert.Equal(t, true, thinking["includeThoughts"])
 	assert.NotContains(t, thinking, "thinkingBudget")
 
-	// A model the vendor configures with a token budget is never sent a level.
 	provider = chatProvider(t, c, "gemini-2.5-flash", modelrepo.CapabilityConfig{})
 	client, err = provider.GetChatConnection(context.Background(), "")
 	require.NoError(t, err)
@@ -208,8 +194,6 @@ func TestUnit_GeminiWire_ThinkingLevelUsesTheVendorEnumAndIncludesThoughts(t *te
 	assert.NotContains(t, thinking, "thinkingLevel")
 }
 
-// A model the vendor documents no thinking control for refuses the request by
-// name instead of sending one with no thinking at all.
 func TestUnit_GeminiWire_UndocumentedThinkingControlIsRefused(t *testing.T) {
 	t.Parallel()
 
@@ -227,8 +211,6 @@ func TestUnit_GeminiWire_UndocumentedThinkingControlIsRefused(t *testing.T) {
 	assert.Empty(t, c.bodies, "no request reaches the vendor")
 }
 
-// A tool-call turn's thought signature is replayed inside the part it was
-// returned on, and the reply's other parts come back with it.
 func TestUnit_GeminiWire_ThoughtSignatureReplaysInsideItsOwnPart(t *testing.T) {
 	t.Parallel()
 
@@ -267,8 +249,6 @@ func TestUnit_GeminiWire_ThoughtSignatureReplaysInsideItsOwnPart(t *testing.T) {
 		"the vendor returns a signature on the first call of a parallel group only")
 }
 
-// A thought signature returned on a text part round-trips, because the reply's
-// parts are replayed rather than rebuilt from the neutral message.
 func TestUnit_GeminiWire_TextPartSignatureRoundTrips(t *testing.T) {
 	t.Parallel()
 
@@ -295,8 +275,6 @@ func TestUnit_GeminiWire_TextPartSignatureRoundTrips(t *testing.T) {
 	assert.Equal(t, "sig-text", parts[0].(map[string]any)["thoughtSignature"])
 }
 
-// A signature the stream returns in its own part is consumed by the function
-// call that follows it, and a signature-only turn is a legal turn.
 func TestUnit_GeminiWire_StreamedSignaturePartIsConsumedByItsCall(t *testing.T) {
 	t.Parallel()
 
@@ -331,8 +309,6 @@ func TestUnit_GeminiWire_StreamedSignaturePartIsConsumedByItsCall(t *testing.T) 
 	require.NotNil(t, result.Continuation)
 }
 
-// The model list is paginated, so every page is read rather than the first one
-// being reported as the whole catalogue.
 func TestUnit_GeminiCatalog_FollowsPagination(t *testing.T) {
 	t.Parallel()
 
@@ -372,9 +348,6 @@ func TestUnit_GeminiCatalog_FollowsPagination(t *testing.T) {
 	require.Equal(t, "gemini-3-flash", models[1].Name)
 }
 
-// The catalog lists a model under the bare id the vendor's generation endpoint
-// takes, so the id an operator sees is the id assignment matches and the id
-// generation sends.
 func TestUnit_GeminiCatalog_ListsTheIDGenerationUses(t *testing.T) {
 	t.Parallel()
 

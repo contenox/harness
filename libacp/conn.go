@@ -45,8 +45,6 @@ func (s *afterResponseSink) run() {
 
 type afterResponseKey struct{}
 
-// AfterResponse schedules fn to run once the current request's result is on the
-// wire; outside a request handler fn runs immediately.
 func AfterResponse(ctx context.Context, fn func()) {
 	if sink, ok := ctx.Value(afterResponseKey{}).(*afterResponseSink); ok {
 		sink.add(fn)
@@ -144,14 +142,10 @@ func NewAgentSideConnection(rw io.ReadWriteCloser, factory AgentFactory) *AgentS
 	return c
 }
 
-// SetExtRequestHandler installs h to handle inbound extension requests; nil
-// answers them with MethodNotFound. Call it from the AgentFactory.
 func (c *AgentSideConnection) SetExtRequestHandler(h ExtRequestHandler) {
 	c.extRequest = h
 }
 
-// SetExtNotificationHandler installs h to handle inbound extension
-// notifications; nil ignores them. Call it from the AgentFactory.
 func (c *AgentSideConnection) SetExtNotificationHandler(h ExtNotificationHandler) {
 	c.extNotification = h
 }
@@ -175,8 +169,6 @@ func (c *AgentSideConnection) Run(ctx context.Context) (err error) {
 	for {
 		line, err := c.reader.Next()
 		if err != nil {
-			// A canceled ctx closes the transport under the reader; report the
-			// cancellation, not the read error.
 			if ctxErr := ctx.Err(); ctxErr != nil {
 				c.shutdown(ctxErr)
 				return ctxErr
@@ -203,8 +195,6 @@ func (c *AgentSideConnection) shutdown(err error) {
 	c.closeOnce.Do(func() {
 		c.closeErr = err
 
-		// Barring admission first guarantees the cancel loops below see every
-		// handler that will ever run.
 		c.handlerMu.Lock()
 		c.draining = true
 		c.handlerMu.Unlock()
@@ -272,8 +262,6 @@ func (c *AgentSideConnection) dispatch(ctx context.Context, line []byte) {
 			}
 		}
 	case IncomingKindNotification:
-		// Applied inline on the read loop so a cancel observes its request's
-		// registration in wire order.
 		switch msg.Notification.Method {
 		case MethodSessionCancel:
 			c.applySessionCancel(msg.Notification.Params)
@@ -326,7 +314,6 @@ func (c *AgentSideConnection) registerPromptCancel(ctx context.Context, params j
 	pc := &promptCancel{sessionID: probe.SessionID, ctx: promptCtx, cancel: cancel}
 	c.cancelMu.Lock()
 	if prev, ok := c.sessionCancels[probe.SessionID]; ok {
-		// A second prompt on a busy session supersedes the first turn.
 		prev.cancel()
 	}
 	c.sessionCancels[probe.SessionID] = pc
@@ -402,7 +389,6 @@ func (c *AgentSideConnection) handleNotification(ctx context.Context, n Notifica
 func (c *AgentSideConnection) callMethod(ctx context.Context, req Request, pc *promptCancel) (any, *Error) {
 	params := req.Params
 	if len(params) == 0 {
-		// Treat omitted params as {} so all-optional-params methods still unmarshal.
 		params = []byte("{}")
 	}
 	switch req.Method {
@@ -516,9 +502,6 @@ func (c *AgentSideConnection) callMethod(ctx context.Context, req Request, pc *p
 		}
 		return resp, nil
 
-	// MethodSessionSetModel is the unstable Zed model-picker method
-	// (session/set_model); an agent with no `models` state returns
-	// MethodNotFound from SetSessionModel.
 	case MethodSessionSetModel:
 		var p SetSessionModelRequest
 		if err := json.Unmarshal(params, &p); err != nil {
@@ -549,7 +532,6 @@ func (c *AgentSideConnection) callMethod(ctx context.Context, req Request, pc *p
 			}
 			return nil, InvalidParams(err.Error())
 		}
-		// pc is nil only when params were unusable, already rejected above.
 		promptCtx := ctx
 		if pc != nil {
 			promptCtx = pc.ctx
@@ -558,8 +540,6 @@ func (c *AgentSideConnection) callMethod(ctx context.Context, req Request, pc *p
 
 		resp, err := c.agent.Prompt(promptCtx, p)
 		if err != nil {
-			// Spec: after session/cancel, prompt must resolve with the
-			// cancelled stop reason, never a JSON-RPC error.
 			if promptCtx.Err() == context.Canceled && errors.Is(err, context.Canceled) {
 				return PromptResponse{StopReason: StopReasonCancelled}, nil
 			}
@@ -568,8 +548,6 @@ func (c *AgentSideConnection) callMethod(ctx context.Context, req Request, pc *p
 		return resp, nil
 
 	default:
-		// req.Params, not the {} default above: extension methods own their
-		// params schema.
 		if IsExtensionMethod(req.Method) && c.extRequest != nil {
 			result, extErr := c.extRequest(ctx, req.Method, req.Params)
 			if extErr != nil {
@@ -628,7 +606,6 @@ func (c *AgentSideConnection) call(ctx context.Context, method string, params an
 		c.pendingMu.Lock()
 		delete(c.pending, id)
 		c.pendingMu.Unlock()
-		// Best-effort: tell the peer this response is no longer awaited.
 		_ = c.notify(MethodCancelRequest, CancelRequestNotification{RequestID: rid})
 		return ctx.Err()
 	case <-c.closed:
@@ -730,7 +707,6 @@ func (c *AgentSideConnection) ReleaseTerminal(ctx context.Context, req ReleaseTe
 	return resp, nil
 }
 
-// MessageMCP exchanges one MCP request with an ACP-provided server.
 func (c *AgentSideConnection) MessageMCP(ctx context.Context, req MessageMCPRequest) (MessageMCPResponse, error) {
 	var resp MessageMCPResponse
 	if err := c.call(ctx, MethodMCPMessage, req, &resp); err != nil {
@@ -742,8 +718,6 @@ func (c *AgentSideConnection) MessageMCP(ctx context.Context, req MessageMCPRequ
 	return resp, nil
 }
 
-// CallExtMethod sends an extension request to the client and returns its raw
-// result. A canceled ctx aborts the wait and notifies the client.
 func (c *AgentSideConnection) CallExtMethod(ctx context.Context, method string, params json.RawMessage) (json.RawMessage, error) {
 	if !IsExtensionMethod(method) {
 		return nil, fmt.Errorf("libacp: %q is not an extension method (must start with %q)", method, ExtensionMethodPrefix)
@@ -759,8 +733,6 @@ func (c *AgentSideConnection) CallExtMethod(ctx context.Context, method string, 
 	return result, nil
 }
 
-// SendExtNotification sends a custom, fire-and-forget extension notification
-// (method must satisfy IsExtensionMethod) to the client.
 func (c *AgentSideConnection) SendExtNotification(method string, params json.RawMessage) error {
 	if !IsExtensionMethod(method) {
 		return fmt.Errorf("libacp: %q is not an extension method (must start with %q)", method, ExtensionMethodPrefix)

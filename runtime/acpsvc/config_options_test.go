@@ -23,8 +23,6 @@ func setupConfigOptionsDB(t *testing.T) (context.Context, libdb.DBManager) {
 
 func TestUnit_SessionConfigOptionsExposeModelPolicyAndThink(t *testing.T) {
 	ctx, db := setupConfigOptionsDB(t)
-	// A decoy global value: per-session display must ignore the global KV entirely
-	// (the HITL policy is session-scoped, like model/think/token-limit).
 	require.NoError(t, clikv.SetHITLPolicy(ctx, runtimetypes.New(db.WithoutTransaction()), "strict"))
 
 	tr := &Transport{
@@ -70,7 +68,7 @@ func TestUnit_SessionConfigOptionsExposeModelPolicyAndThink(t *testing.T) {
 
 	limit := optionByID(t, options, configIDTokenLimit)
 	require.Equal(t, "context", limit.Category)
-	require.Equal(t, "0", limit.CurrentValue) // default
+	require.Equal(t, "0", limit.CurrentValue)
 	require.Contains(t, limit.Description, "token limit")
 }
 
@@ -152,13 +150,6 @@ func TestUnit_SetSessionConfigOptionUpdatesSessionAndPolicyConfig(t *testing.T) 
 	require.Equal(t, "xhigh", optionByID(t, resp.ConfigOptions, configIDThink).CurrentValue)
 }
 
-// TestUnit_HITLPolicyIsPerSessionIndependent proves the fix's core invariant:
-// two live sessions on ONE transport carry independent HITL policy selections,
-// each drives its own config-option CurrentValue and its own enforcement policy
-// name (resolveSessionHITLPolicy — what prompt.go injects into the turn context),
-// and NEITHER write touches the global cli.hitl-policy-name KV. Together with the
-// hitlservice ctx-override tests this is the end-to-end guarantee that two
-// concurrent ACP sessions gate independently through the shared engine.
 func TestUnit_HITLPolicyIsPerSessionIndependent(t *testing.T) {
 	ctx, db := setupConfigOptionsDB(t)
 
@@ -180,8 +171,6 @@ func TestUnit_HITLPolicyIsPerSessionIndependent(t *testing.T) {
 	sessA.driver = &nativeDriver{t: tr}
 	sessB.driver = &nativeDriver{t: tr}
 
-	// Session A picks the permissive-in-name "dev" policy; session B stays on the
-	// configured default (sentinel).
 	_, err := tr.SetSessionConfigOption(ctx, libacp.SetSessionConfigOptionRequest{
 		SessionID: sidA, ConfigID: configIDHITLPolicy, Value: libacp.StringConfigValue("dev"),
 	})
@@ -191,19 +180,15 @@ func TestUnit_HITLPolicyIsPerSessionIndependent(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Independent per-session state.
 	require.Equal(t, "dev", sessA.hitlPolicy())
 	require.Equal(t, "strict", sessB.hitlPolicy())
 
-	// Independent enforcement policy names (what prompt.go injects per turn).
 	require.Equal(t, "dev", tr.resolveSessionHITLPolicy(sessA))
 	require.Equal(t, "strict", tr.resolveSessionHITLPolicy(sessB))
 
-	// Independent config-option display.
 	require.Equal(t, "dev", optionByID(t, tr.sessionConfigOptions(ctx, sessA), configIDHITLPolicy).CurrentValue)
 	require.Equal(t, "strict", optionByID(t, tr.sessionConfigOptions(ctx, sessB), configIDHITLPolicy).CurrentValue)
 
-	// The global KV was never written by either session.
 	require.Empty(t, clikv.ReadHITLPolicy(ctx, runtimetypes.New(db.WithoutTransaction())),
 		"per-session HITL selection must never write the global cli.hitl-policy-name KV")
 }
@@ -236,11 +221,6 @@ func TestUnit_SetSessionConfigOptionRejectsUnknownValue(t *testing.T) {
 	require.Equal(t, "gpt-5-mini", tr.model())
 }
 
-// TestUnit_WorkspaceConfigOptionsMirrorFreshSession pins the session-less
-// snapshot advertised at initialize time: it must carry the same four options
-// (model/HITL/think/token-limit), seeded from the transport defaults, that a
-// freshly-minted session carries — so the empty-chat controls a client renders
-// from _meta match what the first session/new returns.
 func TestUnit_WorkspaceConfigOptionsMirrorFreshSession(t *testing.T) {
 	ctx, db := setupConfigOptionsDB(t)
 
@@ -274,8 +254,6 @@ func TestUnit_WorkspaceConfigOptionsMirrorFreshSession(t *testing.T) {
 	limit := optionByID(t, options, configIDTokenLimit)
 	require.Equal(t, "0", limit.CurrentValue)
 
-	// Byte-identical to what the first session (seeded from the same defaults)
-	// carries — the single source of truth for the option shapes.
 	sess := &sessionEntry{Provider: tr.provider(), Model: tr.model(), Think: tr.thinkDefault(), driver: &nativeDriver{t: tr}}
 	require.Equal(t, tr.sessionConfigOptions(ctx, sess), options)
 }

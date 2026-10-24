@@ -5,7 +5,6 @@ import (
 	"fmt"
 )
 
-// MockTokenizer is a mock implementation of the Tokenizer interface.
 type MockTokenizer struct {
 	FixedTokenCount int
 	FixedModel      string
@@ -18,7 +17,6 @@ func (m MockTokenizer) Tokenize(ctx context.Context, modelName string, prompt st
 	if tokens, ok := m.CustomTokens[prompt]; ok {
 		return tokens, nil
 	}
-	// Just return a slice of dummy token values, e.g., one per word
 	wordCount := len(splitWords(prompt))
 	tokens := make([]int, wordCount)
 	for i := range wordCount {
@@ -41,9 +39,7 @@ func (m MockTokenizer) OptimalModel(ctx context.Context, baseModel string) (stri
 	return fmt.Sprintf("%s-optimized", baseModel), nil
 }
 
-// Simple word splitter for fake tokenization
 func splitWords(s string) []string {
-	// Replace with a more realistic splitter if needed
 	var words []string
 	start := -1
 	for i, c := range s {

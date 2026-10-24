@@ -58,12 +58,10 @@ func (s *store) DeleteMessageIndex(ctx context.Context, id string, identity stri
 	return checkRowsAffected(result)
 }
 
-// ListMessageStreams lists all message stream IDs for an identity.
 func (s *store) ListMessageStreams(ctx context.Context, identity string) ([]string, error) {
 	return s.listMessageIndicesByIdentity(ctx, identity)
 }
 
-// ListMessageIndices lists all message index IDs for an identity.
 func (s *store) ListMessageIndices(ctx context.Context, identity string) ([]string, error) {
 	return s.listMessageIndicesByIdentity(ctx, identity)
 }
@@ -94,7 +92,6 @@ func (s *store) listMessageIndicesByIdentity(ctx context.Context, identity strin
 	return streams, nil
 }
 
-// ListAllSessions lists all session info rows for an identity.
 func (s *store) ListAllSessions(ctx context.Context, identity string) ([]SessionInfo, error) {
 	rows, err := s.Exec.QueryContext(ctx, `
 		SELECT mi.id, mi.identity, COALESCE(mi.name, ''), COUNT(m.id), MAX(m.added_at)
@@ -171,7 +168,6 @@ func parseTimeString(value string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("cannot parse %q", value)
 }
 
-// GetSessionByName returns the session with the given name for an identity.
 func (s *store) GetSessionByName(ctx context.Context, identity string, name string) (*SessionInfo, error) {
 	var si SessionInfo
 	err := s.Exec.QueryRowContext(ctx, `
@@ -189,7 +185,6 @@ func (s *store) GetSessionByName(ctx context.Context, identity string, name stri
 	return &si, nil
 }
 
-// RenameSession updates the human-readable name of a session.
 func (s *store) RenameSession(ctx context.Context, id string, name string) error {
 	result, err := s.Exec.ExecContext(ctx, `
 		UPDATE message_indices
@@ -204,7 +199,6 @@ func (s *store) RenameSession(ctx context.Context, id string, name string) error
 	return checkRowsAffected(result)
 }
 
-// AppendMessages appends multiple messages in a single batch insert.
 func (s *store) AppendMessages(ctx context.Context, messages ...*Message) error {
 	if len(messages) == 0 {
 		return nil
@@ -235,7 +229,6 @@ func (s *store) AppendMessages(ctx context.Context, messages ...*Message) error 
 	return nil
 }
 
-// DeleteMessages deletes all messages for a stream.
 func (s *store) DeleteMessages(ctx context.Context, stream string) error {
 	result, err := s.Exec.ExecContext(ctx, `
 		DELETE FROM messages
@@ -248,7 +241,6 @@ func (s *store) DeleteMessages(ctx context.Context, stream string) error {
 	return checkRowsAffected(result)
 }
 
-// ListMessages lists all messages for a stream in chronological order.
 func (s *store) ListMessages(ctx context.Context, stream string) ([]*Message, error) {
 	rows, err := s.Exec.QueryContext(ctx, `
 		SELECT id, idx_id, payload, added_at
@@ -276,7 +268,6 @@ func (s *store) ListMessages(ctx context.Context, stream string) ([]*Message, er
 	return msgs, nil
 }
 
-// LastMessage gets the most recent message for a stream.
 func (s *store) LastMessage(ctx context.Context, stream string) (*Message, error) {
 	row := s.Exec.QueryRowContext(ctx, `
 		SELECT id, idx_id, payload, added_at
@@ -297,7 +288,6 @@ func (s *store) LastMessage(ctx context.Context, stream string) (*Message, error
 	return &msg, nil
 }
 
-// CountMessages returns the number of messages for a stream.
 func (s *store) CountMessages(ctx context.Context, stream string) (int, error) {
 	var count int
 	err := s.Exec.QueryRowContext(ctx, `

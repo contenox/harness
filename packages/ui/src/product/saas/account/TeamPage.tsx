@@ -88,9 +88,7 @@ export default function TeamPage() {
         {members.data?.map(member => (
           <MemberCard key={member.user_id} member={member} accountID={accountID} />
         ))}
-        {/* Not an EmptyState: the listing always contains the person reading
-            it, so it is never empty. What can be absent is anybody ELSE, and
-            that is what a solo operator is looking at this screen to confirm. */}
+
         {members.data !== undefined && alone(members.data) && (
           <EmptyState
             icon={<Users aria-hidden />}
@@ -242,18 +240,12 @@ function InviteForm({ accountID, account }: { accountID: string; account: Accoun
         options={ROLE_OPTIONS}
         error={errors.fields.role}
       />
-      {/* The blast radius, stated where the grant is made rather than only in
-          the removal dialog that undoes it (finding 14): sessions here are
-          remote code execution, and the inviter is the one consenting. */}
+
       <Small>
         Joining grants access to every machine paired to this account and the sessions running on
         them.
       </Small>
-      {/* Naming happens HERE, in the form that makes the name somebody else's
-          problem, rather than as a link to the screen where it could be fixed.
-          A person one field away from inviting a colleague does not leave to go
-          and rename something and come back — they send the invitation, and the
-          colleague joins a team called 'alex' forever. */}
+
       {wearsDefaultName(account, user?.email) && accountID !== null && (
         <TeamNameField accountID={accountID} currentName={account?.name ?? ''} />
       )}
@@ -277,9 +269,7 @@ function InviteCard({ invite, accountID }: { invite: Invite; accountID: string }
       title={invite.email}
       meta={
         <Small>
-          {/* A DATE, not a relative time: expiry is in the future, and
-              `relativeTime` only describes the past — it rendered every open
-              invitation as "expires now". */}
+
           {ROLE_LABELS[invite.role]} · expires {formatDate(invite.expires_at)}
         </Small>
       }
@@ -323,9 +313,7 @@ function ExpiredInviteCard({ invite }: { invite: Invite }) {
       title={invite.email}
       meta={
         <Small>
-          {/* A RELATIVE time, unlike the open card's date: this one is in the
-              past, which is what `relativeTime` describes and what makes it
-              read differently from a live invitation at a glance. */}
+
           {ROLE_LABELS[invite.role]} · expired {relativeTime(invite.expires_at, 'just now')}
         </Small>
       }

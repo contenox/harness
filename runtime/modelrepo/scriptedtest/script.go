@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	// DefaultModelName is what the catalog exposes when a script names no model; it says "test" so every surface that prints a model name says it too.
 	DefaultModelName = "scripted-test"
 
 	defaultContextLength   = 32768
@@ -34,9 +33,8 @@ type Usage struct {
 }
 
 type ToolCall struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name"`
-	// Arguments is a JSON object, or a JSON string holding raw argument text.
+	ID        string          `json:"id,omitempty"`
+	Name      string          `json:"name"`
 	Arguments json.RawMessage `json:"arguments,omitempty"`
 }
 
@@ -57,7 +55,6 @@ type document struct {
 	Turns           []Turn        `json:"turns"`
 }
 
-// Script replays one recorded dialog; its cursor is process-global per file, so consecutive model turns are consumed in order across the whole chain run.
 type Script struct {
 	Path            string
 	Model           string
@@ -82,7 +79,6 @@ var (
 	cache   = map[string]*cacheEntry{}
 )
 
-// ResolvePath accepts a bare path or a "file://" URL.
 func ResolvePath(baseURL string) (string, error) {
 	raw := strings.TrimSpace(baseURL)
 	raw = strings.TrimPrefix(raw, "file://")
@@ -96,7 +92,6 @@ func ResolvePath(baseURL string) (string, error) {
 	return abs, nil
 }
 
-// Load returns the shared Script for path, reloading (and rewinding) it whenever the file changed on disk.
 func Load(path string) (*Script, error) {
 	abs, err := ResolvePath(path)
 	if err != nil {
@@ -182,7 +177,6 @@ func Parse(path string, raw []byte) (*Script, error) {
 	return script, nil
 }
 
-// Next consumes the turn the dialog is standing on; past the last turn it fails naming the script and the turn index instead of inventing a reply.
 func (s *Script) Next(operation string) (Turn, int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

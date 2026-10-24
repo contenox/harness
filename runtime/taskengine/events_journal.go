@@ -15,7 +15,6 @@ const (
 	journalTextFieldCap = 16 * 1024
 )
 
-// KVJournalTaskEventSink journals task events durably per request ID into the KV store after forwarding them to the wrapped sink.
 type KVJournalTaskEventSink struct {
 	inner   TaskEventSink
 	kv      libkv.KVManager
@@ -29,7 +28,6 @@ func NewKVJournalTaskEventSink(inner TaskEventSink, kv libkv.KVManager, tracker 
 	return &KVJournalTaskEventSink{inner: inner, kv: kv, tracker: tracker}
 }
 
-// Wants defers to the wrapped sink; with no inner sink it consumes every kind.
 func (s *KVJournalTaskEventSink) Wants(kind TaskEventKind) bool {
 	if s.inner != nil {
 		return s.inner.Wants(kind)
@@ -84,7 +82,6 @@ func (s *KVJournalTaskEventSink) PublishTaskEvent(ctx context.Context, event Tas
 	return innerErr
 }
 
-// GetJournaledEvents returns the durably journaled events of a run in arrival order, or an empty slice if none exist.
 func GetJournaledEvents(ctx context.Context, kv libkv.KVManager, reqID string) ([]TaskEvent, error) {
 	if reqID == "" {
 		return nil, nil
@@ -105,7 +102,6 @@ func GetJournaledEvents(ctx context.Context, kv libkv.KVManager, reqID string) (
 		}
 		out = append(out, ev)
 	}
-	// ListPush prepends (LPUSH); reverse so callers get arrival order.
 	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
 		out[i], out[j] = out[j], out[i]
 	}

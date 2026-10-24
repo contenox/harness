@@ -23,7 +23,6 @@ type OllamaChatClient struct {
 	tracker          libtracker.ActivityTracker
 }
 
-// checkAudio refuses audio a peer would drop or misread: without the audios extension the payload is ignored, and with it the peer names each format from the bytes.
 func checkAudio(modelName string, audioExtension bool, messages []modelrepo.Message) error {
 	if !audioExtension {
 		return modelrepo.RefuseAudioInput("ollama", modelName, messages)
@@ -65,7 +64,6 @@ func (c *OllamaChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 		return modelrepo.ChatResult{}, err
 	}
 
-	// Prior ToolCalls must be mapped too, or Ollama has no record of tools already called.
 	apiMessages := make([]Message, 0, len(messages))
 	for _, msg := range messages {
 		var apiToolCalls []ToolCall
@@ -146,7 +144,6 @@ func (c *OllamaChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 
 	var finalResponse ChatResponse
 
-	// Only the final frame is kept; Ollama includes the full message there.
 	err = c.ollamaClient.Chat(ctx, req, func(res ChatResponse) error {
 		if res.Done {
 			finalResponse = res
@@ -157,7 +154,6 @@ func (c *OllamaChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 	if err != nil {
 		reportErr(err)
 		wrapped := fmt.Errorf("ollama API chat request failed for model %s: %w", c.modelName, err)
-		// Ollama reports context overflow only as an error string; classify it into the typed sentinel.
 		return modelrepo.ChatResult{}, modelrepo.ClassifyProviderError(wrapped, 0, "", err.Error())
 	}
 
@@ -173,10 +169,7 @@ func (c *OllamaChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 		reportErr(err)
 		return modelrepo.ChatResult{}, err
 	case "length":
-		// Truncated but successful; partial content is real.
 	case "", "stop":
-		// The vendor omits done_reason on some successful streams; empty content
-		// is allowed with or without tool calls.
 	default:
 		err := fmt.Errorf("unexpected completion reason %q for model %s", finalResponse.DoneReason, c.modelName)
 		reportErr(err)
@@ -191,13 +184,8 @@ func (c *OllamaChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 
 	var toolCalls []modelrepo.ToolCall
 	for _, tc := range finalResponse.Message.ToolCalls {
-		// Arguments is an ordered map; String() renders it as the JSON string modelrepo.ToolCall expects.
 		argsJSON := tc.Function.Arguments.String()
 
-		// The id the upstream assigned is quoted back by the tool result, and
-		// an upstream that pairs calls to results by id refuses a turn whose
-		// result carries a different one. Only a server that assigned no id at
-		// all gets one minted here, so real Ollama keeps working.
 		id := tc.ID
 		if id == "" {
 			id = uuid.NewString()

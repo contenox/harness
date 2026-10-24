@@ -20,9 +20,6 @@ function uniqueObservedModels(models: Backend['pulledModels']): Backend['pulledM
   });
 }
 
-// Mirrors the CLI's `backend list` annotation (modeldconn.LocalSentinel = "local"):
-// a modeld backend row's URL of "local" (or empty) means the local daemon, anything
-// else is a remote node's host:port.
 function backendTypeLabel(backend: Backend): string {
   if (backend.type !== 'modeld') return backend.type;
   const isLocal = backend.baseUrl === 'local' || backend.baseUrl === '';

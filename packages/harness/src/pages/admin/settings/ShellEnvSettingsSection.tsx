@@ -5,8 +5,6 @@ import { usePutShellEnv } from '../../../hooks/usePutShellEnv';
 import { useShellEnv } from '../../../hooks/useShellEnv';
 import { AuthContext } from '../../../lib/authContext';
 
-// Variable names must match the backend contract: letters, digits and
-// underscores, not starting with a digit.
 const NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 type EnvRow = { id: number; name: string; value: string };
@@ -18,9 +16,6 @@ export function ShellEnvSettingsSection() {
   const putEnv = usePutShellEnv();
   const formId = useId();
 
-  // Rows are edited as an ordered list (not a Record keyed by name) so a
-  // half-typed or duplicated name stays visible instead of collapsing onto
-  // another row; the vars map is rebuilt from the rows on save.
   const [rows, setRows] = useState<EnvRow[]>([]);
   const idRef = useRef(0);
   const nextId = () => ++idRef.current;
@@ -81,8 +76,6 @@ export function ShellEnvSettingsSection() {
     e.preventDefault();
     if (validation.hasErrors) return;
     putEnv.reset();
-    // Full replacement: build the whole map from the current rows. An empty
-    // rows list PUTs {} and clears every injected variable on the server.
     const vars: Record<string, string> = {};
     for (const row of rows) {
       const name = row.name.trim();

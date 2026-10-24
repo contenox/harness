@@ -4,9 +4,6 @@ import { useProductPorts } from '../ports';
 import { answeringBlock } from '../lib/asks';
 import type { AnswerAskRequest, Ask } from '../lib/api/types';
 
-/**
- * A column of answerable asks, wherever they are being shown.
- */
 export function AskList({ asks, here }: { asks: Ask[]; here?: 'agent' | 'host' }) {
   const { useAccount, useAnswerAsk, useAskBoard, useAuth, useHosts } = useProductPorts();
   const { accountID, accounts } = useAuth();

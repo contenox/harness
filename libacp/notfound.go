@@ -7,9 +7,6 @@ import (
 	"strings"
 )
 
-// IsNotFound reports whether err is a peer's answer of "that resource does not
-// exist": a typed *Error with Code == ErrResourceNotFound, or a
-// subject-describing code whose message says "not found".
 func IsNotFound(err error) bool {
 	if err == nil {
 		return false
@@ -28,9 +25,6 @@ func IsNotFound(err error) bool {
 	return strings.Contains(strings.ToLower(e.Message), "not found")
 }
 
-// AsNotExist normalizes a not-found failure (per IsNotFound) into an error
-// satisfying errors.Is(err, os.ErrNotExist); any other error, including nil,
-// is returned unchanged.
 func AsNotExist(err error) error {
 	if err == nil {
 		return nil

@@ -140,8 +140,6 @@ func TestUnit_LogoutRequestResponse_WireShape(t *testing.T) {
 	assert.JSONEq(t, `{}`, string(raw))
 }
 
-// Pins: a "boolean" SessionConfigOption puts a real JSON boolean on the wire
-// (never "true") and carries no options key.
 func TestUnit_SessionConfigOption_BooleanWireShape(t *testing.T) {
 	raw, err := json.Marshal(libacp.SessionConfigOption{
 		ID:           "auto-approve",
@@ -161,7 +159,6 @@ func TestUnit_SessionConfigOption_BooleanWireShape(t *testing.T) {
 	assert.Equal(t, "true", back.CurrentValue, "boolean currentValue round-trips to the Go-side string form")
 }
 
-// Pins: "select" currentValue stays a string, and options is always present.
 func TestUnit_SessionConfigOption_SelectWireShape(t *testing.T) {
 	raw, err := json.Marshal(libacp.SessionConfigOption{
 		ID:           "model",
@@ -183,9 +180,6 @@ func TestUnit_SessionConfigOption_SelectWireShape(t *testing.T) {
 	assert.Equal(t, "gpt-5", back.CurrentValue)
 }
 
-// Pins: McpServerHttp/Sse always carry `headers` (even `[]`), and
-// McpServerStdio always carries `args`/`env` — omitting them can break a
-// strict receiver.
 func TestUnit_McpServer_RequiredArraysAlwaysPresent(t *testing.T) {
 	stdio, err := json.Marshal(libacp.McpServer{Name: "local", Command: "/bin/mcp"})
 	require.NoError(t, err)
@@ -219,8 +213,6 @@ func TestUnit_McpServer_RequiredArraysAlwaysPresent(t *testing.T) {
 	assert.Empty(t, sseHeaders)
 }
 
-// Pins: available_commands_update/config_option_update always carry their
-// payload array, even empty; every other update kind omits it.
 func TestUnit_SessionUpdate_AvailableCommandsAndConfigOptions_EmitEmptyArrays(t *testing.T) {
 	raw, err := json.Marshal(libacp.SessionUpdate{SessionUpdate: libacp.SessionUpdateAvailableCommands})
 	require.NoError(t, err)
@@ -264,7 +256,6 @@ func TestUnit_AdditionalDirectories_WireShape(t *testing.T) {
 	require.NoError(t, json.Unmarshal(newReq, &back))
 	assert.Equal(t, []string{"/repo/vendor"}, back.AdditionalDirectories)
 
-	// Omitted when unset, on every request that carries it and on SessionInfo.
 	noDirs, err := json.Marshal(libacp.NewSessionRequest{Cwd: "/repo", McpServers: []libacp.McpServer{}})
 	require.NoError(t, err)
 	var noDirsM map[string]any
@@ -319,8 +310,6 @@ func TestUnit_Annotations_LastModifiedWireShape(t *testing.T) {
 	assert.Equal(t, "2024-01-01T00:00:00Z", back.LastModified)
 }
 
-// Pins: a diff clearing content to "" still puts path/newText on the wire
-// for the "diff" tool-call-content variant.
 func TestUnit_ToolCallContentDiff_EmitsEmptyNewText(t *testing.T) {
 	raw, err := json.Marshal(libacp.ToolCallContent{
 		Type:    libacp.ToolCallContentDiff,
@@ -336,7 +325,6 @@ func TestUnit_ToolCallContentDiff_EmitsEmptyNewText(t *testing.T) {
 	require.True(t, ok, "diff must carry newText even when empty, wire: %s", raw)
 	assert.Equal(t, "", newText)
 
-	// Non-diff kinds are unaffected: path/newText stay omitted when unset.
 	regular, err := json.Marshal(libacp.ToolCallContent{
 		Type:    libacp.ToolCallContentRegular,
 		Content: &libacp.ContentBlock{Type: string(libacp.ContentKindText), Text: "ok"},

@@ -61,9 +61,6 @@ export type TokenUsage = {
   total: number;
 };
 
-/**
- * Mirrors taskengine.CapturedStateUnit (Go).
- */
 export type CapturedStateUnit = {
   taskID: string;
   taskHandler: string;

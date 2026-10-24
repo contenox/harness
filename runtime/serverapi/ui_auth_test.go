@@ -1,9 +1,5 @@
 package serverapi
 
-// These tests exercise the Beam remote-access login endpoints and the session
-// cookie's acceptance across the mutation-protection middleware. They hit the
-// handlers directly (no real product routes required) and assert the cookie is
-// interchangeable with the bearer token everywhere the bearer is honored.
 import (
 	"encoding/json"
 	"net/http"
@@ -24,8 +20,6 @@ func decodeAuthStatus(t *testing.T, body []byte) authStatusResponse {
 	return out
 }
 
-// sessionCookieFromLogin performs a successful login and returns the session
-// cookie the server set, so downstream requests can present it.
 func sessionCookieFromLogin(t *testing.T, token string) *http.Cookie {
 	t.Helper()
 	h := uiLoginHandler(token, newLoginLimiter(defaultLoginMaxAttempts, defaultLoginWindow))
@@ -46,7 +40,6 @@ func sessionCookieFromLogin(t *testing.T, token string) *http.Cookie {
 
 func TestUILogin_CorrectTokenSetsHttpOnlySessionCookie(t *testing.T) {
 	c := sessionCookieFromLogin(t, testToken)
-	// The cookie must carry a signed session JWT, NOT the raw shared secret.
 	if c.Value == testToken {
 		t.Fatal("session cookie must not store the raw TOKEN verbatim")
 	}
@@ -62,8 +55,6 @@ func TestUILogin_CorrectTokenSetsHttpOnlySessionCookie(t *testing.T) {
 	if c.Path != "/" {
 		t.Fatalf("session cookie Path: want /, got %q", c.Path)
 	}
-	// Over plain HTTP (httptest is non-TLS) Secure must be off, or the browser
-	// would drop the cookie and login would silently fail.
 	if c.Secure {
 		t.Fatal("session cookie must not be Secure over plain HTTP")
 	}
@@ -109,7 +100,6 @@ func TestUILogin_WrongTokenIsUnauthorizedAndSetsNoCookie(t *testing.T) {
 }
 
 func TestUILogin_RateLimitReturns429(t *testing.T) {
-	// A tiny window/budget so exhausting it is deterministic without sleeps.
 	limiter := newLoginLimiter(2, time.Minute)
 	h := uiLoginHandler(testToken, limiter)
 	do := func() int {
@@ -175,7 +165,6 @@ func TestUIAuthStatus_NoTokenConfigured(t *testing.T) {
 func TestUIAuthStatus_TokenConfigured(t *testing.T) {
 	h := uiAuthStatusHandler(testToken)
 
-	// Anonymous: required, not authenticated.
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/ui/auth-status", nil))
 	got := decodeAuthStatus(t, rr.Body.Bytes())
@@ -183,7 +172,6 @@ func TestUIAuthStatus_TokenConfigured(t *testing.T) {
 		t.Fatalf("anon: want {required:true, authenticated:false}, got %+v", got)
 	}
 
-	// With the session cookie: authenticated.
 	cookie := sessionCookieFromLogin(t, testToken)
 	rr = httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/ui/auth-status", nil)
@@ -194,7 +182,6 @@ func TestUIAuthStatus_TokenConfigured(t *testing.T) {
 		t.Fatalf("cookie: want {required:true, authenticated:true}, got %+v", got)
 	}
 
-	// With the bearer token: also authenticated (programmatic path unchanged).
 	rr = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/ui/auth-status", nil)
 	req.Header.Set("Authorization", "Bearer "+testToken)
@@ -223,8 +210,6 @@ func TestUILogout_ClearsCookie(t *testing.T) {
 	}
 }
 
-// The session cookie must satisfy the mutation-protection middleware exactly as
-// a bearer token does: a cookie'd mutation passes, an anonymous one 401s.
 func TestProtectMutatingAPI_SessionCookieAuthorizesMutation(t *testing.T) {
 	called := false
 	handler := ProtectMutatingAPI(testToken, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -259,8 +244,6 @@ func TestProtectMutatingAPI_SessionCookieAuthorizesMutation(t *testing.T) {
 	}
 }
 
-// Loopback with no TOKEN: login is not required, and mutations pass without any
-// credential (zero prompts for local dev).
 func TestUILogin_NoTokenLoopbackNeedsNoCredential(t *testing.T) {
 	rr := httptest.NewRecorder()
 	uiLoginHandler("", newLoginLimiter(defaultLoginMaxAttempts, defaultLoginWindow)).
@@ -276,7 +259,6 @@ func TestUILogin_NoTokenLoopbackNeedsNoCredential(t *testing.T) {
 	called := false
 	handler := ProtectMutatingAPI("", http.HandlerFunc(func(http.ResponseWriter, *http.Request) { called = true }))
 	mr := httptest.NewRecorder()
-	// Same-origin mutation (no Origin header, not cross-site) passes with no token.
 	handler.ServeHTTP(mr, httptest.NewRequest(http.MethodPost, "/api/backends", strings.NewReader("{}")))
 	if !called {
 		t.Fatal("no-token same-origin mutation must pass without a credential")

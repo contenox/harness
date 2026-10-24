@@ -44,7 +44,7 @@ func TestSupervisor_RetriesRetryableErrorThenSucceeds(t *testing.T) {
 	err := sup.Serve(ctx, func(_ context.Context, _ *acpexec.Process, attempt int) error {
 		attempts = append(attempts, attempt)
 		if attempt < 2 {
-			return libacp.ErrConnectionClosed // retryable
+			return libacp.ErrConnectionClosed
 		}
 		return nil
 	})
@@ -78,7 +78,7 @@ func TestSupervisor_NonRetryableErrorNotRetried(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	sentinel := errors.New("method not found") // not retryable
+	sentinel := errors.New("method not found")
 	sup := acpexec.Supervisor{Command: trueCmd, MaxRestarts: 5}
 
 	calls := 0
@@ -120,7 +120,6 @@ func TestSupervisor_AppliesBackoffAndHonorsCancellation(t *testing.T) {
 		},
 	}
 
-	// Cancel while the first backoff is pending; Serve must return ctx.Err.
 	go func() {
 		time.Sleep(10 * time.Millisecond)
 		cancel()

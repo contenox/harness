@@ -12,19 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// claudeACPBinEnv gates the one non-hermetic server in this package's e2e
-// suite: a real, foreign, production agent (Claude Code served over ACP, e.g.
-// via the claude-code-acp adapter). Unlike stub/testy/loopback its replies
-// are nondeterministic and it needs credentials, so this suite asserts turn
-// SHAPE only and never runs in CI — it exists to prove the host drives a
-// real-world agent through the exact same composed path, with zero
-// Claude-specific code anywhere in the host.
 const claudeACPBinEnv = "ACP_CLAUDE_ACP_BIN"
 
-// TestHostE2E_Claude_TurnShape registers a Claude-over-ACP executable through
-// the real registry leg and drives one live prompt turn through DriveTurn,
-// asserting only what every well-behaved agent must produce: a normal
-// end_turn and at least one displayable reply chunk.
 func TestHostE2E_Claude_TurnShape(t *testing.T) {
 	requireSandboxable(t)
 	bin := os.Getenv(claudeACPBinEnv)
@@ -45,17 +34,13 @@ func TestHostE2E_Claude_TurnShape(t *testing.T) {
 	var stderr acpexec.LockedBuffer
 	harness := &agenthost.RecordingHarness{}
 	res, err := agenthost.DriveTurn(ctx, agent, harness, agenthost.TurnRequest{
-		Cwd:    t.TempDir(),
-		Prompt: []libacp.ContentBlock{libacp.NewTextContent("This is an automated connection check. Reply with one short sentence.")},
-		Stderr: &stderr,
-		// The adapter is a persistent process that never exits on
-		// stdin-close; don't wait out the full default grace on teardown.
+		Cwd:       t.TempDir(),
+		Prompt:    []libacp.ContentBlock{libacp.NewTextContent("This is an automated connection check. Reply with one short sentence.")},
+		Stderr:    &stderr,
 		KillGrace: 2 * time.Second,
 	})
 	require.NoError(t, err, "claude adapter stderr:\n%s", stderr.String())
 
-	// Shape only — never the reply text: a live model's wording is not ours
-	// to pin. end_turn plus displayable output is the contract.
 	require.Equal(t, libacp.StopReasonEndTurn, res.StopReason)
 	tracker := &libacp.TurnTracker{}
 	for _, n := range harness.Updates() {

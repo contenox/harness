@@ -12,5 +12,3 @@ import (
 	_ "github.com/contenox/harness/runtime/modelrepo/vertex"
 	_ "github.com/contenox/harness/runtime/modelrepo/vllm"
 )
-
-// Import vendor catalog providers for registry-based modelrepo catalog construction.

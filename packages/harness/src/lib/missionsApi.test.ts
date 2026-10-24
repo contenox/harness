@@ -1,14 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './api';
 
-/**
- * Wire-level tests for the mission surface: list/get/reports over
- * /api/missions, plus fire-a-mission (`dispatchMission`, POST
- * /api/fleet/dispatch) — grouped here rather than in fleetApi.test.ts because
- * conceptually all four are "mission mode" calls even though dispatch's URL
- * sits under /fleet (see runtime/missionservice's package doc: "every
- * dispatch is a mission"). Same fetch-stub shape as fleetApi.test.ts.
- */
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
     ok,

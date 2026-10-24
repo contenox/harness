@@ -11,11 +11,8 @@ import (
 	"time"
 )
 
-// DefaultOllamaSuggestModel is the model name we suggest for local Ollama when no chat models are present yet.
 const DefaultOllamaSuggestModel = "qwen2.5:7b"
 
-// resolveOllamaProbeBaseURL returns the Ollama HTTP base URL for health checks.
-// It respects OLLAMA_HOST (with or without scheme); otherwise http://127.0.0.1:11434.
 func resolveOllamaProbeBaseURL() string {
 	h := strings.TrimSpace(os.Getenv("OLLAMA_HOST"))
 	if h == "" {
@@ -27,7 +24,6 @@ func resolveOllamaProbeBaseURL() string {
 	return "http://" + strings.TrimLeft(h, "/")
 }
 
-// ProbeLocalOllamaAPI returns (baseURL, true) if GET {base}/api/tags responds with HTTP 200.
 func ProbeLocalOllamaAPI(ctx context.Context) (baseURL string, ok bool) {
 	baseURL = resolveOllamaProbeBaseURL()
 	if _, err := url.Parse(baseURL); err != nil {
@@ -114,8 +110,6 @@ func enrichResultWithOllamaAt(r Result, probedBase string) Result {
 	return r
 }
 
-// EnrichResultWithOllamaProbe probes the local Ollama HTTP API (OLLAMA_HOST or default)
-// and augments registration-related issues when /api/tags is reachable but no Ollama backend is ready yet.
 func EnrichResultWithOllamaProbe(ctx context.Context, r Result) Result {
 	base, ok := ProbeLocalOllamaAPI(ctx)
 	if !ok {

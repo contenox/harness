@@ -1,4 +1,3 @@
-// Package mcpserverservice stores MCP server configs. Add a database, Git host, or internal tool once — chains can call it from that point on.
 package mcpserverservice
 
 import (
@@ -12,7 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Service exposes CRUD operations for persisted MCP server configurations.
 type Service interface {
 	Create(ctx context.Context, srv *runtimetypes.MCPServer) error
 	Get(ctx context.Context, id string) (*runtimetypes.MCPServer, error)
@@ -30,7 +28,6 @@ type service struct {
 	uiBaseURL string
 }
 
-// New creates a new MCP server service backed by the given database manager.
 func New(db libdb.DBManager, opts ...Option) Service {
 	s := &service{db: db}
 	for _, opt := range opts {

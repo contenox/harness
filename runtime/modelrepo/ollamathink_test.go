@@ -11,14 +11,8 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 )
 
-// thinkModel is the smallest checkpoint that reports the "thinking"
-// capability (~500MB).
 const thinkModel = "qwen3:0.6b"
 
-// TestSystem_Ollama_Thinking exercises the reasoning path against a live
-// server. ThinkValue marshals as a bool for "off" and a string for a named
-// level, and a real server rejects the wrong shape outright — which fakes
-// cannot do.
 func TestSystem_Ollama_Thinking(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping ollama thinking system test: starts a container and pulls a reasoning model")
@@ -68,7 +62,6 @@ func TestSystem_Ollama_Thinking(t *testing.T) {
 		require.True(t, found, "listed models do not include %s", thinkModel)
 	})
 
-	// A named level marshals as the JSON string "low".
 	t.Run("ThinkLevelIsString", func(t *testing.T) {
 		resp, err := newChatClient(t).Chat(ctx,
 			[]modelrepo.Message{{Role: "user", Content: "What is 2 + 2?"}},
@@ -78,8 +71,6 @@ func TestSystem_Ollama_Thinking(t *testing.T) {
 		assert.NotEmpty(t, resp.Message.Thinking, "no reasoning trace returned for think=\"low\"")
 	})
 
-	// "off" marshals as the JSON bool false, a different wire shape from the
-	// level strings above.
 	t.Run("ThinkOffIsBool", func(t *testing.T) {
 		resp, err := newChatClient(t).Chat(ctx,
 			[]modelrepo.Message{{Role: "user", Content: "What is 2 + 2?"}},

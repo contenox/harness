@@ -187,8 +187,6 @@ func resolveSystemChain(cmd *cobra.Command, contenoxDir, name string) (string, e
 	return lookupSystemFile(contenoxDir, name)
 }
 
-// lookupSystemFile finds a config file by name. Workspace .contenox/ overrides
-// home ~/.contenox-harness/. Returns an error if neither exists.
 func lookupSystemFile(contenoxDir, name string) (string, error) {
 	if contenoxDir != "" {
 		workspacePath := filepath.Join(contenoxDir, name)

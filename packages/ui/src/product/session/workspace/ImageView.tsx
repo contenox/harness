@@ -23,9 +23,6 @@ function imageMime(path: string): string {
   }
 }
 
-/**
- * The image viewer of the preview pipe: raw base64 bytes straight off the wire become a data-URL image.
- */
 export default function ImageView({ content, name, path }: PreviewViewerProps) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-auto">

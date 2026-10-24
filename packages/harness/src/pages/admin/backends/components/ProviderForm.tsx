@@ -8,7 +8,6 @@ import type { CloudProviderType } from '../../../../lib/types';
 type ProviderFormProps = {
   provider?: CloudProviderType;
   setup?: CloudProviderSetup;
-  /** Called after the credentials are saved, so a wizard can advance. */
   onSaved?: () => void;
 };
 

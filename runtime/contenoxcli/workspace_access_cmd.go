@@ -1,12 +1,3 @@
-// workspace_access_cmd.go is `contenox workspace access` — the CLI's window
-// onto POST /workspace/access (runtime/internal/accessapi), the batch,
-// structured-reason HITL verdict preview also used by Beam's access-preview
-// panel. Unlike its `workspace add/remove/list` siblings (durable grants,
-// written to the shared database with no serve required), a verdict is
-// computed live by a running `contenox serve` process — its HITL policy
-// engine, its view of the filesystem — so this reaches serve over REST, the
-// same serveClient every other server-backed verb (`approvals`, `fleet`,
-// `mission`) uses.
 package contenoxcli
 
 import (
@@ -58,30 +49,15 @@ func init() {
 	workspaceCmd.AddCommand(workspaceAccessCmd)
 }
 
-// ─── serveClient wrapper (access-shaped; mirrors approvals_cmd.go's own
-// request/response duplication over the wire contract rather than importing
-// the internal accessapi package for two one-shot structs) ────────────────
-
-// accessEvaluateRequest is the POST /workspace/access body (mirrors
-// accessapi.EvaluateRequest).
 type accessEvaluateRequest struct {
 	Paths []string `json:"paths"`
 }
 
-// accessEvaluateResponse is the POST /workspace/access response (mirrors
-// accessapi.EvaluateResponse). Verdicts reuses accessview.PathVerdict
-// directly — that package is the public wire-shape owner (see its doc
-// comment), so decoding through it here keeps this client and the server
-// reading the exact same JSON contract.
 type accessEvaluateResponse struct {
 	PolicyName string                   `json:"policyName"`
 	Verdicts   []accessview.PathVerdict `json:"verdicts"`
 }
 
-// evaluateWorkspaceAccess posts paths to /workspace/access?root=<root>&policy=<policy>
-// (either query param omitted when empty, letting serve apply its own default
-// resolution) and returns the resolved policy name plus one verdict per path,
-// in request order.
 func (c *serveClient) evaluateWorkspaceAccess(ctx context.Context, root, policy string, paths []string) (accessEvaluateResponse, error) {
 	q := url.Values{}
 	if strings.TrimSpace(root) != "" {
@@ -101,8 +77,6 @@ func (c *serveClient) evaluateWorkspaceAccess(ctx context.Context, root, policy 
 	}
 	return out, nil
 }
-
-// ─── access ─────────────────────────────────────────────────────────────
 
 func runWorkspaceAccess(cmd *cobra.Command, args []string) error {
 	ctx := libtracker.WithNewRequestID(context.Background())
@@ -137,10 +111,6 @@ func runWorkspaceAccess(cmd *cobra.Command, args []string) error {
 	return w.Flush()
 }
 
-// dimensionAction renders a dimension verdict's action, or "-" for the nil
-// Read/Write that an unreachable path (accessview.PathVerdict.Reachable ==
-// false) always carries — no policy is evaluated for a path that isn't really
-// inside the workspace root, so there is no action to show.
 func dimensionAction(dv *accessview.DimensionVerdict) string {
 	if dv == nil {
 		return "-"
@@ -148,14 +118,6 @@ func dimensionAction(dv *accessview.DimensionVerdict) string {
 	return dv.Action
 }
 
-// accessReasonColumn combines the read/write dimensions' reasons into the
-// table's single REASON column, prefixed by which dimension they belong to.
-// A dimension whose action is "allow" is omitted — the routine, expected
-// case that needs no explaining — so the column surfaces only what made a
-// path get gated: "read:matched_rule#0 write:matched_rule#0" for a path a
-// rule explicitly denies, "write:default_action" for a path whose write falls
-// through to the policy's default_action, "-" when both dimensions allow (or
-// the path is unreachable, where read/write are both nil).
 func accessReasonColumn(read, write *accessview.DimensionVerdict) string {
 	var parts []string
 	if f := dimensionReasonFragment("read", read); f != "" {
@@ -170,10 +132,6 @@ func accessReasonColumn(read, write *accessview.DimensionVerdict) string {
 	return strings.Join(parts, " ")
 }
 
-// dimensionReasonFragment renders one dimension's reason ("matched_rule#<n>"
-// when a rule index decided it, else the bare reason string, e.g.
-// "default_action") labeled by which dimension it is, or "" for a nil
-// dimension or one whose action is "allow".
 func dimensionReasonFragment(label string, dv *accessview.DimensionVerdict) string {
 	if dv == nil || dv.Action == "allow" {
 		return ""

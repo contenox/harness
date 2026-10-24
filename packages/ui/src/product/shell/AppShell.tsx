@@ -9,9 +9,6 @@ import { AccountSwitcher } from './AccountSwitcher';
 import { BillingBanner } from './BillingBanner';
 import { BarContext, type BarSlots } from './screenBar';
 
-/**
- * The frame every signed-in screen renders inside: one bar that carries the navigation AND the screen's own title, back link and actions — a page declares that chrome through [ScreenHeader], which portals it into the slots below — and the content under it.
- */
 export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -44,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <BarContext.Provider value={slots}>
       <div className="bg-surface-100 dark:bg-dark-surface-100 flex h-full min-h-0 flex-col">
         <header className="border-surface-300 bg-surface-50 dark:border-dark-surface-600 dark:bg-dark-surface-50 z-40 flex h-12 shrink-0 items-center gap-1 border-b px-1 sm:px-2">
-          {/* Mobile: the drawer button. */}
+
           <Button
             variant="ghost"
             size="icon"
@@ -59,25 +56,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             )}
           </Button>
 
-          {/* The page's title — the screen's one <h1>. It is the only region
-              allowed to resize: the title truncates instead of pushing its
-              neighbours, which is what keeps the bar from re-laying-out when
-              actions appear. Back navigation never lives here — a page that
-              hangs off another screen carries its own "Back to …" line in its
-              content (see BackTo), so this slot has the same start on every
-              page. */}
+
           <h1
             ref={titleRef}
             className="text-text dark:text-dark-text min-w-0 flex-1 truncate text-base font-semibold sm:text-lg"
           />
 
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            {/* The page's actions (Sign out, Workspace, the ask rule links). */}
+
             <span ref={actionsRef} className="flex shrink-0 items-center gap-1 sm:gap-2" />
-            {/* Desktop destinations LAST, pinned to the bar's right edge: the
-                page actions between title and nav may vary in number, and the
-                nav must not move because they do. A phone keeps them in the
-                drawer. */}
+
             <nav
               aria-label="Primary"
               className="hidden items-stretch sm:flex sm:ml-2 [&>a]:rounded-lg [&>a]:px-3 [&>a]:py-1.5">
@@ -87,20 +75,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Decides for itself whether there is anything to say (a grace or
-              on-hold subscription, on a destination screen) — see the component
-              for why it is here and not on every route. */}
+
           <BillingBanner />
-          {/* The scope every screen below is read in. Renders nothing for a
-              single membership, and never becomes a destination of its own — see
-              the component. */}
+
           <AccountSwitcher />
           {children}
         </div>
 
         {open && (
           <div className="fixed inset-0 z-50 sm:hidden">
-            {/* Scrim: a tap on it is a tap on "stay here", like the Back gesture. */}
+
             <div
               className="bg-black/40 absolute inset-0"
               onClick={() => setOpen(false)}
@@ -144,10 +128,7 @@ function ShellLinks({ onNavigate }: { onNavigate?: () => void }) {
             icon={
               <span className="relative block">
                 <Icon className="h-5 w-5" aria-hidden />
-                {/* On the ICON rather than beside the label: `NavItem` wraps
-                    its children in a truncating span, and a narrow item's
-                    count inside that span is the first thing the ellipsis
-                    eats. */}
+
                 {count > 0 && <WaitingCount count={count} />}
               </span>
             }

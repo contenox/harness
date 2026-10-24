@@ -1,4 +1,3 @@
-/** Heuristic: JSON files that are likely task chain documents. */
 export function isChainLikeVfsPath(path: string): boolean {
   const lower = path.toLowerCase();
   if (!lower.endsWith('.json')) return false;

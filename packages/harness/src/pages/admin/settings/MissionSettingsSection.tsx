@@ -13,22 +13,9 @@ const uniqueSorted = (values: string[]) =>
     a.localeCompare(b),
   );
 
-/**
- * The two global keys that make `/mission <intent>` fireable: which declared
- * agent runs the mission, and the HITL policy that bounds it. Both were
- * CLI-only (`contenox config set default-mission-agent …`), which is what a
- * `/mission` in beam told you to go do — this section is that instruction made
- * clickable, with the same list endpoints the dispatch itself resolves against.
- *
- * Both are picked from lists rather than typed: a mission refuses to fire on an
- * agent or a policy that does not resolve, so a free-text field could only
- * produce a value that fails later, at the moment of firing.
- */
 export function MissionSettingsSection() {
   const { t } = useTranslation();
   const { user } = useContext(AuthContext);
-  // The mission pair lives only in the full CLI-config snapshot: setup-status
-  // carries the onboarding-readiness subset, which these are not part of.
   const { data: cliConfig } = useCLIConfig(!!user);
   const { data: agents, error: agentsError } = useAgents();
   const { data: policies, error: policiesError } = useListPolicies();
@@ -50,9 +37,6 @@ export function MissionSettingsSection() {
     return () => window.clearTimeout(timer);
   }, [putConfig.isSuccess, putConfig.reset]);
 
-  // Only ENABLED agents are offered: the dispatch resolves through
-  // ResolveForSpawn, which refuses a disabled agent outright, so offering one
-  // would be offering a default that cannot fire.
   const enabledAgentNames = useMemo(
     () => uniqueSorted((agents ?? []).filter(a => a.enabled).map(a => a.name)),
     [agents],
@@ -61,9 +45,6 @@ export function MissionSettingsSection() {
   const agentOptions = useMemo(() => {
     const values = [...enabledAgentNames];
     const current = agent.trim();
-    // A stored name that is no longer on the list (agent deleted, renamed, or
-    // since disabled) is kept as an option so the field shows the truth rather
-    // than silently resetting to "not set" — the warning below names the risk.
     if (current && !values.includes(current)) values.unshift(current);
     return [
       { value: '', label: t('settings.mission_not_set') },
@@ -93,16 +74,11 @@ export function MissionSettingsSection() {
     return !(policies ?? []).map(value => value.trim()).includes(current);
   }, [policies, policy]);
 
-  // A mission needs BOTH halves; with either missing, /mission answers with the
-  // error that sent the operator here. Say so up front instead of letting a
-  // half-configured section look done.
   const incomplete = !agent.trim() || !policy.trim();
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     putConfig.reset();
-    // Always send both, even empty: an empty value is how a default is CLEARED,
-    // and an omitted key would leave a stale one in place.
     const body: CLIConfigUpdateRequest = {
       'default-mission-agent': agent.trim(),
       'default-mission-policy': policy.trim(),

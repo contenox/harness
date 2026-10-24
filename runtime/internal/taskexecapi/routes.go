@@ -31,7 +31,7 @@ type handler struct {
 type executeTaskRequest struct {
 	Input        any                            `json:"input"`
 	InputType    string                         `json:"inputType"`
-	Chain        taskengine.TaskChainDefinition `json:"chain" openapi_include_type:"taskengine.TaskChainDefinition"`
+	Chain        taskengine.TaskChainDefinition `json:"chain"`
 	TemplateVars map[string]string              `json:"templateVars,omitempty"`
 }
 
@@ -39,7 +39,7 @@ type executeTaskResponse struct {
 	RequestID  string                         `json:"requestId,omitempty"`
 	Output     any                            `json:"output"`
 	OutputType string                         `json:"outputType"`
-	State      []taskengine.CapturedStateUnit `json:"state" openapi_include_type:"taskengine.CapturedStateUnit"`
+	State      []taskengine.CapturedStateUnit `json:"state"`
 	StopReason agentservice.StopReason        `json:"stopReason,omitempty"`
 }
 
@@ -51,8 +51,6 @@ func (h *handler) authorize(ctx context.Context) error {
 	return err
 }
 
-// execute runs the submitted task chain through the configured agent and
-// returns the output together with the captured per-step state and stop reason.
 func (h *handler) execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if err := h.authorize(ctx); err != nil {
@@ -64,7 +62,7 @@ func (h *handler) execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req, err := apiframework.Decode[executeTaskRequest](r) // @request taskexecapi.executeTaskRequest
+	req, err := apiframework.Decode[executeTaskRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -102,7 +100,7 @@ func (h *handler) execute(w http.ResponseWriter, r *http.Request) {
 		State:      resp.Steps,
 		StopReason: resp.StopReason,
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, out) // @response taskexecapi.executeTaskResponse
+	_ = apiframework.Encode(w, r, http.StatusOK, out)
 }
 
 func (h *handler) templateVars(ctx context.Context, raw map[string]string) map[string]string {

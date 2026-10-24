@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_AudioPart_JSONRoundTrip checks audio bytes ride JSON as base64 beside media type and decode back unchanged.
 func TestUnit_AudioPart_JSONRoundTrip(t *testing.T) {
 	t.Parallel()
 
@@ -51,8 +50,6 @@ func TestUnit_MessagesHaveAudio(t *testing.T) {
 	}))
 }
 
-// TestUnit_ValidateAudioParts_MimeAllowlist covers the accepted v1 media-type
-// set and the refusal of anything outside it.
 func TestUnit_ValidateAudioParts_MimeAllowlist(t *testing.T) {
 	t.Parallel()
 
@@ -71,7 +68,6 @@ func TestUnit_ValidateAudioParts_MimeAllowlist(t *testing.T) {
 	require.NoError(t, modelrepo.ValidateAudioParts("gemini", "gemini-2.5-flash", []modelrepo.Message{{Role: "user", Content: "hi"}}))
 }
 
-// TestUnit_ValidateAudioParts_SizeCap checks total raw audio bytes across all attachments must stay within MaxInlineAudioBytes.
 func TestUnit_ValidateAudioParts_SizeCap(t *testing.T) {
 	t.Parallel()
 
@@ -87,7 +83,6 @@ func TestUnit_ValidateAudioParts_SizeCap(t *testing.T) {
 	require.ErrorIs(t, err, modelrepo.ErrAudioTooLarge)
 	require.Contains(t, err.Error(), "vertex", "the refusal names the provider")
 
-	// The cap is per request, not per attachment.
 	half := modelrepo.MaxInlineAudioBytes/2 + 1
 	summed := []modelrepo.Message{
 		{Role: "user", Audio: []modelrepo.AudioPart{{Data: make([]byte, half), MimeType: "audio/wav"}}},
@@ -96,7 +91,6 @@ func TestUnit_ValidateAudioParts_SizeCap(t *testing.T) {
 	require.ErrorIs(t, modelrepo.ValidateAudioParts("vertex", "gemini-2.5-pro", summed), modelrepo.ErrAudioTooLarge)
 }
 
-// TestUnit_RefuseAudioInput checks a provider without audio encoding refuses audio-bearing messages, naming provider, model, and missing capability.
 func TestUnit_RefuseAudioInput(t *testing.T) {
 	t.Parallel()
 
@@ -111,7 +105,6 @@ func TestUnit_RefuseAudioInput(t *testing.T) {
 	require.True(t, strings.Contains(err.Error(), "audio"), "the refusal names the capability")
 }
 
-// TestUnit_GeminiModelSupportsAudio pins the hand-maintained Google audio allowlist across mainline and excluded model families.
 func TestUnit_GeminiModelSupportsAudio(t *testing.T) {
 	t.Parallel()
 

@@ -10,28 +10,10 @@ function optionVariant(kind: PermissionOption['kind']): 'primary' | 'danger' | '
 }
 
 export interface PermissionCardProps {
-  /** The live pending permission request this card represents. */
   permission: RequestPermissionRequest;
-  /** Answers the request with the chosen option id. The ONLY path that responds. */
   onRespond: (optionId: string) => void;
 }
 
-/**
- * The permission request rendered as an INLINE CARD in the session's transcript
- * flow — the replacement for the old modal `PermissionGate`. It is anchored
- * next to the pending tool call it belongs to (see `TranscriptItems`), so the
- * request lives chronologically where it happened instead of floating over the
- * page.
- *
- * Deliberately inert except for its option buttons: NO backdrop, NO portal, NO
- * document/Escape key listener, NO close/dismiss affordance, and NO effects.
- * The ONLY way to answer is an explicit click on one of the offered option
- * buttons — clicking elsewhere, pressing Escape, scrolling, switching tabs, or
- * unmounting the card can never send a response, so an unanswered request stays
- * pending (correct ACP semantics: the agent waits). This is what fixes the
- * "click-outside silently denies" bug. Several of these can be live at once,
- * one per session, each reading its own slice's `pendingPermission`.
- */
 export function PermissionCard({ permission, onRespond }: PermissionCardProps) {
   const { t } = useTranslation();
   const { toolCall } = permission;

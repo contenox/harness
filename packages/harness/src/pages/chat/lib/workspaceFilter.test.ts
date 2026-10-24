@@ -11,7 +11,6 @@ import {
 } from './workspaceFilter';
 import type { NodeDecoration, NodeDecorator } from './workspaceTree';
 
-/** Compiles a type's value, asserting it isn't the "inactive" null. */
 function query(id: string, value: string): FindQuery {
   const q = filterTypeById(id)!.toQuery(value);
   if (!q) throw new Error(`expected a query for ${id}=${value}`);
@@ -94,7 +93,7 @@ describe('access axis filter types', () => {
     const q = query('access_read', 'deny');
     expect(q.globs).toEqual(['*']);
     expect(q.refine!(match('secret'), verdict({ action: 'deny' }, { action: 'deny' }))).toBe(true);
-    expect(q.refine!(match('ok'), verdict({ action: 'allow' }, { action: 'deny' }))).toBe(false); // write deny, read allow → excluded
+    expect(q.refine!(match('ok'), verdict({ action: 'allow' }, { action: 'deny' }))).toBe(false);
     expect(q.refine!(match('none'), undefined)).toBe(false);
   });
 
@@ -117,11 +116,10 @@ describe('buildTreeFromMatches', () => {
       match('docs/intro.md'),
       match('docs/beam/guide.md'),
     ]);
-    // docs (dir) sorts before README.md (file).
     expect(nodes.map(n => n.id)).toEqual(['docs', 'README.md']);
     const docs = nodes.find(n => n.id === 'docs')!;
     expect(docs.isDirectory).toBe(true);
-    expect(docs.children!.map(n => n.id)).toEqual(['docs/beam', 'docs/intro.md']); // dir before file
+    expect(docs.children!.map(n => n.id)).toEqual(['docs/beam', 'docs/intro.md']);
     const beam = docs.children!.find(n => n.id === 'docs/beam')!;
     expect(beam.children!.map(n => n.id)).toEqual(['docs/beam/guide.md']);
   });

@@ -101,8 +101,6 @@ func (e *modelManager) runChatSelections(
 			ProviderType: provider.GetType(),
 			BackendID:    backend,
 		}
-		// Recorded on the same tracker event the stream path uses so cache hit
-		// rates are observable on both paths.
 		if response.Usage != nil {
 			e.reportTokenUsage(ctx, req, meta, *response.Usage)
 		}
@@ -126,7 +124,6 @@ func (e *modelManager) runPromptSelections(
 	for _, sel := range selections {
 		provider, backend := sel.Provider, sel.Backend
 
-		// Envelope allowlist (see bounds.go).
 		if err := e.enforceResolutionBounds(ctx, "prompt", provider, backend); err != nil {
 			if failErr := skipOrFail(&refusals, sel, err); failErr != nil {
 				return "", Meta{}, failErr
@@ -158,8 +155,6 @@ func (e *modelManager) runPromptSelections(
 			BackendID:    backend,
 			Usage:        usage,
 		}
-		// Same tracker seam as the chat path so token accounting is observable on
-		// every non-streaming call.
 		if usage != nil {
 			e.reportTokenUsage(ctx, req, meta, *usage)
 		}
@@ -182,7 +177,6 @@ func (e *modelManager) runStreamSelections(
 	for _, sel := range selections {
 		provider, backend := sel.Provider, sel.Backend
 
-		// Envelope allowlist, checked before the stream is opened (see bounds.go).
 		if err := e.enforceResolutionBounds(ctx, "stream", provider, backend); err != nil {
 			if failErr := skipOrFail(&refusals, sel, err); failErr != nil {
 				return nil, Meta{}, failErr
@@ -208,7 +202,6 @@ func (e *modelManager) runStreamSelections(
 			continue
 		}
 
-		// Peek the first parcel — the only failover-safe window.
 		var first *libmodelprovider.StreamParcel
 		select {
 		case first = <-stream:
@@ -262,8 +255,6 @@ func (e *modelManager) relayStream(
 				mergeTokenUsage(&usage, parcel.Terminal.Usage)
 				sawUsage = true
 			}
-			// Selecting on ctx.Done() here keeps an abandoned consumer from
-			// stranding this goroutine on a blocked channel send.
 			select {
 			case wrappedStream <- parcel:
 				return true

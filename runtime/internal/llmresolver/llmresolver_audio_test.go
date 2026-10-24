@@ -10,8 +10,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// TestUnit_ChatModelResolution_AudioGate covers the audio capability gate:
-// audio requests resolve only to CanAudio providers or fail with a typed error.
 func TestUnit_ChatModelResolution_AudioGate(t *testing.T) {
 	getModels := func(providers []modelrepo.Provider) func(context.Context, ...string) ([]modelrepo.Provider, error) {
 		return func(context.Context, ...string) ([]modelrepo.Provider, error) { return providers, nil }

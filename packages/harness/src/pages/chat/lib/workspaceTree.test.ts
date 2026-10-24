@@ -37,7 +37,7 @@ describe('toFileTreeNodes', () => {
     const nodes = toFileTreeNodes(partial);
     const dir = nodes.find(n => n.id === 'src')!;
     expect(dir.isDirectory).toBe(true);
-    expect(dir.children).toBeUndefined(); // not loaded yet
+    expect(dir.children).toBeUndefined();
   });
 
   it('populates children once the directory is loaded', () => {
@@ -63,7 +63,6 @@ describe('verdictToAccess (two independent axes)', () => {
     };
     const a = verdictToAccess(verdict, LABELS);
     expect(a.dimmed).toBe(false);
-    // A normal file: green read, yellow write — the two axes stay distinct.
     expect(a.read).toEqual({ status: 'allow', title: 'Read: allowed — policy rule' });
     expect(a.write).toEqual({ status: 'approve', title: 'Write: needs approval — default policy' });
   });
@@ -96,7 +95,6 @@ describe('verdictToAccess (two independent axes)', () => {
 });
 
 describe('toFileTreeNodes decorator threading', () => {
-  // A decorator stands in for the panel's verdict → eye/pencil indicators mapping.
   const decorate: NodeDecorator = path => {
     const table: Record<string, NodeDecoration> = {
       src: { indicators: [{ key: 'read', icon: null, status: 'allow', title: 'Read: allowed' }] },

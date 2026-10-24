@@ -8,7 +8,6 @@ import RemoteHooksSection from './components/RemoteHooksSection';
 
 type HooksTabId = 'mcp-servers' | 'remote-hooks' | 'discovery';
 
-/** Default to MCP servers so the page stays usable when Discovery would enumerate many broken MCP configs. */
 const DEFAULT_TAB: HooksTabId = 'mcp-servers';
 
 export default function RemoteHooksPage() {

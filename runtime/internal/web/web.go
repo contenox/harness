@@ -1,4 +1,3 @@
-// Package web serves the embedded harness React SPA from the contenox binary.
 package web
 
 import (
@@ -14,7 +13,6 @@ import (
 //go:embed all:harness/dist
 var harnessFiles embed.FS
 
-// HarnessFS returns the embedded harness dist as an io/fs.FS rooted at the dist dir.
 func HarnessFS() fs.FS {
 	sub, err := fs.Sub(harnessFiles, "harness/dist")
 	if err != nil {
@@ -23,7 +21,6 @@ func HarnessFS() fs.FS {
 	return sub
 }
 
-// SPAHandler serves the harness SPA with an index.html fallback for client-side routes.
 func SPAHandler() http.Handler {
 	harnessFS := HarnessFS()
 	fileServer := http.FileServer(http.FS(harnessFS))
@@ -44,8 +41,6 @@ func SPAHandler() http.Handler {
 	})
 }
 
-// DevProxyHandler proxies harness UI requests to a Vite dev server while the Go
-// server remains the browser origin for /api and auth cookies.
 func DevProxyHandler(target string) (http.Handler, error) {
 	raw := strings.TrimSpace(target)
 	if raw == "" {

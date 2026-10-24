@@ -161,8 +161,6 @@ func TestUnit_CodexStreamFailures(t *testing.T) {
 	}
 }
 
-// A response the vendor reports as incomplete is a completed turn with a
-// length- or filter-class finish reason, not a failed stream.
 func TestUnit_CodexStreamIncompleteIsATerminal(t *testing.T) {
 	c := codexFixture(t, func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "data: {\"type\":\"response.output_text.delta\",\"delta\":\"partial\"}\n\n")

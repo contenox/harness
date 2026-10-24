@@ -55,7 +55,6 @@ func TestUnit_Build_ToolUseAndToolResultRoundTrip(t *testing.T) {
 	if len(req.Messages) != 3 {
 		t.Fatalf("expected 3 messages, got %d", len(req.Messages))
 	}
-	// assistant tool_use — name is sanitized on the wire
 	asst := req.Messages[1]
 	if asst.Role != "assistant" || len(asst.Content) != 1 || asst.Content[0].Type != "tool_use" {
 		t.Fatalf("assistant tool_use block wrong: %+v", asst)
@@ -63,14 +62,12 @@ func TestUnit_Build_ToolUseAndToolResultRoundTrip(t *testing.T) {
 	if asst.Content[0].ID != "toolu_1" || asst.Content[0].Name != "fs_list" {
 		t.Fatalf("tool_use id/name wrong: %+v", asst.Content[0])
 	}
-	// nameMap must restore the original name
 	if nameMap["fs_list"] != "fs.list" {
 		t.Fatalf("nameMap missing fs.list mapping: %v", nameMap)
 	}
 	if string(asst.Content[0].Input) != `{"path":"/tmp"}` {
 		t.Fatalf("tool_use input wrong: %s", asst.Content[0].Input)
 	}
-	// tool result -> user/tool_result
 	res := req.Messages[2]
 	if res.Role != "user" || res.Content[0].Type != "tool_result" || res.Content[0].ToolUseID != "toolu_1" {
 		t.Fatalf("tool_result block wrong: %+v", res)
@@ -96,7 +93,6 @@ func TestUnit_DecodeResponse_TextThinkingToolUse(t *testing.T) {
 	if len(res.ToolCalls) != 1 || res.ToolCalls[0].ID != "toolu_9" || res.ToolCalls[0].Function.Name != "fs.list" {
 		t.Fatalf("tool call wrong: %+v", res.ToolCalls)
 	}
-	// Arguments must be the JSON object serialized as a string.
 	var got map[string]any
 	if err := json.Unmarshal([]byte(res.ToolCalls[0].Function.Arguments), &got); err != nil {
 		t.Fatalf("args not valid json: %q", res.ToolCalls[0].Function.Arguments)
@@ -106,7 +102,6 @@ func TestUnit_DecodeResponse_TextThinkingToolUse(t *testing.T) {
 	}
 }
 
-// The decoder only translates the wire; assembly happens once in modelrepo.StreamAssembler.
 func TestUnit_StreamDecoder_NamedEventsAndInputJSONDelta(t *testing.T) {
 	d := msgcodec.NewStreamDecoder(nil)
 	asm := modelrepo.NewStreamAssembler("anthropic", "test-model")
@@ -161,7 +156,6 @@ func TestUnit_StreamDecoder_NamedEventsAndInputJSONDelta(t *testing.T) {
 	}
 }
 
-// An in-stream `error` SSE event is a hard decode error, not swallowed.
 func TestUnit_StreamDecoder_ErrorEventSurfaces(t *testing.T) {
 	d := msgcodec.NewStreamDecoder(nil)
 	_, err := d.DecodeLine([]byte(`{"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}`))

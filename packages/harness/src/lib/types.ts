@@ -23,7 +23,6 @@ export type Backend = {
   name: string;
   baseUrl: string;
   type: string;
-  /** Runtime-observed model names for this backend. */
   models: string[];
   pulledModels: ObservedModel[];
   error: string;
@@ -31,7 +30,6 @@ export type Backend = {
   updatedAt?: string;
 };
 
-/** GET /api/state — runtime-observed backend state (same shape as runtimestate.BackendRuntimeState JSON). */
 export type BackendRuntimeState = {
   id: string;
   name: string;
@@ -66,13 +64,9 @@ export type StateResponse = {
 
 export type ChatContextArtifact = {
   kind: string;
-  /** JSON value serialized per artifact */
   payload?: unknown;
 };
 
-// TaskEvent mirrors taskengine.TaskEvent on the Go side. The canonical client
-// type lives in @contenox/ui (shared with ExecutionTimeline and TaskEventFeed);
-// beam re-exports it so there is a single definition.
 export type { TaskEvent, TaskEventKind } from '@contenox/ui';
 
 export type SetupIssue = {
@@ -129,14 +123,11 @@ export type CLIConfigUpdateResponse = {
   hitlPolicyName: string;
   telemetryEnabled?: string;
   updateCheck?: string;
-  /** Declared agent `/mission <intent>` fires when the prompt names none. */
   defaultMissionAgent?: string;
-  /** HITL policy that bounds a fired mission — its envelope. */
   defaultMissionPolicy?: string;
   resolvedFrom?: ConfigResolvedFrom;
 };
 
-/** Full CLI config snapshot — GET /api/cli-config, same shape PUT returns. */
 export type CLIConfig = CLIConfigUpdateResponse;
 
 export type CLIConfigUpdateRequest = {
@@ -156,16 +147,10 @@ export type CLIConfigUpdateRequest = {
   'default-mission-policy'?: string;
 };
 
-/**
- * Global shell environment variables contenox injects into the shells it
- * spawns (local_shell, terminal). Plain config strings, NOT secrets. Same
- * shape for GET and the PUT response.
- */
 export type ShellEnvResponse = {
   vars: Record<string, string>;
 };
 
-/** PUT /api/shell-env body — a FULL replacement of the injected variable map. */
 export type ShellEnvUpdateRequest = {
   vars: Record<string, string>;
 };
@@ -247,9 +232,6 @@ export type Job = {
   createdAt: Date;
 };
 
-// CapturedStateUnit mirrors taskengine.CapturedStateUnit on the Go side.
-// The canonical client type lives in @contenox/ui (shared with
-// ExecutionTimeline and StateVisualizer); beam re-exports it.
 export type { CapturedStateUnit } from '@contenox/ui';
 
 export type ErrorState = {
@@ -296,19 +278,11 @@ export type LocalHook = {
   name: string;
   description: string;
   type: string;
-  /** Origin of this hook in the merged discovery list (from API). */
   source?: 'builtin' | 'mcp' | 'remote';
   tools: Tool[];
-  /** Present when the server could not load tools (e.g. unreachable MCP). */
   unavailableReason?: string;
 };
 
-/**
- * Persisted declared-agent config; matches runtimetypes.Agent JSON. Read-only
- * over REST for now (registration stays with `contenox agent`). configJson is
- * the kind-specific config as a raw JSON value (e.g. an ExternalACPConfig for
- * kind "external_acp"), so it is intentionally untyped here.
- */
 export type Agent = {
   id: string;
   name: string;
@@ -324,16 +298,8 @@ export type Agent = {
   updatedAt: string;
 };
 
-/**
- * Lifecycle state of a live agent instance; mirrors agentinstance's
- * `starting|running|stopped|error|warning` (runtime/agentinstance/instance.go).
- */
 export type FleetInstanceState = 'starting' | 'running' | 'stopped' | 'error' | 'warning';
 
-/**
- * A single running agent instance. Mirrors agentinstance.InstanceStatus JSON
- * (GET /api/fleet/{instanceID}, and the elements of a FleetEntry's instances).
- */
 export type InstanceStatus = {
   id: string;
   agentId: string;
@@ -343,15 +309,9 @@ export type InstanceStatus = {
   sessions: number;
   viewers: number;
   startedAt: string;
-  /** Ids of every session with at least one attached viewer, sorted. */
   sessionIds: string[];
 };
 
-/**
- * One declared agent annotated with its running instances — the config+runtime
- * join returned by GET /api/fleet. Mirrors agentinstance.FleetEntry JSON.
- * `instances` is null when the declared agent is idle (no live instances).
- */
 export type FleetEntry = {
   agentId: string;
   agentName: string;
@@ -359,40 +319,12 @@ export type FleetEntry = {
   instances: InstanceStatus[] | null;
 };
 
-/**
- * Mission mode's lifecycle state; mirrors missionservice.Status
- * (runtime/missionservice/missionservice.go). A mission stays "open" for its
- * entire run — LastHeartbeat/LastError on {@link Mission}, not Status, carry
- * unattended liveness.
- */
-/**
- * A mission's lifecycle state — mirrored from `missionservice.Status`: one
- * running state and the closed set of terminal ones it comes to rest in.
- *
- * `stuck` is deliberately NOT a flavour of `derailed`: it means the unit hit a
- * boundary it cannot pass alone (a loop, a wall, a judgement call), which asks
- * for attention rather than a post-mortem. The Go set is contracted to only ever
- * GROW, so anything rendering a status must stay total over unknown values —
- * see `composeUnitStatus`, where a missing case once took the whole missions
- * page down with it.
- */
 export type MissionStatus = 'open' | 'landed' | 'derailed' | 'stuck' | 'abandoned';
 
-/**
- * A plan entry's lifecycle state; mirrors missionservice.PlanEntryStatus, whose
- * values are contracted byte-for-byte to libacp.PlanEntryStatus
- * (pending|in_progress|completed).
- */
 export type MissionPlanEntryStatus = 'pending' | 'in_progress' | 'completed';
 
-/** A plan entry's priority; mirrors missionservice.PlanEntryPriority (high|medium|low). */
 export type MissionPlanEntryPriority = 'high' | 'medium' | 'low';
 
-/**
- * One line of a mission's living plan; mirrors missionservice.PlanEntry. `id` is
- * server-assigned and stable across revisions (SetPlan diffs on it), so it is the
- * right React key.
- */
 export type MissionPlanEntry = {
   id: string;
   content: string;
@@ -400,31 +332,12 @@ export type MissionPlanEntry = {
   priority: MissionPlanEntryPriority;
 };
 
-/**
- * A mission's living plan; mirrors missionservice.Plan. `revision` counts
- * successful SetPlan calls — 0 with an empty/absent `entries` is the zero Plan
- * ("never planned"), which the UI renders as NO plan panel rather than an empty
- * shell. `explanation` is the agent's own "why it changed" line for the latest
- * revision. The field is always present on the wire (missionservice marshals a
- * never-planned mission as the zero Plan), so callers key on `entries` length,
- * not on the field's presence.
- */
 export type MissionPlan = {
   entries: MissionPlanEntry[] | null;
   revision: number;
   explanation?: string;
 };
 
-/**
- * One durable entry in a mission's bounded plan-revision ring; mirrors
- * missionservice.PlanRevisionSummary. The "+2/−1 — why" line for a single past
- * SetPlan: `added`/`removed` are the entry delta, the per-status counts are the
- * snapshot after that revision, `explanation` is the agent's own account of the
- * change (absent when it gave none), and `at` is the wall-clock the revision was
- * stored. Surfaced additively on the mission GET as `planRevisions`
- * (oldest-first, newest is the final element) — absent on legacy or
- * never-planned missions, which is a real state, never an error.
- */
 export type PlanRevisionSummary = {
   revision: number;
   explanation?: string;
@@ -436,22 +349,6 @@ export type PlanRevisionSummary = {
   at: string;
 };
 
-/**
- * The headless interaction model's durable record (see
- * docs/development/blueprints/acp/fleet-consolidation.md, "Mission mode"): a
- * one-line intent fired at a declared agent, bound to exactly one session and
- * one instance, and bounded by an envelope — a named HITL policy — that
- * governs what the unit may do while unattended. Mirrors missionservice.Mission
- * JSON (GET/POST /api/missions).
- *
- * LastHeartbeat and LastError are liveness facts, not status: they are how a
- * caller tells a unit that is quietly working apart from one that has gone
- * dark or is erroring, without attaching to its session. Both are absent
- * until the unit's first Heartbeat call — nothing calls it yet, it arrives
- * with the mission-tools slice — so a mission that has never reported and one
- * that reported long ago must render differently, not collapse into the same
- * "no time shown" blank.
- */
 export type Mission = {
   id: string;
   intent: string;
@@ -461,24 +358,8 @@ export type Mission = {
   instanceId?: string;
   parentSessionId?: string;
   status: MissionStatus;
-  /**
-   * The one line Finish attached when the mission reached a terminal status
-   * (missionservice.Mission.StatusReason). Absent while open.
-   */
   statusReason?: string;
-  /**
-   * The mission's living plan (missionservice.Mission.Plan). Always present on
-   * the wire; a never-planned mission carries the zero Plan (revision 0, no
-   * entries) — see {@link MissionPlan}. Optional here so an older serve that
-   * omits the field entirely still decodes.
-   */
   plan?: MissionPlan;
-  /**
-   * The mission's last-N plan-revision summaries, oldest-first (newest is the
-   * final element), bounded server-side. Surfaced additively as `planRevisions`
-   * (missionservice.Mission.PlanRevisions); absent on legacy or never-planned
-   * missions — the revision feed simply renders nothing, never an empty shell.
-   */
   planRevisions?: PlanRevisionSummary[];
   lastHeartbeat?: string;
   lastError?: string;
@@ -486,13 +367,6 @@ export type Mission = {
   updatedAt: string;
 };
 
-/**
- * A changed file in a mission's aggregated diff (mirrors
- * missionchanges.ChangedFile). `score` is the Degree-of-Interest weight the
- * list is ordered by (DESC) — where the unit's attention concentrated, per the
- * attention layer; it is a ranking hint, never a gate. `path` is absolute (the
- * value the diff endpoint's `path` query parameter takes verbatim).
- */
 export type MissionChangeStatus = 'added' | 'modified' | 'deleted';
 
 export type MissionChangedFile = {
@@ -501,12 +375,6 @@ export type MissionChangedFile = {
   score: number;
 };
 
-/**
- * The scope statistics of a mission's changes (mirrors missionchanges.ScopeStats)
- * — the attention layer's scope signal. `anomaly` flags that the unit's touched
- * paths diverged from its expected scope (an early-warning ADVICE flag, not a
- * verdict); `outsidePaths` names the offending paths when present.
- */
 export type MissionChangeScope = {
   files: number;
   dirs: number;
@@ -514,36 +382,18 @@ export type MissionChangeScope = {
   outsidePaths?: string[];
 };
 
-/**
- * `GET /api/missions/{id}/changes` body (mirrors missionchanges.Changes).
- * `files` is non-nil and ordered by `score` DESC; `incomplete` is true when the
- * list was capped (100) so more changes exist than are shown.
- */
 export type MissionChangesResponse = {
   files: MissionChangedFile[];
   incomplete: boolean;
   scope: MissionChangeScope;
 };
 
-/**
- * `GET /api/missions/{id}/changes/diff?path=<absolute>` body (mirrors
- * missionchanges.Diff). `truncated` is true when either side was capped at
- * 128 KiB. An added file has an empty `original`; a deleted file an empty
- * `modified`.
- */
 export type MissionFileDiff = {
   original: string;
   modified: string;
   truncated?: boolean;
 };
 
-/**
- * One streamed match from `GET /api/workspace/search` (mirrors
- * localfileapi.searchMatch). `path` is root-relative (matching the /files
- * endpoints), `line` is 1-based, and `column`/`length` are 0-based BYTE offsets
- * of the matched substring within `preview` — so the client highlights it
- * without re-searching (see byteSlice in lib/workspaceSearch).
- */
 export type WorkspaceSearchMatch = {
   path: string;
   line: number;
@@ -552,32 +402,14 @@ export type WorkspaceSearchMatch = {
   preview: string;
 };
 
-/**
- * The terminal `done` frame of a workspace search (mirrors
- * localfileapi.searchDone). Always closes the stream; `truncated` is true when
- * the hard result cap stopped the scan early, so the UI can offer "refine your
- * search".
- */
 export type WorkspaceSearchDone = {
   done: boolean;
   matches: number;
   truncated: boolean;
 };
 
-/**
- * The closed set a mission report's Kind is drawn from; mirrors
- * missionservice.ReportKind. Deliberately closed rather than free text — the
- * set IS the hint to an unattended agent about what is worth reporting at
- * all (see missionservice's package doc, "Reports").
- */
 export type MissionReportKind = 'progress' | 'finding' | 'blocker' | 'result';
 
-/**
- * A single dispatch from a unit on a mission, filed under a Kind that hints
- * how much it matters. Mirrors missionservice.Report JSON (GET/POST
- * /api/missions/{id}/reports). Refs is by reference only (paths, URLs) — a
- * report never carries artifact content.
- */
 export type MissionReport = {
   id: string;
   missionId: string;
@@ -588,13 +420,6 @@ export type MissionReport = {
   createdAt: string;
 };
 
-/**
- * POST /api/fleet/dispatch body — fire a mission: bring a declared agent up,
- * open a session, and run `intent` as its first turn, detached. Mirrors
- * fleetservice.DispatchRequest. Every dispatch is a mission (see
- * {@link Mission}), so intent and hitlPolicyName are both required — there is
- * no separate prompt field, and no dispatch with no envelope.
- */
 export type DispatchRequest = {
   agentName: string;
   intent: string;
@@ -602,39 +427,14 @@ export type DispatchRequest = {
   cwd?: string;
 };
 
-/**
- * The 202 body from POST /api/fleet/dispatch: the ids the dispatch created.
- * Mirrors fleetservice.DispatchResult. missionId is always present — every
- * dispatch is a mission.
- */
 export type DispatchResult = {
   instanceId: string;
   sessionId: string;
   missionId: string;
 };
 
-/**
- * Lifecycle state of one durable human-in-the-loop approval ask; mirrors
- * runtimetypes.HITLApprovalState. `pending` is the only non-terminal state —
- * a row ends exactly once at approved/denied (a human's answer) or expired
- * (the sweeper). The inbox only ever lists `pending`.
- */
 export type HITLApprovalState = 'pending' | 'approved' | 'denied' | 'expired';
 
-/**
- * One durable approval ask (the attention inbox's rows). Mirrors
- * runtimetypes.HITLApproval JSON (GET /api/approvals). It is the ask an
- * unattended unit raised that a human must answer without attaching to the
- * session that raised it (see docs/development/blueprints/acp/
- * fleet-consolidation.md, slice C2).
- *
- * The attribution set — agentName, instanceId, sessionId, missionId — names WHO
- * is asking, which is what makes an inbox of many answerable: identical-looking
- * rows can be told apart, and an operator can name the policy (policyName +
- * matchedRule) that gated the action. All are best-effort: an ask raised by a
- * native chain turn with no fleet unit behind it carries none of them, so empty
- * means "not applicable", never "unknown but exists".
- */
 export type HITLApproval = {
   id: string;
   toolsName: string;
@@ -645,7 +445,6 @@ export type HITLApproval = {
   matchedRule?: number;
   onTimeout?: string;
   state: HITLApprovalState;
-  /** Opaque JSON, present only once the ask is resolved. */
   resolution?: unknown;
   instanceId?: string;
   sessionId?: string;
@@ -656,25 +455,8 @@ export type HITLApproval = {
   resolvedAt?: string;
 };
 
-/**
- * Why a report landed in the operator inbox rather than reaching a live
- * supervising session; mirrors operatorinbox.Reason. `operator_fired`: the
- * mission carried no parent session, so an operator fired it directly and its
- * reports were always inbox-bound. `parent_gone`: the mission named a parent
- * session, but no live instance owned it when the report arrived — the
- * supervisor had ended.
- */
 export type OperatorInboxReason = 'operator_fired' | 'parent_gone';
 
-/**
- * One mission report that reached no live supervisor, plus the mission
- * attribution needed to render and act on it without a second read. Mirrors
- * operatorinbox.Item JSON (GET /api/operator-inbox) — the read sibling of
- * {@link HITLApproval}'s inbox for notices that need eyes rather than a
- * decision. `agentName`/`intent` are best-effort (present when the mission
- * carried them at write time); `parentSessionId` is present only for
- * `parent_gone` — the (now-unreachable) supervisor the report was meant for.
- */
 export type OperatorInboxItem = {
   id: string;
   missionId: string;
@@ -686,7 +468,6 @@ export type OperatorInboxItem = {
   createdAt: string;
 };
 
-/** Persisted MCP server config; matches runtimetypes.MCPServer JSON. */
 export type MCPServer = {
   id: string;
   name: string;
@@ -770,8 +551,6 @@ export type UpdateAccessEntryRequest = {
   permission?: string;
 };
 
-// Local Beam runs as a same-origin UI over the local HTTP API. There is no
-// account service in OSS local mode; AuthProvider supplies a local identity.
 export type AuthenticatedUser = {
   id: string;
   subject: string;
@@ -781,7 +560,6 @@ export type AuthenticatedUser = {
   expiresAt?: string;
 };
 
-/** Result of GET /ui/auth-status: whether remote-access login is required, and whether this browser is already authenticated via its session cookie. */
 export type AuthStatus = {
   required: boolean;
   authenticated: boolean;
@@ -873,7 +651,6 @@ export interface ChainTask {
   retry_on_failure?: number;
 }
 
-// FormTask keeps partial but requires keys we edit frequently
 export type FormTask = Partial<ChainTask> & {
   id: string;
   handler: TaskHandler;
@@ -881,9 +658,6 @@ export type FormTask = Partial<ChainTask> & {
   transition: TaskTransition;
 };
 
-// RetryPolicy mirrors taskengine/llmretry.RetryPolicy. Durations are expressed
-// as Go duration strings ("500ms", "30s", "2m"); the backend also accepts
-// nanoseconds as numbers but this editor writes strings for readability.
 export interface RetryPolicy {
   max_attempts?: number;
   initial_backoff?: string;
@@ -894,8 +668,6 @@ export interface RetryPolicy {
   fallback_after?: number;
 }
 
-// CompactPolicy mirrors taskengine/compact.Policy. Controls mid-run conversation
-// compaction on the executor's chat_completion task.
 export interface CompactPolicy {
   trigger_fraction?: number;
   keep_recent?: number;
@@ -915,19 +687,11 @@ export interface ExecuteConfig {
   hooks?: string[];
   hide_tools?: string[];
   pass_clients_tools?: boolean;
-  // tools_policies maps tools-provider name -> policy key/value pairs.
   tools_policies?: Record<string, Record<string, string>>;
-  // Legacy backup UI field. Read for compatibility, but new edits write tools_policies.
   hook_policies?: Record<string, Record<string, string>>;
-  // think: "", "low", "medium", "high", or "true" / "false" — provider-gated.
   think?: string;
-  // shift: allow the context window to slide on overflow instead of erroring.
   shift?: boolean;
-  // retry_policy: classified retry/backoff + optional fallback model.
-  // See taskengine/llmretry.RetryPolicy.
   retry_policy?: RetryPolicy;
-  // compact_policy: mid-run conversation compaction.
-  // See taskengine/compact.Policy.
   compact_policy?: CompactPolicy;
 }
 
@@ -1089,7 +853,6 @@ export type EventStreamMessage = {
   created_at: string;
 };
 
-// Executor and Task Types
 export type TaskRequest = {
   prompt: string;
   modelName: string;
@@ -1113,7 +876,6 @@ export type ExecutionHistory = {
   error?: string;
 }[];
 
-// Pagination Types
 export type PaginationParams = {
   limit?: number;
   cursor?: string;
@@ -1125,7 +887,6 @@ export type PaginatedResponse<T> = {
   hasMore: boolean;
 };
 
-// Validation Error Types
 export type ValidationError = {
   field: string;
   message: string;
@@ -1138,7 +899,6 @@ export type ApiError = {
   details?: ValidationError[];
 };
 
-// Webhook and Integration Types
 export type WebhookPayload = {
   headers: Record<string, string>;
   body: Record<string, unknown>;
@@ -1162,7 +922,6 @@ export type IntegrationConfig = {
   updatedAt?: string;
 };
 
-// System and Health Types
 export type SystemHealth = {
   status: 'healthy' | 'degraded' | 'unhealthy';
   components: {
@@ -1207,10 +966,9 @@ export type InjectionArg = {
   in: 'path' | 'query' | 'body';
 };
 
-// For listing with pagination
 export type RemoteHookListResponse = {
   hooks: RemoteHook[];
-  nextCursor?: string; // RFC3339Nano timestamp
+  nextCursor?: string;
 };
 
 export interface DragResult {
@@ -1244,9 +1002,6 @@ export interface DraggableProvided {
   } | null;
 }
 
-// Matches the engine's closed handler set exactly (runtime/taskengine/tasktype.go:15-24).
-// An unknown handler is hard-rejected at chain validation, so this union must never
-// declare a value the engine does not also accept.
 export type TaskHandler =
   | 'raise_error'
   | 'route'
@@ -1262,21 +1017,6 @@ export const HandleExecuteToolCalls: TaskHandler = 'execute_tool_calls';
 export const HandleNoop: TaskHandler = 'noop';
 export const HandleTools: TaskHandler = 'tools';
 
-/**
- * One allowlisted workspace root reported by `GET /workspace/roots`. Mirrors
- * localfileapi.workspaceRoot: `default` marks the single root that the empty
- * value and "/" resolve to (see vfs.Factory.Default). The list is the legible
- * boundary a client offers as a folder picker instead of discovering it by
- * probing paths and reading the 422 the per-request `root` check returns.
- *
- * `name` is the root's EXPLICIT project name (its marker's name) — empty/absent
- * for a structural or unnamed root, which is how a client tells a real
- * registered project apart (display fallback to the path basename is the
- * client's job, see `projectName`). `managed` distinguishes a runtime grant
- * (operator-forgettable) from a launch root. Both are optional so a serve
- * predating them — and older fixtures/tests — still typecheck against the
- * earlier `{ path, default }` shape.
- */
 export type WorkspaceRoot = {
   path: string;
   default: boolean;
@@ -1284,22 +1024,10 @@ export type WorkspaceRoot = {
   managed?: boolean;
 };
 
-/**
- * `GET /workspace/roots` body. Mirrors localfileapi.workspaceRootsResponse.
- * The whole route is nil-gated server-side: when serve has no workspace-root
- * allowlist configured it 404s, which the client reads as "feature absent"
- * (hide the picker affordances), never as an error to surface.
- */
 export type WorkspaceRootsResponse = {
   roots: WorkspaceRoot[];
 };
 
-/**
- * `POST /api/terminal/sessions` body. Mirrors terminalapi.createSessionRequest.
- * `cwd` is validated server-side against the workspace-root allowlist (empty →
- * default root); `cols`/`rows` seed the PTY size before the first fit/resize
- * frame. `shell` is optional (server default when blank).
- */
 export type TerminalSessionRequest = {
   cwd?: string;
   cols: number;
@@ -1307,13 +1035,6 @@ export type TerminalSessionRequest = {
   shell?: string;
 };
 
-/**
- * The 201 body from `POST /api/terminal/sessions`. Mirrors
- * terminalapi.createSessionResponse. `wsPath` is the server-authoritative,
- * already-`/api`-prefixed path of the binary-frame WebSocket to attach to
- * (`/api/terminal/sessions/{id}/ws`) — the client turns it into a `ws(s)://`
- * URL rather than reconstructing the path itself.
- */
 export type TerminalSession = {
   id: string;
   wsPath: string;

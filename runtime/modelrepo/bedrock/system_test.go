@@ -10,9 +10,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// isAWSCredentialError reports whether err is an environment problem (missing,
-// expired or rejected credentials) rather than a product defect, so this test
-// skips instead of failing on a machine without an AWS login.
 func isAWSCredentialError(err error) bool {
 	message := err.Error()
 	for _, marker := range []string{
@@ -31,9 +28,6 @@ func isAWSCredentialError(err error) bool {
 	return false
 }
 
-// The vendor's own model list is the only source the catalogue reads: this
-// exercises it against the live control plane, which needs an AWS credential
-// unless the machine has one.
 func TestSystem_BedrockCatalog_RegisteredAndChatCapable(t *testing.T) {
 	catalogue, err := modelrepo.NewCatalogProvider(modelrepo.BackendSpec{
 		Type:    "bedrock",

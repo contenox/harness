@@ -151,7 +151,7 @@ describe('file canvas tabs', () => {
       { type: 'open', tab: term },
       { type: 'open', tab: fileA },
       { type: 'open', tab: fileB },
-      { type: 'open', tab: fileA }, // re-open A: focus, no duplicate/reorder
+      { type: 'open', tab: fileA },
     );
     expect(state.tabs).toEqual([term, fileA, fileB]);
     expect(state.activeId).toBe(fileA.id);

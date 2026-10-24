@@ -1,4 +1,3 @@
-// Package chatservice persists the conversation thread. Terminal output, file reads, and agent steps are stored here so the thread survives restarts.
 package chatservice
 
 import (
@@ -21,7 +20,6 @@ func NewManager(workspaceID string) *Manager {
 	return &Manager{workspaceID: workspaceID}
 }
 
-// AddInstruction inserts a system message into an existing chat index.
 func (m *Manager) AddInstruction(ctx context.Context, tx libdb.Exec, id string, sendAt time.Time, message string) error {
 	msg := taskengine.Message{
 		Role:      "system",
@@ -44,8 +42,6 @@ func (m *Manager) AddInstruction(ctx context.Context, tx libdb.Exec, id string, 
 	})
 }
 
-// AppendMessage appends a message to an in-memory slice (no DB write).
-// Call PersistDiff afterwards to persist the result.
 func (m *Manager) AppendMessage(_ context.Context, messages []taskengine.Message, sendAt time.Time, message string, role string) ([]taskengine.Message, error) {
 	messages = append(messages, taskengine.Message{
 		Role:      role,
@@ -55,7 +51,6 @@ func (m *Manager) AppendMessage(_ context.Context, messages []taskengine.Message
 	return messages, nil
 }
 
-// ListMessages retrieves all stored messages for a given subject ID.
 func (m *Manager) ListMessages(ctx context.Context, tx libdb.Exec, subjectID string) ([]taskengine.Message, error) {
 	conversation, err := messagestore.New(tx, m.workspaceID).ListMessages(ctx, subjectID)
 	if err != nil {
@@ -73,7 +68,6 @@ func (m *Manager) ListMessages(ctx context.Context, tx libdb.Exec, subjectID str
 	return messages, nil
 }
 
-// PersistDiff surgically appends only new messages by comparing existing IDs.
 func (m *Manager) PersistDiff(ctx context.Context, tx libdb.Exec, subjectID string, hist []taskengine.Message) error {
 	if len(hist) == 0 {
 		return nil
@@ -94,12 +88,6 @@ func (m *Manager) PersistDiff(ctx context.Context, tx libdb.Exec, subjectID stri
 		if msg.ID == "" {
 			msg.ID = generateMessageID(subjectID, &msg)
 		}
-		// Dedup against both DB-stored rows AND messages already queued for
-		// this batch. The synthesizer is documented as free to emit
-		// overlapping prefixes (e.g. system_instruction prepending in
-		// taskexec causes outHist[startIdx:] to re-include the last prior
-		// message); PersistDiff is the boundary that must guarantee
-		// uniqueness before the INSERT batch.
 		if existingIDs[msg.ID] {
 			continue
 		}
@@ -125,18 +113,14 @@ func (m *Manager) PersistDiff(ctx context.Context, tx libdb.Exec, subjectID stri
 	return nil
 }
 
-// DeleteSession removes all messages and the index for a session.
 func (m *Manager) DeleteSession(ctx context.Context, tx libdb.Exec, sessionID string, identity string) error {
 	store := messagestore.New(tx, m.workspaceID)
-	// DeleteMessageIndex cascades to messages via ON DELETE CASCADE.
 	if err := store.DeleteMessageIndex(ctx, sessionID, identity); err != nil {
 		return fmt.Errorf("failed to delete session index: %w", err)
 	}
 	return nil
 }
 
-// ClearSession removes all messages for a session while keeping the index, so
-// the session keeps its identity and name but starts a fresh conversation.
 func (m *Manager) ClearSession(ctx context.Context, tx libdb.Exec, sessionID string) error {
 	if err := messagestore.New(tx, m.workspaceID).DeleteMessages(ctx, sessionID); err != nil {
 		return fmt.Errorf("failed to clear session messages: %w", err)
@@ -144,12 +128,10 @@ func (m *Manager) ClearSession(ctx context.Context, tx libdb.Exec, sessionID str
 	return nil
 }
 
-// RenameSession updates the human-readable name of a session.
 func (m *Manager) RenameSession(ctx context.Context, tx libdb.Exec, sessionID string, name string) error {
 	return messagestore.New(tx, m.workspaceID).RenameSession(ctx, sessionID, name)
 }
 
-// generateMessageID creates a deterministic ID from the message content.
 func generateMessageID(subjectID string, msg *taskengine.Message) string {
 	h := sha1.New()
 	h.Write([]byte(subjectID))

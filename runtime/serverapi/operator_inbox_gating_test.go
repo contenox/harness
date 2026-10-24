@@ -14,8 +14,6 @@ import (
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
-// operatorInboxGatingMux builds the product mux the way serve does, with or
-// without the operator-inbox dependency.
 func operatorInboxGatingMux(t *testing.T, withInbox bool) *http.ServeMux {
 	t.Helper()
 	ctx := context.Background()
@@ -41,9 +39,6 @@ func operatorInboxGatingMux(t *testing.T, withInbox bool) *http.ServeMux {
 	return mux
 }
 
-// TestServe_OperatorInboxRoutesGatedOnInbox proves /operator-inbox is registered
-// only when serve passes the operator-inbox service, mirroring the other
-// nil-gated route groups.
 func TestServe_OperatorInboxRoutesGatedOnInbox(t *testing.T) {
 	withInbox := operatorInboxGatingMux(t, true)
 	rr := httptest.NewRecorder()

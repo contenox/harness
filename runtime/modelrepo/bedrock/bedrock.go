@@ -1,6 +1,3 @@
-// Package bedrock is a provider for AWS Bedrock via the unified Converse API.
-// Credentials are optional: a stored JSON blob of static AWS keys, or the ambient
-// aws-sdk default chain when empty. The region is parsed from the backend URL.
 package bedrock
 
 import (
@@ -23,9 +20,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// classifyBedrockError maps the documented Converse error list onto the shared
-// sentinels, and preserves the vendor's own status, code and message for every
-// error the list does not classify.
 func classifyBedrockError(err error) error {
 	if err == nil {
 		return nil
@@ -122,13 +116,12 @@ func regionFromURL(raw string) string {
 	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" {
-		// Not a URL — treat as a bare region (e.g. "us-east-1").
 		if !strings.Contains(raw, "/") && !strings.Contains(raw, ".") {
 			return raw
 		}
 		return ""
 	}
-	host := u.Host // bedrock-runtime.<region>.amazonaws.com
+	host := u.Host
 	parts := strings.Split(host, ".")
 	for i, p := range parts {
 		if (p == "bedrock-runtime" || p == "bedrock") && i+1 < len(parts) {

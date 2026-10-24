@@ -280,7 +280,6 @@ func TestUnit_SynthesizeHistory_ErrorDropsEmptyAssistantShell(t *testing.T) {
 	assert.Contains(t, got[1].Content, "peg-native format")
 }
 
-// TestUnit_SynthesizeHistory_SystemPrependDoesNotReemitOrPersist guards against index-based diffing re-emitting messages or leaking the injected system instruction.
 func TestUnit_SynthesizeHistory_SystemPrependDoesNotReemitOrPersist(t *testing.T) {
 	prior := []taskengine.Message{
 		{ID: "u1", Role: "user", Content: "read the file"},
@@ -308,7 +307,6 @@ func TestUnit_SynthesizeHistory_SystemPrependDoesNotReemitOrPersist(t *testing.T
 	assert.Equal(t, []string{"u1", "a0", "t0", "a1"}, ids)
 }
 
-// TestUnit_SynthesizeHistory_InterruptedToolCallGetsStubResult guards against persisting an unanswered tool call when the chain dies mid-execution.
 func TestUnit_SynthesizeHistory_InterruptedToolCallGetsStubResult(t *testing.T) {
 	prior := []taskengine.Message{{ID: "u1", Role: "user", Content: "list files"}}
 	chatOut := taskengine.ChatHistory{
@@ -331,7 +329,6 @@ func TestUnit_SynthesizeHistory_InterruptedToolCallGetsStubResult(t *testing.T) 
 	assert.Contains(t, got[3].Content, "chain failed")
 }
 
-// TestUnit_SynthesizeHistory_OrphanToolResultDropped guards against carrying forward tool results whose call is gone.
 func TestUnit_SynthesizeHistory_OrphanToolResultDropped(t *testing.T) {
 	prior := []taskengine.Message{
 		{ID: "u1", Role: "user", Content: "hi"},
@@ -346,7 +343,6 @@ func TestUnit_SynthesizeHistory_OrphanToolResultDropped(t *testing.T) {
 	assert.Equal(t, "a1", got[1].ID)
 }
 
-// TestUnit_SynthesizeHistory_DuplicateToolResultsDropped guards against duplicate tool results for one call ID; only the first must survive.
 func TestUnit_SynthesizeHistory_DuplicateToolResultsDropped(t *testing.T) {
 	prior := []taskengine.Message{
 		{ID: "u1", Role: "user", Content: "read it"},

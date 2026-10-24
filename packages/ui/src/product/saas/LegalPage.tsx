@@ -2,9 +2,6 @@ import { Page } from '@contenox/ui';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-/**
- * LegalPage renders one public legal document supplied by the application.
- */
 export function LegalPage({ markdown }: { markdown: string }) {
   return (
     <Page>

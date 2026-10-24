@@ -15,9 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// claimReconcile is the debounce gate behind ReconcileIfStale: the first call
-// claims the window, calls inside the window are skipped, and a call past the
-// window claims again.
 func TestUnit_ClaimReconcile_Debounces(t *testing.T) {
 	s := &State{}
 	t0 := time.Now()
@@ -47,8 +44,6 @@ func newReconcileStateTest(t *testing.T, opts ...Option) (context.Context, *Stat
 	return ctx, state, db
 }
 
-// A read-path ReconcileIfStale must discover a backend that comes up after an
-// empty reconcile, but only once the debounce window has elapsed.
 func TestUnit_ReconcileIfStale_DiscoversBackendThatAppearsLater(t *testing.T) {
 	ctx, state, db := newReconcileStateTest(t, WithAutoDiscoverModels())
 
@@ -74,7 +69,6 @@ func TestUnit_ReconcileIfStale_DiscoversBackendThatAppearsLater(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, store.SetKV(ctx, BackendCredentialKey("openai", "openai-backend"), keyData))
 
-	// A read inside the debounce window is a no-op; the new backend stays invisible.
 	require.NoError(t, state.ReconcileIfStale(ctx))
 	require.NotContains(t, state.Get(ctx), "openai-backend")
 

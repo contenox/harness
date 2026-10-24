@@ -16,15 +16,6 @@ vi.mock('../../../lib/api', () => ({
   },
 }));
 
-/**
- * `@testing-library/react` is not a dependency of `packages/beam` (see
- * PermissionCard.test.tsx). This pins what the form OFFERS given seeded
- * agents/policies — in particular that a disabled agent never appears as an
- * option, per the M2 spec's "only enabled agents". The submit gate itself
- * (required fields, single-line intent) is exercised directly and more
- * thoroughly in dispatchForm.test.ts, since a submit click cannot be
- * simulated in this DOM-less environment.
- */
 beforeAll(async () => {
   await i18n.changeLanguage('en');
 });
@@ -78,7 +69,6 @@ describe('MissionDispatchPage', () => {
 
   it('marks agent, intent, and envelope as required, and cwd as optional', () => {
     const html = renderForm([agent({ name: 'researcher' })], ['hitl-policy-dev.json']);
-    // FormField renders a literal "*" marker next to a required label.
     const agentLabelIdx = html.indexOf('Agent');
     const cwdLabelIdx = html.indexOf('Working directory');
     expect(html).toContain('Intent');

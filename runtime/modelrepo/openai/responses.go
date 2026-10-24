@@ -8,42 +8,29 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// openAIResponsesRequest always disables server-side response storage.
 type openAIResponsesRequest struct {
-	Include         []string                  `json:"include,omitempty"`
-	Model           string                    `json:"model"`
-	Input           []openAIResponseInput     `json:"input"`
-	Instructions    string                    `json:"instructions"`
-	MaxOutputTokens *int                      `json:"max_output_tokens,omitempty"`
-	Temperature     *float64                  `json:"temperature,omitempty"`
-	TopP            *float64                  `json:"top_p,omitempty"`
-	Reasoning       *openAIResponsesReasoning `json:"reasoning,omitempty"`
-	Tools           []openAIResponsesTool     `json:"tools,omitempty"`
-	// ToolChoice is the documented union: the string form (none, auto, required)
-	// or the named-function object, which no single Go member can carry.
-	ToolChoice        any   `json:"tool_choice,omitempty"`
-	ParallelToolCalls *bool `json:"parallel_tool_calls,omitempty"`
-	// Text carries the structured-output constraint, which this endpoint places
-	// under text.format rather than at the request's top level.
-	Text           *openAIResponsesText `json:"text,omitempty"`
-	Stream         bool                 `json:"stream,omitempty"`
-	Store          *bool                `json:"store,omitempty"`
-	PromptCacheKey string               `json:"prompt_cache_key,omitempty"`
-	// PromptCacheRetention is the documented cache lifetime policy: 24h keeps a
-	// cached prefix active for up to a day. Sent only when a cache hint asks for
-	// a lifetime of at least a day.
-	PromptCacheRetention string `json:"prompt_cache_retention,omitempty"`
+	Include              []string                  `json:"include,omitempty"`
+	Model                string                    `json:"model"`
+	Input                []openAIResponseInput     `json:"input"`
+	Instructions         string                    `json:"instructions"`
+	MaxOutputTokens      *int                      `json:"max_output_tokens,omitempty"`
+	Temperature          *float64                  `json:"temperature,omitempty"`
+	TopP                 *float64                  `json:"top_p,omitempty"`
+	Reasoning            *openAIResponsesReasoning `json:"reasoning,omitempty"`
+	Tools                []openAIResponsesTool     `json:"tools,omitempty"`
+	ToolChoice           any                       `json:"tool_choice,omitempty"`
+	ParallelToolCalls    *bool                     `json:"parallel_tool_calls,omitempty"`
+	Text                 *openAIResponsesText      `json:"text,omitempty"`
+	Stream               bool                      `json:"stream,omitempty"`
+	Store                *bool                     `json:"store,omitempty"`
+	PromptCacheKey       string                    `json:"prompt_cache_key,omitempty"`
+	PromptCacheRetention string                    `json:"prompt_cache_retention,omitempty"`
 }
 
-// openAIResponsesText is the endpoint's text configuration, whose only neutral
-// member is the response format.
 type openAIResponsesText struct {
 	Format *openAIResponsesTextFormat `json:"format,omitempty"`
 }
 
-// openAIResponsesTextFormat is the Responses API's structured-output shape: the
-// schema members sit beside the type rather than inside a json_schema object,
-// which is where the chat/completions endpoint nests them.
 type openAIResponsesTextFormat struct {
 	Type   string `json:"type"`
 	Name   string `json:"name,omitempty"`
@@ -51,8 +38,6 @@ type openAIResponsesTextFormat struct {
 	Strict *bool  `json:"strict,omitempty"`
 }
 
-// openAIResponsesToolChoiceName names one function in the object form of
-// tool_choice, which this endpoint spells flat.
 type openAIResponsesToolChoiceName struct {
 	Type string `json:"type"`
 	Name string `json:"name"`
@@ -275,8 +260,6 @@ func buildOpenAIResponsesRequestWithContinuation(modelName string, messages []mo
 			req.Tools = tools
 		}
 	}
-	// A named tool selection resolves after the list, so it names the sanitized
-	// function the request actually declares.
 	req.ToolChoice = responsesToolChoice(cfg.ToolChoice, origToSanitized)
 
 	var systemParts []string
@@ -380,9 +363,6 @@ func (c *openAIClient) buildResponsesRequest(messages []modelrepo.Message, args 
 		return openAIResponsesRequest{}, nil, err
 	}
 	c.clampResponsesMaxOutputTokens(&req)
-	// A reasoning model replays the encrypted reasoning items the vendor returns
-	// with tool calls; without them the next turn restarts its reasoning, which
-	// the vendor documents as degraded function calling.
 	if c.codex != nil || openAIModelReasons(c.modelName) {
 		req.Include = []string{"reasoning.encrypted_content"}
 	}
@@ -443,10 +423,6 @@ func decodeResponseContinuation(raw json.RawMessage) ([]openAIResponseInput, err
 	return items, nil
 }
 
-// responseContinuation is the vendor's own output items, replayed verbatim on the
-// next turn. A reasoning model requires its reasoning items back with the tool
-// outputs, which is what the encrypted content carries; a turn with no reasoning
-// item is already fully represented by the neutral message.
 func (c *openAIClient) responseContinuation(response *openAIResponse) *modelrepo.Continuation {
 	if response == nil || len(response.Output) == 0 {
 		return nil
@@ -465,8 +441,6 @@ func (c *openAIClient) responseContinuation(response *openAIResponse) *modelrepo
 	return &modelrepo.Continuation{Provider: c.providerType(), Model: c.modelName, Items: raw}
 }
 
-// responsesHaveReasoningItem reports whether the vendor returned a reasoning item
-// that has to be replayed with the tool outputs.
 func responsesHaveReasoningItem(response *openAIResponse) bool {
 	for _, item := range response.Output {
 		if strings.EqualFold(item.Type, "reasoning") {
@@ -476,8 +450,6 @@ func responsesHaveReasoningItem(response *openAIResponse) bool {
 	return false
 }
 
-// responsesRefusalText is the refusal the vendor put in an output message, which
-// is how a declined turn is reported beside the streamed refusal deltas.
 func responsesRefusalText(response *openAIResponse) string {
 	if response == nil {
 		return ""
@@ -499,10 +471,6 @@ func responsesRefusalText(response *openAIResponse) string {
 	return b.String()
 }
 
-// responsesFinishReason is the terminal finish reason of a finished response:
-// the reason the vendor reported for an incomplete one, which is a length or
-// content-filter class value the caller acts on, and the ordinary completion
-// otherwise.
 func responsesFinishReason(response *openAIResponse) string {
 	if response != nil && response.IncompleteDetails != nil && response.IncompleteDetails.Reason != "" {
 		return response.IncompleteDetails.Reason
@@ -510,7 +478,6 @@ func responsesFinishReason(response *openAIResponse) string {
 	return "stop"
 }
 
-// firstNonEmptyString returns the first non-empty argument.
 func firstNonEmptyString(values ...string) string {
 	for _, value := range values {
 		if value != "" {

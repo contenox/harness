@@ -22,9 +22,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// runCmd runs any task chain with any input type.
-// Unlike 'contenox chat' (which hardcodes DataTypeChatHistory), 'contenox run'
-// lets the caller specify the input type and is fully stateless (no chat history).
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run any task chain with explicit input type control (stateless).",
@@ -66,7 +63,6 @@ Examples:
 
 		flags := cmd.Flags()
 
-		// Resolve .contenox dir using Git-style parent walk.
 		contenoxDir, err := ResolveContenoxDir(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to resolve .contenox dir: %w", err)
@@ -84,7 +80,6 @@ Examples:
 			return errChainRequired
 		}
 
-		// Resolve input
 		rawInput, err := resolveRunInput(cmd, args)
 		if err != nil {
 			if errors.Is(err, errEmptyPrompt) {
@@ -100,7 +95,6 @@ Examples:
 			)
 		}
 
-		// Resolve input type
 		inputTypeName, _ := flags.GetString("input-type")
 		if !flags.Changed("input-type") && !flags.Changed("chain") {
 			inputTypeName = "string"
@@ -110,7 +104,6 @@ Examples:
 			return fmt.Errorf("--input-type %q: %w", inputTypeName, err)
 		}
 
-		// Open database (needed for buildRunOpts KV read and engine).
 		dbPathAbs, err := resolveDBPath(cmd)
 		if err != nil {
 			return fmt.Errorf("invalid database path: %w", err)
@@ -128,7 +121,6 @@ Examples:
 		}
 		defer closeLogs()
 
-		// Build chatOpts from flags and SQLite KV defaults.
 		o, err := buildRunOpts(cmd, db, contenoxDir)
 		if err != nil {
 			return err
@@ -144,7 +136,6 @@ Examples:
 			return err
 		}
 
-		// Resolve chain path
 		chainPathAbs, err := filepath.Abs(chainPath)
 		if err != nil {
 			return fmt.Errorf("invalid chain path: %w", err)
@@ -154,17 +145,13 @@ Examples:
 			return err
 		}
 
-		// Template vars
 		templateVars := buildTemplateVars(o)
 
-		// Set timeout
 		timeout, _ := flags.GetDuration("timeout")
 		execCtx := libtracker.WithNewRequestID(ctx)
 		timeoutCtx, timeoutCancel := context.WithTimeout(execCtx, timeout)
 		defer timeoutCancel()
 
-		// Use signal.NotifyContext so the goroutine is cleaned up automatically
-		// when the command returns, instead of leaking a blocked goroutine.
 		execCtx, stop := signal.NotifyContext(timeoutCtx, syscall.SIGINT, syscall.SIGTERM)
 		defer stop()
 
@@ -181,7 +168,6 @@ Examples:
 		stopThoughts := startThoughtStream(execCtx, engine, cmd.ErrOrStderr(), o.EffectiveThink)
 		defer stopThoughts()
 
-		// Create agent and execute via service layer (stateless — no session).
 		workspaceID := ResolveWorkspaceID(o.ContenoxDir)
 		ag := agentservice.New(agentservice.Deps{
 			Engine:      engine,
@@ -227,7 +213,6 @@ Examples:
 	},
 }
 
-// resolveRunInput returns the raw input string from --editor, --input, @file, positional args, or stdin.
 func resolveRunInput(cmd *cobra.Command, args []string) (string, error) {
 	flags := cmd.Flags()
 
@@ -249,8 +234,6 @@ func resolveRunInput(cmd *cobra.Command, args []string) (string, error) {
 
 	if len(args) > 0 {
 		argsInput := strings.Join(args, " ")
-		// If stdin is also piped, combine: args = instruction, stdin = data.
-		// e.g. git diff | contenox run "suggest a commit message"
 		data, ok, err := readStdinIfAvailable(maxCLIStdinBytes)
 		if err != nil {
 			return "", err
@@ -272,7 +255,6 @@ func resolveRunInput(cmd *cobra.Command, args []string) (string, error) {
 	return "", nil
 }
 
-// parseRunInput converts a raw string into the typed value and DataType the engine expects.
 func parseRunInput(raw, typeName string) (any, taskengine.DataType, error) {
 	switch strings.ToLower(typeName) {
 	case "string", "":
@@ -309,14 +291,12 @@ func parseRunInput(raw, typeName string) (any, taskengine.DataType, error) {
 	}
 }
 
-// buildRunOpts resolves effective options from flags and persistent SQLite config.
 func buildRunOpts(cmd *cobra.Command, db libdbexec.DBManager, contenoxDir string) (chatOpts, error) {
 	flags := cmd.Root().Flags()
 
 	ctx := libtracker.WithNewRequestID(context.Background())
 	store := runtimetypes.New(db.WithoutTransaction())
 
-	// Read persistent defaults from SQLite KV; flags always override.
 	kvModel, _ := getConfigKV(ctx, store, "default-model")
 	kvProvider, _ := getConfigKV(ctx, store, "default-provider")
 	kvAltModel, _ := getConfigKV(ctx, store, "default-alt-model")
@@ -369,8 +349,8 @@ func buildRunOpts(cmd *cobra.Command, db libdbexec.DBManager, contenoxDir string
 	effectiveHITL := !autoMode
 
 	return chatOpts{
-		EffectiveDB:                  "", // resolved separately in RunE
-		EffectiveChain:               "", // unused — run loads chain directly
+		EffectiveDB:                  "",
+		EffectiveChain:               "",
 		EffectiveContext:             effectiveContext,
 		EffectiveDefaultModel:        effectiveModel,
 		EffectiveDefaultProvider:     effectiveDefaultProvider,

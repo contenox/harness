@@ -75,7 +75,6 @@ describe('computeSetupFingerprint', () => {
 
 describe('wizard dismissal store', () => {
   beforeEach(() => {
-    // Reset to a clean, undismissed state before each test.
     clearWizardDismissal();
   });
 
@@ -130,6 +129,6 @@ describe('wizard dismissal store', () => {
     unsubscribe();
 
     dismissWizard(status({}));
-    expect(calls).toBe(3); // no further notifications once unsubscribed
+    expect(calls).toBe(3);
   });
 });

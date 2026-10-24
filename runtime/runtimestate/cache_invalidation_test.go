@@ -12,9 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// newTestKV returns a SQLite-backed KV manager over a temp-file DB. A file (not
-// ":memory:") is used so the internal Executor calls inside Clear/Invalidate see
-// the same database as the test's own writes.
 func newTestKV(t *testing.T) libkvstore.KVManager {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "kv.db")
@@ -33,7 +30,7 @@ func TestUnit_ClearModelCache_removesProvKeysOnly(t *testing.T) {
 	val, _ := json.Marshal(map[string]any{"models": []string{}, "api_key": ""})
 	require.NoError(t, exec.Set(ctx, "prov:backend-a", val))
 	require.NoError(t, exec.Set(ctx, "prov:backend-b", val))
-	require.NoError(t, exec.Set(ctx, "cloud-provider:openai", val)) // provider config — must survive
+	require.NoError(t, exec.Set(ctx, "cloud-provider:openai", val))
 
 	n, err := runtimestate.ClearModelCache(ctx, kv)
 	require.NoError(t, err)

@@ -55,8 +55,6 @@ func singleTaskChain(prompt string) *taskengine.TaskChainDefinition {
 	}
 }
 
-// TestUnit_MacroEnv_Var_HappyPath verifies that a {{var:key}} expands to the
-// value injected via WithTemplateVars.
 func TestUnit_MacroEnv_Var_HappyPath(t *testing.T) {
 	inner := &stubEnvExecutor{}
 	env, err := taskengine.NewMacroEnv(inner, nil)
@@ -71,8 +69,6 @@ func TestUnit_MacroEnv_Var_HappyPath(t *testing.T) {
 	require.Equal(t, "hello world", inner.receivedPrompt)
 }
 
-// TestUnit_MacroEnv_Var_MissingKey verifies that a {{var:key}} whose key was
-// never added to the vars map returns an error — not a silent empty string.
 func TestUnit_MacroEnv_Var_MissingKey(t *testing.T) {
 	inner := &stubEnvExecutor{}
 	env, err := taskengine.NewMacroEnv(inner, nil)
@@ -87,8 +83,6 @@ func TestUnit_MacroEnv_Var_MissingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "missing")
 }
 
-// TestUnit_MacroEnv_Var_NoVarsInContext verifies that using {{var:key}} when
-// WithTemplateVars was never called also returns an error.
 func TestUnit_MacroEnv_Var_NoVarsInContext(t *testing.T) {
 	inner := &stubEnvExecutor{}
 	env, err := taskengine.NewMacroEnv(inner, nil)
@@ -98,9 +92,6 @@ func TestUnit_MacroEnv_Var_NoVarsInContext(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestUnit_MacroEnv_Var_AltSlot verifies that the alt_model / alt_provider vars
-// resolve via the same mechanism as primary model/provider — they're plain
-// template vars, no special handling.
 func TestUnit_MacroEnv_Var_AltSlot(t *testing.T) {
 	inner := &stubEnvExecutor{}
 	env, err := taskengine.NewMacroEnv(inner, nil)

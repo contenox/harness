@@ -16,9 +16,6 @@ export function GlobalSettingsSection() {
   const { t } = useTranslation();
   const { user } = useContext(AuthContext);
   const { data } = useSetupStatus(!!user);
-  // useSetupStatus only carries the model/provider subset relevant to
-  // onboarding readiness checks; the alt-model/alt-provider defaults live in
-  // the full CLI config snapshot instead (see hooks/useCLIConfig.ts).
   const { data: cliConfig } = useCLIConfig(!!user);
   const putConfig = usePutCLIConfig();
   const formId = useId();
@@ -101,8 +98,6 @@ export function GlobalSettingsSection() {
     const body: CLIConfigUpdateRequest = {};
     if (model.trim()) body['default-model'] = model.trim();
     if (provider.trim()) body['default-provider'] = provider.trim();
-    // Alt model/provider are genuinely optional — always send them (even
-    // empty) so clearing the field in the UI actually clears the stored value.
     body['default-alt-model'] = altModel.trim();
     body['default-alt-provider'] = altProvider.trim();
     putConfig.mutate(body);

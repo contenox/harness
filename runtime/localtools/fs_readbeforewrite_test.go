@@ -219,9 +219,6 @@ func TestUnit_ReadBeforeWrite_DeniedWhenFileChangedAfterRead(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Simulate the filesystem changing after the agent read the file.
-	// A guard that only stores "this path was read" will incorrectly allow
-	// the next write and overwrite this external change.
 	require.NoError(t, os.WriteFile(
 		filepath.Join(dir, "a.txt"),
 		[]byte("external change\n"),
@@ -264,8 +261,6 @@ func TestUnit_ReadBeforeWrite_RangeReadDoesNotAuthorizeFullFileWrite(t *testing.
 	})
 	require.NoError(t, err)
 
-	// A range read should not authorize replacing the whole file.
-	// Otherwise the agent can inspect two lines and then destroy unseen content.
 	res, err := execTool(t, ctx, tools, "write_file", map[string]any{
 		"path":    "a.txt",
 		"content": "collapsed rewrite\n",
@@ -286,7 +281,6 @@ func TestUnit_ReadBeforeWrite_InvalidationAfterMutation(t *testing.T) {
 	ctx, tools, dir := setupFSReadGuard(t)
 	writeFile(t, dir, "a.txt", "line1\nline2\n")
 
-	// 1) Read, then write – allowed
 	_, err := execTool(t, ctx, tools, "read_file", map[string]any{"path": "a.txt"})
 	require.NoError(t, err)
 
@@ -299,7 +293,6 @@ func TestUnit_ReadBeforeWrite_InvalidationAfterMutation(t *testing.T) {
 	require.True(t, ok)
 	require.True(t, fw.Written)
 
-	// 2) Immediately try another write without a new read – should be denied
 	res, err = execTool(t, ctx, tools, "write_file", map[string]any{
 		"path":    "a.txt",
 		"content": "changed again\n",
@@ -309,7 +302,6 @@ func TestUnit_ReadBeforeWrite_InvalidationAfterMutation(t *testing.T) {
 	require.True(t, ok, "expected denial message string, got %T", res)
 	require.Contains(t, msg, "without reading it first")
 
-	// File should still contain the first mutation, not the second
 	got, err := os.ReadFile(filepath.Join(dir, "a.txt"))
 	require.NoError(t, err)
 	require.Equal(t, "changed\n", string(got))
@@ -319,7 +311,6 @@ func TestUnit_ReadBeforeWrite_SedInvalidation(t *testing.T) {
 	ctx, tools, dir := setupFSReadGuard(t)
 	writeFile(t, dir, "a.txt", "alpha bravo\n")
 
-	// read then sed – allowed
 	_, err := execTool(t, ctx, tools, "read_file", map[string]any{"path": "a.txt"})
 	require.NoError(t, err)
 
@@ -334,7 +325,6 @@ func TestUnit_ReadBeforeWrite_SedInvalidation(t *testing.T) {
 	require.True(t, sed.Written)
 	require.Equal(t, 1, sed.Replacements)
 
-	// Second sed without re-read – denied
 	res, err = execTool(t, ctx, tools, "sed", map[string]any{
 		"path":        "a.txt",
 		"pattern":     "bravo",
@@ -345,7 +335,6 @@ func TestUnit_ReadBeforeWrite_SedInvalidation(t *testing.T) {
 	require.True(t, ok)
 	require.Contains(t, msg, "without reading it first")
 
-	// Content unchanged from first sed
 	got, err := os.ReadFile(filepath.Join(dir, "a.txt"))
 	require.NoError(t, err)
 	require.Equal(t, "ALPHA bravo\n", string(got))

@@ -133,7 +133,7 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
-      {/* Top bar */}
+
       <div className="z-10 flex flex-wrap items-center justify-between gap-2 border-b border-surface-300 px-3 py-2 dark:border-dark-surface-300">
         <h3 className="flex min-w-0 items-center gap-2 text-lg font-semibold text-text dark:text-dark-text">
           <svg
@@ -229,7 +229,7 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
         </div>
       </div>
 
-      {/* Canvas */}
+
       <div
         ref={containerRef}
         className={cn(
@@ -311,7 +311,7 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
               </pattern>
             </defs>
 
-            {/* Grid across current viewBox */}
+
             <rect
               x={viewBox.x - 1000}
               y={viewBox.y - 1000}
@@ -324,7 +324,7 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
             {DebugViewBoxRect}
             {DebugContentRect}
 
-            {/* zoom via group (user controlled) */}
+
             <g transform={`scale(${zoomForRender})`}>{children}</g>
           </svg>
         )}

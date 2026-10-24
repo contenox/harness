@@ -14,78 +14,33 @@ import (
 	"github.com/google/uuid"
 )
 
-// Agent kinds.
-//
-//   - AgentKindChain: one of the runtime's OWN task chains, addressable as an
-//     agent. The kernel re-executes this binary (`contenox acp`) bound to the
-//     named chain file, so a chain runs as an ACP peer over stdio. This is the
-//     only kind users declare; chain agents are seeded by discovery from chain
-//     files on disk (see runtime/chainagents). See ChainConfig and
-//     runtime/agentinstance's chain branch.
-//   - AgentKindExternalACP: INTERNAL only. Not user-registerable — there is no
-//     CLI, API, or UI path to create one, and discovery never emits one. It
-//     survives solely as the spawn-config shape the instance kernel and the
-//     agenthost one-shot driver build to run an ACP peer over stdio (see
-//     ExternalACPConfig), reused by the chain path and the host test harness.
 const (
 	AgentKindExternalACP = "external_acp"
 	AgentKindChain       = "chain"
 )
 
-// Agent.Source values — system-managed provenance, never part of the
-// user-editable run spec (see Agent.Source).
-//
-//   - AgentSourceRegistry: seeded from the ACP agent catalog.
-//   - AgentSourceManual: registered by hand from a bare command.
-//   - AgentSourceDiscovered: seeded by chain-agent discovery from a chain file
-//     on disk (see runtime/chainagents). Discovery OWNS these rows: it
-//     re-upserts them on every startup and disables the ones whose chain file
-//     has gone away. A row with any other Source is never touched by it.
 const (
 	AgentSourceRegistry   = "registry"
 	AgentSourceManual     = "manual"
 	AgentSourceDiscovered = "discovered"
 )
 
-// ExternalACPConfig is the config_json shape for an AgentKindExternalACP
-// agent: how to reach the external ACP agent the runtime spawns/drives.
-//
-// Transport selects which of the remaining fields apply:
-//   - "stdio": the runtime spawns Command with Args/Env/Cwd and speaks ACP
-//     over the subprocess's stdin/stdout (see runtime/agenthost, which wraps
-//     libacp/acpexec for this).
-//   - "endpoint": the runtime dials URL directly instead of spawning a
-//     process. Not implemented yet (runtime/agenthost returns a clear error);
-//     the field exists so the config shape doesn't need to change later.
 type ExternalACPConfig struct {
-	Transport string            `json:"transport" example:"stdio"` // "stdio" | "endpoint"
+	Transport string            `json:"transport" example:"stdio"`
 	Command   string            `json:"command,omitempty" example:"my-acp-agent"`
-	Args      []string          `json:"args,omitempty" example:"['--flag']" openapi_include_type:"string"`
+	Args      []string          `json:"args,omitempty" example:"['--flag']"`
 	Env       map[string]string `json:"env,omitempty"`
 	Cwd       string            `json:"cwd,omitempty" example:"/workspace"`
 	URL       string            `json:"url,omitempty" example:"https://agent.example.com/acp"`
 
-	// McpServers is the explicit allowlist of registered MCP server names
-	// (the mcp_servers table, `contenox mcp list`) forwarded to this agent
-	// in ACP session/new. Forwarding hands the agent everything it needs to
-	// reach that server — argv for stdio servers, URL and configured headers
-	// (which may carry auth) for http/sse — so it is per-agent consent, named
-	// server by named server: there is deliberately no "all servers"
-	// wildcard, and contenox-side auth synthesis (authToken/authEnvKey/
-	// oauth/injectParams) is never forwarded. Empty means forward nothing.
-	McpServers []string `json:"mcp_servers,omitempty" example:"['filesystem']" openapi_include_type:"string"`
+	McpServers []string `json:"mcp_servers,omitempty" example:"['filesystem']"`
 }
 
-// Transport values accepted by ExternalACPConfig.Transport.
 const (
 	ExternalACPTransportStdio    = "stdio"
 	ExternalACPTransportEndpoint = "endpoint"
 )
 
-// Validate checks the transport-specific requirements of an ExternalACPConfig
-// in isolation: it does not know (or care) about the owning Agent's name or
-// kind — that belongs to the caller (the registry service validates name
-// uniqueness and kind separately; see runtime/agentregistryservice).
 func (c ExternalACPConfig) Validate() error {
 	switch c.Transport {
 	case ExternalACPTransportStdio:
@@ -109,42 +64,14 @@ func (c ExternalACPConfig) Validate() error {
 	return nil
 }
 
-// ChainConfig is the config_json shape for an AgentKindChain agent: which of
-// the runtime's own task chains a unit launched from this template runs. It is
-// the sibling of ExternalACPConfig and deliberately much smaller, because a
-// chain unit has nothing to configure that the chain file does not already
-// say — no command, no credentials, no transport choice.
-//
-// Path, not a chain id or a name, is the field: the spawned runtime resolves
-// its chain from a FILE (runtime/acpsvc's chain registry reads a path), so a
-// name would only have to be resolved back into one, and the resolution would
-// then be a second implementation of the lookup discovery already performs.
-// It is required to be absolute for the same reason a session cwd is: the
-// spawned process's working directory is the session's, not the declarer's, so
-// a relative path would resolve somewhere neither of them intended.
 type ChainConfig struct {
 	Path string `json:"path" example:"/home/user/.contenox/agent-reviewer.json"`
 
-	// ChainID is the "id" field inside that chain file, recorded at declaration
-	// time so a listing can show WHICH chain a unit runs without reading every
-	// file. It is a display copy of a fact the file owns: nothing resolves
-	// through it, and an edit that changes the file's id leaves this stale
-	// until the next discovery pass rewrites it. Optional.
 	ChainID string `json:"chainId,omitempty" example:"agent-reviewer"`
 
-	// Refused is why discovery holds the agent disabled: the declaration it
-	// compiles from was refused. Discovery sets it and clears it; it never
-	// enables the agent again, so a fixed declaration needs 'agent enable'.
 	Refused string `json:"refused,omitempty" example:"/home/user/.contenox/agents/reviewer.md has no YAML frontmatter block"`
 }
 
-// Validate checks a ChainConfig in isolation, in the same spirit as
-// ExternalACPConfig.Validate: it knows nothing about the owning Agent. It
-// deliberately does NOT stat the path — existence is a runtime condition that
-// can change between declaration and spawn, and a validator that pretended
-// otherwise would reject a perfectly good declaration made before its chain
-// file is written. A missing file surfaces at spawn, where the ACP chain
-// loader already fails closed with the path in the message.
 func (c ChainConfig) Validate() error {
 	if strings.TrimSpace(c.Path) == "" {
 		return fmt.Errorf("chain: path is required (the chain file this agent runs)")
@@ -155,30 +82,15 @@ func (c ChainConfig) Validate() error {
 	return nil
 }
 
-// Agent represents a persisted, declared agent resource: something the
-// runtime can spawn/drive as an ACP peer — either somebody else's program
-// (kind "external_acp") or one of the runtime's own task chains (kind
-// "chain").
-//
-// ConfigJSON carries the kind-specific config as raw JSON rather than flat
-// columns — mcp_servers can use flat columns because it has exactly one
-// kind; agents is polymorphic, so flat-columns-per-kind would have been a
-// migration trap the moment the second kind (chain) was implemented.
 type Agent struct {
 	ID          string          `json:"id" example:"a1b2c3d4-e5f6-7890-abcd-ef1234567890"`
 	Name        string          `json:"name" example:"local-claude-code"`
 	Kind        string          `json:"kind" example:"external_acp"`
 	Enabled     bool            `json:"enabled" example:"true"`
 	ConfigJSON  json.RawMessage `json:"configJson" example:"{\"transport\":\"stdio\",\"command\":\"claude-code-acp\"}"`
-	HarnessID   *string         `json:"harnessId,omitempty"`   // reserved FK seam; nil = implicit serve harness
-	WorkspaceID *string         `json:"workspaceId,omitempty"` // reserved scoping seam, consistent with kv/message_indices
+	HarnessID   *string         `json:"harnessId,omitempty"`
+	WorkspaceID *string         `json:"workspaceId,omitempty"`
 
-	// Source, RegistryID, and RegistryVersion are system-managed provenance for
-	// display and updates — NOT part of the user-editable run spec (which lives
-	// in ConfigJSON). Source is one of AgentSourceRegistry / AgentSourceManual /
-	// AgentSourceDiscovered; RegistryID/RegistryVersion record the catalog entry
-	// a registry-sourced agent was seeded from. nil for agents predating
-	// provenance tracking.
 	Source          *string `json:"source,omitempty"`
 	RegistryID      *string `json:"registryId,omitempty"`
 	RegistryVersion *string `json:"registryVersion,omitempty"`
@@ -187,10 +99,6 @@ type Agent struct {
 	UpdatedAt time.Time `json:"updatedAt" example:"2024-01-15T10:00:00Z"`
 }
 
-// ExternalACPConfig unmarshals ConfigJSON as an ExternalACPConfig. It returns
-// an error if the agent's Kind is not AgentKindExternalACP or the stored JSON
-// doesn't parse — the typed accessor a polymorphic config_json column needs
-// so callers never have to unmarshal raw JSON themselves.
 func (a *Agent) ExternalACPConfig() (*ExternalACPConfig, error) {
 	if a.Kind != AgentKindExternalACP {
 		return nil, fmt.Errorf("agent %q: kind is %q, not %q", a.Name, a.Kind, AgentKindExternalACP)
@@ -205,8 +113,6 @@ func (a *Agent) ExternalACPConfig() (*ExternalACPConfig, error) {
 	return &cfg, nil
 }
 
-// SetExternalACPConfig marshals cfg into ConfigJSON and sets Kind to
-// AgentKindExternalACP.
 func (a *Agent) SetExternalACPConfig(cfg ExternalACPConfig) error {
 	raw, err := json.Marshal(cfg)
 	if err != nil {
@@ -217,9 +123,6 @@ func (a *Agent) SetExternalACPConfig(cfg ExternalACPConfig) error {
 	return nil
 }
 
-// ChainConfig unmarshals ConfigJSON as a ChainConfig, the AgentKindChain
-// counterpart of ExternalACPConfig() and identical in contract: it errors if
-// the agent's Kind is not AgentKindChain or the stored JSON doesn't parse.
 func (a *Agent) ChainConfig() (*ChainConfig, error) {
 	if a.Kind != AgentKindChain {
 		return nil, fmt.Errorf("agent %q: kind is %q, not %q", a.Name, a.Kind, AgentKindChain)
@@ -234,7 +137,6 @@ func (a *Agent) ChainConfig() (*ChainConfig, error) {
 	return &cfg, nil
 }
 
-// SetChainConfig marshals cfg into ConfigJSON and sets Kind to AgentKindChain.
 func (a *Agent) SetChainConfig(cfg ChainConfig) error {
 	raw, err := json.Marshal(cfg)
 	if err != nil {

@@ -11,37 +11,21 @@ import { previewKind } from '../../../components/editors/previewKind';
 import { previewViewer } from './previewRegistry';
 import { AssetActionToolbar } from './AssetActionToolbar';
 
-/** Monaco loads only when a file tab is actually shown (lazy chunk + workers). */
 const MonacoView = lazy(() => import('./MonacoView'));
 
-// ---------------------------------------------------------------------------
-// File tree panel (the "workspace sidebar"): lazily expanded from the same
-// per-directory listing cache the composer's @-mention picker uses.
-// ---------------------------------------------------------------------------
 
 const ROOT = '';
 
-/** One row of the tree as a management control needs to name it. */
 export interface TreeEntryRef {
   path: string;
   name: string;
   isDirectory: boolean;
 }
 
-/**
- * What a screen adds to the tree to manage the files in it. Absent for a session
- * whose workspace is read-only here; present, it adds a toolbar, a trailing
- * control on every row, and drop targets that hand dropped files to
- * `onDropFiles`.
- */
 export interface FileTreeManagement {
-  /** Rendered under the heading; `targetDir` is the folder new items go into. */
   toolbar: (targetDir: string) => ReactNode;
-  /** The trailing control of one row. */
   rowAction: (entry: TreeEntryRef) => ReactNode;
-  /** Files dropped on `dir`, a folder row or the panel. */
   onDropFiles: (files: File[], dir: string) => void;
-  /** Status under the tree. */
   footer?: ReactNode;
 }
 
@@ -50,7 +34,6 @@ export interface FileTreePanelProps {
   ensureLoaded: (dir: string) => void;
   isLoading: (dir: string) => boolean;
   onOpenFile: (path: string) => void;
-  /** One-directory read over the wire, for the quick-find walk. */
   listDir: DirLister;
   manage?: FileTreeManagement;
 }
@@ -309,9 +292,6 @@ export function FileTreePanel({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tab strip + file pane.
-// ---------------------------------------------------------------------------
 
 export function CanvasTabStrip({
   tabs,
@@ -325,9 +305,7 @@ export function CanvasTabStrip({
   activePath: string;
   onSelect: (path: string) => void;
   onClose: (path: string) => void;
-  /** Non-closable mode tabs rendered before the file tabs (e.g. Chat, Activity). */
   views?: { id: string; label: string; active: boolean; onSelect: () => void }[];
-  /** Hide the file tabs — used while a mode tab owns the strip's content. */
   showFileTabs?: boolean;
 }) {
   const hasContent = tabs.length > 0 || (views !== undefined && views.length > 0);
@@ -381,15 +359,10 @@ export function CanvasTabStrip({
 
 export interface FilePaneProps {
   tab: CanvasFileTab;
-  /** Handles a Monaco "Ask about selection": path + selected region. */
   onAskSelection?: (path: string, region: SelectedRegion) => void;
-  /** Persists an edited file over `_contenox/fs/write_file`; must resolve on success. */
   onWrite?: (path: string, content: string) => Promise<void>;
-  /** Lists the machine's advertised asset actions for the tab's kind. */
   listAssetActions?: () => Promise<AssetAction[]>;
-  /** Runs one advertised asset action on the host file at the tab's path. */
   runAssetAction?: (action: string, path: string) => Promise<AssetActionResult>;
-  /** Opens an artifact an action produced (a new or changed asset). */
   onOpenArtifact?: (path: string) => void;
 }
 
@@ -405,7 +378,6 @@ export function FilePane({
   const [text, setText] = useState(tab.content);
   const [status, setStatus] = useState<'saved' | 'error' | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Follow external content (load, an external save) while not editing.
   useEffect(() => {
     if (!editing) setText(tab.content);
   }, [tab.content, editing]);

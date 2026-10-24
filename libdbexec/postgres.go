@@ -13,8 +13,6 @@ type postgresDBManager struct {
 	dbInstance *sql.DB
 }
 
-// NewPostgresDBManager creates a DBManager for PostgreSQL, opening a connection
-// group for dsn, pinging it, and optionally applying schema.
 func NewPostgresDBManager(ctx context.Context, dsn string, schema string) (DBManager, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -22,13 +20,13 @@ func NewPostgresDBManager(ctx context.Context, dsn string, schema string) (DBMan
 	}
 
 	if err = db.PingContext(ctx); err != nil {
-		_ = db.Close() // Attempt to close if ping fails
+		_ = db.Close()
 		return nil, fmt.Errorf("database connection failed: %w", translatePostgresError(err))
 	}
 
 	if schema != "" {
 		if _, err = db.ExecContext(ctx, schema); err != nil {
-			_ = db.Close() // Attempt to close if schema fails
+			_ = db.Close()
 			return nil, fmt.Errorf("failed to initialize schema: %w", translatePostgresError(err))
 		}
 	}
@@ -36,19 +34,14 @@ func NewPostgresDBManager(ctx context.Context, dsn string, schema string) (DBMan
 	return &postgresDBManager{dbInstance: db}, nil
 }
 
-// WithoutTransaction returns an executor operating directly on the connection group.
 func (sm *postgresDBManager) WithoutTransaction() Exec {
 	return &txAwareDB{db: sm.dbInstance, errTranslate: translatePostgresError, driverName: "postgres"}
 }
 
-// WithTransaction starts a PostgreSQL transaction and returns the associated
-// executor, commit function, and release function.
 func (sm *postgresDBManager) WithTransaction(ctx context.Context, onRollback ...func()) (Exec, CommitTx, ReleaseTx, error) {
 	return sm.WithTransactionOptions(ctx, nil, onRollback...)
 }
 
-// WithTransactionOptions starts a PostgreSQL transaction with opts and returns
-// the associated executor, commit function, and release function.
 func (sm *postgresDBManager) WithTransactionOptions(ctx context.Context, opts *sql.TxOptions, onRollback ...func()) (Exec, CommitTx, ReleaseTx, error) {
 	tx, err := sm.dbInstance.BeginTx(ctx, opts)
 	if err != nil {
@@ -56,7 +49,6 @@ func (sm *postgresDBManager) WithTransactionOptions(ctx context.Context, opts *s
 	}
 
 	store := &txAwareDB{tx: tx, errTranslate: translatePostgresError, driverName: "postgres"}
-	// Guards against double-execution of onRollback hooks.
 	finalized := false
 	fireRollback := func() {
 		for _, f := range onRollback {
@@ -64,7 +56,7 @@ func (sm *postgresDBManager) WithTransactionOptions(ctx context.Context, opts *s
 				f()
 			}
 		}
-		onRollback = nil // prevent a second call from re-running any hooks
+		onRollback = nil
 	}
 
 	commitFn := func(commitCtx context.Context) error {
@@ -93,7 +85,6 @@ func (sm *postgresDBManager) WithTransactionOptions(ctx context.Context, opts *s
 	return store, commitFn, releaseFn, nil
 }
 
-// Close shuts down the underlying database connection group.
 func (sm *postgresDBManager) Close() error {
 	if sm.dbInstance != nil {
 		return sm.dbInstance.Close()
@@ -101,8 +92,6 @@ func (sm *postgresDBManager) Close() error {
 	return nil
 }
 
-// translatePostgresError maps common sql and pq errors into package-defined
-// sentinels, wrapping with %w so the original stays inspectable.
 func translatePostgresError(err error) error {
 	if err == nil {
 		return nil

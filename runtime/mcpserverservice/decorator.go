@@ -15,7 +15,6 @@ type activityTrackerDecorator struct {
 	tracker libtracker.ActivityTracker
 }
 
-// WithActivityTracker wraps a Service with activity tracking.
 func WithActivityTracker(service Service, tracker libtracker.ActivityTracker) Service {
 	return &activityTrackerDecorator{service: service, tracker: tracker}
 }

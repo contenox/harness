@@ -9,9 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The setup wizard must offer Vertex so it can be (re)wired through the extension's
-// "Run Setup", which launches `contenox setup`. Guards against the drift that hid
-// vertex-google from the menu while the runtime already supported it.
 func TestUnit_SetupProviders_IncludeVertex(t *testing.T) {
 	var vertex *setupProvider
 	for i := range setupProviders {
@@ -25,9 +22,6 @@ func TestUnit_SetupProviders_IncludeVertex(t *testing.T) {
 	assert.NotEmpty(t, vertex.defaultModel)
 }
 
-// registerSetupBackend must persist the operator-supplied Vertex endpoint and,
-// on a re-run, rewire it to a new project/region rather than silently keeping
-// the stale URL.
 func TestUnit_RegisterSetupBackend_VertexBaseURLAndRewire(t *testing.T) {
 	ctx := context.Background()
 	db := envSetupTestDB(t)

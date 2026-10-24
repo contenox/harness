@@ -16,11 +16,7 @@ type vertexPredictEmbedRequest struct {
 }
 
 type vertexEmbedInstance struct {
-	Content string `json:"content"`
-	// TaskType is the downstream use the vendor documents for the instance:
-	// RETRIEVAL_DOCUMENT for a passage being indexed and RETRIEVAL_QUERY for a
-	// search query. The vendor's default when it is absent is RETRIEVAL_QUERY,
-	// which is the wrong side for an indexed passage.
+	Content  string `json:"content"`
 	TaskType string `json:"task_type,omitempty"`
 }
 
@@ -84,10 +80,6 @@ func (c *vertexEmbedClient) Embed(ctx context.Context, prompt string) ([]float64
 
 var _ modelrepo.LLMEmbedClient = (*vertexEmbedClient)(nil)
 
-// vertexEmbeddingTaskType names the vendor's task type for one embedding
-// purpose. A purpose the vendor publishes no task type for is refused rather
-// than sent as the vendor's query default, which encodes a passage as though it
-// were a search.
 func vertexEmbeddingTaskType(purpose modelrepo.EmbeddingPurpose) (string, error) {
 	switch purpose {
 	case modelrepo.EmbeddingDocument:

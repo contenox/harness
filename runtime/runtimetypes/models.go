@@ -151,7 +151,6 @@ func (s *store) UpdateModel(ctx context.Context, data *Model) error {
 	if !data.CanChat && !data.CanEmbed && !data.CanPrompt && !data.CanStream {
 		return fmt.Errorf("model must have at least one capability")
 	}
-	// Update only the modifiable fields that exist in the table
 	result, err := s.Exec.ExecContext(ctx, `
 		UPDATE ollama_models
 		SET

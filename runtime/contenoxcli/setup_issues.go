@@ -11,11 +11,8 @@ import (
 	"github.com/contenox/harness/runtime/internal/setupcheck"
 )
 
-// ErrPreflightBlocked is returned when LLM setup is not ready; instructions are already printed to w.
 var ErrPreflightBlocked = errors.New("LLM setup is not ready")
 
-// PreflightLLMSetup checks setup status before running chat or run. If the user must fix
-// configuration first, it prints instructions and returns ErrPreflightBlocked. Otherwise it returns nil.
 func PreflightLLMSetup(w io.Writer, res setupcheck.Result) error {
 	if res.Ready() {
 		return nil
@@ -26,7 +23,6 @@ func PreflightLLMSetup(w io.Writer, res setupcheck.Result) error {
 	return ErrPreflightBlocked
 }
 
-// isModelResolverFailure reports errors where printing setupcheck issues helps the user.
 func isModelResolverFailure(err error) bool {
 	if err == nil {
 		return false
@@ -62,8 +58,6 @@ func issueRank(code string) int {
 	return 100
 }
 
-// PrintSetupIssues prints actionable setup issues after model resolution failures.
-// Includes error and warning severities, ordered for readability.
 func PrintSetupIssues(w io.Writer, res setupcheck.Result) {
 	if len(res.Issues) == 0 {
 		return
@@ -96,7 +90,6 @@ func PrintSetupIssues(w io.Writer, res setupcheck.Result) {
 	}
 }
 
-// PrintBackendChecks prints one line per registered backend plus any runtime error hint.
 func PrintBackendChecks(w io.Writer, res setupcheck.Result) {
 	if len(res.BackendChecks) == 0 {
 		return

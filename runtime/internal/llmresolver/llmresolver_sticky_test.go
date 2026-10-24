@@ -21,9 +21,6 @@ func stickyCandidates(n int) []modelrepo.Provider {
 	return out
 }
 
-// TestUnit_StickyOrRandom_SameKeySamePick: the whole point of the policy — one
-// session key always lands on the same provider+backend while the candidate
-// set is stable.
 func TestUnit_StickyOrRandom_SameKeySamePick(t *testing.T) {
 	candidates := stickyCandidates(4)
 	policy := llmresolver.StickyOrRandom("session-abc")
@@ -43,10 +40,8 @@ func TestUnit_StickyOrRandom_SameKeySamePick(t *testing.T) {
 	}
 }
 
-// TestUnit_StickyOrRandom_KeysSpread: distinct keys must not all collapse onto
-// one backend.
 func TestUnit_StickyOrRandom_KeysSpread(t *testing.T) {
-	candidates := stickyCandidates(4) // 8 backends total
+	candidates := stickyCandidates(4)
 	picked := map[string]bool{}
 	for i := 0; i < 200; i++ {
 		_, b, err := llmresolver.StickyOrRandom(fmt.Sprintf("session-%d", i))(candidates)
@@ -60,9 +55,6 @@ func TestUnit_StickyOrRandom_KeysSpread(t *testing.T) {
 	}
 }
 
-// TestUnit_StickyOrRandom_CandidateChangeDegradesGracefully: rendezvous
-// hashing's contract — removing one provider only moves the sessions that were
-// pinned to it; everyone else keeps their pick.
 func TestUnit_StickyOrRandom_CandidateChangeDegradesGracefully(t *testing.T) {
 	full := stickyCandidates(4)
 	removedID := "p2"
@@ -86,7 +78,7 @@ func TestUnit_StickyOrRandom_CandidateChangeDegradesGracefully(t *testing.T) {
 		}
 		if pFull.GetID() == removedID {
 			onRemoved++
-			continue // these sessions must move; anywhere in the reduced set is fine
+			continue
 		}
 		if pFull.GetID() == pRed.GetID() && bFull == bRed {
 			stable++
@@ -102,8 +94,6 @@ func TestUnit_StickyOrRandom_CandidateChangeDegradesGracefully(t *testing.T) {
 	}
 }
 
-// TestUnit_StickyOrRandom_EmptyKeyAndEmptySet: empty key behaves like Randomly
-// (still resolves), and an empty candidate set is the usual typed error.
 func TestUnit_StickyOrRandom_EmptyKeyAndEmptySet(t *testing.T) {
 	candidates := stickyCandidates(2)
 	p, b, err := llmresolver.StickyOrRandom("")(candidates)

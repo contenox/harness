@@ -51,9 +51,7 @@ describe('toFolderNodes', () => {
 
   it('populates children only for loaded directories, leaving unloaded ones lazy', () => {
     const nodes = toFolderNodes(cache);
-    // `src` is loaded → its children are built (directories only).
     expect(nodes[0].children?.map(n => n.id)).toEqual(['src/app']);
-    // `src/app` is not in the cache → its children stay undefined (load on expand).
     expect(nodes[0].children?.[0].children).toBeUndefined();
   });
 

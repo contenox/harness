@@ -28,17 +28,6 @@ vi.mock('../../../lib/api', () => ({
   },
 }));
 
-/**
- * `@testing-library/react` is not a dependency of packages/beam (see
- * FleetPage.test.tsx). The inbox is rendered to static markup with its five
- * feeds pre-seeded into the query cache — approvals, the mission list, each
- * mission's reports, the operator inbox, and the fleet — which is enough to
- * pin the triage layout: what each tier offers and in what order. The
- * answer-click behaviour (a direct mutation, no confirm gate) is pinned
- * separately against useAnswerApproval in hooks/useApprovals.test.tsx.
- * lastSeen-driven "new" badges depend on localStorage, absent under static
- * render, so those are covered in inboxPresentation.test.ts instead.
- */
 beforeAll(async () => {
   await i18n.changeLanguage('en');
 });
@@ -96,8 +85,6 @@ function renderInbox(opts: {
   client.setQueryData(missionKeys.list(), opts.missions ?? []);
   client.setQueryData(fleetKeys.list(), opts.fleet ?? []);
   client.setQueryData(operatorInboxKeys.list(), opts.operatorInbox ?? []);
-  // Seed a reports feed for every mission so useInboxReports is not stuck
-  // "loading" a mission's reports under static render.
   for (const m of opts.missions ?? []) {
     client.setQueryData(missionKeys.reports(m.id), opts.reports?.[m.id] ?? []);
   }
@@ -128,12 +115,10 @@ describe('InboxPage — pending asks (tier 1, grouped by mission)', () => {
     expect(html).toContain('local_fs / write_file');
     expect(html).toContain('hitl-policy-default.json #1');
     expect(html).toContain('reviewer');
-    // The mission intent is the group header, linking to the mission.
     expect(html).toContain('Migrate the staging database');
     expect(html).toContain('href="/missions/mission-1"');
     expect(html).toContain('Allow local_fs / write_file');
     expect(html).toContain('Deny local_fs / write_file');
-    // Counts strip reflects one pending ask.
     expect(html).toContain('1 need you');
   });
 
@@ -183,9 +168,7 @@ describe('InboxPage — the all-clear state', () => {
     expect(html).toContain('No unit needs you.');
     expect(html).toContain('2 still running.');
     expect(html).toContain('2 running');
-    // The still-running line links to the board rather than duplicating it.
     expect(html).toContain('Open the fleet board');
-    // No answer buttons when nothing is pending.
     expect(html).not.toContain('Allow ');
   });
 });
@@ -238,7 +221,6 @@ describe('InboxPage — operator inbox merge (reports that reached no live super
     });
 
     expect(html).toContain('Supervisor session ended');
-    // The report renders once, not twice.
     expect(html.match(/landed the migration/g)).toHaveLength(1);
   });
 

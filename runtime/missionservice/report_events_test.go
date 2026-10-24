@@ -10,9 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakePublisher captures every publish so a test can assert the subject and the
-// decoded event, and can be primed to fail so the best-effort contract is
-// testable.
 type fakePublisher struct {
 	mu       sync.Mutex
 	subjects []string
@@ -44,9 +41,6 @@ func (p *fakePublisher) events(t *testing.T) []ReportAddedEvent {
 	return out
 }
 
-// TestUnit_AddReport_PublishesReportAddedEvent proves AddReport announces a
-// stored report on the bus, carrying the supervision edge (ParentSessionID) and
-// the report itself, so a routing service can act without reading anything back.
 func TestUnit_AddReport_PublishesReportAddedEvent(t *testing.T) {
 	ctx, db := setupMissionDB(t)
 	pub := &fakePublisher{}
@@ -72,15 +66,12 @@ func TestUnit_AddReport_PublishesReportAddedEvent(t *testing.T) {
 	require.Equal(t, m.ID, ev.Report.MissionID)
 }
 
-// TestUnit_AddReport_OperatorFiredEventHasEmptyEdge proves a mission with no
-// parent session publishes an event with an empty ParentSessionID — the router's
-// signal to route the report to the operator inbox.
 func TestUnit_AddReport_OperatorFiredEventHasEmptyEdge(t *testing.T) {
 	ctx, db := setupMissionDB(t)
 	pub := &fakePublisher{}
 	svc := New(db, WithEventPublisher(pub))
 
-	m := newMission("operator fired this directly") // no ParentSessionID
+	m := newMission("operator fired this directly")
 	require.NoError(t, svc.Create(ctx, m))
 	require.NoError(t, svc.AddReport(ctx, m.ID, &Report{Kind: ReportKindProgress, Summary: "halfway there"}))
 
@@ -89,9 +80,6 @@ func TestUnit_AddReport_OperatorFiredEventHasEmptyEdge(t *testing.T) {
 	require.Empty(t, evs[0].ParentSessionID, "an operator-fired mission carries no supervision edge")
 }
 
-// TestUnit_AddReport_PublishFailureDoesNotFailAddReport is the best-effort
-// invariant: a publish error never turns a successfully-stored report into a
-// failed AddReport, and the report remains durably readable.
 func TestUnit_AddReport_PublishFailureDoesNotFailAddReport(t *testing.T) {
 	ctx, db := setupMissionDB(t)
 	pub := &fakePublisher{err: fmt.Errorf("bus is down")}
@@ -108,11 +96,9 @@ func TestUnit_AddReport_PublishFailureDoesNotFailAddReport(t *testing.T) {
 	require.Equal(t, "found it", reports[0].Summary)
 }
 
-// TestUnit_AddReport_NoPublisherStillStores proves the publisher is optional: a
-// service built without one stores reports and simply publishes nothing.
 func TestUnit_AddReport_NoPublisherStillStores(t *testing.T) {
 	ctx, db := setupMissionDB(t)
-	svc := New(db) // no publisher
+	svc := New(db)
 
 	m := newMission("no bus wired")
 	require.NoError(t, svc.Create(ctx, m))

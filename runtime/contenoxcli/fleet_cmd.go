@@ -1,24 +1,3 @@
-// fleet_cmd.go is the `contenox fleet` command tree — the shell surface over
-// the fleet board (fleet-consolidation.md slice C3, "the shell is this
-// product's operating surface"). The verbs here operate on UNITS — list, show,
-// stop, cancel — the process-management half of the fleet. WORK (firing a
-// mission, reading its reports) lives under `contenox mission`, per the M4
-// noun-split: firing is `mission fire` even though it is served by
-// POST /fleet/dispatch, so `fleet` never grows a `dispatch` that would be a
-// second name for one act.
-//
-// EXECUTED access decision (C3): unlike `contenox state`/`session`, which open
-// the SQLite database directly, the fleet lives in `contenox serve`'s MEMORY —
-// a live Manager owning subprocesses — and is reachable only over HTTP. So this
-// tree is a thin client of serve's /api/fleet routes, built on the same
-// serveClient `contenox approvals` introduced (serveclient.go), NOT a second
-// access path. All lifecycle POLICY (the Enabled gate, teardown-on-failure,
-// cancel fan-out) stays in fleetservice behind those routes; these verbs decode
-// flags, call one route, and render — no orchestration is re-derived here.
-//
-// Output discipline, uniform with every other verb: stdout is data, diagnostics
-// are stderr, `--json` is the machine contract (the raw route response), and a
-// route error becomes a non-zero exit.
 package contenoxcli
 
 import (
@@ -115,8 +94,6 @@ exit status.`,
 }
 
 func init() {
-	// One set of --server/--token on the parent; every fleet subcommand inherits
-	// it — the same shared helper `contenox approvals` registers (serveclient.go).
 	addServeClientFlags(fleetCmd)
 
 	fleetListCmd.Flags().Bool("json", false, "Print the raw /fleet records as JSON instead of the board table")
@@ -129,11 +106,6 @@ func init() {
 	fleetCmd.AddCommand(fleetCancelCmd)
 }
 
-// ─── serveClient wrappers (fleet-shaped; the client itself is resource-agnostic) ───
-
-// listFleet fetches GET /fleet — the config+runtime join of every declared
-// agent annotated with its live instances. The result is always a non-nil
-// slice so an empty fleet renders as an empty board rather than a nil deref.
 func (c *serveClient) listFleet(ctx context.Context) ([]agentinstance.FleetEntry, error) {
 	var out []agentinstance.FleetEntry
 	if err := c.get(ctx, "/fleet", &out); err != nil {
@@ -145,9 +117,6 @@ func (c *serveClient) listFleet(ctx context.Context) ([]agentinstance.FleetEntry
 	return out, nil
 }
 
-// getInstance fetches GET /fleet/{id}. A 404 comes back as a *ServeError
-// carrying serve's own "instance not found" message, so an unknown id is
-// distinguishable without re-parsing.
 func (c *serveClient) getInstance(ctx context.Context, instanceID string) (*agentinstance.InstanceStatus, error) {
 	var out agentinstance.InstanceStatus
 	if err := c.get(ctx, "/fleet/"+url.PathEscape(instanceID), &out); err != nil {
@@ -156,27 +125,17 @@ func (c *serveClient) getInstance(ctx context.Context, instanceID string) (*agen
 	return &out, nil
 }
 
-// stopInstance issues DELETE /fleet/{id}. Idempotent by kernel contract (200,
-// not 404, for an unknown/already-stopped id).
 func (c *serveClient) stopInstance(ctx context.Context, instanceID string) error {
 	return c.delete(ctx, "/fleet/"+url.PathEscape(instanceID))
 }
 
-// cancelInstanceBody is the optional POST /fleet/{id}/cancel body — a tiny
-// duplicate of fleetapi.CancelRequest's one field (the same way approvals
-// duplicates its answer body) rather than importing the internal wire type. An
-// empty SessionID cancels every session on the unit.
 type cancelInstanceBody struct {
 	SessionID string `json:"sessionId,omitempty"`
 }
 
-// cancelInstance posts a cancel for instanceID; sessionID empty means "every
-// session on the unit". A 404 surfaces as a *ServeError.
 func (c *serveClient) cancelInstance(ctx context.Context, instanceID, sessionID string) error {
 	return c.post(ctx, "/fleet/"+url.PathEscape(instanceID)+"/cancel", cancelInstanceBody{SessionID: sessionID}, nil)
 }
-
-// ─── list ─────────────────────────────────────────────────────────────────
 
 func runFleetList(cmd *cobra.Command, args []string) error {
 	ctx := libtracker.WithNewRequestID(context.Background())
@@ -193,10 +152,6 @@ func runFleetList(cmd *cobra.Command, args []string) error {
 
 	asJSON, _ := cmd.Flags().GetBool("json")
 	if asJSON {
-		// The machine contract is the route's own shape (declared agents +
-		// instances), NOT the intent-joined table — a script wanting a unit's
-		// work reads `contenox mission list --json`, keeping the noun-split
-		// intact even in JSON.
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
 		return enc.Encode(entries)
@@ -207,21 +162,12 @@ func runFleetList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Join the mission intent per unit for the board's primary column. This is
-	// pure read-side PRESENTATION — a second GET and a map lookup, not
-	// orchestration: the fleet route carries no intent (it is the mission's, not
-	// the unit's), so the board reads it from the missions the units are bound
-	// to. A missions fetch that fails must not blank the board — the units are
-	// the load-bearing data — so its error only drops the intent column.
 	intentByInstance := fleetMissionIntents(ctx, client)
 
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "AGENT\tKIND\tSTATE\tINSTANCE\tSESSIONS\tVIEWERS\tINTENT")
 	for _, e := range entries {
 		if len(e.Instances) == 0 {
-			// A declared-but-idle agent: no unit, so no per-instance facts and no
-			// mission. Shown so the board reflects what CAN be fired, not only what
-			// is running.
 			fmt.Fprintf(w, "%s\t%s\tidle\t-\t-\t-\t-\n", e.AgentName, e.Kind)
 			continue
 		}
@@ -240,12 +186,6 @@ func runFleetList(cmd *cobra.Command, args []string) error {
 	return w.Flush()
 }
 
-// fleetMissionIntents builds an instance-id -> mission-intent map for the board's
-// INTENT column. It walks the mission list newest-first and keeps the FIRST
-// intent seen per instance, matching missionservice.GetByInstance's "newest
-// mission that claims the unit wins" resolution. Best-effort: any error (serve
-// old enough to lack /missions, a transient failure) returns an empty map, and
-// the board simply renders every intent as "-".
 func fleetMissionIntents(ctx context.Context, client *serveClient) map[string]string {
 	missions, err := client.listMissions(ctx, 0)
 	if err != nil {
@@ -262,8 +202,6 @@ func fleetMissionIntents(ctx context.Context, client *serveClient) map[string]st
 	}
 	return out
 }
-
-// ─── show ─────────────────────────────────────────────────────────────────
 
 func runFleetShow(cmd *cobra.Command, args []string) error {
 	ctx := libtracker.WithNewRequestID(context.Background())
@@ -308,8 +246,6 @@ func runFleetShow(cmd *cobra.Command, args []string) error {
 	return w.Flush()
 }
 
-// ─── stop ─────────────────────────────────────────────────────────────────
-
 func runFleetStop(cmd *cobra.Command, args []string) error {
 	ctx := libtracker.WithNewRequestID(context.Background())
 	instanceID := args[0]
@@ -325,8 +261,6 @@ func runFleetStop(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(cmd.OutOrStdout(), "Instance %s stopped.\n", instanceID)
 	return nil
 }
-
-// ─── cancel ───────────────────────────────────────────────────────────────
 
 func runFleetCancel(cmd *cobra.Command, args []string) error {
 	ctx := libtracker.WithNewRequestID(context.Background())

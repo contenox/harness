@@ -25,7 +25,7 @@ export default function AdvancedFields({ task, onChange }: AdvancedFieldsProps) 
 
   return (
     <div className="space-y-6">
-      {/* print */}
+
       <Collapsible title={t('chains.task_form.print_statement')} defaultExpanded={false}>
         <P className="text-text-muted mb-2 text-sm">{t('chains.task_form.print_statement_help')}</P>
         <Textarea
@@ -37,7 +37,7 @@ export default function AdvancedFields({ task, onChange }: AdvancedFieldsProps) 
         />
       </Collapsible>
 
-      {/* execution */}
+
       <Collapsible title={t('chains.task_form.execution_settings')} defaultExpanded={false}>
         <P className="text-text-muted mb-2 text-sm">
           {t('chains.task_form.execution_settings_help')}

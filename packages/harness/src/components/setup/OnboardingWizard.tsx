@@ -16,8 +16,6 @@ const TOTAL_STEPS = 4;
 
 function detectProvider(provider: string): ProviderChoice {
   const p = provider.trim().toLowerCase();
-  // Legacy local types (local/llama/openvino/modeld) have no provider any
-  // more; the closest supported local option is an Ollama server.
   if (p === 'local' || p === 'llama' || p === 'openvino' || p === 'modeld') return 'ollama';
   if (p === 'vertex') return 'vertex-google';
   if (isCloudProviderType(p)) return p;
@@ -36,7 +34,6 @@ export function OnboardingWizard({ data, onDismiss }: Props) {
   const [provider, setProvider] = useState<ProviderChoice>('ollama');
   const [initialized, setInitialized] = useState(false);
 
-  // Smart starting step — runs once after first data load
   useEffect(() => {
     if (!data || initialized) return;
     setInitialized(true);
@@ -44,11 +41,10 @@ export function OnboardingWizard({ data, onDismiss }: Props) {
       setProvider(detectProvider(data.defaultProvider));
     }
     if (data.backendCount > 0) {
-      setStep(3); // already has backends → health check
+      setStep(3);
     } else if (data.defaultProvider || data.defaultModel) {
-      setStep(1); // defaults configured but no backends → get a model
+      setStep(1);
     }
-    // else: step 0 — fresh start
   }, [data, initialized]);
 
   const refreshStatus = () => {
@@ -57,7 +53,6 @@ export function OnboardingWizard({ data, onDismiss }: Props) {
       .catch(() => queryClient.invalidateQueries({ queryKey: setupKeys.status() }));
   };
 
-  // Check if everything is healthy — offer finish shortcut
   const isHealthy = useMemo(() => {
     if (!data) return false;
     const hasErrors = (data.issues ?? []).some(i => i.severity === 'error');
@@ -66,7 +61,7 @@ export function OnboardingWizard({ data, onDismiss }: Props) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
+
       <div className="shrink-0 border-b px-6 py-4 flex items-center gap-4">
         <div className="flex-1 min-w-0">
           <H1 className="text-lg font-semibold leading-tight">{t('onboarding.title')}</H1>
@@ -94,7 +89,7 @@ export function OnboardingWizard({ data, onDismiss }: Props) {
         </Button>
       </div>
 
-      {/* Step content */}
+
       <div className="flex-1 min-h-0 overflow-auto p-6">
         {step === 0 && <StepChooseProvider value={provider} onChange={setProvider} />}
         {step === 1 && (
@@ -113,7 +108,7 @@ export function OnboardingWizard({ data, onDismiss }: Props) {
         )}
       </div>
 
-      {/* Footer navigation */}
+
       <div className="shrink-0 border-t px-6 py-4 flex items-center justify-between">
         <Button
           variant="secondary"

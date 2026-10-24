@@ -102,9 +102,6 @@ Examples:
 		rawHeaders, _ := flags.GetStringArray("header")
 		rawInjects, _ := flags.GetStringArray("inject")
 
-		// Positional shorthand: contenox mcp add <name> <url>
-		// If a second positional arg is provided, treat it as --url and default
-		// transport to "http" unless the user explicitly set --transport.
 		if len(args) == 2 {
 			if url == "" {
 				url = args[1]
@@ -241,7 +238,6 @@ injected-param values are masked while their keys remain visible.`,
 			return fmt.Errorf("mcp server %q not found: %w", name, err)
 		}
 
-		// Never print auth token values.
 		display := *srv
 		if display.AuthToken != "" {
 			display.AuthToken = "(set, value hidden)"

@@ -7,8 +7,6 @@ import { missionKeys } from '../../../lib/queryKeys';
 import type { MissionChangesData } from '../../../hooks/useMissionChanges';
 import MissionChangesTab from './MissionChangesTab';
 
-// The changes fetch is never exercised — every case seeds the query cache — but
-// mock the module so an unseeded path can never hit the network in a test.
 vi.mock('../../../lib/api', () => ({
   api: { getMissionChanges: vi.fn(async () => null), getMissionChangeDiff: vi.fn() },
 }));
@@ -52,9 +50,7 @@ describe('MissionChangesTab', () => {
     expect(html).toContain('Sorted by attention');
     expect(html).toContain('hot.ts');
     expect(html).toContain('README.md');
-    // DOI order preserved: the higher-score file renders first.
     expect(html.indexOf('hot.ts')).toBeLessThan(html.indexOf('README.md'));
-    // Rows are collapsed by default — no Monaco/diff in the initial paint.
     expect(html).not.toContain('Loading diff');
   });
 

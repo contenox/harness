@@ -9,7 +9,6 @@ type LocalHookCardProps = {
 export default function LocalHookCard({ hook }: LocalHookCardProps) {
   const { t } = useTranslation();
 
-  // Safe access to tools with fallback
   const tools = hook.tools || [];
 
   const sourceLabel = (() => {
@@ -22,7 +21,7 @@ export default function LocalHookCard({ hook }: LocalHookCardProps) {
   return (
     <Card variant="surface" className="h-full">
       <div className="flex h-full flex-col gap-3">
-        {/* Header */}
+
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <P className="font-semibold">{hook.name}</P>
@@ -33,7 +32,7 @@ export default function LocalHookCard({ hook }: LocalHookCardProps) {
           </Badge>
         </div>
 
-        {/* Tools */}
+
         <div className="flex-1">
           {hook.unavailableReason ? (
             <Panel variant="warning" className="text-sm">

@@ -7,16 +7,10 @@ export const ROLE_LABELS: Record<MembershipRole, string> = {
   tenant_user: 'Member',
 };
 
-/**
- * roleLabel maps a wire role to its label, passing through anything unknown rather than hiding it.
- */
 export function roleLabel(role: string): string {
   return ROLE_LABELS[role as MembershipRole] ?? role;
 }
 
-/**
- * Whether this role may invite and remove people — `auth.CanManageMembers`, which is owner or admin.
- */
 export function canManageMembers(role: string | undefined): boolean {
   return role === 'tenant_owner' || role === 'tenant_admin';
 }

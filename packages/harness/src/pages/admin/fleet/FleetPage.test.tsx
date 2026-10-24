@@ -14,23 +14,12 @@ vi.mock('../../../lib/api', () => ({
     stopInstance: vi.fn(async () => 'deleted'),
     cancelInstance: vi.fn(async () => 'cancelled'),
     listMissions: vi.fn(async () => []),
-    // The board now derives a "blocked" chip from the report feed
-    // (useInboxReports), a client-side fan-out of per-mission report fetches.
     listMissionReports: vi.fn(async () => []),
   },
 }));
 
 const { api } = await import('../../../lib/api');
 
-/**
- * `@testing-library/react` is not a dependency of `packages/beam` (see
- * PermissionCard.test.tsx). The board is rendered to static markup with the
- * fleet pre-seeded into the query cache, which is enough to pin WHAT the board
- * offers per row; the two behaviours a click would exercise — the Stop confirm
- * gate and the cancel call shape — are pinned against the exported
- * `createStopFlow` / `stopConfirmCopy` the page actually uses, so no simulated
- * DOM event is needed.
- */
 beforeAll(async () => {
   await i18n.changeLanguage('en');
 });
@@ -61,14 +50,6 @@ function mission(over: Partial<Mission> & { id: string; instanceId: string }): M
   };
 }
 
-/**
- * Renders the board with the fleet (and, optionally, the mission list — see
- * the M2 board-integration join) pre-seeded into the query cache. Wrapped in
- * a MemoryRouter: FleetPage now renders a `<Link>` to a matching mission's
- * detail page (react-router-dom throws when Link/useNavigate render with no
- * Router ancestor at all, regardless of whether that Link's branch is taken
- * in a given test).
- */
 function renderBoard(fleet: FleetEntry[], missions: Mission[] = []): string {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(fleetKeys.list(), fleet);
@@ -95,7 +76,6 @@ describe('FleetPage — session rows and per-instance actions', () => {
 
     expect(html).toContain('sess-a');
     expect(html).toContain('sess-b');
-    // One cancel affordance per session, addressed by session id.
     expect(html).toContain('Cancel the in-flight turn on session sess-a');
     expect(html).toContain('Cancel the in-flight turn on session sess-b');
   });
@@ -120,7 +100,6 @@ describe('FleetPage — session rows and per-instance actions', () => {
 
     expect(many).toContain('Cancel all turns');
     expect(one).not.toContain('Cancel all turns');
-    // A single session still gets its own cancel — nothing is lost.
     expect(one).toContain('Cancel the in-flight turn on session sess-a');
   });
 
@@ -246,7 +225,7 @@ describe('stopConfirmCopy — honest about which cost is being paid', () => {
 
     expect(live).toContain('conversation context');
     expect(live).toContain('no restart action');
-    expect(live).toContain('another tab'); // it cannot know whether a chat is open
+    expect(live).toContain('another tab');
     expect(dead).toContain('context is lost');
     expect(dead).toContain('no restart action');
     expect(dead).toContain('cannot tell');
@@ -355,7 +334,6 @@ describe('FleetPage — open session (adopt) + plan progress', () => {
       },
     ]);
     expect(html).not.toContain('Open session sess-a in chat');
-    // The session row (and its Cancel) still render — only adoption is gated.
     expect(html).toContain('Cancel the in-flight turn on session sess-a');
   });
 

@@ -10,8 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A provider's error body is a diagnostic, not a payload: the caller must read
-// the message and code the provider reported instead of the raw JSON.
 func TestUnit_ClassifyProviderError_SurfacesTheProviderMessageAndCode(t *testing.T) {
 	body := []byte(`{"error":{"message":"Invalid API key provided","type":"invalid_request_error","code":"invalid_api_key"}}`)
 	code, message := modelrepo.ProviderErrorDetail(body)
@@ -31,8 +29,6 @@ func TestUnit_ClassifyProviderError_SurfacesTheProviderMessageAndCode(t *testing
 	assert.True(t, errors.Is(err, modelrepo.ErrModelAccessDenied), "the classification sentinel must stay reachable")
 }
 
-// A caller that hands the classifier the raw body instead of reading the
-// envelope still gets the provider's message and code, not the blob.
 func TestUnit_ClassifyProviderError_ReadsAnEnvelopePassedAsTheMessage(t *testing.T) {
 	body := `{"error":{"message":"Rate limit reached for gpt-5","type":"requests","code":"rate_limit_exceeded"}}`
 	err := modelrepo.ClassifyProviderError(errors.New("OpenAI API returned non-200 status"), 429, "", body)
@@ -45,15 +41,12 @@ func TestUnit_ClassifyProviderError_ReadsAnEnvelopePassedAsTheMessage(t *testing
 	assert.ErrorIs(t, err, modelrepo.ErrRateLimited)
 }
 
-// A body that carries no envelope leaves the provider's text as the message;
-// nothing is invented for it.
 func TestUnit_ProviderErrorDetail_KeepsAnUnenvelopedBodyVerbatim(t *testing.T) {
 	code, message := modelrepo.ProviderErrorDetail([]byte("  upstream is unwell  "))
 	assert.Empty(t, code)
 	assert.Equal(t, "upstream is unwell", message)
 }
 
-// The dialects type the code member as a string, a number or null.
 func TestUnit_ProviderErrorDetail_AcceptsEveryCodeShape(t *testing.T) {
 	for _, tc := range []struct {
 		body string
@@ -96,7 +89,6 @@ func TestUnit_ClassifyProviderError_KeepsTheClassificationForRetry(t *testing.T)
 	}
 }
 
-// An unclassified failure is still the provider's error, so it is typed too.
 func TestUnit_ClassifyProviderError_TypesAnUnclassifiedFailure(t *testing.T) {
 	err := modelrepo.ClassifyProviderError(errors.New("HTTP request failed"), 500, "", "internal error")
 	var provider *modelrepo.ProviderError
@@ -110,8 +102,6 @@ func TestUnit_ClassifyProviderError_NilStaysNil(t *testing.T) {
 	assert.NoError(t, modelrepo.ClassifyProviderError(nil, 500, "", "unused"))
 }
 
-// A truncated stream is a connection failure a fresh attempt can clear, and the
-// seam reports it as such rather than leaving the retry classifier to read text.
 func TestUnit_IsRetryableStreamFailure_NamesTruncation(t *testing.T) {
 	assert.True(t, modelrepo.IsRetryableStreamFailure(modelrepo.ErrStreamTruncated))
 	wrapped := fmt.Errorf("chat stream failed: %w", modelrepo.ErrStreamTruncated)
@@ -120,8 +110,6 @@ func TestUnit_IsRetryableStreamFailure_NamesTruncation(t *testing.T) {
 	assert.False(t, modelrepo.IsRetryableStreamFailure(nil))
 }
 
-// The provider diagnostics stay reachable through a truncation, because the
-// classification sentinel wraps the typed error rather than replacing it.
 func TestUnit_ProviderError_StaysReachableThroughTruncation(t *testing.T) {
 	classified := modelrepo.ClassifyProviderError(errors.New("body ended"), 503, "server_error", "upstream closed")
 	truncated := fmt.Errorf("%w: %w", modelrepo.ErrStreamTruncated, classified)

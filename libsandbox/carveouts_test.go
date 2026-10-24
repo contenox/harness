@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Deny-default: an empty reader allows nothing, and that is not an error.
 func TestUnit_LoadCarveouts_DenyDefaultOnEmptyReader(t *testing.T) {
 	fs, net, err := libsandbox.LoadCarveouts(strings.NewReader(""))
 
@@ -17,7 +16,6 @@ func TestUnit_LoadCarveouts_DenyDefaultOnEmptyReader(t *testing.T) {
 	require.Empty(t, net)
 }
 
-// An empty JSON object (and a "null" document) likewise allows nothing.
 func TestUnit_LoadCarveouts_DenyDefaultOnEmptyObject(t *testing.T) {
 	for _, doc := range []string{`{}`, `null`} {
 		fs, net, err := libsandbox.LoadCarveouts(strings.NewReader(doc))
@@ -27,8 +25,6 @@ func TestUnit_LoadCarveouts_DenyDefaultOnEmptyObject(t *testing.T) {
 	}
 }
 
-// A well-formed necessity list decodes into the exact carve-outs, mode and
-// justification preserved.
 func TestUnit_LoadCarveouts_AcceptsValidDoc(t *testing.T) {
 	doc := `{
 	  "filesystem": [ {"path":"~/.claude","mode":"ro","needs":"agent auth/config to start"} ],
@@ -46,8 +42,6 @@ func TestUnit_LoadCarveouts_AcceptsValidDoc(t *testing.T) {
 	}, net)
 }
 
-// An unknown field (a typo, a smuggled key) fails loudly rather than silently
-// changing a hole.
 func TestUnit_LoadCarveouts_RejectsUnknownField(t *testing.T) {
 	_, _, err := libsandbox.LoadCarveouts(strings.NewReader(
 		`{"filesystem":[{"path":"~/.claude","mode":"ro","needs":"x","extra":"nope"}]}`))
@@ -62,7 +56,6 @@ func TestUnit_LoadCarveouts_RejectsBadMode(t *testing.T) {
 	require.ErrorIs(t, err, libsandbox.ErrInvalidCarveout)
 }
 
-// A hole with no justification is not admitted.
 func TestUnit_LoadCarveouts_RejectsEmptyNeeds(t *testing.T) {
 	_, _, err := libsandbox.LoadCarveouts(strings.NewReader(
 		`{"filesystem":[{"path":"/x","mode":"ro","needs":""}]}`))
@@ -91,7 +84,6 @@ func TestUnit_LoadCarveouts_RejectsEmptyHost(t *testing.T) {
 	require.ErrorIs(t, err, libsandbox.ErrInvalidCarveout)
 }
 
-// Malformed JSON is reported as an invalid carve-out, not a bare decode error.
 func TestUnit_LoadCarveouts_RejectsMalformedJSON(t *testing.T) {
 	_, _, err := libsandbox.LoadCarveouts(strings.NewReader(`{"filesystem": [`))
 

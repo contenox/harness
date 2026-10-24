@@ -7,9 +7,6 @@ const INSTALL_COMMAND = 'curl -fsSL https://contenox.com/install.sh | sh';
 
 const QUICKSTART_URL = 'https://contenox.com/docs/guide/quickstart/';
 
-/**
- * What the Hosts screen shows a fresh account instead of an empty list: the whole path from nothing installed to a paired machine, on one card.
- */
 export function FirstMachineCard() {
   return (
     <Card variant="filled" className="flex flex-col gap-5">
@@ -22,10 +19,7 @@ export function FirstMachineCard() {
 
       <Step number={1} title="Install the runtime on the machine you want to reach">
         <div className="flex flex-col gap-2">
-          {/* Wrapped, not scrolled: this line is read off a phone and typed
-              into a machine — the same brief as the pairing key above — and a
-              command clipped mid-URL transcribes as a command that does
-              nothing. */}
+
           <CodeBlock className="bg-surface-200 dark:bg-dark-surface-300 rounded-lg px-3 py-2 whitespace-pre-wrap break-all">
             {INSTALL_COMMAND}
           </CodeBlock>

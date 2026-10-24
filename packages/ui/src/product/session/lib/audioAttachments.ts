@@ -56,16 +56,10 @@ export const AUDIO_ACCEPT_ATTRIBUTE = [
   ...Object.keys(AUDIO_EXTENSION_TYPES).map(ext => `.${ext}`),
 ].join(',');
 
-/**
- * Whether the session's agent advertises audio prompt support (`initialize` → `agentCapabilities.promptCapabilities.audio`).
- */
 export function canAttachAudio(capabilities: PromptCapabilities | undefined): boolean {
   return capabilities?.audio === true;
 }
 
-/**
- * The allowlisted mime type a picked file will travel as (canonical five, alias-normalised, extension fallback for an empty type), or null = refuse before reading the file.
- */
 export function attachableAudioType(file: { type: string; name: string }): string | null {
   const declared = file.type.toLowerCase().split(';')[0].trim();
   if (ATTACHABLE_AUDIO_TYPE_SET.has(declared)) return declared;
@@ -78,17 +72,11 @@ export function attachableAudioType(file: { type: string; name: string }): strin
   return null;
 }
 
-/**
- * One pending composer attachment: the wire payload plus client-local `id` (chip key, never leaves the browser) and `name`.
- */
 export interface PendingAudioAttachment extends AudioPart {
   id: string;
   name: string;
 }
 
-/**
- * Why a clip could not become an attachment — the UI maps each reason to a sentence.
- */
 export type AudioAttachmentErrorReason = 'unsupported' | 'too_large' | 'process_failed';
 
 export class AudioAttachmentError extends Error {
@@ -101,9 +89,6 @@ export class AudioAttachmentError extends Error {
 
 const AUDIO_BLOCK_OVERHEAD_BYTES = 96;
 
-/**
- * Base64 a NEW clip may add given everything already staged.
- */
 export function remainingAudioBudget(staged: readonly AudioPart[]): number {
   let used = 0;
   for (const part of staged) used += part.data.length + AUDIO_BLOCK_OVERHEAD_BYTES;
@@ -126,19 +111,10 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 export interface PrepareAudioOptions {
-  /**
-   * Base64 length this attachment may not exceed.
-   */
   budgetBytes?: number;
-  /**
-   * File → `data:` URL seam; defaults to the browser's FileReader.
-   */
   readAsDataUrl?: (file: File) => Promise<string>;
 }
 
-/**
- * A user-supplied audio file as a pending attachment the socket can carry, or an {@link AudioAttachmentError}: `unsupported` (not an allowlisted kind) and `too_large` both refuse BEFORE the file is read, `process_failed` for an unreadable file.
- */
 export async function prepareAudioAttachment(
   file: File,
   options: PrepareAudioOptions = {},

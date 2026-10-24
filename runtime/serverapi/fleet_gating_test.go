@@ -16,8 +16,6 @@ import (
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
-// fleetGatingMux builds the product mux the way serve does, with or without the
-// Fleet service dependency.
 func fleetGatingMux(t *testing.T, withFleet bool) *http.ServeMux {
 	t.Helper()
 	ctx := context.Background()
@@ -46,8 +44,6 @@ func fleetGatingMux(t *testing.T, withFleet bool) *http.ServeMux {
 	return mux
 }
 
-// TestServe_FleetRoutesGatedOnInstances proves /fleet is registered only when
-// serve passes a Fleet service, mirroring the other nil-gated route groups.
 func TestServe_FleetRoutesGatedOnInstances(t *testing.T) {
 	withFleet := fleetGatingMux(t, true)
 	rr := httptest.NewRecorder()

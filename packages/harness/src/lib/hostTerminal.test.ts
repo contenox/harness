@@ -35,7 +35,6 @@ describe('buildTerminalWsUrl', () => {
   });
 });
 
-/** Minimal fakes: a terminal capturing writes and exposing its onData sink, and a socket recording sends. */
 function fakes() {
   const writes: Array<string | Uint8Array> = [];
   let dataHandler: ((d: string) => void) | undefined;
@@ -96,13 +95,13 @@ describe('createHostTerminalBridge — read-only gating and take-over flip', () 
     const f = fakes();
     const bridge = createHostTerminalBridge(f.terminal, f.socket);
 
-    bridge.setReadOnly(false); // "Take over shell"
+    bridge.setReadOnly(false);
     f.typeInput('whoami\r');
     expect(f.sends).toEqual(['whoami\r']);
 
-    bridge.setReadOnly(true); // return to watching
+    bridge.setReadOnly(true);
     f.typeInput('rm -rf /\r');
-    expect(f.sends).toEqual(['whoami\r']); // nothing new
+    expect(f.sends).toEqual(['whoami\r']);
   });
 
   it('honours an explicit interactive start option', () => {
@@ -117,7 +116,7 @@ describe('createHostTerminalBridge — output frames in', () => {
   it('writes a binary (ArrayBuffer) PTY frame as bytes to the terminal', () => {
     const f = fakes();
     createHostTerminalBridge(f.terminal, f.socket);
-    const bytes = new Uint8Array([104, 105]); // "hi"
+    const bytes = new Uint8Array([104, 105]);
     f.emitMessage(bytes.buffer);
     expect(f.writes).toHaveLength(1);
     expect(Array.from(f.writes[0] as Uint8Array)).toEqual([104, 105]);

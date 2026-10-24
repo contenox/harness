@@ -10,24 +10,16 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// ProviderKeyPrefix begins the key of every connection credential record; BackendCredentialKey completes it.
 const ProviderKeyPrefix = "cloud-provider:"
 
 const (
-	// CredentialStored is the source whose literal key lives in the record the operator saved.
-	CredentialStored = "stored"
-	// CredentialEnvironment is the source whose record names the variable that holds the key; the key itself is never stored.
+	CredentialStored      = "stored"
 	CredentialEnvironment = "environment"
-	// CredentialAmbient is the source the cloud SDK resolves on its own, such as the AWS chain or Google application default credentials.
-	CredentialAmbient = "ambient"
-	// CredentialNone is the source of an endpoint that takes no credential.
-	CredentialNone = "none"
-	// CredentialDevice is the source whose credential comes from a provider sign-in rather than from the record.
-	CredentialDevice = "device"
+	CredentialAmbient     = "ambient"
+	CredentialNone        = "none"
+	CredentialDevice      = "device"
 )
 
-// ProviderConfig is one connection's credential record, stored under BackendCredentialKey.
-// CredentialSource names where the connection's credential comes from; APIKey is read only for CredentialStored and APIKeyEnv only for CredentialEnvironment.
 type ProviderConfig struct {
 	CredentialSource string
 	APIKey           string
@@ -35,17 +27,14 @@ type ProviderConfig struct {
 	Type             string
 }
 
-// EnvironmentUnsetError reports an environment-sourced credential whose variable holds no value.
 type EnvironmentUnsetError struct {
 	Variable string
 }
 
-// Error names the variable a connection reads its credential from.
 func (e *EnvironmentUnsetError) Error() string {
 	return fmt.Sprintf("environment variable %s is unset or empty", e.Variable)
 }
 
-// Source is the credential source the record names. A record written without an explicit source is read by its fields, and an environment reference outranks a literal beside it, so a stale literal never overrides a variable the operator chose to reference.
 func (pc ProviderConfig) Source(backendType string) string {
 	switch {
 	case pc.CredentialSource != "":
@@ -62,8 +51,6 @@ func (pc ProviderConfig) Source(backendType string) string {
 	return CredentialNone
 }
 
-// Credential is the credential a connection's requests carry: the stored literal for CredentialStored, the named variable's current value for CredentialEnvironment, and nothing for the sources that carry none in the record.
-// A literal beside an environment reference is never used, and an unset variable is an *EnvironmentUnsetError rather than an empty credential.
 func (pc ProviderConfig) Credential(backendType string) (string, error) {
 	switch source := pc.Source(backendType); source {
 	case CredentialStored:
@@ -88,7 +75,6 @@ func (pc ProviderConfig) Credential(backendType string) (string, error) {
 	}
 }
 
-// MarshalJSON writes the record as stored: it is the product's credential path, and HTTP provider APIs return sanitized views.
 func (pc ProviderConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		CredentialSource string `json:"CredentialSource,omitempty"`

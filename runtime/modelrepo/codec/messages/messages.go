@@ -1,6 +1,3 @@
-// Package messages is a transport-agnostic codec for Anthropic's Messages API
-// wire format. It maps between neutral modelrepo types and Anthropic's JSON
-// shape and does no I/O.
 package messages
 
 import (
@@ -13,11 +10,8 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// DefaultMaxTokens is used when the caller does not set ChatConfig.MaxTokens.
 const DefaultMaxTokens = 4096
 
-// Request is the Anthropic Messages request body. System is a plain string, or
-// a []wireBlock of text blocks when a cache breakpoint is placed on it.
 type Request struct {
 	Model         string          `json:"model,omitempty"`
 	MaxTokens     int             `json:"max_tokens"`
@@ -33,27 +27,19 @@ type Request struct {
 	Stream        bool            `json:"stream,omitempty"`
 }
 
-// ToolChoice is the Anthropic tool-selection object. Type is auto, any, tool or
-// none; Name is set only for type tool.
 type ToolChoice struct {
-	Type string `json:"type"`
-	Name string `json:"name,omitempty"`
-	// DisableParallelToolUse refuses more than one tool call in one turn.
-	DisableParallelToolUse bool `json:"disable_parallel_tool_use,omitempty"`
+	Type                   string `json:"type"`
+	Name                   string `json:"name,omitempty"`
+	DisableParallelToolUse bool   `json:"disable_parallel_tool_use,omitempty"`
 }
 
-// CacheControl marks a cache breakpoint on a content block or tool definition:
-// everything rendered up to and including the marked element is cached.
 type CacheControl struct {
 	Type string `json:"type"`
 	TTL  string `json:"ttl,omitempty"`
 }
 
-// MaxCacheBreakpoints is Anthropic's per-request limit on cache_control breakpoints.
 const MaxCacheBreakpoints = 4
 
-// ThinkingBlocksMetaKey is the ToolCall.ProviderMeta key under which the
-// assistant turn's thinking blocks round-trip, as the JSON array of wire blocks.
 const ThinkingBlocksMetaKey = "anthropic_thinking_blocks"
 
 type ThinkingConfig struct {
@@ -62,18 +48,13 @@ type ThinkingConfig struct {
 	Display      string `json:"display,omitempty"`
 }
 
-// MinThinkingBudget is the smallest budget_tokens the API accepts; a budget
-// below it is rejected, and so is one that does not leave room under max_tokens.
 const MinThinkingBudget = 1024
 
-// OutputConfig carries the request's output controls: the reasoning effort and,
-// for a structured-output request, the schema the response must satisfy.
 type OutputConfig struct {
 	Effort string        `json:"effort,omitempty"`
 	Format *OutputFormat `json:"format,omitempty"`
 }
 
-// OutputFormat is the JSON-schema output constraint of a request.
 type OutputFormat struct {
 	Type   string `json:"type"`
 	Schema any    `json:"schema"`
@@ -85,25 +66,19 @@ type wireMessage struct {
 }
 
 type wireBlock struct {
-	Type string `json:"type"`
-	// text
-	Text string `json:"text,omitempty"`
-	// image
-	Source *wireImageSource `json:"source,omitempty"`
-	// tool_use
-	ID    string          `json:"id,omitempty"`
-	Name  string          `json:"name,omitempty"`
-	Input json.RawMessage `json:"input,omitempty"`
-	// tool_result; Content is a string or an array of blocks
-	ToolUseID string `json:"tool_use_id,omitempty"`
-	Content   any    `json:"content,omitempty"`
-	IsError   bool   `json:"is_error,omitempty"`
-	// thinking
-	Thinking  string `json:"thinking,omitempty"`
-	Signature string `json:"signature,omitempty"`
-	// redacted_thinking
-	Data         string        `json:"data,omitempty"`
-	CacheControl *CacheControl `json:"cache_control,omitempty"`
+	Type         string           `json:"type"`
+	Text         string           `json:"text,omitempty"`
+	Source       *wireImageSource `json:"source,omitempty"`
+	ID           string           `json:"id,omitempty"`
+	Name         string           `json:"name,omitempty"`
+	Input        json.RawMessage  `json:"input,omitempty"`
+	ToolUseID    string           `json:"tool_use_id,omitempty"`
+	Content      any              `json:"content,omitempty"`
+	IsError      bool             `json:"is_error,omitempty"`
+	Thinking     string           `json:"thinking,omitempty"`
+	Signature    string           `json:"signature,omitempty"`
+	Data         string           `json:"data,omitempty"`
+	CacheControl *CacheControl    `json:"cache_control,omitempty"`
 }
 
 type wireImageSource struct {
@@ -119,10 +94,6 @@ type wireTool struct {
 	CacheControl *CacheControl `json:"cache_control,omitempty"`
 }
 
-// Build converts neutral messages and config into an Anthropic Messages Request.
-// The transport must still set Model. A request the vendor would reject — an
-// image whose media type it does not accept — is refused here, where the
-// offending message is still addressable.
 func Build(messages []modelrepo.Message, cfg *modelrepo.ChatConfig) (Request, map[string]string, error) {
 	req := Request{MaxTokens: DefaultMaxTokens}
 	nameMap := make(map[string]string)
@@ -168,7 +139,6 @@ func Build(messages []modelrepo.Message, cfg *modelrepo.ChatConfig) (Request, ma
 	}
 
 	var systemParts []string
-	// srcIdx[j] is the index into the neutral messages slice that produced wire message j.
 	var srcIdx []int
 	for i, m := range messages {
 		before := len(req.Messages)
@@ -188,7 +158,6 @@ func Build(messages []modelrepo.Message, cfg *modelrepo.ChatConfig) (Request, ma
 			})
 		case "assistant", "model":
 			var blocks []wireBlock
-			// Anthropic requires signed thinking blocks to precede tool_use blocks.
 			blocks = append(blocks, thinkingBlocksFromToolCalls(m.ToolCalls)...)
 			if m.Content != "" {
 				blocks = append(blocks, wireBlock{Type: "text", Text: m.Content})
@@ -248,7 +217,6 @@ func Build(messages []modelrepo.Message, cfg *modelrepo.ChatConfig) (Request, ma
 	return req, nameMap, nil
 }
 
-// ImageMediaTypes are the media types the API accepts on a base64 image block.
 func ImageMediaTypes() []string {
 	return []string{"image/jpeg", "image/png", "image/gif", "image/webp"}
 }
@@ -262,8 +230,6 @@ func acceptsImageMediaType(mediaType string) bool {
 	return false
 }
 
-// imageBlock renders one image attachment as the vendor's base64 image block,
-// refusing a media type the API does not accept.
 func imageBlock(img modelrepo.ImagePart) (wireBlock, error) {
 	if !acceptsImageMediaType(img.MimeType) {
 		return wireBlock{}, fmt.Errorf("messages: image media type %q is not accepted (accepted: %s)",
@@ -279,9 +245,6 @@ func imageBlock(img modelrepo.ImagePart) (wireBlock, error) {
 	}, nil
 }
 
-// toolResultBlock renders one tool message as the vendor's tool_result block:
-// the content member takes a string or an array of blocks, and is_error carries
-// a failed call so the model can tell it from an empty success.
 func toolResultBlock(m modelrepo.Message) (wireBlock, error) {
 	block := wireBlock{
 		Type:      "tool_result",
@@ -307,9 +270,6 @@ func toolResultBlock(m modelrepo.Message) (wireBlock, error) {
 	return block, nil
 }
 
-// wireOutputFormat renders a structured-output request as the vendor's
-// output_config.format, which is in general availability and needs no beta
-// header. Effort lives in the same object and is set by the transport.
 func wireOutputFormat(cfg *modelrepo.ChatConfig) *OutputConfig {
 	if cfg == nil || cfg.Format == nil || cfg.Format.Mode != modelrepo.ResponseFormatJSONSchema {
 		return nil
@@ -317,9 +277,6 @@ func wireOutputFormat(cfg *modelrepo.ChatConfig) *OutputConfig {
 	return &OutputConfig{Format: &OutputFormat{Type: "json_schema", Schema: cfg.Format.Schema}}
 }
 
-// wireToolChoice renders the neutral tool-selection policy in Anthropic's
-// vocabulary: required is any, and a named tool is type tool. Parallel calls
-// are refused only when the neutral request disables them.
 func wireToolChoice(cfg *modelrepo.ChatConfig) *ToolChoice {
 	if cfg == nil {
 		return nil
@@ -347,9 +304,6 @@ func wireToolChoice(cfg *modelrepo.ChatConfig) *ToolChoice {
 	return choice
 }
 
-// wireInputSchema renders a tool's parameter schema. A tool declared without
-// one still needs the member: several dialects reject a tool that omits it, and
-// an empty object schema is the schema of a parameterless function.
 func wireInputSchema(parameters any) any {
 	if parameters == nil {
 		return map[string]any{"type": "object"}
@@ -411,8 +365,6 @@ func thinkingBlocksFromToolCalls(toolCalls []modelrepo.ToolCall) []wireBlock {
 	return nil
 }
 
-// StripThinkingBlocks removes replayed thinking blocks from every message, and
-// any message left empty. Transports call it when the request does not enable thinking.
 func StripThinkingBlocks(req *Request) {
 	if req == nil {
 		return
@@ -435,8 +387,6 @@ func StripThinkingBlocks(req *Request) {
 	req.Messages = msgs
 }
 
-// imageContentBlocks renders a message's text and image attachments as the
-// vendor's content blocks, refusing a media type it does not accept.
 func imageContentBlocks(m modelrepo.Message) ([]wireBlock, error) {
 	blocks := make([]wireBlock, 0, len(m.Images)+1)
 	if m.Content != "" {
@@ -452,7 +402,6 @@ func imageContentBlocks(m modelrepo.Message) ([]wireBlock, error) {
 	return blocks, nil
 }
 
-// Response is the non-streaming Anthropic Messages response body.
 type Response struct {
 	Role         string          `json:"role"`
 	Content      []responseBlock `json:"content"`
@@ -462,16 +411,12 @@ type Response struct {
 	Usage        *wireUsage      `json:"usage"`
 }
 
-// stopDetails explains a refusal; it is non-null only for stop_reason refusal,
-// and both its members are null for a refusal the vendor did not classify.
 type stopDetails struct {
 	Type        string `json:"type"`
 	Category    string `json:"category"`
 	Explanation string `json:"explanation"`
 }
 
-// RefusalReason renders a refusal's detail for a reader; an unclassified
-// refusal is the vendor's type alone.
 func (d *stopDetails) RefusalReason() string {
 	if d == nil {
 		return ""
@@ -487,16 +432,12 @@ func (d *stopDetails) RefusalReason() string {
 }
 
 type wireUsage struct {
-	InputTokens              int `json:"input_tokens"`
-	OutputTokens             int `json:"output_tokens"`
-	CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
-	CacheReadInputTokens     int `json:"cache_read_input_tokens"`
-	// CacheCreation splits the cache-write tokens by the TTL they were written
-	// for; a 1-hour write costs twice the base input rate.
-	CacheCreation *cacheCreationUsage `json:"cache_creation"`
-	// OutputTokensDetails reports how many billed output tokens were internal
-	// reasoning.
-	OutputTokensDetails *outputTokenDetails `json:"output_tokens_details"`
+	InputTokens              int                 `json:"input_tokens"`
+	OutputTokens             int                 `json:"output_tokens"`
+	CacheCreationInputTokens int                 `json:"cache_creation_input_tokens"`
+	CacheReadInputTokens     int                 `json:"cache_read_input_tokens"`
+	CacheCreation            *cacheCreationUsage `json:"cache_creation"`
+	OutputTokensDetails      *outputTokenDetails `json:"output_tokens_details"`
 }
 
 type cacheCreationUsage struct {
@@ -508,11 +449,6 @@ type outputTokenDetails struct {
 	ThinkingTokens int `json:"thinking_tokens"`
 }
 
-// NormalizeUsage maps the vendor's token accounting onto the neutral counters.
-// PromptTokens counts the whole prompt and CacheWriteTokens every token written
-// to cache. The vendor's TTL breakdown of that write is not a separate counter:
-// the total is the sum of its parts, and a rate card prices the one-hour write
-// from the total it already receives.
 func NormalizeUsage(u wireUsage) modelrepo.TokenUsage {
 	written := u.CacheCreationInputTokens
 	if u.CacheCreation != nil {
@@ -545,10 +481,6 @@ type responseBlock struct {
 	Data      string          `json:"data"`
 }
 
-// DecodeResponse parses a non-streaming response into a neutral ChatResult. A
-// refusal is the vendor's outcome and not an error, so it returns ErrRefused
-// carrying the vendor's own explanation and discards the partial turn, which the
-// refusal policy says to treat as incomplete.
 func DecodeResponse(raw []byte, nameMap map[string]string) (modelrepo.ChatResult, error) {
 	var resp Response
 	if err := json.Unmarshal(raw, &resp); err != nil {
@@ -607,8 +539,6 @@ func DecodeResponse(raw []byte, nameMap map[string]string) (modelrepo.ChatResult
 	}, nil
 }
 
-// category reports the vendor's refusal category, which is null for a refusal
-// that maps to no named category.
 func (d *stopDetails) category() string {
 	if d == nil {
 		return ""
@@ -666,8 +596,6 @@ type streamEvent struct {
 	} `json:"error"`
 }
 
-// StreamDecoder translates streamed Messages SSE events into raw-delta parcels.
-// It does not assemble tool calls; that is left to modelrepo.StreamAssembler.
 type StreamDecoder struct {
 	nameMap      map[string]string
 	stopReason   string
@@ -686,8 +614,6 @@ func NewStreamDecoder(nameMap map[string]string) *StreamDecoder {
 	return &StreamDecoder{nameMap: nameMap}
 }
 
-// DecodeLine parses one SSE data payload and returns the parcels it carries, in
-// wire order. An Anthropic error event returns an error.
 func (d *StreamDecoder) DecodeLine(payload []byte) ([]*modelrepo.StreamParcel, error) {
 	var ev streamEvent
 	if err := json.Unmarshal(payload, &ev); err != nil {
@@ -770,7 +696,6 @@ func (d *StreamDecoder) DecodeLine(payload []byte) ([]*modelrepo.StreamParcel, e
 		d.terminated = true
 		return nil, nil
 	default:
-		// ping
 		return nil, nil
 	}
 }
@@ -805,16 +730,11 @@ func (d *StreamDecoder) recordUsage(u wireUsage) {
 	if u.CacheReadInputTokens != 0 {
 		d.usage.CacheReadInputTokens = u.CacheReadInputTokens
 	}
-	// The output-token breakdown arrives on the final message_delta event only.
 	if u.OutputTokensDetails != nil {
 		d.usage.OutputTokensDetails = u.OutputTokensDetails
 	}
 }
 
-// Finish returns the terminal parcel: the stop reason, the refused detail when
-// the vendor declined, accumulated usage, and whether message_stop was observed.
-// A stream that ended before message_stop is truncated, and the assembler
-// reports that instead of a completed turn.
 func (d *StreamDecoder) Finish() *modelrepo.StreamParcel {
 	term := &modelrepo.StreamTerminal{
 		FinishReason: d.stopReason,

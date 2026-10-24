@@ -30,7 +30,6 @@ func init() {
 func (p *catalogProvider) Type() string { return "bedrock" }
 
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	// Catalog listing is a non-streaming call: bound it end-to-end.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 
@@ -46,8 +45,6 @@ func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedM
 		return nil, fmt.Errorf("failed to list foundation models: %w", err)
 	}
 
-	// Newer models are invocable only through a cross-region inference profile.
-	// Listing is best-effort: without permission, profile-only models are omitted.
 	profileIDs, _ := listInferenceProfileIDs(ctx, client)
 
 	var models []modelrepo.ObservedModel
@@ -101,7 +98,6 @@ func resolveInvocableModelID(modelID string, inferenceTypes []types.InferenceTyp
 	if len(matches) == 0 {
 		return "", false
 	}
-	// Non-global profiles first, then stable order.
 	sort.SliceStable(matches, func(i, j int) bool {
 		gi := strings.HasPrefix(matches[i], "global.")
 		gj := strings.HasPrefix(matches[j], "global.")
@@ -110,13 +106,6 @@ func resolveInvocableModelID(modelID string, inferenceTypes []types.InferenceTyp
 	return matches[0], true
 }
 
-// observedFromSummary restates one vendor model summary as the model the runtime
-// routes to. Every capability below is a member of that summary — its input and
-// output modalities and the vendor's own streaming flag — because a model the
-// vendor does not describe is not given a capability it never declared. The
-// vendor publishes neither reasoning support nor the prompt-cache checkpoint
-// contract for a foundation model, so neither is derived here: both are
-// capability declarations an operator states on the model.
 func observedFromSummary(summary types.FoundationModelSummary, invokeID string) modelrepo.ObservedModel {
 	inputs := bedrockModalities(summary.InputModalities)
 	outputs := bedrockModalities(summary.OutputModalities)

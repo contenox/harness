@@ -1,10 +1,10 @@
 package acpsvc
 
 import (
-	"github.com/contenox/harness/runtime/homedir"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/contenox/harness/runtime/homedir"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,9 +17,6 @@ import (
 
 const compactDefaultKeep = 8
 
-// handleClear wipes the session's conversation history in place. The ACP
-// session keeps its identity (and the client keeps its window); only the
-// stored messages are removed.
 func (t *Transport) handleClear(ctx context.Context, _ libacp.SessionID, sess *sessionEntry) (string, error) {
 	mgr := chatservice.NewManager(sess.WorkspaceID)
 
@@ -37,9 +34,6 @@ func (t *Transport) handleClear(ctx context.Context, _ libacp.SessionID, sess *s
 	return "Conversation history cleared.", nil
 }
 
-// handleCompact summarizes older history into a single message, reclaiming
-// context while keeping the last `keep` messages verbatim. It reuses the same
-// chatservice.CompactHistory core the CLI's `session fork --summary` uses.
 func (t *Transport) handleCompact(ctx context.Context, _ libacp.SessionID, sess *sessionEntry, args string) (string, error) {
 	keep := compactDefaultKeep
 	if s := strings.TrimSpace(args); s != "" {
@@ -73,7 +67,6 @@ func (t *Transport) handleCompact(ctx context.Context, _ libacp.SessionID, sess 
 		return "", err
 	}
 
-	// Replace the stored history with the compacted set in place.
 	exec, commit, release, err := t.deps.DB.WithTransaction(ctx)
 	if err != nil {
 		return "", fmt.Errorf("start transaction: %w", err)
@@ -92,9 +85,6 @@ func (t *Transport) handleCompact(ctx context.Context, _ libacp.SessionID, sess 
 	return fmt.Sprintf("Compacted %d messages to %d (kept last %d).", len(history), len(compacted), keep), nil
 }
 
-// loadCompactChain reads chain-compact.json from the active .contenox directory,
-// falling back to ~/.contenox-harness. It does not import the CLI's resolver (that would
-// create an import cycle); this is a plain file lookup, not duplicated logic.
 func (t *Transport) loadCompactChain() (*taskengine.TaskChainDefinition, error) {
 	const name = "chain-compact.json"
 	var candidates []string

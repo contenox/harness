@@ -89,7 +89,6 @@ func chatConfigFromArgs(args []modelrepo.ChatArgument) *modelrepo.ChatConfig {
 	return cfg
 }
 
-// orChatClient implements modelrepo.LLMChatClient.
 type orChatClient struct{ orClient }
 
 func (c *orChatClient) Chat(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (modelrepo.ChatResult, error) {
@@ -113,7 +112,6 @@ func (c *orChatClient) Chat(ctx context.Context, messages []modelrepo.Message, a
 	return res, nil
 }
 
-// orStreamClient implements modelrepo.LLMStreamClient.
 type orStreamClient struct{ orClient }
 
 func (c *orStreamClient) Stream(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (<-chan *modelrepo.StreamParcel, error) {
@@ -186,7 +184,6 @@ func (c *orStreamClient) Stream(ctx context.Context, messages []modelrepo.Messag
 	return parcels, nil
 }
 
-// orPromptClient implements modelrepo.LLMPromptExecClient.
 type orPromptClient struct{ orClient }
 
 func (c *orPromptClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string, _ ...modelrepo.PromptArgument) (string, *modelrepo.TokenUsage, error) {

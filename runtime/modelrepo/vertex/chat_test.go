@@ -71,8 +71,6 @@ func TestUnit_BuildVertexRequest_MapsThinkingConfig(t *testing.T) {
 	t.Parallel()
 	msgs := []modelrepo.Message{{Role: "user", Content: "hi"}}
 
-	// xhigh is above the deepest budget the vendor documents for 2.5 Pro, so it
-	// takes that budget rather than the dynamic -1 that thinks less than high.
 	req, err := buildVertexRequest("gemini-2.5-pro", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("xhigh")})
 	require.NoError(t, err)
 	require.NotNil(t, req.GenerationConfig.ThinkingConfig)
@@ -80,22 +78,16 @@ func TestUnit_BuildVertexRequest_MapsThinkingConfig(t *testing.T) {
 	require.Equal(t, 32768, *req.GenerationConfig.ThinkingConfig.ThinkingBudget)
 	require.Equal(t, "", req.GenerationConfig.ThinkingConfig.ThinkingLevel)
 
-	// 2.5 Pro documents 128 as its smallest budget and no way to turn thinking
-	// off, so it is never sent the 0 the API rejects for it: the request carries
-	// no thinking control and the model's own default stays in place.
 	req, err = buildVertexRequest("gemini-2.5-pro", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("off")})
 	require.NoError(t, err)
 	require.Nil(t, req.GenerationConfig.ThinkingConfig)
 
-	// 2.5 Flash documents budget 0 as thinking off.
 	req, err = buildVertexRequest("gemini-2.5-flash", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("off")})
 	require.NoError(t, err)
 	require.NotNil(t, req.GenerationConfig.ThinkingConfig)
 	require.NotNil(t, req.GenerationConfig.ThinkingConfig.ThinkingBudget)
 	require.Equal(t, 0, *req.GenerationConfig.ThinkingConfig.ThinkingBudget)
 
-	// A Gemini 3 model takes a thinking level, and the level the vendor lists at
-	// or below the request is the one sent.
 	req, err = buildVertexRequest("gemini-3-pro", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("medium")})
 	require.NoError(t, err)
 	require.NotNil(t, req.GenerationConfig.ThinkingConfig)
@@ -107,7 +99,6 @@ func TestUnit_BuildVertexRequest_MapsThinkingConfig(t *testing.T) {
 	require.NotNil(t, req.GenerationConfig.ThinkingConfig)
 	require.Equal(t, "MINIMAL", req.GenerationConfig.ThinkingConfig.ThinkingLevel)
 
-	// The model's thoughts come back with its answer when a level is requested.
 	require.True(t, req.GenerationConfig.ThinkingConfig.IncludeThoughts)
 
 	req, err = buildVertexRequest("gemini-3-pro", msgs, []modelrepo.ChatArgument{modelrepo.WithThink("auto")})
@@ -138,11 +129,6 @@ func TestUnit_BuildVertexRequest_RejectsEmptyContents(t *testing.T) {
 	require.Contains(t, err.Error(), "refusing to send empty contents")
 }
 
-// TestUnit_BuildVertexRequest_TrimsTrailingModelTurn pins that a request
-// never ends on a model turn: Vertex rejects such requests with "Requests
-// ending with a model turn are not supported". A recovery/summarise or
-// chain-handoff history arrives with the previous task's assistant reply
-// last, so the trailing model content is trimmed before sending.
 func TestUnit_BuildVertexRequest_TrimsTrailingModelTurn(t *testing.T) {
 	t.Parallel()
 
@@ -156,7 +142,6 @@ func TestUnit_BuildVertexRequest_TrimsTrailingModelTurn(t *testing.T) {
 		"the request must not end with a model turn")
 	require.Equal(t, "user", req.Contents[len(req.Contents)-1].Role)
 
-	// A run of trailing model answers is trimmed to the last non-model turn.
 	req, err = buildVertexRequest("gemini-3.1-pro-preview", []modelrepo.Message{
 		{Role: "user", Content: "do the thing"},
 		{Role: "assistant", Content: "first answer"},
@@ -167,9 +152,6 @@ func TestUnit_BuildVertexRequest_TrimsTrailingModelTurn(t *testing.T) {
 	require.Equal(t, "user", last.Role)
 }
 
-// TestUnit_BuildVertexRequest_KeepsPairedToolCallBeforeItsResponse pins that a
-// functionCall survives the trim when its functionResponse follows it, since
-// Vertex requires the response to follow the call.
 func TestUnit_BuildVertexRequest_KeepsPairedToolCallBeforeItsResponse(t *testing.T) {
 	t.Parallel()
 
@@ -195,10 +177,6 @@ func TestUnit_BuildVertexRequest_KeepsPairedToolCallBeforeItsResponse(t *testing
 	require.NotNil(t, req.Contents[1].Parts[0].FunctionCall, "the functionCall content must survive the trim")
 }
 
-// TestUnit_BuildVertexRequest_TrimsUnpairedTrailingToolCall pins that a call
-// with no response after it is trimmed rather than sent: Vertex answers a
-// request ending on a model turn with "Requests ending with a model turn are
-// not supported", whether or not that turn called a tool.
 func TestUnit_BuildVertexRequest_TrimsUnpairedTrailingToolCall(t *testing.T) {
 	t.Parallel()
 
@@ -275,7 +253,6 @@ func TestUnit_BuildVertexRequest_ImageInputAddsInlineDataPart(t *testing.T) {
 	require.Equal(t, "image/jpeg", parts[1].InlineData.MimeType)
 	require.Equal(t, imgBytes, parts[1].InlineData.Data)
 
-	// Wire shape: base64 payload and mime type round-trip in the marshaled JSON.
 	raw, err := json.Marshal(req)
 	require.NoError(t, err)
 	js := string(raw)
@@ -283,7 +260,6 @@ func TestUnit_BuildVertexRequest_ImageInputAddsInlineDataPart(t *testing.T) {
 	require.Contains(t, js, `"mimeType":"image/jpeg"`)
 	require.Contains(t, js, `"data":"`+wantB64+`"`)
 
-	// A text-only message keeps its prior single text-part shape (no inlineData).
 	textReq, err := buildVertexRequest("gemini-flash-latest", []modelrepo.Message{{Role: "user", Content: "hi"}}, nil)
 	require.NoError(t, err)
 	require.Len(t, textReq.Contents, 1)
@@ -318,14 +294,6 @@ func TestUnit_BuildVertexRequest_KeepsNormalObjectToolResultStructured(t *testin
 	require.Equal(t, "ok", req.Contents[1].Parts[0].FunctionResponse.Response["status"])
 }
 
-// TestUnit_BuildVertexRequest_KeepsOperatorTextBeforeTheFunctionResponse pins the
-// resumed-session shape: the previous turn ended on a tool result, and the
-// operator's next prompt follows it. Both messages are user-role, so they share
-// one content — Gemini fails consecutive same-role contents on its alternation
-// check — but the text has to precede the functionResponse. A turn carrying text
-// after a functionResponse is what Vertex answers with "Requests ending with a
-// model turn are not supported", so a session whose last turn ended on a tool
-// result used to lose the whole next prompt, recovery and summarise included.
 func TestUnit_BuildVertexRequest_KeepsOperatorTextBeforeTheFunctionResponse(t *testing.T) {
 	t.Parallel()
 
@@ -356,10 +324,6 @@ func TestUnit_BuildVertexRequest_KeepsOperatorTextBeforeTheFunctionResponse(t *t
 		"the function response must close the turn that carries it")
 }
 
-// TestUnit_BuildVertexRequest_KeepsParallelToolResponsesInOneTurn pins that the
-// ordering rule neither splits nor reverses a batch of parallel responses:
-// Gemini requires one response per call, all in a single following turn, in call
-// order.
 func TestUnit_BuildVertexRequest_KeepsParallelToolResponsesInOneTurn(t *testing.T) {
 	t.Parallel()
 

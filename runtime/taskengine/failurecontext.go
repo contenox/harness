@@ -18,7 +18,6 @@ func ensureFailureContext(input any, dataType DataType, failedTaskID string, fai
 		if !ok {
 			return input, dataType
 		}
-		// Stripped on a copy: the caller's history keeps its audio.
 		hist = stripAudioFromHistory(hist)
 		if chatHistoryHasReportableContent(hist) {
 			return hist, dataType
@@ -29,7 +28,6 @@ func ensureFailureContext(input any, dataType DataType, failedTaskID string, fai
 			Content:   failureContextNotice(failedTaskID, failure),
 			Timestamp: time.Now().UTC(),
 		})
-		// Force recount: the notice's tokens are not in the old values.
 		hist.InputTokens = 0
 		hist.OutputTokens = 0
 		return hist, dataType

@@ -1,4 +1,3 @@
-// chat_cmd.go implements contenox-runtime chat (session-backed chain execution).
 package contenoxcli
 
 import (
@@ -15,7 +14,6 @@ import (
 	"github.com/contenox/harness/runtime/taskengine"
 )
 
-// chatOpts carries all effective config and flags needed by the run pipeline.
 type chatOpts struct {
 	EffectiveDB                  string
 	EffectiveChain               string
@@ -40,18 +38,11 @@ type chatOpts struct {
 	InputValue                   string
 	InputFlagPassed              bool
 	ContenoxDir                  string
-	// EffectiveSkipBackendCycle skips state.RunBackendCycle (e.g. contenox-runtime doctor --skip-cycle).
-	EffectiveSkipBackendCycle bool
-	// EffectiveAskApproval lets editor integrations reuse BuildEngine while
-	// supplying their own HITL UI instead of the CLI tty prompt.
-	EffectiveAskApproval localtools.AskApproval
-	// EffectiveTaskEventSink lets editor integrations receive task events
-	// directly without subscribing to the engine bus.
-	EffectiveTaskEventSink taskengine.TaskEventSink
+	EffectiveSkipBackendCycle    bool
+	EffectiveAskApproval         localtools.AskApproval
+	EffectiveTaskEventSink       taskengine.TaskEventSink
 }
 
-// execChat runs the full chat pipeline and returns any error encountered.
-// db is already opened by the caller (runChat in cli.go) so we share it here.
 func execChat(ctx context.Context, db libdb.DBManager, opts chatOpts, out, errW io.Writer) error {
 	engine, err := BuildEngine(ctx, db, opts)
 	if err != nil {
@@ -63,9 +54,6 @@ func execChat(ctx context.Context, db libdb.DBManager, opts chatOpts, out, errW 
 		return err
 	}
 
-	// ------------------------------------------------------------------------
-	// 10. Load chain from file
-	// ------------------------------------------------------------------------
 	chainPathAbs, err := filepath.Abs(opts.EffectiveChain)
 	if err != nil {
 		return fmt.Errorf("invalid chain path: %w", err)
@@ -75,7 +63,6 @@ func execChat(ctx context.Context, db libdb.DBManager, opts chatOpts, out, errW 
 		return err
 	}
 
-	// Determine input: from flag, positional args (+optional stdin), or stdin alone.
 	in := opts.InputValue
 	if !opts.InputFlagPassed {
 		stdinData, ok, err := readStdinIfAvailable(maxCLIStdinBytes)
@@ -95,12 +82,8 @@ func execChat(ctx context.Context, db libdb.DBManager, opts chatOpts, out, errW 
 		return fmt.Errorf("no input for chain: pass input as args, --input, or pipe via stdin")
 	}
 
-	// ------------------------------------------------------------------------
-	// 11. Build agent and execute via service layer
-	// ------------------------------------------------------------------------
 	workspaceID := ResolveWorkspaceID(opts.ContenoxDir)
 
-	// Resolve session
 	sessionReportErr, _, sessionEnd := engine.Tracker.Start(ctx, "resolve", "active_session")
 	sessionID, err := ensureDefaultSession(ctx, db, workspaceID)
 	if err != nil {
@@ -112,7 +95,6 @@ func execChat(ctx context.Context, db libdb.DBManager, opts chatOpts, out, errW 
 
 	templateVars := buildTemplateVars(opts)
 
-	// Create agent using new Engine-based Deps.
 	ag := agentservice.New(agentservice.Deps{
 		Engine:      engine,
 		DB:          db,
@@ -149,9 +131,6 @@ func execChat(ctx context.Context, db libdb.DBManager, opts chatOpts, out, errW 
 		return fmt.Errorf("chain execution failed: %w", err)
 	}
 
-	// ------------------------------------------------------------------------
-	// 12. Print results (CLI-specific output formatting)
-	// ------------------------------------------------------------------------
 	if shouldPrintThinking(opts.EffectiveThink) {
 		if hist, ok := resp.Output.(taskengine.ChatHistory); ok {
 			for _, msg := range hist.Messages {
@@ -164,7 +143,6 @@ func execChat(ctx context.Context, db libdb.DBManager, opts chatOpts, out, errW 
 	}
 	printRelevantOutput(out, resp.Output, resp.OutputType, opts.EffectiveRaw)
 
-	// --last N: print last N non-system messages from the updated history.
 	if opts.LastN > 0 {
 		if hist, ok := resp.Output.(taskengine.ChatHistory); ok {
 			var visible []taskengine.Message

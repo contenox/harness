@@ -1,6 +1,3 @@
-// Package runtimestate reconciles the declared state of LLM backends against
-// their observed state, read-only, intended to run repeatedly from a background
-// task. State exposes the result through ProviderFromRuntimeState.
 package runtimestate
 
 import (
@@ -22,46 +19,33 @@ import (
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
-// ProviderCacheDuration defines how long the state of models from an external
-// provider (like OpenAI or Gemini) is cached to avoid frequent API calls.
 const ProviderCacheDuration = 1 * time.Hour
 
-// ReconcileDebounceInterval bounds how often a read-triggered reconcile
-// (ReconcileIfStale) re-scans backends, so a burst of UI polls cannot
-// stampede a full cycle. A package var so tests can shorten it.
 var ReconcileDebounceInterval = 15 * time.Second
 
-// providerCacheEntry names the credential a model list was fetched with only as a keyed hash, never as the credential.
 type providerCacheEntry struct {
 	Models         []modelrepo.ObservedModel `json:"models"`
 	CredentialHash string                    `json:"credential_hash"`
 }
 
-// State manages the overall runtime status of multiple LLM backends.
-// It orchestrates synchronization between the desired configuration
-// and the actual observed state of the backends.
 type State struct {
 	dbInstance         libdb.DBManager
 	state              sync.Map
 	psInstance         libbus.Messenger
 	withgroups         bool
-	autoDiscoverModels bool // when true, expose all live backend models without requiring declaration
-	// kvStore is used for persistent provider-model caching (nil = fall back to in-memory sync.Map)
-	kvStore       libkvstore.KVManager
-	providerCache sync.Map // fallback when kvStore is nil
-	// cacheHashKey exists only in this process, so a stored entry never matches a guessed credential and one written by another process is refetched.
-	cacheHashKey []byte
-	// reconcileMu guards lastReconcileAt, the debounce clock shared by every
-	// reconcile (RunBackendCycle and the read-triggered ReconcileIfStale).
-	reconcileMu     sync.Mutex
-	lastReconcileAt time.Time
-	tracker         libtracker.ActivityTracker
-	backendMu       sync.Mutex
-	backendRuns     map[string]*backendRun
-	discovery       *discoveryLifecycle
-	observersMu     sync.Mutex
-	observers       map[int]func()
-	nextObserver    int
+	autoDiscoverModels bool
+	kvStore            libkvstore.KVManager
+	providerCache      sync.Map
+	cacheHashKey       []byte
+	reconcileMu        sync.Mutex
+	lastReconcileAt    time.Time
+	tracker            libtracker.ActivityTracker
+	backendMu          sync.Mutex
+	backendRuns        map[string]*backendRun
+	discovery          *discoveryLifecycle
+	observersMu        sync.Mutex
+	observers          map[int]func()
+	nextObserver       int
 }
 
 type Option func(*State)
@@ -72,40 +56,28 @@ func WithGroups() Option {
 	}
 }
 
-// WithTracker reports failures the state would otherwise only record internally,
-// such as a snapshot copy that could not be made.
 func WithTracker(tracker libtracker.ActivityTracker) Option {
 	return func(s *State) {
 		s.tracker = tracker
 	}
 }
 
-// WithKVStore injects a persistent KV store for provider model-list caching.
-// For the CLI use libkvstore.NewSQLiteManager; for the runtime API use libkvstore.NewManager (Valkey).
-// When not provided the cache falls back to an in-memory sync.Map.
 func WithKVStore(kv libkvstore.KVManager) Option {
 	return func(s *State) {
 		s.kvStore = kv
 	}
 }
 
-// WithSkipDeleteUndeclaredModels is kept as a no-op compatibility option.
-// OSS runtime reconciliation is observation-only and no longer deletes backend models.
 func WithSkipDeleteUndeclaredModels() Option {
 	return func(s *State) {}
 }
 
-// WithAutoDiscoverModels exposes all models returned by live backends without requiring manual
-// declaration via 'model add'. Capability inference remains name-based for providers
-// (e.g. OpenAI) whose APIs do not return capability metadata.
 func WithAutoDiscoverModels() Option {
 	return func(s *State) {
 		s.autoDiscoverModels = true
 	}
 }
 
-// New creates a State manager backed by dbInstance and psInstance; options
-// enable optional features such as group-based reconciliation.
 func New(ctx context.Context, dbInstance libdb.DBManager, psInstance libbus.Messenger, options ...Option) (*State, error) {
 	s := &State{
 		dbInstance: dbInstance,
@@ -142,15 +114,10 @@ func New(ctx context.Context, dbInstance libdb.DBManager, psInstance libbus.Mess
 	return s, nil
 }
 
-// RunBackendCycle performs one reconciliation check for all configured LLM
-// backends and refreshes the runtime snapshot. Scheduling, lifecycle, and retry
-// policy are the caller's responsibility.
 func (s *State) RunBackendCycle(ctx context.Context) error {
 	return s.runBackendCycle(ctx, nil)
 }
 
-// RunProviderCycle refreshes only backends matching connection IDs, provider types or registered names.
-// Empty selectors refresh all backends; unrelated snapshots are retained.
 func (s *State) RunProviderCycle(ctx context.Context, providers ...string) error {
 	return s.runBackendCycle(ctx, providers)
 }
@@ -167,18 +134,12 @@ func (s *State) runBackendCycle(ctx context.Context, providers []string) error {
 	} else {
 		err = s.syncBackends(ctx, providers)
 	}
-	// Feeds the debounce clock (even on error) so a read-triggered cycle right
-	// after is suppressed rather than polling a failing backend in a hot loop.
 	if matchesEveryProvider(providers) {
 		s.markReconciled(time.Now())
 	}
 	return err
 }
 
-// ReconcileIfStale refreshes observations after ReconcileDebounceInterval.
-// With StartDiscovery it schedules owned background work, and schedules a
-// saved connection not yet observed at its current revision at once; otherwise
-// it waits.
 func (s *State) ReconcileIfStale(ctx context.Context) error {
 	if s.discovery != nil {
 		if err := s.scheduleUnobserved(ctx); err != nil {
@@ -208,9 +169,6 @@ func (s *State) markReconciled(now time.Time) {
 	s.reconcileMu.Unlock()
 }
 
-// Observe registers fn to run after a discovery cycle changes the observed
-// snapshot; the returned function removes the registration. fn runs on the
-// goroutine that ran the cycle.
 func (s *State) Observe(fn func()) (func(), error) {
 	if fn == nil {
 		return nil, errors.New("discovery observer is required")
@@ -245,8 +203,6 @@ func (s *State) notifyIfChanged(before string) {
 	}
 }
 
-// signature identifies the observed snapshot, so observers hear only of a
-// change.
 func (s *State) signature() string {
 	var parts []string
 	s.state.Range(func(_, value any) bool {
@@ -266,11 +222,6 @@ func (s *State) signature() string {
 	return strings.Join(parts, "\x1e")
 }
 
-// Get returns a copy of the current observed state for all backends.
-// This provides a safe snapshot for reading state without risking modification
-// of the internal structures. A backend whose copy fails is reported and left
-// out of the snapshot: inserting a zero value would be indistinguishable from a
-// backend that genuinely has no models.
 func (s *State) Get(ctx context.Context) map[string]BackendRuntimeState {
 	state := map[string]BackendRuntimeState{}
 	s.state.Range(func(key, value any) bool {
@@ -510,7 +461,6 @@ func (s *State) processOllamaBackend(ctx context.Context, backend *runtimetypes.
 	s.state.Store(backend.ID, stateservice)
 }
 
-// processVLLMBackend must supply the same connection credentials to catalog and inference requests.
 func (s *State) processVLLMBackend(ctx context.Context, backend *runtimetypes.Backend, models []*runtimetypes.Model) {
 	declaredModelMap := declaredModelsByName(models)
 
@@ -674,7 +624,6 @@ func (s *State) processOptionalCredCloudBackend(ctx context.Context, backend *ru
 	s.storeObservedModelCache(ctx, backend.ID, credJSON, observedModels, catalog)
 }
 
-// apiKeyFailure leads a missing environment variable's message with the variable's name, because a surface may truncate the line.
 func apiKeyFailure(err error) string {
 	var unset *EnvironmentUnsetError
 	switch {
@@ -686,7 +635,6 @@ func apiKeyFailure(err error) string {
 	return fmt.Sprintf("Failed to retrieve API key configuration: %v", err)
 }
 
-// processScriptedTestBackend re-reads the script every cycle and never caches its model list, so editing the script is enough to change what the backend offers.
 func (s *State) processScriptedTestBackend(ctx context.Context, backend *runtimetypes.Backend) {
 	stateInstance := &BackendRuntimeState{
 		ID:           backend.ID,

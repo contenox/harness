@@ -136,8 +136,8 @@ describe('groupReportsByMission', () => {
     const groups = groupReportsByMission(items, '2026-07-20T10:00:00Z');
     const m1 = groups.find(g => g.mission.id === 'm1')!;
     const m2 = groups.find(g => g.mission.id === 'm2')!;
-    expect(m2.newCount).toBe(1); // 12:00 > 10:00
-    expect(m1.newCount).toBe(1); // 11:00 > 10:00, 09:00 not
+    expect(m2.newCount).toBe(1);
+    expect(m1.newCount).toBe(1);
   });
 });
 
@@ -243,7 +243,6 @@ describe('mergeOperatorInboxReports', () => {
   it('matches by mission id + report id, not report id alone', () => {
     const r1 = report({ id: 'r1', missionId: 'm1', createdAt: '2026-07-20T09:00:00Z' });
     const items: InboxReportItem[] = [{ mission: mission({ id: 'm1' }), report: r1 }];
-    // Same report id, different mission — must not cross-match.
     const opItems = [
       operatorItem({
         id: 'op1',
@@ -269,12 +268,11 @@ describe('groupApprovalsByMission', () => {
     const approvals = [
       approval({ id: 'a-m1', missionId: 'm1', createdAt: '2026-07-20T10:00:00Z' }),
       approval({ id: 'a-m2', missionId: 'm2', createdAt: '2026-07-20T12:00:00Z' }),
-      approval({ id: 'a-none', createdAt: '2026-07-20T13:00:00Z' }), // no mission
+      approval({ id: 'a-none', createdAt: '2026-07-20T13:00:00Z' }),
     ];
 
     const groups = groupApprovalsByMission(approvals, missionById);
 
-    // m2 (12:00) before m1 (10:00); the unattributed group is always last.
     expect(groups.map(g => g.missionId ?? '(none)')).toEqual(['m2', 'm1', '(none)']);
     expect(groups[0].mission?.intent).toBe('Two');
     expect(groups[2].mission).toBeUndefined();
@@ -307,7 +305,6 @@ describe('stalledUnits', () => {
 
     const units = stalledUnits(fleet, byInstance);
 
-    // error before warning; within error, newest startedAt first.
     expect(units.map(u => u.instance.id)).toEqual(['err-new', 'err-old', 'warn']);
     expect(units[0].mission?.intent).toBe('Migrate db');
     expect(units[1].mission).toBeUndefined();
@@ -371,8 +368,6 @@ describe('isAttentionAsk — which asks are questions', () => {
   });
 
   it('leaves a gated tool call a permission ask', () => {
-    // Answering THIS with prose would resolve the gate with no verdict, so the
-    // card must keep offering allow/deny for it.
     expect(isAttentionAsk({ toolsName: 'local_fs', toolName: 'write_file' })).toBe(false);
     expect(isAttentionAsk({ toolsName: 'mission', toolName: 'mission_report' })).toBe(false);
     expect(isAttentionAsk({ toolsName: '', toolName: '' })).toBe(false);

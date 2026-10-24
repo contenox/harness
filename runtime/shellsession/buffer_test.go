@@ -19,7 +19,6 @@ func TestScrollback_OffsetsAndSince(t *testing.T) {
 		t.Fatalf("since(6) = %q from=%d to=%d", data, from, to)
 	}
 
-	// A marker at the end yields nothing new.
 	data, from, to = sb.since(11)
 	if len(data) != 0 || from != 11 || to != 11 {
 		t.Fatalf("since(end) = %q from=%d to=%d", data, from, to)
@@ -28,8 +27,8 @@ func TestScrollback_OffsetsAndSince(t *testing.T) {
 
 func TestScrollback_EvictionAdvancesStart(t *testing.T) {
 	sb := newScrollback(8)
-	sb.append([]byte("abcdef"))   // end=6, retained "abcdef"
-	sb.append([]byte("ghijkl"))   // end=12, over cap 8 → drop 4, retain last 8 "efghijkl"
+	sb.append([]byte("abcdef"))
+	sb.append([]byte("ghijkl"))
 	if start := sb.startOffset(); start != 4 {
 		t.Fatalf("start = %d, want 4 after eviction", start)
 	}
@@ -37,7 +36,6 @@ func TestScrollback_EvictionAdvancesStart(t *testing.T) {
 		t.Fatalf("end = %d, want 12", end)
 	}
 
-	// Asking for an evicted marker clamps up to the retained start.
 	data, from, to := sb.since(0)
 	if string(data) != "efghijkl" || from != 4 || to != 12 {
 		t.Fatalf("since(evicted) = %q from=%d to=%d", data, from, to)

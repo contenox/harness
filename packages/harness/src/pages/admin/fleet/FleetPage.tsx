@@ -33,22 +33,11 @@ import { relativeTime } from '../../../lib/relativeTime';
 import type { FleetInstanceState, InstanceStatus, Mission } from '../../../lib/types';
 import { blockedMissionIds, PROCESS_LABEL_KEY } from '../../../lib/unitStatus';
 
-// Instances in these states are hoisted into the attention strip; everything
-// else (running / starting / stopped) is a live-or-recently-live unit.
 const ATTENTION_STATES: FleetInstanceState[] = ['error', 'warning'];
 const attentionRank = (s: FleetInstanceState): number => (s === 'error' ? 0 : 1);
 
-// States in which the instance is (or is becoming) a live agent process. Stop
-// on one of these kills working software; stop on anything else is a reap.
 const LIVE_STATES: FleetInstanceState[] = ['running', 'starting'];
 
-/**
- * Which confirm copy the Stop dialog uses. There is exactly one Stop verb —
- * `Manager.Stop` also removes the instance from the registry, so the same call
- * is both "kill a working agent" and "clear a dead row from the board" — but
- * those read as two very different asks to an operator, and the board must be
- * truthful about which one it is about to do.
- */
 export function stopConfirmCopy(state: FleetInstanceState): {
   title: TranslationKey;
   body: TranslationKey;
@@ -67,16 +56,6 @@ export function stopConfirmCopy(state: FleetInstanceState): {
       };
 }
 
-/**
- * The Stop gate, as a pure trio of handlers.
- *
- * `request` NEVER stops anything — it only nominates an instance for
- * confirmation; the mutation is reachable exclusively through `confirm`. That
- * invariant is the whole point of the gate, so it lives here as plain functions
- * rather than inline arrows: `packages/beam` has no `@testing-library/react`
- * (see PermissionCard.test.tsx), and this way the gate is exercisable directly
- * instead of only through a DOM click that cannot be simulated.
- */
 export function createStopFlow(
   stop: (instanceId: string) => void,
   setTarget: (instance: InstanceStatus | null) => void,
@@ -91,11 +70,6 @@ export function createStopFlow(
   };
 }
 
-/**
- * The Stop confirmation. Composed from `Dialog` + `Button` because the kit has
- * no prebuilt confirm, and kept out of `FleetPage` so the copy selection is a
- * plain prop-driven render rather than a branch buried in the board.
- */
 export function StopConfirmDialog({
   instance,
   pending,
@@ -155,14 +129,6 @@ export function StopConfirmDialog({
 type StopMutation = UseMutationResult<string, Error, string, unknown>;
 type CancelMutation = UseMutationResult<string, Error, CancelInstanceInput, unknown>;
 
-/**
- * One running (or recently-live) unit, given the room to breathe that the
- * board's whole point is to give it: the composed status truth up top, then its
- * instance id, the mission it is running, sessions, viewers, and age laid out as
- * plain facts, then one addressable row per attached session, then the lifecycle
- * actions. A generous single-column card rather than a crushed table row, so it
- * reads the same on a phone as on a wide screen.
- */
 function InstanceRow({
   entry,
   inst,
@@ -186,9 +152,6 @@ function InstanceRow({
   const navigate = useNavigate();
   const { setAdoptIntent } = useAdoptIntent();
   const sessionIds = inst.sessionIds ?? [];
-  // Adoption needs a live downstream to attach a viewer to, so "Open session" is
-  // offered only while the instance is running (the runtime rejects adopting a
-  // stopped/errored one). See lib/adoptIntent.ts / adoptMeta.ts.
   const canAdopt = inst.state === 'running';
   const openSession = (sessionId: string) =>
     startAdoptSession({ instanceId: inst.id, sessionId }, { setAdoptIntent, navigate });
@@ -264,11 +227,7 @@ function InstanceRow({
         </span>
       </div>
 
-      {/* One addressable row per attached session. These are DOWNSTREAM ACP
-          session ids; beam's /chat/:id routes are keyed by UPSTREAM contenox
-          session ids, and acpsvc holds that mapping in one direction only
-          (acpsvc/session.go). So the id is shown, not linked — a link here
-          would be a dead link into the wrong id space. */}
+
       {sessionIds.length === 0 ? (
         <P variant="muted" className="text-xs">
           {t('fleet.no_sessions')}
@@ -284,9 +243,7 @@ function InstanceRow({
                 <span className="font-mono text-xs">{sessionId}</span>
               </span>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                {/* Open the running session in the normal chat surface by ADOPTING
-                    it (session/new + contenox.adopt) — watch its replay and, if
-                    no one else controls it, answer its permission asks. */}
+
                 {canAdopt && (
                   <Button
                     variant="outline"
@@ -316,9 +273,7 @@ function InstanceRow({
       )}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        {/* Cancel-all only earns its place once there is more than one session;
-            with a single session the per-session row above already is the whole
-            fan-out. */}
+
         {sessionIds.length > 1 && (
           <Button
             variant="outline"
@@ -331,9 +286,7 @@ function InstanceRow({
             {t('fleet.cancel_all')}
           </Button>
         )}
-        {/* Stop stays offered in every state: the call is idempotent, and on a
-            dead instance it IS the reap action — there is no other way to clear
-            the row. */}
+
         <Button
           variant="danger"
           size="xs"
@@ -359,16 +312,7 @@ function InstanceRow({
 export default function FleetPage() {
   const { t } = useTranslation();
   const { data, isLoading, error, refetch } = useFleet();
-  // Missions carry InstanceID (missionservice.Mission), so the board joins to
-  // them client-side rather than the server threading mission data through
-  // FleetEntry. A failure here degrades silently — the row still renders,
-  // just without its mission facts.
   const { data: missionsData } = useMissions();
-  // Report feed, purely to know which missions are blocked (latest report is a
-  // blocker) so the board can surface a "waiting on a human" chip first-class.
-  // Cache-shared with the inbox and mission detail (same per-mission report
-  // query keys), so mounting it here is close to free when navigating between
-  // the fleet surfaces.
   const inboxReports = useInboxReports();
   const stopInstance = useStopInstance();
   const cancelInstance = useCancelInstance();
@@ -402,10 +346,6 @@ export default function FleetPage() {
   );
   const blocked = blockedMissionIds(inboxReports.items.map(i => i.report));
 
-  // Every instance across every agent, split into the two piles the board is
-  // organised around: what needs attention (error/warning) and what is
-  // running-or-recently-live (everything else). Idle agents — declared but with
-  // no live instance — collapse into one compact secondary list, not a card each.
   const attention: { entry: (typeof fleet)[number]; inst: InstanceStatus }[] = [];
   const live: { entry: (typeof fleet)[number]; inst: InstanceStatus }[] = [];
   for (const entry of fleet) {

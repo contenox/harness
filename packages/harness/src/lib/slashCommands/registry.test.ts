@@ -91,7 +91,6 @@ describe('SlashCommandRegistry', () => {
     expect(reg.get('@', 'TERMINAL')?.name).toBe('terminal');
     expect(reg.get('@', 'term')?.name).toBe('terminal');
     expect(reg.get('@', 'nope')).toBeUndefined();
-    // Same name on the other trigger does NOT collide.
     expect(reg.get('/', 'terminal')).toBeUndefined();
   });
 

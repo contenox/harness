@@ -6,7 +6,6 @@ import (
 )
 
 func TestUnit_VertexUsage_CachedContentTokenCount(t *testing.T) {
-	// cachedContentTokenCount must not be added on top of promptTokenCount.
 	body := `{"promptTokenCount":4200,"candidatesTokenCount":15,"thoughtsTokenCount":25,"totalTokenCount":4240,"cachedContentTokenCount":4096}`
 	var meta vertexUsageMetadata
 	if err := json.Unmarshal([]byte(body), &meta); err != nil {

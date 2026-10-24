@@ -16,18 +16,9 @@ export type TaskEventViewState = {
   status: string;
   error: string | null;
   lastTaskID: string | null;
-  /** From chain_started (local chain path or chain id). */
   activeChainId: string | null;
-  /**
-   * Inline attachments accumulated from `step_completed` / `step_failed`
-   * events for this run (Phase 5 of the canvas-vision plan). Mapped from
-   * raw widget hints via the same artifact→inline-attachment helper used
-   * by user-attached artifacts in Phase 4.
-   */
   attachments: InlineAttachment[];
-  /** Non-null when execution is paused waiting for HITL approval. */
   pendingApproval: PendingApproval | null;
-  /** Latest context usage from token_usage events (prompt tokens used vs model context length). */
   contextUsed?: number;
   contextSize?: number;
 };
@@ -57,9 +48,6 @@ export function reduceTaskEventState(
     events: [...state.events, event],
   };
 
-  // Accumulate inline attachments from any event that carries them. Hooks
-  // emit hints during a step; the publisher attaches them to that step's
-  // step_completed (or step_failed when a hook fired before terminal error).
   if (event.attachments && event.attachments.length > 0) {
     const inline = artifactsToInlineAttachments(
       event.attachments as ChatContextArtifact[],

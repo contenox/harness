@@ -8,7 +8,6 @@ import {
   type WorkspaceFindMatch,
 } from './workspaceFind';
 
-/** A fake streaming Response that yields the given SSE text chunks in order. */
 function streamResponse(chunks: string[]): FindResponseLike {
   const enc = new TextEncoder();
   let i = 0;

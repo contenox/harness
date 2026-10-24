@@ -12,9 +12,6 @@ import { hostDetail } from '../../lib/hostState';
 import { FirstMachineCard } from './FirstMachineCard';
 import { PairingKeyPanel } from './PairingKeyPanel';
 
-/**
- * The machines this account has paired, and the one control that adds another.
- */
 export default function HostsPage() {
   const { useAuth, useHosts } = useProductPorts();
   const accountID = useAuth().accountID ?? '';
@@ -29,9 +26,7 @@ export default function HostsPage() {
         {error && (
           <ScreenError error={error} onRetry={() => void refetch()} retrying={isFetching} />
         )}
-        {/* Not an EmptyState: a fresh account has nothing installed, so the
-            way out is the whole install path, not a sentence pointing at the
-            key above (finding 8). */}
+
         {data?.length === 0 && <FirstMachineCard />}
         {data?.map(host => (
           <HostCard key={host.id} host={host} accountID={accountID} />
@@ -80,9 +75,7 @@ function HostCard({ host, accountID }: { host: Instance; accountID: string }) {
         onClose={() => setRenaming(false)}
       />
 
-      {/* @contenox/ui's Dialog already traps focus, locks body scroll, closes on
-          Escape and carries aria-modal — the behaviours a Radix port would have
-          been for. Adopted as it is. */}
+
       <Dialog open={confirming} onClose={() => setConfirming(false)} title={`Revoke ${host.name}?`}>
         <div className="flex flex-col gap-4">
           <P className="text-sm">

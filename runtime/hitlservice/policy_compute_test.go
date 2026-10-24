@@ -10,17 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// These cover the COMPUTE half of the envelope schema (hitlservice.ComputeBounds):
-// that a well-formed compute block parses and reads back exactly, that an absent
-// one is unbounded (the additive default), that only RESTRICTING is possible, and
-// that the validate/deny-unknown-fields matrix rejects the malformed. They exercise
-// the block through the public surface a fleet enforcement seam uses —
-// ComputeBoundsReader.ComputeBoundsFor — plus Evaluate, to prove a bad compute
-// block fails the whole policy to load (falling back to the built-in default)
-// rather than silently running a mission on a bound it thought it set.
-
-// boundsReader constructs a service over dir and returns it as a
-// ComputeBoundsReader (the optional capability a fleet seam type-asserts).
 func boundsReader(t *testing.T, dir, fallback string) hitlservice.ComputeBoundsReader {
 	t.Helper()
 	svc := hitlservice.NewWithDefaultPolicy(hitlservice.NewFSPolicySource(dir), testTenant, nopKVReader{}, libtracker.NoopTracker{}, fallback)
@@ -55,9 +44,6 @@ func TestUnit_ComputeBounds_ParsesAndReadsBackExactly(t *testing.T) {
 	assert.Equal(t, hitlservice.OnExhaustedFinishStuck, bounds.OnExhausted)
 }
 
-// The additive default: an envelope with no compute block reads back as the zero
-// (unbounded) bounds, with no error — exactly today's behavior for every policy
-// written before this field existed.
 func TestUnit_ComputeBounds_AbsentBlockIsUnbounded(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -71,8 +57,6 @@ func TestUnit_ComputeBounds_AbsentBlockIsUnbounded(t *testing.T) {
 	assert.Zero(t, bounds.MaxTokens)
 }
 
-// pause_ask is DECLARED and parses (forward-compat), even though the enforcement
-// seam honors it as finish_stuck for now (see the blueprint).
 func TestUnit_ComputeBounds_PauseAskParses(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -83,10 +67,6 @@ func TestUnit_ComputeBounds_PauseAskParses(t *testing.T) {
 	assert.Equal(t, hitlservice.OnExhaustedPauseAsk, bounds.OnExhausted)
 }
 
-// The validate/deny-unknown-fields matrix: every malformed compute block fails the
-// whole policy to load (ComputeBoundsFor surfaces the error), so a typo or an
-// out-of-range value can never silently run a mission unbounded on the field the
-// operator thought they set.
 func TestUnit_ComputeBounds_ValidateMatrix_RejectsMalformed(t *testing.T) {
 	t.Parallel()
 	cases := map[string]string{
@@ -133,9 +113,6 @@ func TestUnit_ComputeBounds_ValidateMatrix_AcceptsWellFormed(t *testing.T) {
 	}
 }
 
-// Restrict-only / additive: adding a compute block does not change how the action
-// rules evaluate — the same policy gates the same tool the same way. Compute bounds
-// sit ALONGSIDE the rules; they do not rewrite them.
 func TestUnit_ComputeBounds_DoesNotAlterActionEvaluation(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -155,15 +132,9 @@ func TestUnit_ComputeBounds_DoesNotAlterActionEvaluation(t *testing.T) {
 	assert.Equal(t, hitlservice.ActionDeny, denied.Action, "default_action still governs an unmatched tool")
 }
 
-// A bad compute block fails the policy to load, and Evaluate then falls back to the
-// built-in default rather than honoring the broken document — the same fail-to-safe
-// path a malformed rule already took, now covering the compute block too.
 func TestUnit_ComputeBounds_BadBlockFallsBackToBuiltinOnEvaluate(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	// The rule WOULD allow write_file, but the compute block is malformed, so the
-	// whole policy is rejected and the built-in default (which approves write_file)
-	// governs instead — proving the broken document never took effect.
 	writePolicy(t, dir, "envelope.json", []byte(`{
 		"rules":[{"tools":"local_fs","tool":"write_file","action":"allow"}],
 		"compute":{"maxTurns":-1}

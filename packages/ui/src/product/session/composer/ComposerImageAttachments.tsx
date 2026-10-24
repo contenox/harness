@@ -22,13 +22,7 @@ import {
   type PendingImageAttachment,
 } from '../lib/imageAttachments';
 
-/**
- * Attaching a picture to a message, from a phone.
- */
 
-/**
- * What the transient composer notice reports: a rejected capability, a per-file failure, or a message that will not fit.
- */
 export type ImageAttachmentNotice = 'not_supported' | 'message_too_large' | ImageAttachmentErrorReason;
 
 
@@ -39,40 +33,16 @@ const UNNAMED_IMAGE = 'Photo';
 
 export interface UseImageAttachmentsResult {
   images: PendingImageAttachment[];
-  /**
-   * Transient rejection notice, or null — render via `ImageAttachmentNoticeView`.
-   */
   notice: ImageAttachmentNotice | null;
-  /**
-   * Encodes + stages picked/captured/pasted/dropped files (rejections surface on `notice`).
-   */
   addFiles: (files: File[]) => Promise<void>;
   removeImage: (id: string) => void;
-  /**
-   * Measures `text` plus the staged pictures and answers whether the send may go on, having raised `message_too_large` when it may not.
-   */
   approveForSend: (text: string) => boolean;
-  /**
-   * Hands the staged attachments to the send path and empties the strip.
-   */
   takeForSend: () => PendingImageAttachment[];
-  /**
-   * Composer textarea `onPaste`: intercepts image payloads; plain-text pastes pass through untouched.
-   */
   handlePaste: (e: ClipboardEvent<HTMLTextAreaElement>) => void;
-  /**
-   * Composer wrapper `onDrop`: same interception for dropped image files.
-   */
   handleDrop: (e: DragEvent<HTMLElement>) => void;
-  /**
-   * Composer wrapper `onDragOver`: accepts the drag exactly when it carries images (required for drop to fire).
-   */
   handleDragOver: (e: DragEvent<HTMLElement>) => void;
 }
 
-/**
- * Pending-image state for one composer.
- */
 export function useImageAttachments(supported: boolean): UseImageAttachmentsResult {
   const [images, setImages] = useState<PendingImageAttachment[]>([]);
   const [notice, setNotice] = useState<ImageAttachmentNotice | null>(null);
@@ -201,9 +171,6 @@ export function useImageAttachments(supported: boolean): UseImageAttachmentsResu
   };
 }
 
-/**
- * The staged pictures, as removable thumbnails.
- */
 export function ComposerImageAttachments({
   images,
   onRemove,
@@ -228,15 +195,7 @@ export function ComposerImageAttachments({
               title={name}
               className="h-14 w-14 object-cover"
             />
-            {/*
-              BESIDE the thumbnail, never over it. The obvious design is a
-              little ✕ on the corner, and on a phone it is wrong: `app.css`'s
-              coarse-pointer floor grows every button to 44px, and a 44px
-              target on a 56px thumbnail covers the middle of the picture — so
-              brushing the photo you just attached deletes it, silently, with
-              no undo. `reach.spec.ts` measures the two boxes and refuses an
-              overlap; this row is what satisfies it.
-            */}
+
             <button
               type="button"
               onClick={() => onRemove(img.id)}
@@ -302,9 +261,6 @@ function ImagePicker({
   );
 }
 
-/**
- * Both ways to attach a picture, for the composer footer: the camera, and whatever is already on the device.
- */
 export function AttachImageButtons({
   onFiles,
   disabled,
@@ -342,9 +298,6 @@ const NOTICE_TEXT: Record<ImageAttachmentNotice, string> = {
     'That message is too long to send with a picture attached. Shorten it, or remove the picture.',
 };
 
-/**
- * The transient refusal above the composer.
- */
 export function ImageAttachmentNoticeView({ notice }: { notice: ImageAttachmentNotice | null }) {
   if (!notice) return null;
   return (

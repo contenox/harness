@@ -16,9 +16,6 @@ const DOCUMENT_LABELS: Record<string, string> = {
   withdrawal_waiver: 'Withdrawal waiver',
 };
 
-/**
- * The data rights: read what was agreed to, take a copy of everything, or make it stop existing.
- */
 export default function DataPage() {
   const { routes, useAccount, useAuth } = useProductPorts();
   const accountID = useAuth().accountID ?? '';
@@ -110,10 +107,7 @@ function DeleteAccountCard({ account }: { account: Account }) {
         Delete this account
       </Button>
 
-      {/* The dialog's verb differs from the button that opened it, and that is
-          not decoration: two controls reading "Delete this account" on one
-          screen are two controls a spec cannot tell apart, and neither can
-          anybody reading a screenshot of a half-open dialog. */}
+
       <ConfirmDialog
         open={confirming}
         onClose={() => setConfirming(false)}

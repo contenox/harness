@@ -39,7 +39,6 @@ describe('accessUrl', () => {
 describe('dedupeSortPaths', () => {
   it('de-dupes and sorts so the batch key is order-independent (expands do not thrash)', () => {
     expect(dedupeSortPaths(['b', 'a', 'a', 'c'])).toEqual(['a', 'b', 'c']);
-    // Same set in a different order → identical key.
     expect(dedupeSortPaths(['c', 'a', 'b']).join('\n')).toBe(dedupeSortPaths(['a', 'b', 'c']).join('\n'));
   });
 

@@ -70,12 +70,9 @@ func setVersion() {
 	fmt.Printf("Version set to: %s\n", version)
 }
 
-// BumpVersion performs a version bump with proper cleanup on failure
 func bumpVersion(bumpType string) error {
-	// Start with a clean transaction context
 	tx := newBumpTransaction()
 
-	// Ensure cleanup happens on error or panic
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("⚠️  Panic during version bump: %v\n", r)
@@ -86,17 +83,14 @@ func bumpVersion(bumpType string) error {
 		}
 	}()
 
-	// 1. Verify we're in a git repository
 	if !isGitRepository() {
 		return fmt.Errorf("not in a git repository")
 	}
 
-	// 2. Check for uncommitted changes
 	if hasUncommittedChanges() {
 		return fmt.Errorf("cannot create release with uncommitted changes. Please commit or stash your changes first")
 	}
 
-	// 3. Get current version
 	currentVersion, err := getCurrentTagVersion()
 	if err != nil {
 		return fmt.Errorf("failed to get current version: %w", err)
@@ -104,7 +98,6 @@ func bumpVersion(bumpType string) error {
 	fmt.Printf("Current version: %s\n", currentVersion)
 	tx.currentVersion = currentVersion
 
-	// 4. Calculate new version
 	newVersion, err := calculateNewVersion(currentVersion, bumpType)
 	if err != nil {
 		return fmt.Errorf("failed to calculate new version: %w", err)
@@ -112,31 +105,26 @@ func bumpVersion(bumpType string) error {
 	fmt.Printf("New version will be: %s\n", newVersion)
 	tx.newVersion = newVersion
 
-	// 5. Update version file
 	if err := updateVersionFile(newVersion); err != nil {
 		return fmt.Errorf("failed to update version file: %w", err)
 	}
 	tx.versionFileUpdated = true
 
-	// 6. Update README install snippet TAG so copy-paste URL stays correct
 	if err := updateReadmeTag(newVersion); err != nil {
 		return fmt.Errorf("failed to update README TAG: %w", err)
 	}
 	tx.readmeUpdated = true
 
-	// 7. Commit changes
 	if err := commitVersionFile(newVersion); err != nil {
 		return fmt.Errorf("failed to commit version changes: %w", err)
 	}
 	tx.commitCreated = true
 
-	// 8. Create tag
 	if err := createTag(newVersion); err != nil {
 		return fmt.Errorf("failed to create tag: %w", err)
 	}
 	tx.tagCreated = true
 
-	// Success - no rollback needed
 	tx.markSuccessful()
 
 	fmt.Printf("\n✅ Release %s created successfully!\n", newVersion)
@@ -149,7 +137,6 @@ func isGitRepository() bool {
 	return cmd.Run() == nil
 }
 
-// hasUncommittedChanges checks for any changes in the git repository, ignoring the version file.
 func hasUncommittedChanges() bool {
 	versionFilePath := getVersionFile()
 
@@ -157,7 +144,7 @@ func hasUncommittedChanges() bool {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Printf("Git error checking for uncommitted changes: %s\n", string(output))
-		return true // Fail safe
+		return true
 	}
 
 	lines := strings.Split(string(output), "\n")
@@ -167,8 +154,6 @@ func hasUncommittedChanges() bool {
 			continue
 		}
 
-		// If a line indicates a change and it's NOT the version file,
-		// then we have uncommitted changes that need to be addressed.
 		if !strings.HasSuffix(trimmedLine, versionFilePath) {
 			return true
 		}
@@ -177,12 +162,9 @@ func hasUncommittedChanges() bool {
 	return false
 }
 
-// getCurrentTagVersion fetches the latest semantic version tag from the repository.
 func getCurrentTagVersion() (string, error) {
-	// Fetch all tags from the remote repository
-	exec.Command("git", "fetch", "--tags").Run() // Ignore errors for offline scenarios
+	exec.Command("git", "fetch", "--tags").Run()
 
-	// Get the latest tag by sorting them using version semantics
 	cmd := exec.Command("git", "tag", "--sort=-v:refname")
 	output, err := cmd.CombinedOutput()
 	if err != nil || len(output) == 0 {
@@ -197,9 +179,7 @@ func getCurrentTagVersion() (string, error) {
 	return tags[0], nil
 }
 
-// calculateNewVersion increments a semantic version string based on the bump type.
 func calculateNewVersion(currentVersion, bumpType string) (string, error) {
-	// Remove 'v' prefix for parsing
 	if !strings.HasPrefix(currentVersion, "v") {
 		return "", fmt.Errorf("invalid version format: missing 'v' prefix in '%s'", currentVersion)
 	}
@@ -223,7 +203,6 @@ func calculateNewVersion(currentVersion, bumpType string) (string, error) {
 		return "", fmt.Errorf("invalid patch version in '%s': %w", tag, err)
 	}
 
-	// Bump version based on type
 	switch bumpType {
 	case "major":
 		major++
@@ -259,7 +238,6 @@ func commitVersionFile(newVersion string) error {
 		return fmt.Errorf("failed to stage version files: %w\nOutput: %s", err, string(output))
 	}
 
-	// Commit the change
 	cmd = exec.Command("git", "commit", "-S", "-m", fmt.Sprintf("chore: release %s", newVersion))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to commit version file: %w\nOutput: %s", err, string(output))
@@ -271,7 +249,6 @@ func commitVersionFile(newVersion string) error {
 func createTag(newVersion string) error {
 	fmt.Printf("🔖 Creating tag %s...\n", newVersion)
 
-	// Create an annotated tag pointing to the release commit
 	cmd := exec.Command("git", "tag", "-s", "-a", newVersion, "-m", fmt.Sprintf("Release %s", newVersion))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to create tag: %w\nOutput: %s", err, string(output))
@@ -301,7 +278,6 @@ func updateReadmeTag(newVersion string) error {
 	return nil
 }
 
-// BumpTransaction represents a version bump operation with state tracking for proper cleanup
 type bumpTransaction struct {
 	currentVersion     string
 	newVersion         string
@@ -313,43 +289,36 @@ type bumpTransaction struct {
 	successful         bool
 }
 
-// newBumpTransaction creates a new transaction context
 func newBumpTransaction() *bumpTransaction {
 	return &bumpTransaction{
-		hasError:   true, // Assume failure until proven otherwise
+		hasError:   true,
 		successful: false,
 	}
 }
 
-// markSuccessful marks the transaction as successful
 func (tx *bumpTransaction) markSuccessful() {
 	tx.successful = true
 	tx.hasError = false
 }
 
-// Rollback attempts to revert all changes made during the transaction
 func (tx *bumpTransaction) Rollback() {
 	fmt.Println("\n🔄 Rolling back version bump...")
 
-	// If we successfully created a tag, remove it
 	if tx.tagCreated {
 		fmt.Printf("   Removing tag %s...\n", tx.newVersion)
 		exec.Command("git", "tag", "-d", tx.newVersion).Run()
 	}
 
-	// If we successfully created a commit, reset it
 	if tx.commitCreated {
 		fmt.Println("   Resetting last commit...")
 		exec.Command("git", "reset", "HEAD~1").Run()
 	}
 
-	// If we updated the version file, revert it
 	if tx.versionFileUpdated {
 		fmt.Printf("   Restoring version file to %s...\n", tx.currentVersion)
 		os.WriteFile(getVersionFile(), []byte(tx.currentVersion), 0644)
 	}
 
-	// If we updated the README TAG line, revert it
 	if tx.readmeUpdated {
 		fmt.Println("   Restoring README TAG...")
 		if err := updateReadmeTag(tx.currentVersion); err != nil {

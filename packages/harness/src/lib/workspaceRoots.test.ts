@@ -63,14 +63,11 @@ describe('isWorkspaceRootRefusal', () => {
   });
 
   it('matches the current "not under any configured workspace root" phrasing', () => {
-    // The exact wire string localfileapi list/find/search emits today — the one
-    // that used to leak through untranslated and truncated in the file tree.
     expect(
       isWorkspaceRootRefusal(
         'serverops: unprocessable entity: workspace root "/home/naro" is not under any configured workspace root; roots: /home/naro/src/github.com/contenox/harness, /home/naro/src',
       ),
     ).toBe(true);
-    // The vfs cwd-check variant ("workspace directory") must route too.
     expect(
       isWorkspaceRootRefusal('workspace directory "/tmp" is not under any configured workspace root; roots: /srv'),
     ).toBe(true);
@@ -143,8 +140,6 @@ describe('workspaceNameForCwd', () => {
   });
 
   it('ignores unnamed roots — a structural root must not swallow the label', () => {
-    // The bare home/default root has no marker name; a session under it keeps
-    // the caller's cwd-basename fallback instead of reading as the root.
     expect(workspaceNameForCwd('/a/b/c', [{ path: '/a/b', default: false }])).toBeNull();
     expect(
       workspaceNameForCwd('/home/me/demo-app', [

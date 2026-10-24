@@ -5,18 +5,6 @@ import {
   type WorkspaceFindMatch,
 } from '../lib/workspaceFind';
 
-/**
- * The workspace-filter data source: streams `GET /api/workspace/find` and
- * accumulates the matching file entries. The filename sibling of
- * `useWorkspaceSearch` — same shape (per-run AbortController supersedes the
- * previous stream, a coalescing flush keeps renders bounded, terminal
- * done/refusal/error states) — but keyed on the compiled glob list rather than a
- * text query. The panel owns the debounce of the raw filter value (so typing
- * stays instant); this hook owns the stream.
- *
- * `globs` empty ⇒ idle (no request): the filter is inactive and the panel shows
- * the ordinary lazy tree.
- */
 
 export type FindStatus = 'idle' | 'searching' | 'done' | 'refusal' | 'error';
 
@@ -25,9 +13,7 @@ export interface WorkspaceFindState {
   entries: WorkspaceFindMatch[];
   count: number;
   truncated: boolean;
-  /** The 422 refusal message (bad glob / out-of-bounds root / unreachable path). */
   refusalMessage?: string;
-  /** A generic failure message. */
   errorMessage?: string;
 }
 
@@ -46,9 +32,7 @@ export interface UseWorkspaceFindOptions {
   filter?: string;
   policy?: string;
   limit?: number;
-  /** Bump to re-issue the current query (e.g. a retry). */
   nonce?: number;
-  /** Injected for tests; forwarded to runWorkspaceFind. */
   fetchImpl?: FindFetch;
 }
 
@@ -62,8 +46,6 @@ export function useWorkspaceFind({
   fetchImpl,
 }: UseWorkspaceFindOptions): WorkspaceFindState {
   const [state, setState] = useState<WorkspaceFindState>(IDLE);
-  // The stream effect keys on the serialized glob list so an unchanged array
-  // identity across renders does not re-issue the request.
   const globsKey = globs.join('\n');
 
   useEffect(() => {

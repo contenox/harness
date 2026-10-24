@@ -8,22 +8,14 @@ import (
 	"github.com/contenox/harness/runtime/shellenvservice"
 )
 
-// shellEnvResponse is the GET/PUT body: the global environment variables contenox
-// injects into the shells it spawns, as a name→value object.
 type shellEnvResponse struct {
 	Vars map[string]string `json:"vars"`
 }
 
-// shellEnvRequest is the PUT body: the FULL replacement set of variables (PUT
-// replaces, it does not merge). An empty object clears the injected variables.
 type shellEnvRequest struct {
 	Vars map[string]string `json:"vars"`
 }
 
-// AddShellEnvRoutes registers the global shell-env read/write surface: the
-// operator-defined variables injected into every shell contenox spawns. Both
-// verbs are authenticated exactly like the other mutating routes; the values are
-// plaintext config, not secrets.
 func AddShellEnvRoutes(mux *http.ServeMux, svc shellenvservice.Service, auth middleware.AuthZReader) {
 	h := &handler{svc: svc, auth: auth}
 	mux.HandleFunc("GET /shell-env", h.get)
@@ -53,7 +45,7 @@ func (h *handler) get(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, shellEnvResponse{Vars: vars}) // @response shellenvapi.shellEnvResponse
+	_ = apiframework.Encode(w, r, http.StatusOK, shellEnvResponse{Vars: vars})
 }
 
 func (h *handler) put(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +53,7 @@ func (h *handler) put(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.AuthorizeOperation)
 		return
 	}
-	body, err := apiframework.Decode[shellEnvRequest](r) // @request shellenvapi.shellEnvRequest
+	body, err := apiframework.Decode[shellEnvRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
@@ -75,5 +67,5 @@ func (h *handler) put(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, shellEnvResponse{Vars: vars}) // @response shellenvapi.shellEnvResponse
+	_ = apiframework.Encode(w, r, http.StatusOK, shellEnvResponse{Vars: vars})
 }

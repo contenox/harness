@@ -25,14 +25,11 @@ type vLLMProvider struct {
 	SupportsPrompt       bool
 	SupportsThink        bool
 	SupportsVision       bool
-	// SupportsAudio is the operator's declaration that this deployment accepts
-	// audio input; the vendor's model list reports no modality, so the adapter
-	// sends an audio part only where one was declared.
-	SupportsAudio bool
-	Backends      []string
-	authToken     string
-	client        *http.Client
-	tracker       libtracker.ActivityTracker
+	SupportsAudio        bool
+	Backends             []string
+	authToken            string
+	client               *http.Client
+	tracker              libtracker.ActivityTracker
 }
 
 func NewVLLMProvider(modelName string, backends []string, client *http.Client, caps modelrepo.CapabilityConfig, authToken string, tracker libtracker.ActivityTracker) modelrepo.Provider {

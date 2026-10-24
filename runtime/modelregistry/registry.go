@@ -14,68 +14,26 @@ import (
 var ErrNotFound = errors.New("model not found in registry")
 
 type ModelDescriptor struct {
-	ID        string `json:"id,omitempty" example:"m1a2b3c4-d5e6-f7g8-h9i0-j1k2l3m4n5o6"`
-	Name      string `json:"name" example:"qwen3-8b"`
-	SourceURL string `json:"sourceUrl" example:"https://huggingface.co/Qwen/..."`
-	SizeBytes int64  `json:"sizeBytes" example:"934000000"`
-	Curated   bool   `json:"curated" example:"true"`
-	// Backend is the local backend this model targets: "" or "llama" for GGUF,
-	// "openvino" for an OpenVINO IR model. It selects the models/<backend>/
-	// directory and the pull strategy (single GGUF file vs multi-file IR repo).
-	Backend string `json:"backend,omitempty" example:"openvino"`
-	// Repo is the Hugging Face repo id for multi-file pulls (OpenVINO IR). For
-	// GGUF models SourceURL points at the single file and Repo is empty.
-	Repo string `json:"repo,omitempty" example:"OpenVINO/Qwen3-8B-int4-ov"`
-	// ToolProtocol is the backend-native tool-call parser protocol (for example
-	// "llama:common_chat_tool_parser" or "openvino:...").
-	// Set for curated models certified for tool calls; `model pull` writes it into
-	// the model's profile so the local provider enables tool calls out of the box.
-	ToolProtocol string `json:"toolProtocol,omitempty" example:"llama:common_chat_tool_parser"`
-	// ReasoningProtocol is the local backend's parser for model-emitted reasoning
-	// text. `model pull` writes it into the
-	// model's profile so the provider can separate visible output from thinking.
+	ID                string `json:"id,omitempty" example:"m1a2b3c4-d5e6-f7g8-h9i0-j1k2l3m4n5o6"`
+	Name              string `json:"name" example:"qwen3-8b"`
+	SourceURL         string `json:"sourceUrl" example:"https://huggingface.co/Qwen/..."`
+	SizeBytes         int64  `json:"sizeBytes" example:"934000000"`
+	Curated           bool   `json:"curated" example:"true"`
+	Backend           string `json:"backend,omitempty" example:"openvino"`
+	Repo              string `json:"repo,omitempty" example:"OpenVINO/Qwen3-8B-int4-ov"`
+	ToolProtocol      string `json:"toolProtocol,omitempty" example:"llama:common_chat_tool_parser"`
 	ReasoningProtocol string `json:"reasoningProtocol,omitempty" example:"llama:common_chat_reasoning_parser"`
-	// ReasoningFormat is the backend-native reasoning format passed to the parser
-	// and chat-template renderer, for example llama.cpp common-chat "deepseek".
-	ReasoningFormat string `json:"reasoningFormat,omitempty" example:"deepseek"`
-	// Family groups related size/quant variants of the same model line for
-	// display (e.g. "qwen3", "gemma4", "phi-4"). It is a presentation grouping
-	// key, not a capability signal.
-	Family string `json:"family,omitempty" example:"qwen3"`
-	// DisplayLabel is the human-readable name shown in listings, e.g.
-	// "Qwen 3 8B". Falls back to Name when empty.
-	DisplayLabel string `json:"displayLabel,omitempty" example:"Qwen 3 8B"`
-	// UseCase is the primary workflow this curated entry is meant to serve,
-	// e.g. "coding", "chat", "reasoning", or "smoke".
-	UseCase string `json:"useCase,omitempty" example:"coding"`
-	// RecommendedVRAMGB is the coarse VRAM tier this curated entry is intended
-	// for before live modeld capacity data is available. It is advisory only:
-	// modeld still resolves the real hot-KV/effective-context fit from current
-	// device free memory, resident policy, KV profile, and runtime overhead.
-	RecommendedVRAMGB int `json:"recommendedVramGb,omitempty" example:"8"`
-	// Vision marks curated entries whose artifacts carry the full vision stack
-	// (multimodal projector beside the GGUF for llama; vision encoder models in
-	// the IR snapshot for OpenVINO), so modeld can serve image input. It is the
-	// curation-side capability signal only — the live truth stays modeld's
-	// Describe answer (ModelInfo.SupportsVision), which the providers thread
-	// into CapabilityConfig.CanVision.
-	Vision bool `json:"vision,omitempty" example:"true"`
-	// MMProjURL is the multimodal projector GGUF for llama vision entries.
-	// `model pull` fetches it beside the model as mmproj.gguf — the filename
-	// modeld resolves the projector from — and fails loudly when the projector
-	// cannot be fetched instead of leaving a silently text-only model. Empty for
-	// text entries and for OpenVINO entries (their multi-file snapshot already
-	// includes the vision models).
-	MMProjURL string `json:"mmprojUrl,omitempty" example:"https://huggingface.co/.../mmproj-....gguf"`
-	// MMProjSizeBytes is the projector file size for download reporting.
-	MMProjSizeBytes int64 `json:"mmprojSizeBytes,omitempty" example:"559874816"`
-	// Notes is a short free-text annotation shown alongside the model in
-	// listings, e.g. "native tool format", "MoE", "fastest smoke test".
-	Notes string `json:"notes,omitempty" example:"native tool format"`
+	ReasoningFormat   string `json:"reasoningFormat,omitempty" example:"deepseek"`
+	Family            string `json:"family,omitempty" example:"qwen3"`
+	DisplayLabel      string `json:"displayLabel,omitempty" example:"Qwen 3 8B"`
+	UseCase           string `json:"useCase,omitempty" example:"coding"`
+	RecommendedVRAMGB int    `json:"recommendedVramGb,omitempty" example:"8"`
+	Vision            bool   `json:"vision,omitempty" example:"true"`
+	MMProjURL         string `json:"mmprojUrl,omitempty" example:"https://huggingface.co/.../mmproj-....gguf"`
+	MMProjSizeBytes   int64  `json:"mmprojSizeBytes,omitempty" example:"559874816"`
+	Notes             string `json:"notes,omitempty" example:"native tool format"`
 }
 
-// BackendType returns the local backend this model targets, defaulting empty to
-// "llama" for GGUF descriptors.
 func (d ModelDescriptor) BackendType() string {
 	if d.Backend == "" {
 		return "llama"
@@ -83,7 +41,6 @@ func (d ModelDescriptor) BackendType() string {
 	return d.Backend
 }
 
-// Label returns DisplayLabel, falling back to Name when no display label was set.
 func (d ModelDescriptor) Label() string {
 	if d.DisplayLabel != "" {
 		return d.DisplayLabel
@@ -91,7 +48,6 @@ func (d ModelDescriptor) Label() string {
 	return d.Name
 }
 
-// RecommendedVRAMLabel formats the advisory curated VRAM tier for display.
 func (d ModelDescriptor) RecommendedVRAMLabel() string {
 	if d.RecommendedVRAMGB <= 0 {
 		return "-"
@@ -99,19 +55,11 @@ func (d ModelDescriptor) RecommendedVRAMLabel() string {
 	return fmt.Sprintf("%dGB", d.RecommendedVRAMGB)
 }
 
-// residentHeadroomNumerator/Denominator apply a 25% headroom over the on-disk
-// weight size, approximating KV cache + runtime overhead at moderate context.
 const (
 	residentHeadroomNumerator   = 5
 	residentHeadroomDenominator = 4
 )
 
-// EstimatedResidentBytes is a coarse pre-install RAM/VRAM estimate (on-disk
-// weight size — including the multimodal projector for vision entries — plus
-// ~25% headroom for KV cache and runtime overhead at a moderate context
-// length). It is NOT modeld's real KV-aware capacity.Resolve budget computed
-// from the live device and the model's actual KV profile — only a rough
-// signal for picking a model before modeld is even installed.
 func (d ModelDescriptor) EstimatedResidentBytes() int64 {
 	if d.SizeBytes <= 0 {
 		return 0
@@ -119,16 +67,11 @@ func (d ModelDescriptor) EstimatedResidentBytes() int64 {
 	return (d.SizeBytes + d.MMProjSizeBytes) * residentHeadroomNumerator / residentHeadroomDenominator
 }
 
-// FamilyGroup is a display grouping of descriptors sharing the same Family.
 type FamilyGroup struct {
 	Family  string
 	Entries []ModelDescriptor
 }
 
-// GroupByFamily groups entries by Family (falling back to Name when Family is
-// empty) and sorts groups by family name and entries within a group by
-// SizeBytes ascending. It is a pure display helper — it takes no context and
-// hits no DB.
 func GroupByFamily(entries []ModelDescriptor) []FamilyGroup {
 	groups := map[string][]ModelDescriptor{}
 	for _, e := range entries {
@@ -154,9 +97,7 @@ func GroupByFamily(entries []ModelDescriptor) []FamilyGroup {
 }
 
 type Registry interface {
-	// Resolve returns the descriptor for a user-added registry entry.
 	Resolve(ctx context.Context, name string) (*ModelDescriptor, error)
-	// List returns every user-added descriptor.
 	List(ctx context.Context) ([]ModelDescriptor, error)
 }
 
@@ -198,8 +139,6 @@ func (r *registryImpl) List(ctx context.Context) ([]ModelDescriptor, error) {
 	return out, nil
 }
 
-// mergeUserEntry turns a stored registry row into its descriptor. There is no
-// curated catalogue behind it: every field comes from the row itself.
 func mergeUserEntry(e *runtimetypes.ModelRegistryEntry) ModelDescriptor {
 	if e == nil {
 		return ModelDescriptor{}

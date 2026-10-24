@@ -17,18 +17,6 @@ import (
 
 const localTerminalPrincipal = "local-user"
 
-// AddRoutes registers interactive terminal endpoints. If enabled is false, this is a no-op.
-//
-// authenticate is the credential gate for every terminal route INCLUDING the
-// websocket handshake. It is a FUNCTION, not a raw token, for two load-bearing
-// reasons: (1) the terminal must accept exactly the credentials every other
-// serve surface accepts — the raw shared secret AND the browser's session JWT
-// cookie minted by /ui/login (serverapi.AuthenticateCredential is the one
-// gate; a raw-only ConstantTimeCompare here once rejected Beam's cookie with a
-// 401 while /acp accepted it — one login must satisfy every surface); and
-// (2) serverapi imports this package, so importing the gate from there would
-// cycle — the caller injects it instead. nil means "no token configured":
-// open, matching the loopback-only serving mode that permits an empty TOKEN.
 func AddRoutes(mux *http.ServeMux, svc terminalservice.Service, auth middleware.AuthZReader, enabled bool, authenticate func(credential string) bool) {
 	if !enabled {
 		return
@@ -128,17 +116,14 @@ func extractTerminalToken(r *http.Request) string {
 	return ""
 }
 
-// createSession opens a new host terminal session for the authenticated
-// principal and returns its ID plus the websocket attach URL.
 func (h *handler) createSession(w http.ResponseWriter, r *http.Request) {
-	// @param token string Serve credential accepted as a query-parameter auth fallback (read via principalFromRequest); auth headers take precedence when present.
 	ctx := r.Context()
 	principal, err := h.principalFromRequest(r)
 	if err != nil {
 		writeAuthError(w, r, err)
 		return
 	}
-	req, err := apiframework.Decode[createSessionRequest](r) // @request terminalapi.createSessionRequest
+	req, err := apiframework.Decode[createSessionRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -162,12 +147,10 @@ func (h *handler) createSession(w http.ResponseWriter, r *http.Request) {
 		ID:     out.ID,
 		WSPath: "/api/terminal/sessions/" + out.ID + "/ws",
 	}
-	_ = apiframework.Encode(w, r, http.StatusCreated, resp) // @response terminalapi.createSessionResponse
+	_ = apiframework.Encode(w, r, http.StatusCreated, resp)
 }
 
-// listSessions returns the authenticated principal's terminal sessions.
 func (h *handler) listSessions(w http.ResponseWriter, r *http.Request) {
-	// @param token string Serve credential accepted as a query-parameter auth fallback (read via principalFromRequest); auth headers take precedence when present.
 	ctx := r.Context()
 	principal, err := h.principalFromRequest(r)
 	if err != nil {
@@ -190,12 +173,10 @@ func (h *handler) listSessions(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, items) // @response []terminalstore.Session
+	_ = apiframework.Encode(w, r, http.StatusOK, items)
 }
 
-// getSession returns one of the principal's terminal sessions by ID.
 func (h *handler) getSession(w http.ResponseWriter, r *http.Request) {
-	// @param token string Serve credential accepted as a query-parameter auth fallback (read via principalFromRequest); auth headers take precedence when present.
 	ctx := r.Context()
 	principal, err := h.principalFromRequest(r)
 	if err != nil {
@@ -216,12 +197,10 @@ func (h *handler) getSession(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.GetOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, sess) // @response terminalstore.Session
+	_ = apiframework.Encode(w, r, http.StatusOK, sess)
 }
 
-// deleteSession closes a terminal session by ID and responds 204.
 func (h *handler) deleteSession(w http.ResponseWriter, r *http.Request) {
-	// @param token string Serve credential accepted as a query-parameter auth fallback (read via principalFromRequest); auth headers take precedence when present.
 	principal, err := h.principalFromRequest(r)
 	if err != nil {
 		writeAuthError(w, r, err)
@@ -240,16 +219,13 @@ func (h *handler) deleteSession(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.DeleteOperation)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent) // @response none session closed; the handler writes 204 with no body
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handler) wsHandler() http.Handler {
 	s := &websocket.Server{
 		Handshake: func(cfg *websocket.Config, req *http.Request) error {
 			cfg.Origin, _ = websocket.Origin(cfg, req)
-			// Enforce the token at the handshake so an unauthenticated upgrade is
-			// rejected with 403 before the 101 switch, not accepted and then
-			// silently dropped inside the handler.
 			return h.requireToken(req)
 		},
 	}

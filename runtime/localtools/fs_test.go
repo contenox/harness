@@ -25,12 +25,6 @@ func TestUnit_LocalFSTools_Exec(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 
-	// testFileContent is the canonical fixture every test.txt subtest starts
-	// from. Subtests must not depend on each other's leftovers: `sed` rewrites
-	// test.txt in place, so without a per-subtest reseed the assertions below
-	// only hold when the whole parent runs top to bottom. Running one subtest
-	// alone — which is what an IDE's per-test run button does — would then fail
-	// on a file that was never created.
 	const testFileContent = "hello world\nline 2\nline 3"
 
 	seedTestFile := func(t *testing.T) {
@@ -40,10 +34,6 @@ func TestUnit_LocalFSTools_Exec(t *testing.T) {
 		}
 	}
 
-	// seedBigFile writes the oversized fixture for the read/output size-policy
-	// tests. Content is ASCII text, not NUL bytes: an all-zero fixture would be
-	// refused as binary before ever reaching the size checks these tests
-	// exercise (see TestUnit_LocalFSTools_ReadFile_RefusesBinary).
 	seedBigFile := func(t *testing.T) {
 		t.Helper()
 		if err := os.WriteFile(filepath.Join(tempDir, "big.bin"), bytes.Repeat([]byte("a"), 2*1024*1024), 0644); err != nil {
@@ -204,7 +194,6 @@ func TestUnit_LocalFSTools_Exec(t *testing.T) {
 			t.Errorf("unexpected result: %v", res)
 		}
 
-		// Verify change
 		argsRead := map[string]any{"path": "test.txt"}
 		readCall := &taskengine.ToolsCall{ToolName: "read_file"}
 		resRead, _, _ := h.Exec(ctx, now, argsRead, false, readCall)
@@ -262,8 +251,6 @@ func TestUnit_LocalFSTools_Exec(t *testing.T) {
 			t.Fatal(err)
 		}
 		stats := res.(string)
-		// test.txt is the seeded fixture: "hello world\nline 2\nline 3".
-		// Lines: 3, Words: 6.
 		if !strings.Contains(stats, "Lines: 3") || dataType != taskengine.DataTypeString {
 			t.Errorf("unexpected stats: %q", stats)
 		}
@@ -315,9 +302,6 @@ func TestUnit_LocalFSTools_Exec(t *testing.T) {
 	})
 
 	t.Run("maxOutputBytesTruncatesRatherThanErrors", func(t *testing.T) {
-		// Rec 4 (tool-hardening.md): read_file no longer hard-errors when its output
-		// exceeds _max_output_bytes — it returns a bounded head plus a notice naming
-		// the exact next step ("start_line: N"), so nothing is dropped silently.
 		seedBigFile(t)
 		ctxSmallOut := taskengine.WithToolsArgs(ctx, localtools.LocalFSToolsName, map[string]string{
 			"_max_read_bytes":   "-1",
@@ -493,10 +477,6 @@ func TestUnit_LocalFSTools_Exec(t *testing.T) {
 		}
 		toolsCall := &taskengine.ToolsCall{ToolName: "grep"}
 		res, _, err := h.Exec(ctxLim, now, args, false, toolsCall)
-		// Like read_file over its output cap, grep over _max_grep_matches
-		// truncates rather than erroring: hard-failing threw away every match
-		// already found, so the model paid for the search and got back neither
-		// the hits nor the knowledge of where they started.
 		if err != nil {
 			t.Fatalf("grep over the match cap must truncate, not error: %v", err)
 		}
@@ -549,14 +529,8 @@ func TestUnit_LocalFSTools_Exec(t *testing.T) {
 		}
 	})
 
-	// --- list_dir noise-filtering tests ---
-
-	// TestFailure: before the fix, list_dir(".") on a project root would return
-	// .git/ and node_modules/ entries, flooding the model's context window with
-	// thousands of irrelevant paths. The default skip set must prevent this.
 	t.Run("listDirSkipsNoiseDirsDefault", func(t *testing.T) {
 		root := t.TempDir()
-		// Simulate the real-project layout that caused the context flood.
 		_ = os.MkdirAll(filepath.Join(root, ".git", "objects"), 0755)
 		_ = os.WriteFile(filepath.Join(root, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0644)
 		_ = os.MkdirAll(filepath.Join(root, "node_modules", "react"), 0755)
@@ -608,7 +582,6 @@ func TestUnit_LocalFSTools_Exec(t *testing.T) {
 		_ = os.MkdirAll(filepath.Join(root, ".git"), 0755)
 		_ = os.WriteFile(filepath.Join(root, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0644)
 
-		// Empty string disables the default filter entirely.
 		ctxDisabled := taskengine.WithToolsArgs(ctx, localtools.LocalFSToolsName, map[string]string{
 			"_skip_dir_names": "",
 		})
@@ -632,7 +605,7 @@ func TestUnit_LocalFSTools_Exec(t *testing.T) {
 
 		ctxExt := taskengine.WithToolsArgs(ctx, localtools.LocalFSToolsName, map[string]string{
 			"_list_extensions": ".go,.md",
-			"_skip_dir_names":  "", // show everything dir-wise; we only filter files
+			"_skip_dir_names":  "",
 		})
 		h2 := localtools.NewLocalFSTools(root, nil)
 		res, _, err := h2.Exec(ctxExt, now, map[string]any{"path": "."}, false, &taskengine.ToolsCall{ToolName: "list_dir"})

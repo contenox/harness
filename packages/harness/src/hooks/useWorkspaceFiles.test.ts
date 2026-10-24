@@ -2,14 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { filesUrl } from './useWorkspaceFiles';
 import { ROOT_DIR } from '../pages/chat/lib/workspaceTree';
 
-/**
- * Covers the pure `filesUrl` builder behind `useWorkspaceFiles`. The React hook
- * itself needs a DOM renderer this package's test env doesn't provide (see
- * usePersistentToggle.test.ts), so the URL contract is pinned here on the pure
- * builder. `/files` is now a RAW listing — the agent-view verdict overlay moved
- * to a separate `POST /workspace/access` batch, so the listing URL no longer
- * carries `filter=agent` or `policy` (that contract lives in workspaceAccess.test).
- */
 describe('filesUrl', () => {
   const parse = (url: string) => new URLSearchParams(url.split('?')[1]);
 

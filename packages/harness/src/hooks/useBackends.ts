@@ -12,7 +12,6 @@ export function useBackends() {
   return useSuspenseQuery<Backend[]>({
     queryKey: backendKeys.all,
     queryFn: api.getBackends,
-    // Backend list + merged runtime fields; avoid tight polling (see TabbedPage mountActivePanelOnly).
     refetchInterval: 15_000,
   });
 }

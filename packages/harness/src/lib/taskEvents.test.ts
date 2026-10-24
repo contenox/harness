@@ -55,8 +55,6 @@ describe('reduceTaskEventState', () => {
       kind: 'step_completed',
       timestamp: new Date().toISOString(),
       task_id: 'tools',
-      // Wire format uses artifact-kind vocabulary; reduceTaskEventState
-      // maps it to inline-attachment kind via artifactsToInlineAttachments.
       attachments: [
         { kind: 'file_excerpt', payload: { path: 'README.md', text: '# hi\n' } },
       ],

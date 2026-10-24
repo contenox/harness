@@ -52,9 +52,6 @@ func (s *service) Create(ctx context.Context, principal string, req CreateReques
 		cmd = exec.Command(shell)
 	}
 	cmd.Dir = cwd
-	// Scrub serve's credentials out of the terminal's environment when configured
-	// (default off — the terminal is the operator's own shell); TERM is appended
-	// last so it wins regardless of the policy.
 	parent := os.Environ()
 	if s.cfg.ScrubEnv != nil {
 		parent = s.cfg.ScrubEnv(parent)

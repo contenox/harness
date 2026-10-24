@@ -1,5 +1,3 @@
-// tools_cmd.go — contenox tools subcommand tree (add, list, show, remove, update).
-// Each subcommand opens only the DB; no LLM stack is needed.
 package contenoxcli
 
 import (
@@ -19,7 +17,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// toolsCmd is the parent "contenox tools" command.
 var toolsCmd = &cobra.Command{
 	Use:   "tools",
 	Short: "Manage remote tool providers (add, list, show, remove, update).",
@@ -175,7 +172,6 @@ func init() {
 	toolsAddCmd.Flags().Int("timeout", 10000, "Request timeout in milliseconds")
 	toolsAddCmd.Flags().String("spec", "", "Full URL or local file path to the OpenAPI v3 spec (e.g. https://host/openapi.yaml, ~/spec.yaml, ./spec.json)")
 
-	// Auth flow flags
 	toolsAddCmd.Flags().String("auth-login-url", "", "URL to POST credentials to before calling the API (triggers http_handshake auth flow)")
 	toolsAddCmd.Flags().String("auth-login-method", "POST", "HTTP method for the login request (default: POST)")
 	toolsAddCmd.Flags().String("auth-login-body", "", `JSON body for the login request, e.g. '{"usr":"${USER}","pwd":"${PASS}"}' (env vars expanded)`)
@@ -194,8 +190,6 @@ func init() {
 	toolsCmd.AddCommand(toolsAddCmd, toolsListCmd, toolsShowCmd, toolsRemoveCmd, toolsUpdateCmd)
 }
 
-// openToolsService resolves the DB path, opens SQLite and returns a toolsproviderservice.
-// The toolsRegistry is nil here (CLI doesn't need ListLocalTools / GetSchemasForSupportedTools).
 func openToolsService(cmd *cobra.Command) (libdb.DBManager, toolsproviderservice.Service, error) {
 	dbPath, err := resolveDBPath(cmd)
 	if err != nil {
@@ -209,7 +203,6 @@ func openToolsService(cmd *cobra.Command) (libdb.DBManager, toolsproviderservice
 	return db, toolsproviderservice.New(db, nil, nil), nil
 }
 
-// parseHeaders parses a []string of "Key: Value" into a map[string]string.
 func parseHeaders(raw []string) (map[string]string, error) {
 	out := make(map[string]string, len(raw))
 	for _, h := range raw {
@@ -224,7 +217,6 @@ func parseHeaders(raw []string) (map[string]string, error) {
 	return out, nil
 }
 
-// parseInjects parses a []string of "key=value" into a map[string]string.
 func parseInjects(raw []string) (map[string]string, error) {
 	out := make(map[string]string, len(raw))
 	for _, kv := range raw {
@@ -239,9 +231,6 @@ func parseInjects(raw []string) (map[string]string, error) {
 	return out, nil
 }
 
-// probeTools fetches tools from the spec source and returns the count.
-// specURL is used as the spec source when non-empty; otherwise endpointURL is used.
-// Returns -1 on failure — non-fatal, just affects the registration message.
 func probeTools(endpointURL, specURL string) int {
 	proto := &tools.OpenAPIToolProtocol{SpecSource: specURL}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -253,20 +242,12 @@ func probeTools(endpointURL, specURL string) int {
 	return len(discovered)
 }
 
-// resolveSpecPath converts a user-supplied spec source to the canonical stored form.
-//   - http:// and https:// URLs are returned as-is.
-//   - file:// URIs are returned as-is (user already knows what they're doing).
-//   - ~/path is expanded to the user's home directory and converted to file:///abs/path.
-//   - Relative and absolute file paths are resolved to an absolute path,
-//     verified to exist, and returned as file:///abs/path.
 func resolveSpecPath(raw string) (string, error) {
-	// Pass through URLs and already-formed file:// URIs.
 	if strings.HasPrefix(raw, "http://") ||
 		strings.HasPrefix(raw, "https://") ||
 		strings.HasPrefix(raw, "file://") {
 		return raw, nil
 	}
-	// Expand ~/
 	if strings.HasPrefix(raw, "~/") {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -274,7 +255,6 @@ func resolveSpecPath(raw string) (string, error) {
 		}
 		raw = filepath.Join(home, raw[2:])
 	}
-	// Resolve to absolute path and verify it exists.
 	abs, err := filepath.Abs(raw)
 	if err != nil {
 		return "", fmt.Errorf("invalid spec path %q: %w", raw, err)
@@ -292,7 +272,6 @@ func runToolsAdd(cmd *cobra.Command, args []string) error {
 	rawInjects, _ := cmd.Flags().GetStringArray("inject")
 	timeoutMs, _ := cmd.Flags().GetInt("timeout")
 
-	// Auth and TLS flags
 	authLoginUrl, _ := cmd.Flags().GetString("auth-login-url")
 	authLoginMethod, _ := cmd.Flags().GetString("auth-login-method")
 	authLoginBody, _ := cmd.Flags().GetString("auth-login-body")
@@ -325,7 +304,6 @@ func runToolsAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Resolve optional spec source.
 	var resolvedSpec string
 	if specRaw, _ := cmd.Flags().GetString("spec"); specRaw != "" {
 		resolved, err := resolveSpecPath(specRaw)
@@ -342,12 +320,10 @@ func runToolsAdd(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	// Check name not already taken.
 	if _, err := svc.GetByName(ctx, name); err == nil {
 		return fmt.Errorf("tools %q already exists; use 'contenox tools update' to modify it", name)
 	}
 
-	// Probe tools (non-fatal — purely presentation logic, not a service concern).
 	toolCount := probeTools(url, resolvedSpec)
 
 	remoteTools := &runtimetypes.RemoteTools{
@@ -459,12 +435,10 @@ func runToolsShow(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(out, "Inject:    %s (values hidden)\n", strings.Join(keys, ", "))
 	}
 
-	// Probe live tools — use SpecURL as spec source when set.
 	proto := &tools.OpenAPIToolProtocol{SpecSource: remoteTools.SpecURL}
 	toolCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// Build inject params from headers for probe.
 	injectParams := make(map[string]tools.ParamArg, len(remoteTools.Headers))
 	for k, v := range remoteTools.Headers {
 		injectParams[k] = tools.ParamArg{Name: k, Value: v, In: tools.ArgLocationHeader}
@@ -478,8 +452,6 @@ func runToolsShow(cmd *cobra.Command, args []string) error {
 
 	fmt.Fprintf(out, "Tools (%d):\n", len(fetchedTools))
 	for _, t := range fetchedTools {
-		// Use literal newline in string literals; previously rendered '\n' bug fix.
-		// TODO: is this the right place to fix this?
 		desc := strings.ReplaceAll(t.Function.Description, "\\n", "\n")
 		fmt.Fprintf(out, "  %-30s  %s\n", t.Function.Name, desc)
 	}
@@ -545,7 +517,6 @@ func runToolsUpdate(cmd *cobra.Command, args []string) error {
 	if cmd.Flags().Changed("spec") {
 		specRaw, _ := cmd.Flags().GetString("spec")
 		if specRaw == "" {
-			// Explicit empty string clears the spec URL.
 			remoteTools.SpecURL = ""
 		} else {
 			resolved, err := resolveSpecPath(specRaw)

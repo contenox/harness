@@ -1,4 +1,3 @@
-// init.go implements the contenox init subcommand (scaffold .contenox/).
 package contenoxcli
 
 import (
@@ -43,20 +42,10 @@ var initFIMChain string
 //go:embed agent-planner.json
 var initPlannerChain string
 
-// blessedChainHashes is a map of file basenames to a list of known-good SHA256
-// checksums from previous versions. When the --update flag is used, if a file's
-// current checksum matches one of these, it is safe to overwrite it.
 var blessedChainHashes = map[string][]string{}
 
-// headlessACPChainFilename is the on-disk name the acpx (OpenClaw / untrusted
-// driver) profile loads its chain from, parallel to default-acp-chain.json for
-// the acp profile.
 const headlessACPChainFilename = "headless-acp-chain.json"
 
-// seedHeadlessACPChainIfMissing writes the embedded acpx chain to contenoxDir
-// only when absent. It never overwrites a user-edited file, and a failure here
-// leaves the file absent so LoadChainRegistryFrom still fails closed rather
-// than the acpx profile silently running a different chain.
 func seedHeadlessACPChainIfMissing(contenoxDir string) error {
 	dst := filepath.Join(contenoxDir, headlessACPChainFilename)
 	if _, err := os.Stat(dst); err == nil {
@@ -68,13 +57,6 @@ func seedHeadlessACPChainIfMissing(contenoxDir string) error {
 	return os.WriteFile(dst, []byte(initACPXChain), 0644)
 }
 
-// seedACPChainIfMissing writes the default-acp-chain.json preset when it is
-// absent, so the `acp` profile is self-sufficient on a fresh install the same
-// way `acpx` is via seedHeadlessACPChainIfMissing. Without this, a clean
-// environment that never ran `contenox init`/`--setup` hard-errors at launch
-// in LoadChainRegistryFrom (the registry validator runs in exactly such an
-// isolated HOME), so the ACP transport never starts and `initialize` is never
-// answered.
 func seedACPChainIfMissing(contenoxDir string) error {
 	dst := filepath.Join(contenoxDir, "default-acp-chain.json")
 	if _, err := os.Stat(dst); err == nil {
@@ -86,7 +68,6 @@ func seedACPChainIfMissing(contenoxDir string) error {
 	return os.WriteFile(dst, []byte(initACPChain), 0644)
 }
 
-// providerConfig holds the provider-specific values used during init.
 type providerConfig struct {
 	name         string
 	defaultModel string
@@ -127,7 +108,7 @@ var providerConfigs = map[string]providerConfig{
 	"bedrock": {
 		name:         "AWS Bedrock",
 		defaultModel: "anthropic.claude-3-5-sonnet-20241022-v2:0",
-		envKey:       "", // ambient AWS credential chain
+		envKey:       "",
 	},
 
 	"vertex-google": {
@@ -137,9 +118,6 @@ var providerConfigs = map[string]providerConfig{
 	},
 }
 
-// pruneLegacyLocalBackends removes modeld-era local backends (llama, openvino,
-// modeld, local). The daemon that served them is gone, so the rows only produce
-// "Unsupported backend type" errors in runtime health.
 func pruneLegacyLocalBackends(ctx context.Context, db libdb.DBManager) (int, error) {
 	store := runtimetypes.New(db.WithoutTransaction())
 	backends, err := store.ListBackends(ctx, nil, runtimetypes.MAXLIMIT)
@@ -159,7 +137,6 @@ func pruneLegacyLocalBackends(ctx context.Context, db libdb.DBManager) (int, err
 	return removed, nil
 }
 
-// pruneLegacyLocalBackendsFromHome opens the global store and prunes, for init.
 func pruneLegacyLocalBackendsFromHome(out io.Writer) {
 	dbPath, err := globalDBPath()
 	if err != nil {
@@ -181,8 +158,6 @@ func pruneLegacyLocalBackendsFromHome(out io.Writer) {
 	}
 }
 
-// hasBackendOfType returns true when the local DB already contains at least one
-// backend whose Type matches the given provider string.
 func hasBackendOfType(providerType string) bool {
 	dbPath, err := globalDBPath()
 	if err != nil {
@@ -206,8 +181,6 @@ func hasBackendOfType(providerType string) bool {
 	return false
 }
 
-// RunGlobalInit ensures ~/.contenox-harness/ has chain files, HITL policies, and a llama backend.
-// Unlike RunInit it does NOT create a workspace-scoped .contenox/ directory.
 func RunGlobalInit(out io.Writer) error {
 	homeDir, err := globalContenoxDir()
 	if err != nil {
@@ -241,9 +214,6 @@ func RunGlobalInit(out io.Writer) error {
 	if err := writeFile(filepath.Join(homeDir, headlessACPChainFilename), initACPXChain); err != nil {
 		return err
 	}
-	// The resident-planner profile (mission-plans.md, slice 4). Named by the
-	// agent-* convention so chain-agent discovery declares it as a fleet-
-	// dispatchable agent; its envelope grants only the mission tools.
 	if err := writeFile(filepath.Join(homeDir, "agent-planner.json"), initPlannerChain); err != nil {
 		return err
 	}
@@ -254,17 +224,9 @@ func RunGlobalInit(out io.Writer) error {
 	return nil
 }
 
-// RunInit scaffolds .contenox/ with default chain files.
-// provider is "" (defaults to the already-configured provider or "ollama"), or one of providerConfigs.
-// contenoxDir is the target data directory (e.g. from --data-dir or the default .contenox/).
-// projectName is the friendly name to stamp into the marker — an explicit name
-// renames an already-named project; "" leaves the marker's name (or lack of one)
-// alone, preserving legacy bare-UUID-equivalent behavior for a plain init.
 func RunInit(out, errOut io.Writer, force, update bool, provider string, contenoxDir string, projectName string) error {
 	provider = modelrepo.CanonicalBackendType(provider)
 	if provider == "" {
-		// Default to the provider already configured in the database so that
-		// re-running init doesn't show irrelevant setup steps.
 		if dbPath, gpErr := globalDBPath(); gpErr == nil {
 			if db, openErr := OpenDBAt(libtracker.WithNewRequestID(context.Background()), dbPath); openErr == nil {
 				store := runtimetypes.New(db.WithoutTransaction())
@@ -289,11 +251,6 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 	if err := os.MkdirAll(contenoxDir, 0750); err != nil {
 		return fmt.Errorf("failed to create .contenox directory: %w", err)
 	}
-	// The project package owns the marker format (JSON {id,name}); a fresh marker
-	// gets a new UUID, an existing one keeps its ID (an explicit projectName
-	// renames it; "" leaves the stored name alone). ResolveWorkspaceID reads both
-	// this and the legacy bare-UUID form, so an existing install's DB token stays
-	// stable.
 	marker, err := project.EnsureInContenoxDir(contenoxDir, projectName)
 	if err != nil {
 		return fmt.Errorf("failed to write project marker: %w", err)
@@ -302,7 +259,6 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 		fmt.Fprintf(out, "Marked project %q (%s)\n", marker.Name, filepath.Join(contenoxDir, project.MarkerFileName))
 	}
 	writeFile := func(path, content string) error {
-		// If the file doesn't exist, we always write it.
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 				return fmt.Errorf("failed to write %s: %w", path, err)
@@ -311,7 +267,6 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 			return nil
 		}
 
-		// If we're forcing, we always overwrite.
 		if force {
 			if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 				return fmt.Errorf("failed to write %s: %w", path, err)
@@ -320,7 +275,6 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 			return nil
 		}
 
-		// If --update is passed, we check the checksum and overwrite if it's a known-good, unmodified file.
 		if update {
 			basename := filepath.Base(path)
 			if knownHashes, ok := blessedChainHashes[basename]; ok {
@@ -333,7 +287,6 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 
 				for _, knownHash := range knownHashes {
 					if currentHash == knownHash {
-						// Checksum matches, safe to overwrite.
 						if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 							return fmt.Errorf("failed to write %s: %w", path, err)
 						}
@@ -342,13 +295,10 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 					}
 				}
 			}
-			// If we're here, the file was either not in the blessed list or the checksum didn't match.
-			// We don't overwrite it, but we also don't print a scary "already exists" message.
 			fmt.Fprintf(out, "  Skipped %s (has been modified)\n", path)
 			return nil
 		}
 
-		// Default case: file exists, no --force, no --update. Do nothing.
 		fmt.Fprintf(out, "  %s already exists (use --force to overwrite or --update to refresh)\n", path)
 		return nil
 	}
@@ -372,9 +322,6 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 	if err := writeFile(filepath.Join(homeDir, headlessACPChainFilename), initACPXChain); err != nil {
 		return err
 	}
-	// The resident-planner profile (mission-plans.md, slice 4). Named by the
-	// agent-* convention so chain-agent discovery declares it as a fleet-
-	// dispatchable agent; its envelope grants only the mission tools.
 	if err := writeFile(filepath.Join(homeDir, "agent-planner.json"), initPlannerChain); err != nil {
 		return err
 	}
@@ -382,16 +329,11 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 		return err
 	}
 
-	// The local backends (llama + openvino) are always-present infrastructure.
-	// Create them if missing so the user only ever needs to pull a model — never
-	// wire up a backend.
 	pruneLegacyLocalBackendsFromHome(out)
 
 	fmt.Fprintln(out, "Done.")
 	fmt.Fprintln(out, "")
 
-	// Surface the currently configured model so users immediately know
-	// if they have a stale entry from a previous install.
 	if dbPath, gpErr := globalDBPath(); gpErr == nil {
 		if db, openErr := OpenDBAt(libtracker.WithNewRequestID(context.Background()), dbPath); openErr == nil {
 			store := runtimetypes.New(db.WithoutTransaction())
@@ -419,8 +361,6 @@ func RunInit(out, errOut io.Writer, force, update bool, provider string, conteno
 		}
 	}
 
-	// Resolve API key status (env or KV store) — used both for the status line and to
-	// suppress the "register backend" step when the backend is already configured.
 	var envVal string
 	var kvHasKey bool
 	if pc.envKey != "" {

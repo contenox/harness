@@ -1,4 +1,3 @@
-// Package modelcontract defines versioned model operations independently of serving backends.
 package modelcontract
 
 import (
@@ -9,14 +8,12 @@ import (
 	"fmt"
 )
 
-// AutocompleteInput preserves the source on both sides of the insertion point.
 type AutocompleteInput struct {
 	Format string `json:"format"`
 	Prefix string `json:"prefix"`
 	Suffix string `json:"suffix"`
 }
 
-// FIMFormat identifies a model's native fill-in-the-middle vocabulary and order.
 type FIMFormat struct {
 	ID      string
 	Version int
@@ -27,7 +24,6 @@ type FIMFormat struct {
 	Stops   []string
 }
 
-// ResolveFIM returns the explicit model contract; model names never select a format.
 func ResolveFIM(name string) (FIMFormat, error) {
 	entry, err := declaredFormats.fimFormat(name)
 	if err != nil {
@@ -36,7 +32,6 @@ func ResolveFIM(name string) (FIMFormat, error) {
 	return FIMFormat{ID: entry.ID, Version: entry.Version, Kind: entry.Kind, Prefix: entry.Prefix, Suffix: entry.Suffix, Middle: entry.Middle, Stops: entry.Stops}, nil
 }
 
-// FIMFingerprint identifies token ordering, termination and operation semantics.
 func FIMFingerprint(name string) (string, error) {
 	format, err := ResolveFIM(name)
 	if err != nil {
@@ -50,12 +45,10 @@ func FIMFingerprint(name string) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-// Render assembles a raw PSM prompt for completion endpoints that accept text.
 func (f FIMFormat) Render(prefix, suffix string) string {
 	return f.Prefix + prefix + f.Suffix + suffix + f.Middle
 }
 
-// TokenizeFIM validates control tokens and tokenizes source without special-token parsing.
 func TokenizeFIM(input AutocompleteInput, tokenize func(string, bool) ([]int, error)) ([]int, []int, error) {
 	if tokenize == nil {
 		return nil, nil, errors.New("autocomplete requires a tokenizer")

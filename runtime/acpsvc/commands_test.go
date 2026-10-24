@@ -27,7 +27,6 @@ func TestParseCommand(t *testing.T) {
 		{name: "max tokens command", input: "/max-tokens 8192", wantName: "max-tokens", wantArgs: "8192", wantOk: true},
 		{name: "args with extra spaces collapse to trimmed", input: "/model   gpt-4o  ", wantName: "model", wantArgs: "gpt-4o", wantOk: true},
 
-		// Not commands:
 		{name: "plain text", input: "hello there", wantOk: false},
 		{name: "unknown slash word", input: "/foobar", wantOk: false},
 		{name: "absolute path", input: "/home/user/file.go", wantOk: false},
@@ -56,9 +55,6 @@ func TestParseCommand(t *testing.T) {
 }
 
 func TestAcpCommandsCoverDispatch(t *testing.T) {
-	// Every known command (the capability-unfiltered superset) must be
-	// recognized by parseCommand, so no advertised subset of it can ever be
-	// offered by a menu that Prompt would then pass through as plain text.
 	for _, c := range allACPCommands() {
 		if _, _, ok := parseCommand("/" + c.Name); !ok {
 			t.Errorf("known command %q is not recognized by parseCommand", c.Name)

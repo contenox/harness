@@ -40,7 +40,6 @@ func (p *catalogProvider) Type() string {
 }
 
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	// Catalog listing is a non-streaming call: bound it end-to-end.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 
@@ -60,8 +59,6 @@ func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedM
 		return nil, err
 	}
 
-	// One tag can resolve to several child manifests, one row each; the tag
-	// still names one model, and the server's own manifest list says which.
 	order := make([]string, 0, len(resp.Models))
 	grouped := make(map[string][]ListModelResponse, len(resp.Models))
 	for _, model := range resp.Models {
@@ -106,9 +103,6 @@ func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedM
 	return out, nil
 }
 
-// checkManifestSelection refuses a tag whose rows cannot be reduced to the one
-// manifest the server says the tag resolves to; reporting every variant under
-// one name would leave the name ambiguous for every consumer downstream.
 func checkManifestSelection(ctx context.Context, client *ollamaHTTPClient, name string, rows []ListModelResponse) error {
 	show, err := client.Show(ctx, &ShowRequest{Model: name, AllManifests: true})
 	if err != nil {
@@ -169,10 +163,6 @@ func applyShowMetadata(model *modelrepo.ObservedModel, resp *ShowResponse, audio
 
 	model.ThinkingTypes = ollamaThinkingTypes(resp.Thinking)
 
-	// Both fields carry the window and both are read: the ObservedModel one by
-	// the runtime state, the CapabilityConfig one by every provider built from
-	// this observation. Setting only the first left a provider reporting an
-	// unknown window for a model the catalogue had just measured.
 	if model.ContextLength == 0 {
 		for key, value := range resp.ModelInfo {
 			if !strings.HasSuffix(key, ".context_length") {
@@ -191,10 +181,6 @@ func applyShowMetadata(model *modelrepo.ObservedModel, resp *ShowResponse, audio
 	}
 }
 
-// ollamaThinkingTypes reads the model's own thinking descriptor into the
-// runtime's declaration. A descriptor that names only levels this vocabulary
-// does not carry leaves the level list empty, so a caller asking for one is
-// refused rather than sent a name the server would resolve to its default.
 func ollamaThinkingTypes(descriptor *ThinkingMetadata) *modelrepo.ThinkingTypes {
 	if descriptor == nil || len(descriptor.Values) == 0 {
 		return nil
@@ -218,10 +204,6 @@ func ollamaThinkingTypes(descriptor *ThinkingMetadata) *modelrepo.ThinkingTypes 
 	return types
 }
 
-// parameterInt reads one parameter out of the Modelfile-style parameters string
-// /api/show reports, whose lines are "<name> <value>" — "num_predict 8192",
-// "num_ctx 4096". A parameter that is absent, not a number, or not positive is
-// unknown rather than a ceiling of zero.
 func parameterInt(parameters, name string) int {
 	for _, line := range strings.Split(parameters, "\n") {
 		fields := strings.Fields(line)

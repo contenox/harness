@@ -10,9 +10,6 @@ export type WizardProps = {
   className?: string;
 };
 
-/**
- * Vertical setup / onboarding container.
- */
 export function Wizard({
   title,
   description,

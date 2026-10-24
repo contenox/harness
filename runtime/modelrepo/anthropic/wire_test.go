@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// capture records the body of every request a stub vendor endpoint receives.
 type capture struct {
 	server  *httptest.Server
 	bodies  []map[string]any

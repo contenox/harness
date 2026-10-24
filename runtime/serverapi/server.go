@@ -30,7 +30,6 @@ import (
 	"github.com/contenox/harness/runtime/internal/missionapi"
 	"github.com/contenox/harness/runtime/internal/missionchangesapi"
 	"github.com/contenox/harness/runtime/internal/modelregistryapi"
-	"github.com/contenox/harness/runtime/internal/openapidocs"
 	"github.com/contenox/harness/runtime/internal/operatorinboxapi"
 	"github.com/contenox/harness/runtime/internal/providerapi"
 	"github.com/contenox/harness/runtime/internal/setupapi"
@@ -59,153 +58,61 @@ import (
 	"github.com/contenox/harness/runtime/vfs"
 )
 
-// Config holds the HTTP serving configuration for `contenox serve`.
 type Config struct {
-	Addr                string `json:"addr"`
-	Port                string `json:"port"`
-	Token               string `json:"token"`
-	UIBaseURL           string `json:"ui_base_url"`
-	AllowedAPIOrigins   string `json:"allowed_api_origins"`
-	ProxyOrigin         string `json:"proxy_origin"`
+	Addr                 string `json:"addr"`
+	Port                 string `json:"port"`
+	Token                string `json:"token"`
+	UIBaseURL            string `json:"ui_base_url"`
+	AllowedAPIOrigins    string `json:"allowed_api_origins"`
+	ProxyOrigin          string `json:"proxy_origin"`
 	HarnessDevProxyURL   string `json:"harness_dev_proxy_url"`
-	TerminalEnabled     string `json:"terminal_enabled"`
-	TerminalAllowedRoot string `json:"terminal_allowed_root"`
-	TerminalShell       string `json:"terminal_shell"`
-	TerminalIdleTimeout string `json:"terminal_idle_timeout"`
-	TerminalMaxSessions string `json:"terminal_max_sessions"`
-	// WorkspaceRoots is the operator's allowlist of directories a browser client
-	// may choose as a session workspace, separated by the OS path-list separator
-	// (":" on POSIX). The serve directory is always the default root; these
-	// extend the allowlist. Also settable via `--workspace-root` flags and the
-	// `contenox serve [dir]` positional arguments.
-	WorkspaceRoots string `json:"workspace_roots"`
-	// HITLApprovalTimeout is the serve-level ceiling (a Go duration string,
-	// e.g. "1h") that bounds a pending human-in-the-loop approval when the
-	// policy rule that gated it set no TimeoutS of its own. Empty keeps
-	// hitlservice's built-in default (hitlservice.DefaultApprovalCeiling, 1
-	// hour) — see runtime/contenoxcli/serve_cmd.go's
-	// parseHITLApprovalCeiling.
-	HITLApprovalTimeout string `json:"hitl_approval_timeout"`
-	// TurnMax (env CONTENOX_TURN_MAX) is the hard wall-clock ceiling on a single
-	// NATIVE task-chain turn (a Go duration string, e.g. "15m") — Belt 2 of the
-	// native-turn survival layer. A turn still running when it elapses is
-	// terminated. Empty keeps nativeturn.DefaultTurnDeadline. See
-	// nativeturn.ParseEnv.
-	TurnMax string `json:"contenox_turn_max"`
-	// TurnGrace (env CONTENOX_TURN_GRACE) is how long a native turn survives with
-	// no client attached before it is cancelled and reclaimed (a Go duration
-	// string, e.g. "60s") — Belt 1 of the survival layer. A reconnect inside the
-	// window keeps it alive. Empty keeps nativeturn.DefaultGraceWindow. See
-	// nativeturn.ParseEnv.
-	TurnGrace string `json:"contenox_turn_grace"`
-	// SandboxShellScrub selects how the environment handed to an agent-reachable
-	// shell (the local_shell tool and the ACP "!"/shell_session PTY) is scrubbed
-	// of the serve process's own credentials: "deny-secrets" (the default — pass
-	// everything except the control plane and known credential shapes), "strict"
-	// (pass only a safe base set plus SandboxEnvAllow), or "off" (inherit
-	// everything, the legacy behavior). See libsandbox.EnvPolicyForMode.
-	SandboxShellScrub string `json:"sandbox_shell_scrub"`
-	// SandboxTerminalScrub is the same posture for the interactive terminal panel
-	// — a trusted operator shell, so it defaults to "off". Set "deny-secrets" or
-	// "strict" for a LAN-exposed serve where the terminal is less trusted.
+	TerminalEnabled      string `json:"terminal_enabled"`
+	TerminalAllowedRoot  string `json:"terminal_allowed_root"`
+	TerminalShell        string `json:"terminal_shell"`
+	TerminalIdleTimeout  string `json:"terminal_idle_timeout"`
+	TerminalMaxSessions  string `json:"terminal_max_sessions"`
+	WorkspaceRoots       string `json:"workspace_roots"`
+	HITLApprovalTimeout  string `json:"hitl_approval_timeout"`
+	TurnMax              string `json:"contenox_turn_max"`
+	TurnGrace            string `json:"contenox_turn_grace"`
+	SandboxShellScrub    string `json:"sandbox_shell_scrub"`
 	SandboxTerminalScrub string `json:"sandbox_terminal_scrub"`
-	// SandboxEnvAllow adds variable names or globs (comma/whitespace-separated,
-	// e.g. "GOCACHE,CARGO_HOME,HTTP_PROXY") to whichever scrub is active — the
-	// toolchain and deployment variables a shell needs that are not in the safe
-	// base set.
-	SandboxEnvAllow string `json:"sandbox_env_allow"`
-	// SandboxEnvDeny adds variable names or globs always dropped by an active
-	// scrub, on top of the built-in denies.
-	SandboxEnvDeny string `json:"sandbox_env_deny"`
+	SandboxEnvAllow      string `json:"sandbox_env_allow"`
+	SandboxEnvDeny       string `json:"sandbox_env_deny"`
 }
 
-// Dependencies are the services the product routes are mounted on. All fields
-// are optional: a route group is only registered when its dependencies are
-// present, so a bare runtime still serves /health and /version.
 type Dependencies struct {
-	DB                   libdb.DBManager
-	PubSub               libbus.Messenger
-	State                *runtimestate.State
-	ToolsProviderService toolsproviderservice.Service
-	Auth                 middleware.AuthZReader
-	Agent                agentservice.Agent
-	Chains               taskchainservice.Service
-	// Fleet is serve's fleet-lifecycle-policy layer (runtime/fleetservice), built
-	// on top of serve's live agent-instance Manager. The /fleet routes are a thin
-	// wrapper around it — List/Get/Dispatch/Stop/Cancel — so the orchestration
-	// (Enabled policy, teardown-on-failure, cancel fan-out) lives once, in
-	// fleetservice, not here.
-	Fleet fleetservice.Service
-	// Missions is the durable mission registry; the /missions routes surface it.
-	// The other half of the manifest — one-line intents bound to fleet work.
-	Missions missionservice.Service
-	// MissionChanges is the attention layer's read model over a mission's work
-	// (runtime/missionchanges): the changed-files list, per-file diffs, and the
-	// scope-anomaly summary the /missions/{id}/changes routes surface. Built on the
-	// same live kernel journal the Fleet Manager owns, so it is present only when
-	// serve wires it.
-	MissionChanges missionchanges.Service
-	// OperatorInbox is the durable attention surface for mission reports that
-	// reached no live supervising session (runtime/operatorinbox); the
-	// /operator-inbox route surfaces it. The sibling of the approval inbox for
-	// notices that need eyes rather than a decision — reports from missions an
-	// operator fired directly, and reports whose parent session had ended (see
-	// runtime/reportrouter). Optional: nil-gated like the other route groups.
-	OperatorInbox operatorinbox.Service
-	// HITL is the human-in-the-loop approval service (runtime/hitlservice) whose
-	// durable pending-ask store (slice C1) the /approvals routes surface: the
-	// inbox an operator reads and answers without attaching to the session that
-	// raised the ask (docs/development/blueprints/acp/fleet-consolidation.md
-	// slice C2). Distinct from HITLPolicySource/HITLDefaultPolicyName below,
-	// which feed only the /files `agent` view filter's own throwaway evaluator.
-	HITL hitlservice.Service
-	// Tracker is currently unused by registerProductRoutes (fleetservice.New
-	// takes its own tracker at construction, in serve_cmd.go); kept on
-	// Dependencies as the general activity-tracking seam for future route
-	// groups. Optional: nil degrades to a Noop where consumed.
-	Tracker     libtracker.ActivityTracker
-	WorkspaceID string
-	ProjectRoot string
-	ContenoxDir string
-	// WorkspaceRoots is the workspace-root allowlist. When set, the /files browse
-	// API resolves each request against a client-supplied `root` (validated
-	// through the allowlist) instead of the single fixed ProjectRoot.
-	WorkspaceRoots *vfs.Factory
-	// WorkspaceRootMutators, when set, enables the authenticated grant verbs
-	// (POST/DELETE /workspace/roots) on top of the read-only GET: serve builds
-	// them over the durable grant config and the reload doorbell
-	// (runtime/workspacegrants). Optional — nil leaves the roots surface
-	// read-only, matching the pre-grant behavior.
+	DB                    libdb.DBManager
+	PubSub                libbus.Messenger
+	State                 *runtimestate.State
+	ToolsProviderService  toolsproviderservice.Service
+	Auth                  middleware.AuthZReader
+	Agent                 agentservice.Agent
+	Chains                taskchainservice.Service
+	Fleet                 fleetservice.Service
+	Missions              missionservice.Service
+	MissionChanges        missionchanges.Service
+	OperatorInbox         operatorinbox.Service
+	HITL                  hitlservice.Service
+	Tracker               libtracker.ActivityTracker
+	WorkspaceID           string
+	ProjectRoot           string
+	ContenoxDir           string
+	WorkspaceRoots        *vfs.Factory
 	WorkspaceRootMutators *localfileapi.RootsMutators
 	Defaults              stateservice.RuntimeDefaults
 	TerminalService       terminalservice.Service
 	TerminalEnabled       bool
-	// HITLPolicySource and HITLDefaultPolicyName feed the /files `agent` view
-	// filter: verdicts are computed by the same HITL policy engine the live agent
-	// uses. When HITLPolicySource is nil the filter is unavailable (the raw tree
-	// still serves). HITLDefaultPolicyName is the fallback policy when a request
-	// omits `policy`; empty means the service's built-in default.
 	HITLPolicySource      hitlservice.PolicySource
 	HITLDefaultPolicyName string
 }
 
-// emptyKVReader is a KVReader whose lookups always miss, forcing a hitlservice
-// to use its constructor fallback policy rather than the active-policy KV key.
-// It is how the /files `agent` filter pins evaluation to an explicitly requested
-// policy name.
 type emptyKVReader struct{}
 
 func (emptyKVReader) GetKV(context.Context, string, interface{}) error {
 	return fmt.Errorf("serverapi: no active policy override")
 }
 
-// workspaceHITLFactory builds the PolicyEvaluatorFactory the /files `agent`
-// filter uses, mirroring how serve constructs its HITL service (same
-// PolicySource, tenant, and KV store) so the API and the runtime agree. An empty
-// requested policy name defers to the runtime's default resolution (reads the
-// active-policy KV key, then HITLDefaultPolicyName); a named policy is pinned via
-// emptyKVReader so it is evaluated verbatim. Returns nil when no PolicySource or
-// DB is configured, which disables the filter.
 func workspaceHITLFactory(deps Dependencies) localfileapi.PolicyEvaluatorFactory {
 	if deps.HITLPolicySource == nil || deps.DB == nil {
 		return nil
@@ -222,10 +129,6 @@ func workspaceHITLFactory(deps Dependencies) localfileapi.PolicyEvaluatorFactory
 	}
 }
 
-// New registers the spine routes (not-found shape, health, version) on mux and,
-// when deps are supplied, the product API routes. Returns a cleanup function.
-//
-// openapi:exclude the only direct registration here is the GET / catch-all, which serves the not-found error envelope for unmatched paths — not an operation
 func New(ctx context.Context, mux *http.ServeMux, nodeInstanceID, tenancy string, config *Config, deps ...Dependencies) (func() error, error) {
 	if mux == nil {
 		return nil, fmt.Errorf("serverapi: mux is nil")
@@ -239,7 +142,6 @@ func New(ctx context.Context, mux *http.ServeMux, nodeInstanceID, tenancy string
 	})
 	AddHealthRoutes(mux)
 	AddVersionRoutes(mux, version.Get(), nodeInstanceID, tenancy)
-	openapidocs.Register(mux)
 
 	if len(deps) > 0 {
 		if err := registerProductRoutes(ctx, mux, config, deps[0]); err != nil {
@@ -259,9 +161,6 @@ func registerProductRoutes(ctx context.Context, mux *http.ServeMux, config *Conf
 	backendSvc := backendservice.New(deps.DB)
 	stateSvc := stateservice.New(deps.State, deps.DB, deps.WorkspaceID)
 
-	// Read-only declared-agents registry (registration stays with `contenox
-	// agent`). Mounted here where deps.DB is guaranteed non-nil, not gated on
-	// PubSub — listing agents needs only the store.
 	agentregistryapi.AddAgentRegistryRoutes(mux, agentregistryservice.New(deps.DB))
 
 	backendapi.AddStateRoutes(mux, stateSvc)
@@ -273,42 +172,17 @@ func registerProductRoutes(ctx context.Context, mux *http.ServeMux, config *Conf
 	modelregistryapi.AddRoutes(mux, registrySvc, registry, backendSvc, store)
 
 	setupapi.AddSetupRoutes(mux, stateSvc, deps.Auth)
-	// Global shell-env injection: the operator-defined variables added on top of
-	// whatever the scrub passes into every shell contenox spawns. Plaintext config,
-	// authenticated like the other mutating routes.
 	shellenvapi.AddShellEnvRoutes(mux, shellenvservice.New(deps.DB), deps.Auth)
 	providerSvc := providerservice.New(deps.DB, deps.WorkspaceID)
 	providerapi.AddProviderRoutes(mux, providerSvc)
 
-	// The /files browse API is the file-explorer data source. When a workspace
-	// allowlist is configured (serve), it is per-root: each request names a
-	// `root` (the session's chosen workspace), validated through the allowlist,
-	// so a browser can browse any allowlisted root but nothing outside it. When
-	// no allowlist is configured, it stays rooted at the single fixed ProjectRoot
-	// (unchanged legacy behavior).
 	if deps.WorkspaceRoots != nil {
 		if err := localfileapi.AddWorkspaceRoutes(mux, deps.WorkspaceRoots, workspaceHITLFactory(deps)); err != nil {
 			return fmt.Errorf("workspace files: %w", err)
 		}
-		// GET /workspace/roots surfaces the same allowlist so a client can offer a
-		// folder picker instead of discovering the boundary via the 422 above; when
-		// serve supplies mutators, POST/DELETE /workspace/roots let a LAN operator
-		// grant or revoke a root live (see AddWorkspaceRootsRoutes).
 		localfileapi.AddWorkspaceRootsRoutes(mux, deps.WorkspaceRoots, deps.WorkspaceRootMutators)
-		// GET /workspace/search streams `rg --json` matches (SSE) under a
-		// Factory-validated root — same allowlist authority as the browse API.
 		localfileapi.AddWorkspaceSearchRoutes(mux, deps.WorkspaceRoots)
-		// GET /workspace/find streams filename matches (SSE) via a recursive walk
-		// under a Factory-validated root — the `find` to search's `grep`, and the
-		// data source for Beam's workspace filter box. Same allowlist authority, and
-		// the same agent-view annotation the browse API's filter=agent provides.
 		localfileapi.AddWorkspaceFindRoutes(mux, deps.WorkspaceRoots, workspaceHITLFactory(deps))
-		// POST /workspace/access batch-evaluates the HITL policy's read/write
-		// verdict for a client-supplied list of paths (runtime/accessview) — the
-		// structured-reason sibling of the browse/find APIs' filter=agent, for a
-		// caller (Beam's access-preview panel) that wants the full policy decision
-		// rather than a quiet UI verdict. Same Factory allowlist + policy-factory
-		// wiring as every other workspace route.
 		accessapi.AddRoutes(mux, deps.WorkspaceRoots, workspaceHITLFactory(deps))
 	} else if deps.ProjectRoot != "" {
 		projectFiles, err := localfileservice.New(deps.ProjectRoot)
@@ -335,11 +209,6 @@ func registerProductRoutes(ctx context.Context, mux *http.ServeMux, config *Conf
 	}
 
 	if deps.Agent != nil && chains != nil {
-		// OpenAI-compatible completions under /api/openai/... — the same
-		// agent/chain execution path as taskexecapi, spoken in OpenAI wire
-		// shapes. Root-level /v1 and Ollama-native aliases are registered by
-		// serve on its root mux (contenoxcli/serve_cmd.go), where clients that
-		// point a base URL at the bare host expect them.
 		compatapi.AddOpenAIRoutes(mux, compatapi.CompatDeps{
 			Agent:        deps.Agent,
 			Chains:       chains,
@@ -351,9 +220,6 @@ func registerProductRoutes(ctx context.Context, mux *http.ServeMux, config *Conf
 	}
 
 	if deps.TerminalService != nil {
-		// The terminal accepts exactly what every other serve surface accepts:
-		// the raw token OR the browser session JWT — one login, every surface.
-		// Injected as a closure because terminalapi cannot import this package.
 		var terminalAuth func(string) bool
 		if strings.TrimSpace(config.Token) != "" {
 			token := config.Token
@@ -366,41 +232,22 @@ func registerProductRoutes(ctx context.Context, mux *http.ServeMux, config *Conf
 		toolsapi.AddRemoteToolsRoutes(mux, deps.ToolsProviderService)
 	}
 
-	// Live-fleet counterpart of the declared-agents registry above: the
-	// config+runtime join lives only in serve's Manager (wrapped by
-	// fleetservice), so the routes exist only when serve passes a Fleet.
 	if deps.Fleet != nil {
 		fleetapi.AddRoutes(mux, deps.Fleet)
 	}
 
-	// Durable manifest half of the fleet: mission records. Registered only when
-	// serve builds the service, mirroring the other nil-gated route groups.
 	if deps.Missions != nil {
 		missionapi.AddRoutes(mux, deps.Missions)
 	}
 
-	// The attention layer's per-mission changed-files/diff/scope view
-	// (runtime/missionchanges), read-only, sitting under /missions/{id}. Nil-gated
-	// like every other fleet surface: it needs the live kernel journal to fold, so
-	// the routes exist only when serve builds the service.
 	if deps.MissionChanges != nil {
 		missionchangesapi.AddRoutes(mux, deps.MissionChanges)
 	}
 
-	// The operator attention inbox: mission reports that reached no live
-	// supervising session (an operator-fired mission's reports, or reports whose
-	// parent session had ended). The read sibling of /approvals — see
-	// runtime/reportrouter for what routes reports here. Registered only when
-	// serve builds the service, mirroring the other nil-gated route groups.
 	if deps.OperatorInbox != nil {
 		operatorinboxapi.AddRoutes(mux, deps.OperatorInbox)
 	}
 
-	// The inbox: pending human-in-the-loop approvals an operator can read and
-	// answer without attaching to the session that raised them (slice C2 of
-	// fleet-consolidation.md, closing the loop C1's durable store opened).
-	// Registered only when serve builds an HITL service, mirroring the other
-	// nil-gated route groups.
 	if deps.HITL != nil {
 		approvalapi.AddRoutes(mux, deps.HITL)
 	}
@@ -413,8 +260,6 @@ func registerProductRoutes(ctx context.Context, mux *http.ServeMux, config *Conf
 	return nil
 }
 
-// Handler wraps a mux with the standard middleware chain: CORS, request ID,
-// tracing, and local API request protection.
 func Handler(mux *http.ServeMux, config *Config) http.Handler {
 	if config == nil {
 		config = &Config{}
@@ -443,8 +288,6 @@ func firstNonEmpty(vals ...string) string {
 	return ""
 }
 
-// LoadConfig populates cfg from environment variables (lowercased keys mapped
-// to json tags).
 func LoadConfig[T any](cfg *T) error {
 	if cfg == nil {
 		return fmt.Errorf("config pointer is nil")

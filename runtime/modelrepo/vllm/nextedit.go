@@ -15,7 +15,6 @@ type nextEditClient struct {
 	format string
 }
 
-// CanNextEdit reports the model's explicit independent edit capability.
 func (p *vLLMProvider) CanNextEdit() bool {
 	if !p.SupportsNextEdit {
 		return false
@@ -24,7 +23,6 @@ func (p *vLLMProvider) CanNextEdit() bool {
 	return err == nil
 }
 
-// GetNextEditConnection binds the model's declared edit profile to vLLM completion.
 func (p *vLLMProvider) GetNextEditConnection(_ context.Context, backend string) (modelrepo.LLMNextEditClient, error) {
 	if !p.CanNextEdit() {
 		return nil, modelrepo.ErrNextEditUnsupported
@@ -39,7 +37,6 @@ func (p *vLLMProvider) GetNextEditConnection(_ context.Context, backend string) 
 	return &nextEditClient{vLLMClient: vLLMClient{baseURL: backend, httpClient: client, modelName: p.Name, maxOutputTokens: p.MaxOutputTokens, apiKey: p.authToken, tracker: p.tracker}, format: p.NextEditFormat}, nil
 }
 
-// NextEdit executes the profile's raw completion prompt and validates its replacements.
 func (c *nextEditClient) NextEdit(ctx context.Context, input modelrepo.NextEditRequest) (modelrepo.NextEditResult, error) {
 	if err := input.Validate(); err != nil {
 		return modelrepo.NextEditResult{}, err

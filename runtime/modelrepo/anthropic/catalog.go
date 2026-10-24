@@ -1,6 +1,3 @@
-// Package anthropic is a direct (non-Vertex) provider for the Anthropic API,
-// which speaks the Messages API. It reuses the shared messages codec; only the
-// transport is Anthropic-specific.
 package anthropic
 
 import (
@@ -43,7 +40,6 @@ func (p *catalogProvider) baseURL() string {
 }
 
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	// Catalog listing is a non-streaming call: bound it end-to-end.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 
@@ -57,15 +53,13 @@ type modelListResponse struct {
 }
 
 type modelInfo struct {
-	ID             string `json:"id"`
-	DisplayName    string `json:"display_name"`
-	Lifecycle      string `json:"lifecycle"`
-	CreatedAt      string `json:"created_at"`
-	MaxInputTokens int    `json:"max_input_tokens"`
-	// MaxTokens is the largest max_tokens the model accepts; the Models API
-	// publishes no separate output-token ceiling.
-	MaxTokens    int                `json:"max_tokens"`
-	Capabilities *modelCapabilities `json:"capabilities"`
+	ID             string             `json:"id"`
+	DisplayName    string             `json:"display_name"`
+	Lifecycle      string             `json:"lifecycle"`
+	CreatedAt      string             `json:"created_at"`
+	MaxInputTokens int                `json:"max_input_tokens"`
+	MaxTokens      int                `json:"max_tokens"`
+	Capabilities   *modelCapabilities `json:"capabilities"`
 }
 
 type modelCapabilities struct {
@@ -161,10 +155,6 @@ func (p *catalogProvider) listModels(ctx context.Context, path string) ([]modelr
 	return all, nil
 }
 
-// anthropicThinkingTypes reads the model's own declaration of its thinking
-// controls. A model the vendor lists without a capabilities object declares
-// none, which is a declaration and not a gap: it is what keeps the runtime from
-// guessing a control from the model's name.
 func anthropicThinkingTypes(caps *modelCapabilities) *modelrepo.ThinkingTypes {
 	if caps == nil {
 		return nil
@@ -201,8 +191,6 @@ func anthropicCapabilitiesCanVision(caps *modelCapabilities) bool {
 	return caps.ImageInput.Supported
 }
 
-// anthropicModelMeta carries the catalogue facts that are not capabilities, so a
-// surface can name a model the way the vendor does without re-deriving it.
 func anthropicModelMeta(item modelInfo) map[string]string {
 	meta := map[string]string{}
 	if strings.TrimSpace(item.DisplayName) != "" && item.DisplayName != item.ID {

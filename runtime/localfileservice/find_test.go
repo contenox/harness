@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// collectFind runs Find and returns the emitted entries' paths (in emission order)
-// plus the result.
 func collectFind(t *testing.T, svc localfileservice.Service, opts localfileservice.FindOptions) ([]string, localfileservice.FindResult) {
 	t.Helper()
 	var paths []string
@@ -36,7 +34,7 @@ func seedTree(t *testing.T, root string) {
 		"docs/beam/guide.txt",
 		"src/app.ts",
 		"src/app_test.ts",
-		"node_modules/pkg/index.md", // under a noise dir — must be pruned
+		"node_modules/pkg/index.md",
 	} {
 		require.NoError(t, os.WriteFile(filepath.Join(root, f), []byte("x"), 0o644))
 	}
@@ -81,7 +79,6 @@ func TestUnit_Find_PathScopedGlobMatchesRelativePath(t *testing.T) {
 	svc, err := localfileservice.New(root)
 	require.NoError(t, err)
 
-	// A pattern with '/' matches the root-relative path, not the basename.
 	paths, _ := collectFind(t, svc, localfileservice.FindOptions{Globs: []string{"docs/*.md"}})
 	require.ElementsMatch(t, []string{"docs/intro.md"}, paths,
 		"docs/*.md matches one level under docs by relative path, not the deeper beam/ file")
@@ -121,15 +118,10 @@ func TestUnit_Find_BadGlobErrors(t *testing.T) {
 	require.Error(t, ferr, "a malformed filepath.Match pattern is a request error, not a silent no-match")
 }
 
-// TestUnit_Find_SkipsControlPlaneSubtree is the safety-critical case: the walk
-// descends into children the single-path guard never saw, so Find MUST re-resolve
-// each node through the vfs view. A control-plane directory sitting UNDER a granted
-// workspace root must be pruned (never emitted), even though the walk root itself
-// is legitimately contained — the recursive analogue of the /files boundary.
 func TestUnit_Find_SkipsControlPlaneSubtree(t *testing.T) {
 	root := t.TempDir()
 	cpDir := filepath.Join(root, "cp")
-	lookalike := filepath.Join(root, "cp2") // sibling-named: proves the skip is segment-exact
+	lookalike := filepath.Join(root, "cp2")
 	require.NoError(t, os.MkdirAll(cpDir, 0o750))
 	require.NoError(t, os.MkdirAll(lookalike, 0o750))
 	require.NoError(t, os.WriteFile(filepath.Join(cpDir, "policy.md"), []byte("x"), 0o644))

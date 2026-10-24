@@ -37,7 +37,6 @@ func (p *catalogProvider) Type() string {
 }
 
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	// Catalog listing is a non-streaming call: bound it end-to-end.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 
@@ -57,9 +56,6 @@ func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedM
 	return models, nil
 }
 
-// listModelNames walks every page of the vendor's model list. The list is
-// paginated (nextPageToken, at most 1000 models per page), so a single request
-// reports only the first page as the whole catalogue.
 func (p *catalogProvider) listModelNames(ctx context.Context) ([]string, error) {
 	var names []string
 	pageToken := ""
@@ -142,7 +138,6 @@ func (p *catalogProvider) baseURL() string {
 	return base
 }
 
-// describeModel reads one model by its resource name and lists it under the bare id that role assignment and generation use.
 func (p *catalogProvider) describeModel(ctx context.Context, modelName string) (modelrepo.ObservedModel, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/v1beta/%s", strings.TrimRight(p.baseURL(), "/"), modelName), nil)
 	if err != nil {
@@ -199,7 +194,6 @@ func (p *catalogProvider) describeModel(ctx context.Context, modelName string) (
 			observed.CanEmbed = true
 		}
 	}
-	// Gemini's model API reports no input modalities; vision/audio come from hand-maintained allowlists.
 	observed.CanVision = observed.CanChat && modelrepo.GeminiModelSupportsVision(observed.Name)
 	observed.CanAudio = observed.CanChat && modelrepo.GeminiModelSupportsAudio(observed.Name)
 

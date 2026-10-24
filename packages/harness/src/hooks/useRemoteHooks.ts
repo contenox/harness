@@ -17,7 +17,6 @@ export function useRemoteHooks(params?: { limit?: number; cursor?: string }) {
   });
 }
 
-// Get by ID
 export function useRemoteHook(id: string) {
   return useQuery<RemoteHook>({
     queryKey: remoteHookKeys.detail(id),
@@ -25,7 +24,6 @@ export function useRemoteHook(id: string) {
   });
 }
 
-// Get by name
 export function useRemoteHookByName(name: string) {
   return useQuery<RemoteHook>({
     queryKey: remoteHookKeys.byName(name),
@@ -33,7 +31,6 @@ export function useRemoteHookByName(name: string) {
   });
 }
 
-// Get schemas
 export function useRemoteHookSchemas() {
   return useQuery<Record<string, unknown>>({
     queryKey: remoteHookKeys.schemas(),
@@ -41,7 +38,6 @@ export function useRemoteHookSchemas() {
   });
 }
 
-// Create
 export function useCreateRemoteHook() {
   const queryClient = useQueryClient();
   return useMutation<RemoteHook, Error, Partial<RemoteHook>>({
@@ -52,7 +48,6 @@ export function useCreateRemoteHook() {
   });
 }
 
-// Update
 export function useUpdateRemoteHook() {
   const queryClient = useQueryClient();
   return useMutation<RemoteHook, Error, { id: string; data: Partial<RemoteHook> }>({
@@ -64,7 +59,6 @@ export function useUpdateRemoteHook() {
   });
 }
 
-// Delete
 export function useDeleteRemoteHook() {
   const queryClient = useQueryClient();
   return useMutation<string, Error, string>({

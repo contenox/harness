@@ -7,23 +7,11 @@ import type { PreviewKind } from '../../../components/editors/previewKind';
 export interface AssetActionToolbarProps {
   kind: PreviewKind;
   path: string;
-  /**
-   * Lists the machine's advertised actions for this kind; absent = no machine actions.
-   */
   listActions?: () => Promise<AssetAction[]>;
-  /**
-   * Runs one advertised action on the host file at `path`.
-   */
   runAction?: (action: string, path: string) => Promise<AssetActionResult>;
-  /**
-   * Opens an artifact the action produced, switching the preview to it.
-   */
   onArtifact?: (path: string) => void;
 }
 
-/**
- * The asset action toolbar of the preview tab — the pair-programming surface.
- */
 export function AssetActionToolbar({
   kind,
   path,

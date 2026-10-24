@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Every request carries store:false, and reasoning is parsed from the "reasoning" output item, never the top-level config echo.
 func TestUnit_OpenAIChatClient_ResponsesReasoningAndStore(t *testing.T) {
 	t.Parallel()
 
@@ -21,7 +20,6 @@ func TestUnit_OpenAIChatClient_ResponsesReasoningAndStore(t *testing.T) {
 		require.Equal(t, "/responses", r.URL.Path)
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotReq))
 		w.Header().Set("Content-Type", "application/json")
-		// The decoy top-level "reasoning" echo must be ignored by the parser.
 		_, _ = w.Write([]byte(`{
 			"output": [
 				{"type":"reasoning","id":"rs_1","summary":[{"type":"summary_text","text":"chain of thought"}]},

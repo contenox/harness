@@ -30,7 +30,6 @@ func (f fixedKVReader) GetKV(_ context.Context, _ string, out any) error {
 	return nil
 }
 
-// writePolicy writes a policy document where the FS PolicySource will find it.
 func writePolicy(t *testing.T, dir, name string, data []byte) {
 	t.Helper()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, name), data, 0o644))
@@ -103,8 +102,6 @@ func TestUnit_Evaluate_HostConditionDeniesByURLHost(t *testing.T) {
 	}`))
 	svc := hitlservice.New(src, testTenant, fixedKVReader{"hitl-policy.json"}, libtracker.NoopTracker{})
 
-	// Host parsing must survive scheme, :port and path — the cases a raw URL
-	// glob would let slip through.
 	denied := []string{
 		"http://localhost/",
 		"http://localhost:8080/api",
@@ -119,7 +116,6 @@ func TestUnit_Evaluate_HostConditionDeniesByURLHost(t *testing.T) {
 		assert.Equal(t, hitlservice.ActionDeny, r.Action, "host deny must block %q", u)
 	}
 
-	// A host that only contains the pattern as a substring must NOT be denied.
 	allowed := []string{
 		"http://example.com/?redir=localhost",
 		"https://api.example.com/v1",

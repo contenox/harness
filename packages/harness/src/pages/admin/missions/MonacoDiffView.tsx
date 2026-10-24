@@ -9,16 +9,6 @@ import { defineBeamMonacoThemes, useMonacoAppTheme } from '../../../lib/monacoAp
 import { languageForPath } from '../../../lib/missionChanges';
 import type { MissionChangeStatus, MissionFileDiff } from '../../../lib/types';
 
-/**
- * The per-file diff, rendered with Monaco (`@monaco-editor/react`) — the proven
- * choice for exactly this, never a hand-rolled differ. This is the
- * ONLY module that imports Monaco in the mission inspector, and it is lazily
- * loaded from MissionChangesTab (itself lazily loaded from the page), so Monaco
- * never enters the mission-detail bundle and does not even load until a file row
- * is expanded — the diff is asynchronous enhancement over the instant list (the
- * instant-feel law). It is read-only: Beam reviews, it never edits (the
- * meaningful-filter).
- */
 
 type DiffView = 'old' | 'diff' | 'new';
 
@@ -35,8 +25,6 @@ export default function MonacoDiffView({
   const [view, setView] = useState<DiffView>('diff');
   const theme = useMonacoAppTheme();
   const language = languageForPath(path);
-  // Side-by-side reads on a wide viewport; inline is the honest fit for the
-  // narrow mission-inspector column and mobile.
   const sideBySide = useMediaQuery('(min-width: 768px)');
 
   const views: { id: DiffView; labelKey: TranslationKey; titleKey: TranslationKey }[] = [
@@ -45,8 +33,6 @@ export default function MonacoDiffView({
     { id: 'new', labelKey: 'changes.view_new', titleKey: 'changes.view_new_title' },
   ];
 
-  // An added file has no original; a deleted file has no resulting version —
-  // say so plainly instead of showing a blank editor.
   const emptyNote =
     view === 'old' && status === 'added'
       ? t('changes.added_no_old')

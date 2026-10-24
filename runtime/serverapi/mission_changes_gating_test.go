@@ -15,10 +15,6 @@ import (
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
-// missionChangesGatingMux builds the product mux with or without the
-// MissionChanges service, and seeds one mission so the WITH case has a real id to
-// hit. It mirrors fleetGatingMux — the attention-layer routes are nil-gated the
-// same way every other fleet surface is.
 func missionChangesGatingMux(t *testing.T, withChanges bool) (*http.ServeMux, string) {
 	t.Helper()
 	ctx := context.Background()
@@ -40,8 +36,6 @@ func missionChangesGatingMux(t *testing.T, withChanges bool) (*http.ServeMux, st
 
 	deps := Dependencies{DB: db, State: state}
 	if withChanges {
-		// nil journal reader: a deployment with no live kernel still answers, with
-		// empty changes — which is all this gating test needs (route present → 200).
 		deps.MissionChanges = missionchanges.New(missions, nil)
 	}
 
@@ -52,10 +46,6 @@ func missionChangesGatingMux(t *testing.T, withChanges bool) (*http.ServeMux, st
 	return mux, m.ID
 }
 
-// TestServe_MissionChangesRoutesGatedOnService proves /missions/{id}/changes is
-// registered only when serve passes a MissionChanges service. With it, a real
-// mission's changes read as 200 (empty, no live unit); without it, the route does
-// not exist and the request 404s.
 func TestServe_MissionChangesRoutesGatedOnService(t *testing.T) {
 	withChanges, id := missionChangesGatingMux(t, true)
 	rr := httptest.NewRecorder()

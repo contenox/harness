@@ -13,7 +13,6 @@ function contextUsageTextClass(pct: number): string | undefined {
   return undefined;
 }
 
-/** Compact context-window usage meter shared by the chat toolbar and the console status line. */
 export function ContextUsageMeter({ used, size }: { used: number; size: number }) {
   const safeUsed = Math.max(0, used);
   const pct = Math.round((safeUsed / size) * 100);

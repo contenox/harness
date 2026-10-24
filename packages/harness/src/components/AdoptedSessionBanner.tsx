@@ -3,26 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useMissions } from '../hooks/useMissions';
 
-/**
- * The header strip for an ADOPTED chat session — one the operator opened from
- * the fleet board / mission detail to watch and steer a running dispatch (see
- * `adoptMeta.ts`). Mounted only when the session's roster `_meta` carries a
- * `contenox.adopt` outcome, so its `useMissions` poll is scoped to adopted
- * sessions and never runs for an ordinary chat.
- *
- * It reports the three things that make an adopted session legible:
- *  - control: "Übernommen" (this connection answers the unit's permission asks)
- *    vs "Beobachten" (another viewer controls it; you are watching) — read
- *    straight from the kernel's `controller` verdict, never assumed.
- *  - the agent driving the session.
- *  - a link back to the mission it belongs to, resolved from the adopted
- *    instance id (a dispatched mission carries its instance id); absent for an
- *    adopted board session that is not a mission.
- *
- * plus the durability caveat: dispatch wrote nothing durable before adoption, so
- * the transcript is durable only from take-over onward (acpsvc/adopt.go "Honest
- * limitations"). Shown quietly so it informs without alarming.
- */
 export function AdoptedSessionBanner({
   instanceId,
   controller,

@@ -17,10 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// stubGrants is an in-test stand-in for serve's reloader: Add/Remove mutate a
-// live Factory via SetRoots, exactly as the real mutators do, so the POST/DELETE
-// handlers' response (re-read from that Factory) reflects the change. It lets the
-// handler wiring be tested without the config DB or the bus.
 type stubGrants struct {
 	factory   *vfs.Factory
 	roots     []string
@@ -83,20 +79,17 @@ func TestUnit_WorkspaceRoots_PostGrantsAndDeleteRevokes(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	// Baseline: only the base root.
 	resp, err := http.Get(srv.URL + "/workspace/roots")
 	require.NoError(t, err)
 	baseline := readBody(t, resp)
 	require.Equal(t, []string{resolvedBase}, decodeRoots(t, baseline))
 
-	// POST grants a new root; the response already reflects it.
 	body, _ := json.Marshal(map[string]string{"path": grant})
 	resp, err = http.Post(srv.URL+"/workspace/roots", "application/json", bytes.NewReader(body))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.ElementsMatch(t, []string{resolvedBase, resolvedGrant}, decodeRoots(t, readBody(t, resp)))
 
-	// DELETE revokes it.
 	req, _ := http.NewRequest(http.MethodDelete, srv.URL+"/workspace/roots?path="+resolvedGrant, nil)
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
@@ -152,8 +145,6 @@ func TestUnit_WorkspaceRoots_PostValidation(t *testing.T) {
 	})
 }
 
-// TestUnit_WorkspaceRoots_NilMutatorsIsReadOnly proves that without mutators the
-// write verbs are not registered — POST/DELETE 405 — while GET still serves.
 func TestUnit_WorkspaceRoots_NilMutatorsIsReadOnly(t *testing.T) {
 	base := t.TempDir()
 	factory, err := vfs.NewFactory(base)
@@ -180,8 +171,8 @@ func readBody(t *testing.T, resp *http.Response) []byte {
 }
 
 func TestUnit_WorkspaceRoots_NameAndManaged(t *testing.T) {
-	base := t.TempDir()  // launch root → default, unmanaged
-	grant := t.TempDir() // runtime grant → managed, named from its marker
+	base := t.TempDir()
+	grant := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(grant, ".contenox"), 0o750))
 	require.NoError(t, os.WriteFile(
 		filepath.Join(grant, ".contenox", "workspace.id"),
@@ -190,7 +181,6 @@ func TestUnit_WorkspaceRoots_NameAndManaged(t *testing.T) {
 	factory, err := vfs.NewFactory(base, grant)
 	require.NoError(t, err)
 	mut := &localfileapi.RootsMutators{
-		// Only `grant` is a runtime grant; `base` is a launch root.
 		Grants: func(context.Context) []string { return []string{grant} },
 	}
 	mux := http.NewServeMux()

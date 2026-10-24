@@ -14,12 +14,9 @@ import (
 )
 
 const (
-	vllmPort       = "8000/tcp"
-	vllmHealthPath = "/health"
-	vllmModelsPath = "/v1/models"
-	// Must exceed the largest output budget a client requests (the prompt client
-	// asks for max_tokens = context length, up to 2048) plus the prompt itself —
-	// otherwise vLLM 400s with "maximum context length" when output+input > limit.
+	vllmPort           = "8000/tcp"
+	vllmHealthPath     = "/health"
+	vllmModelsPath     = "/v1/models"
 	defaultMaxModelLen = "4096"
 	defaultModel       = "HuggingFaceTB/SmolLM2-360M-Instruct"
 	defaultTag         = "latest"
@@ -28,7 +25,6 @@ const (
 	readinessRetries   = 15
 )
 
-// SetupVLLMLocalInstance creates a vLLM container for testing.
 func SetupVLLMLocalInstance(ctx context.Context, model string, tag string, toolParser string) (string, testcontainers.Container, func(), error) {
 	if model == "" {
 		model = defaultModel
@@ -38,8 +34,6 @@ func SetupVLLMLocalInstance(ctx context.Context, model string, tag string, toolP
 	}
 
 	cleanup := func() {}
-	// vLLM-CPU reserves gpu-memory-utilization * total_RAM at startup, so 0.3
-	// keeps the target small. max-model-len must be a flag, not an env var.
 	cmd := []string{
 		"--model", model,
 		"--max-model-len", defaultMaxModelLen,

@@ -1,9 +1,9 @@
 package acpsvc
 
 import (
-	"github.com/contenox/harness/runtime/homedir"
 	"encoding/json"
 	"fmt"
+	"github.com/contenox/harness/runtime/homedir"
 	"os"
 	"path/filepath"
 
@@ -24,10 +24,6 @@ func LoadChainRegistry() (*ChainRegistry, error) {
 	return LoadChainRegistryFrom(defaultChainFilename, chainPathEnv)
 }
 
-// LoadChainRegistryFrom loads the ACP chain for a specific profile: filename is
-// the ~/.contenox-harness/ file the chain is read from, envVar overrides that path.
-// A missing file is a hard error (fail closed) — callers must not fall back to
-// a different chain.
 func LoadChainRegistryFrom(filename, envVar string) (*ChainRegistry, error) {
 	path := os.Getenv(envVar)
 	if path == "" {

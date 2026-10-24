@@ -92,7 +92,7 @@ export default function ChainEditor({
             rows={20}
           />
 
-          {/* Task navigation bar */}
+
           <div>
             <Label className="text-sm font-medium">{t('workflow.task_navigation')}</Label>
             <div className="flex flex-wrap gap-2 pt-2">

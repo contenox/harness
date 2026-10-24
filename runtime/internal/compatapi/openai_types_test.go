@@ -13,9 +13,6 @@ import (
 	"github.com/contenox/harness/runtime/taskengine"
 )
 
-// TestChatMessage_ContentUnion covers both OpenAI wire forms for message
-// content: the plain string and the content-parts array (text + image_url
-// with a data: URI).
 func TestChatMessage_ContentUnion(t *testing.T) {
 	pngBytes := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a}
 	pngB64 := base64.StdEncoding.EncodeToString(pngBytes)
@@ -104,8 +101,6 @@ func TestChatMessage_ContentUnion(t *testing.T) {
 	})
 }
 
-// TestChatCompletions_ImageParts drives the full handler with a content-parts
-// request and asserts the decoded images reach the agent's chat history.
 func TestChatCompletions_ImageParts(t *testing.T) {
 	agent := &stubAgent{reply: "a cat"}
 	chains := &stubChains{}

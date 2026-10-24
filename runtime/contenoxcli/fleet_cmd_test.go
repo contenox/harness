@@ -20,16 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ─── test scaffolding: hand-fed fakes behind the REAL fleetapi/missionapi
-// handlers, mounted at "/api" exactly like `contenox serve` mounts them. This
-// exercises the serveClient wrappers against the real wire contract without
-// spawning subprocesses or a `contenox serve` process — the narrow Service
-// interfaces make the fakes trivial (fleet-consolidation.md's testing note for
-// C3/M4). ────────────────────────────────────────────────────────────────────
-
-// fakeFleetService is a hand-fed fleetservice.Service. Unknown ids surface as
-// agentinstance.ErrNotFound so the fleetapi handlers map them to 404 exactly as
-// the real service would.
 type fakeFleetService struct {
 	entries   []agentinstance.FleetEntry
 	statuses  map[string]agentinstance.InstanceStatus
@@ -71,9 +61,6 @@ func (f *fakeFleetService) Cancel(_ context.Context, instanceID, sessionID strin
 	return nil
 }
 
-// fakeMissionService is a hand-fed missionservice.Service. Only the read paths
-// the CLI exercises carry behavior; the mutations exist to satisfy the
-// interface.
 type fakeMissionService struct {
 	missions []*missionservice.Mission
 	reports  map[string][]*missionservice.Report
@@ -141,8 +128,6 @@ func setupFleetTestServer(t *testing.T) (*fakeFleetService, *fakeMissionService,
 	return fleet, missions, srv
 }
 
-// ─── test command builders (standalone, mirroring the real wiring) ──────────
-
 func newFleetListTestCmd() *cobra.Command {
 	c := &cobra.Command{Use: "list", Args: cobra.NoArgs, RunE: runFleetList}
 	addServeClientFlags(c)
@@ -181,8 +166,6 @@ func runTestCmd(t *testing.T, cmd *cobra.Command, args ...string) (string, error
 	return buf.String(), err
 }
 
-// ─── list ───────────────────────────────────────────────────────────────────
-
 func TestUnit_FleetList_EmptyRendersHint(t *testing.T) {
 	_, _, srv := setupFleetTestServer(t)
 	out, err := runTestCmd(t, newFleetListTestCmd(), "--server", srv.URL)
@@ -201,7 +184,6 @@ func TestUnit_FleetList_BoardShowsUnitsWithMissionIntent(t *testing.T) {
 				{ID: "inst-1", AgentName: "reviewer", Kind: "external_acp", State: agentinstance.StateRunning, Sessions: 1, Viewers: 0},
 			},
 		},
-		// A declared-but-idle agent: no instances, so it renders as "idle".
 		{AgentID: "a2", AgentName: "planner", Kind: "chain"},
 	}
 	missions.missions = []*missionservice.Mission{
@@ -214,8 +196,8 @@ func TestUnit_FleetList_BoardShowsUnitsWithMissionIntent(t *testing.T) {
 	for _, want := range []string{
 		"AGENT", "KIND", "STATE", "INSTANCE", "SESSIONS", "VIEWERS", "INTENT",
 		"reviewer", "external_acp", "running", "inst-1",
-		"triage the failing CI run", // the mission intent joined onto the unit
-		"planner", "chain", "idle",  // the idle agent still appears
+		"triage the failing CI run",
+		"planner", "chain", "idle",
 	} {
 		require.Contains(t, out, want)
 	}
@@ -235,9 +217,6 @@ func TestUnit_FleetList_JSONEmitsRawEntries(t *testing.T) {
 	require.Equal(t, "reviewer", got[0].AgentName)
 }
 
-// A unit with no mission bound to it renders its INTENT as absent ("-") rather
-// than blanking the row — the join is best-effort presentation over the
-// load-bearing unit data.
 func TestUnit_FleetList_UnitWithNoMissionRendersDashIntent(t *testing.T) {
 	fleet, _, srv := setupFleetTestServer(t)
 	fleet.entries = []agentinstance.FleetEntry{
@@ -249,11 +228,8 @@ func TestUnit_FleetList_UnitWithNoMissionRendersDashIntent(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, out, "reviewer")
 	require.Contains(t, out, "inst-1")
-	// The single data row ends with the absent-intent marker.
 	require.Regexp(t, `inst-1.*-\n?$`, strings.TrimSpace(out))
 }
-
-// ─── show ───────────────────────────────────────────────────────────────────
 
 func TestUnit_FleetShow_RendersStatus(t *testing.T) {
 	fleet, _, srv := setupFleetTestServer(t)
@@ -289,8 +265,6 @@ func TestUnit_FleetShow_UnknownIDFailsNonZero(t *testing.T) {
 	require.NotContains(t, out, "Instance:")
 }
 
-// ─── stop ───────────────────────────────────────────────────────────────────
-
 func TestUnit_FleetStop_ConfirmsAndCallsService(t *testing.T) {
 	fleet, _, srv := setupFleetTestServer(t)
 	out, err := runTestCmd(t, newFleetStopTestCmd(), "--server", srv.URL, "inst-1")
@@ -298,8 +272,6 @@ func TestUnit_FleetStop_ConfirmsAndCallsService(t *testing.T) {
 	require.Equal(t, "Instance inst-1 stopped.\n", out)
 	require.Equal(t, []string{"inst-1"}, fleet.stopped)
 }
-
-// ─── cancel ─────────────────────────────────────────────────────────────────
 
 func TestUnit_FleetCancel_AllSessions(t *testing.T) {
 	fleet, _, srv := setupFleetTestServer(t)
@@ -319,8 +291,6 @@ func TestUnit_FleetCancel_SpecificSession(t *testing.T) {
 
 func TestUnit_FleetCancel_UnknownInstanceFailsNonZero(t *testing.T) {
 	fleet, _, srv := setupFleetTestServer(t)
-	// A non-empty status map with a miss makes the fake return ErrNotFound,
-	// which fleetapi maps to 404.
 	fleet.statuses["other"] = agentinstance.InstanceStatus{ID: "other"}
 	_, err := runTestCmd(t, newFleetCancelTestCmd(), "--server", srv.URL, "no-such-id")
 	require.Error(t, err)

@@ -12,9 +12,7 @@ export type SidebarProps = {
   disabled: boolean;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  /** When omitted and `children` is not set, the rail is empty. */
   items?: MenuItem[];
-  /** Replaces the default nav list when provided. */
   children?: React.ReactNode;
   className?: string;
 };

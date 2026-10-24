@@ -22,9 +22,6 @@ import {
 } from '../lib/asks';
 import { formatDateTime } from '../lib/relativeTime';
 
-/**
- * One agent, stopped, waiting for a person who has no access to the machine it is running on.
- */
 export function AskCard({
   ask,
   outcome,
@@ -73,24 +70,13 @@ export function AskCard({
           )}
         </div>
 
-        {/*
-          The summary is the question. Bounded rather than trusted: it is a
-          string a customer's own machine wrote, and one long enough to fill
-          the viewport would push both actions below the fold on the screen
-          that exists to be answered without scrolling.
-        */}
+
         <P className="max-h-40 overflow-y-auto overscroll-contain text-base leading-snug font-medium break-words">
           {askHeadline(ask)}
         </P>
       </div>
 
-      {/*
-        The four supporting facts as ONE block with a tight rhythm, not four
-        siblings of the card's own gap. Measured, not aesthetic: at the card's
-        outer spacing this section alone cost more than a button, and Allow
-        left the bottom of a 620px handset — see `reach.spec.ts`, "answering
-        with a thumb". They read as one paragraph of context either way.
-      */}
+
       <div className="flex flex-col gap-1">
         <Provenance ask={ask} instances={instances} here={here} />
         <Rule ask={ask} kind={kind} />
@@ -132,11 +118,7 @@ export function AskCard({
 
           {error !== undefined && error !== null && <ScreenError error={error} />}
 
-          {/*
-            The seam is not decoration. Everything above explains the decision
-            and everything below IS the decision, and on a phone with no
-            scrollbar the boundary between the two has to be visible.
-          */}
+
           <div className="border-surface-200 dark:border-dark-surface-500 flex flex-col gap-2 border-t pt-3">
             {kind === 'question' ? (
               <>
@@ -146,10 +128,7 @@ export function AskCard({
                   onClick={() => onAnswer({ decision: 'answer', answer: answer.trim() })}>
                   Send this answer
                 </Button>
-                {/* Whatever was typed rides along as GUIDANCE rather than as
-                    an answer: the relay refuses an answer on a denial, and a
-                    refusal that threw away the sentence explaining it would
-                    leave the agent told no and nothing else. */}
+
                 <Button
                   variant="danger"
                   disabled={pending}
@@ -371,10 +350,7 @@ function Standing({ reason }: { reason: string }) {
       role="status"
       className="border-surface-200 dark:border-dark-surface-500 flex flex-col gap-2 border-t pt-4">
       <Small className="text-text-warning dark:text-dark-text-warning">{reason}</Small>
-      {/* Said because the reader's next thought is "did I just deny it by not
-          answering". Nothing was sent, and the ask is where it was — the
-          deadline above, if there is one, is still the whole of what silence
-          does. */}
+
       <Small className="text-text-muted dark:text-dark-text-muted">
         Nothing has been sent to the machine. The ask is still open on it.
       </Small>

@@ -1,21 +1,3 @@
-// Package mcpoauth implements the MCP OAuth 2.1 Authorization Code + PKCE
-// flow for CLI clients.
-//
-// It covers three responsibilities the golang.org/x/oauth2 package does not:
-//
-//  1. Server metadata discovery (RFC 8414):
-//     fetches /.well-known/oauth-authorization-server to locate the
-//     authorization and token endpoints.
-//
-//  2. Dynamic client registration (RFC 7591):
-//     registers a new OAuth client with the authorization server on first use.
-//
-//  3. Local callback server:
-//     starts a temporary localhost HTTP server to receive the authorization
-//     code redirect, then shuts it down.
-//
-// golang.org/x/oauth2 handles PKCE, token exchange, token refresh, and the
-// Transport RoundTripper.
 package mcpoauth
 
 import (
@@ -31,7 +13,6 @@ import (
 	"time"
 )
 
-// ServerMetadata holds the subset of RFC 8414 fields we need.
 type ServerMetadata struct {
 	Issuer                            string   `json:"issuer"`
 	AuthorizationEndpoint             string   `json:"authorization_endpoint"`
@@ -42,8 +23,6 @@ type ServerMetadata struct {
 	TokenEndpointAuthMethodsSupported []string `json:"token_endpoint_auth_methods_supported"`
 }
 
-// SupportsS256 reports whether the server advertises S256 PKCE support.
-// If the field is absent we assume yes (most modern servers support it).
 func (m *ServerMetadata) SupportsS256() bool {
 	if len(m.CodeChallengeMethodsSupported) == 0 {
 		return true
@@ -56,11 +35,6 @@ func (m *ServerMetadata) SupportsS256() bool {
 	return false
 }
 
-// DiscoverAuthServer fetches the OAuth 2.0 Authorization Server Metadata
-// (RFC 8414) for the given MCP server URL.
-//
-// It first tries the well-known URL derived from the server's base origin,
-// then falls back to conventional endpoint paths if the server returns 404.
 func DiscoverAuthServer(ctx context.Context, mcpServerURL string) (*ServerMetadata, error) {
 	u, err := url.Parse(mcpServerURL)
 	if err != nil {
@@ -68,14 +42,12 @@ func DiscoverAuthServer(ctx context.Context, mcpServerURL string) (*ServerMetada
 	}
 	baseOrigin := u.Scheme + "://" + u.Host
 
-	// RFC 8414 §3 — well-known endpoint.
 	wellKnown := baseOrigin + "/.well-known/oauth-authorization-server"
 	meta, err := fetchJSON[ServerMetadata](ctx, wellKnown)
 	if err == nil {
 		return meta, nil
 	}
 
-	// Fallback: synthesize from the base origin.
 	return &ServerMetadata{
 		Issuer:                baseOrigin,
 		AuthorizationEndpoint: baseOrigin + "/authorize",
@@ -84,17 +56,11 @@ func DiscoverAuthServer(ctx context.Context, mcpServerURL string) (*ServerMetada
 	}, nil
 }
 
-// ClientRegistration is the result of a successful dynamic client registration.
 type ClientRegistration struct {
 	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret,omitempty"` // absent for public clients
+	ClientSecret string `json:"client_secret,omitempty"`
 }
 
-// RegisterClient performs RFC 7591 Dynamic Client Registration against the
-// given endpoint. It registers a public client (no secret) suitable for a
-// native CLI application.
-//
-// If registrationEndpoint is empty the caller must supply a clientID directly.
 func RegisterClient(ctx context.Context, registrationEndpoint, clientName, redirectURI string) (*ClientRegistration, error) {
 	if registrationEndpoint == "" {
 		return nil, fmt.Errorf("mcpoauth: no registration endpoint — supply --oauth-client-id manually")
@@ -105,7 +71,7 @@ func RegisterClient(ctx context.Context, registrationEndpoint, clientName, redir
 		"redirect_uris":              []string{redirectURI},
 		"grant_types":                []string{"authorization_code", "refresh_token"},
 		"response_types":             []string{"code"},
-		"token_endpoint_auth_method": "none", // public client
+		"token_endpoint_auth_method": "none",
 		"application_type":           "native",
 	}
 	b, _ := json.Marshal(body)
@@ -117,7 +83,6 @@ func RegisterClient(ctx context.Context, registrationEndpoint, clientName, redir
 	return reg, nil
 }
 
-// CallbackResult is the outcome of the local callback server.
 type CallbackResult struct {
 	Code             string
 	State            string
@@ -125,12 +90,6 @@ type CallbackResult struct {
 	ErrorDescription string
 }
 
-// StartCallbackServer binds a local HTTP listener on the given port (or a
-// random port if port == 0) and returns the listener, its redirect URI, and a
-// channel that will receive exactly one CallbackResult when the browser
-// redirects to it.
-//
-// The caller is responsible for closing the listener when done.
 func StartCallbackServer(port int) (net.Listener, string, <-chan CallbackResult, error) {
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	ln, err := net.Listen("tcp", addr)
@@ -159,7 +118,6 @@ func StartCallbackServer(port int) (net.Listener, string, <-chan CallbackResult,
 		}
 
 		ch <- result
-		// Shut the server down asynchronously so this handler can return.
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
@@ -172,8 +130,6 @@ func StartCallbackServer(port int) (net.Listener, string, <-chan CallbackResult,
 	redirectURI := fmt.Sprintf("http://127.0.0.1:%d/callback", ln.Addr().(*net.TCPAddr).Port)
 	return ln, redirectURI, ch, nil
 }
-
-// ── internal helpers ──────────────────────────────────────────────────────────
 
 func fetchJSON[T any](ctx context.Context, rawURL string) (*T, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)

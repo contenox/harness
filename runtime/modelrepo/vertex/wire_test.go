@@ -15,8 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// capture answers every request with a fixed body and records the request
-// headers and decoded bodies in order.
 type capture struct {
 	server  *httptest.Server
 	headers []http.Header
@@ -56,9 +54,6 @@ func (c *capture) body(t *testing.T, index int) map[string]any {
 	return c.bodies[index]
 }
 
-// chatClient builds a chat client against the stub endpoint. An express mode
-// API key is the credential, which is what makes the endpoint reachable without
-// a Google token.
 func chatClient(t *testing.T, c *capture, model string, capabilities modelrepo.CapabilityConfig) modelrepo.LLMChatClient {
 	t.Helper()
 
@@ -73,8 +68,6 @@ func chatClient(t *testing.T, c *capture, model string, capabilities modelrepo.C
 	return client
 }
 
-// Express mode authenticates with the API key header the vendor documents and
-// needs no bearer token.
 func TestUnit_VertexWire_ExpressModeUsesTheAPIKeyHeader(t *testing.T) {
 	t.Parallel()
 
@@ -90,9 +83,6 @@ func TestUnit_VertexWire_ExpressModeUsesTheAPIKeyHeader(t *testing.T) {
 	assert.Empty(t, c.headers[0].Get("x-goog-user-project"))
 }
 
-// A stored user credential names the project its endpoint bills to; a service
-// account and an ambient credential are billed to their own project, so neither
-// carries the header.
 func TestUnit_VertexWire_QuotaProjectFollowsTheCredentialKind(t *testing.T) {
 	t.Parallel()
 
@@ -137,8 +127,6 @@ func TestUnit_VertexWire_QuotaProjectFollowsTheCredentialKind(t *testing.T) {
 	assert.Empty(t, req.Header.Get("x-goog-user-project"))
 }
 
-// The vendor's REST reference names the request member systemInstruction, on
-// the projects.locations.publishers.models endpoint as on the Gemini API.
 func TestUnit_VertexWire_SystemInstructionUsesTheDocumentedName(t *testing.T) {
 	t.Parallel()
 
@@ -160,8 +148,6 @@ func TestUnit_VertexWire_SystemInstructionUsesTheDocumentedName(t *testing.T) {
 	assert.Equal(t, "be terse", parts[0].(map[string]any)["text"])
 }
 
-// Structured output and tool schemas use the members the vendor documents for
-// full JSON Schema.
 func TestUnit_VertexWire_StructuredOutputAndToolSchemaUseJSONSchema(t *testing.T) {
 	t.Parallel()
 
@@ -192,8 +178,6 @@ func TestUnit_VertexWire_StructuredOutputAndToolSchemaUseJSONSchema(t *testing.T
 	assert.NotContains(t, declaration, "parameters")
 }
 
-// A thinking level is the vendor's own enum value and the model's thoughts come
-// back with its answer; a 2.5 model takes the documented budget instead.
 func TestUnit_VertexWire_ThinkingControlAndIncludeThoughts(t *testing.T) {
 	t.Parallel()
 
@@ -266,8 +250,6 @@ func TestUnit_VertexWire_ArgonStreamedToolCall(t *testing.T) {
 	require.Equal(t, "argon-stream-signature", result.ToolCalls[0].ProviderMeta["thought_signature"])
 }
 
-// The embedding request carries the task type that matches the purpose the
-// caller declared, and never the vendor's query default for an indexed passage.
 func TestUnit_VertexWire_EmbeddingCarriesTheDocumentedTaskType(t *testing.T) {
 	t.Parallel()
 
@@ -291,8 +273,6 @@ func TestUnit_VertexWire_EmbeddingCarriesTheDocumentedTaskType(t *testing.T) {
 	assert.Equal(t, "RETRIEVAL_QUERY", instance["task_type"])
 }
 
-// A tool-call turn's thought signature is replayed inside the part it was
-// returned on, and a parallel call is never given its sibling's signature.
 func TestUnit_VertexWire_ThoughtSignatureReplaysInsideItsOwnPart(t *testing.T) {
 	t.Parallel()
 
@@ -326,9 +306,6 @@ func TestUnit_VertexWire_ThoughtSignatureReplaysInsideItsOwnPart(t *testing.T) {
 		"the vendor returns a signature on the first call of a parallel group only")
 }
 
-// A thought signature returned on a streamed part is replayed inside its own
-// part, and a turn that produced only thoughts or a signature is a legal turn
-// rather than an empty-stream error.
 func TestUnit_VertexWire_StreamedSignatureAndThoughtOnlyTurn(t *testing.T) {
 	t.Parallel()
 

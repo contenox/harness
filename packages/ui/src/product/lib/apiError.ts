@@ -1,10 +1,4 @@
-/**
- * The client's error vocabulary: one class, one classification of where a failure was described, and the copy shown when nobody described it.
- */
 
-/**
- * Where the failure was described.
- */
 export type ApiErrorSource = 'relay' | 'upstream' | 'transport';
 
 
@@ -16,9 +10,6 @@ const COPY = {
   generic: 'Something went wrong. Try again.',
 } as const;
 
-/**
- * The sentence for a `status` the relay did not explain.
- */
 export function statusMessage(status: number): string {
   if (status === 0 || status === 408) return COPY.offline;
   if (status === 429) return COPY.rateLimited;
@@ -27,36 +18,18 @@ export function statusMessage(status: number): string {
   return COPY.generic;
 }
 
-/**
- * Whether offering "try again" is honest.
- */
 export function isRetryableStatus(status: number): boolean {
   return status === 0 || status === 408 || status === 429 || status >= 500;
 }
 
-/**
- * Everything [ApiError] carries beyond a message and a status.
- */
 export interface ApiErrorInit {
   readonly source: ApiErrorSource;
-  /**
-   * The relay's machine-readable code, or `timeout`/`cancelled`/`network` for a status 0.
-   */
   readonly code?: string;
   readonly type?: string;
-  /**
-   * The input the relay named.
-   */
   readonly param?: string;
-  /**
-   * Developer-only, and never rendered.
-   */
   readonly detail?: unknown;
 }
 
-/**
- * An HTTP failure with the relay's own classification attached.
- */
 export class ApiError extends Error {
   readonly status: number;
   readonly source: ApiErrorSource;
@@ -82,25 +55,16 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * True when the relay refused for want of a session — the gate's cue to show sign-in.
- */
 export function isUnauthorized(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
 }
 
-/**
- * A sentence for anything that was thrown.
- */
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   if (error instanceof Error) return error.message;
   return COPY.generic;
 }
 
-/**
- * Whether a retry affordance should be offered for whatever was thrown.
- */
 export function isRetryable(error: unknown): boolean {
   return error instanceof ApiError && error.retryable;
 }
@@ -119,27 +83,12 @@ const KEY_LIMIT = 12;
 
 const KEY_LENGTH_LIMIT = 40;
 
-/**
- * What an unexplained body WAS, with none of what it said.
- */
 export interface UnexplainedBody {
-  /**
-   * What the bytes were, as far as parsing got.
-   */
   readonly kind: 'empty' | 'json' | 'html' | 'text';
-  /**
-   * Length of the body as received, before any of this.
-   */
   readonly length: number;
-  /**
-   * Top-level property names, when `kind` is `json` and the value was an object.
-   */
   readonly keys?: readonly string[];
 }
 
-/**
- * Describes a body the relay did not write, without retaining it.
- */
 export function describeBody(text: string, body: unknown): UnexplainedBody {
   const length = text.length;
   if (body === undefined) {
@@ -164,9 +113,6 @@ function reportUnexplained(status: number, url: string, described: UnexplainedBo
   console.error(`[api] ${status} ${where} was not the relay's error envelope`, described);
 }
 
-/**
- * Turns a failed response into an [ApiError].
- */
 export async function decodeErrorResponse(response: Response): Promise<ApiError> {
   const { status, url } = response;
   let text: string;

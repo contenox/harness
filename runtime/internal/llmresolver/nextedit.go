@@ -7,7 +7,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// NextEditSelections resolves only models declaring an independent edit profile.
 func NextEditSelections(ctx context.Context, req Request, getModels func(context.Context, ...string) ([]modelrepo.Provider, error), policy Policy) ([]Selection, error) {
 	if len(req.ModelNames) != 1 || len(req.ProviderTypes) != 1 || req.ContextLength < 0 {
 		return nil, errors.New("next edit requires one explicit provider and model and a non-negative context length")

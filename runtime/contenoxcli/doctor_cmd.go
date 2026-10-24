@@ -78,7 +78,6 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	}
 	printDoctorText(cmd.OutOrStdout(), res)
 
-	// Advisory: warn when default-max-tokens exceeds the active provider's ceiling.
 	store := runtimetypes.New(db.WithoutTransaction())
 	maxTokStr := strings.TrimSpace(clikv.Read(ctx, store, "default-max-tokens"))
 	if maxTokStr != "" {

@@ -15,26 +15,10 @@ import {
 type ConnState = 'connecting' | 'open' | 'closed';
 
 export interface TerminalViewProps {
-  /** Server-authoritative WS path from the created session (already `/api`-prefixed). */
   wsPath: string;
   className?: string;
 }
 
-/**
- * xterm attached to a terminalapi PTY over its binary-frame WebSocket — the
- * bolt.diy bridge (onData → send, onmessage → write, ResizeObserver → fit →
- * in-band resize frame), with all the testable plumbing living in
- * lib/hostTerminal.ts. Reconnect-by-session-id on remount comes for free: the
- * caller memoizes the session (useHostTerminalSession), so a remount re-attaches
- * to the SAME `wsPath` and the PTY's scrollback replays.
- *
- * Interactivity: READ-ONLY by default (`disableStdin` + the bridge's send gate;
- * see TERMINAL_READ_ONLY_DEFAULT for the decision and how to flip it). "Take
- * over shell" flips THIS SAME view interactive behind an honest confirmation
- * that names what it is — a real shell on the host, bounded by the serve token.
- * The WS is authenticated by the same-origin `auth_token` cookie riding the
- * handshake; no token is handled here (see buildTerminalWsUrl).
- */
 export function TerminalView({ wsPath, className }: TerminalViewProps) {
   const { t } = useTranslation();
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -63,10 +47,8 @@ export function TerminalView({ wsPath, className }: TerminalViewProps) {
     try {
       fit.fit();
     } catch {
-      /* container not laid out yet; the ResizeObserver will fit shortly */
     }
     termRef.current = term;
-    // A fresh connection always starts read-only, whatever the previous one ended as.
     setReadOnly(TERMINAL_READ_ONLY_DEFAULT);
     term.options.disableStdin = TERMINAL_READ_ONLY_DEFAULT;
 
@@ -83,7 +65,6 @@ export function TerminalView({ wsPath, className }: TerminalViewProps) {
         fit.fit();
         bridge.sendResize(term.cols, term.rows);
       } catch {
-        /* ignore transient measure failures */
       }
     };
 
@@ -105,7 +86,6 @@ export function TerminalView({ wsPath, className }: TerminalViewProps) {
       try {
         socket.close();
       } catch {
-        /* already closing */
       }
       term.dispose();
       termRef.current = null;
@@ -173,7 +153,7 @@ export function TerminalView({ wsPath, className }: TerminalViewProps) {
         </div>
       </div>
 
-      {/* xterm paints its own (dark) background; a solid host avoids a flash. */}
+
       <div ref={hostRef} className="min-h-0 flex-1 overflow-hidden bg-black p-1" />
 
       {confirmOpen && (

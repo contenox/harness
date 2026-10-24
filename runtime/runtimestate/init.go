@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Config holds the configuration for the runtime state initializer.
 type Config struct {
 	DatabaseURL string `json:"database_url"`
 	TaskModel   string `json:"task_model"`
@@ -26,7 +25,6 @@ const (
 	canChat
 )
 
-// InitPromptExec initializes the tasks group and its designated model.
 func InitPromptExec(ctx context.Context, config *Config, dbInstance libdb.DBManager, runtime *State, contextLen int) error {
 	tx, com, r, err := dbInstance.WithTransaction(ctx)
 	if err != nil {
@@ -48,7 +46,6 @@ func InitPromptExec(ctx context.Context, config *Config, dbInstance libdb.DBMana
 	return com(ctx)
 }
 
-// InitChatExec initializes the chat group and its designated model.
 func InitChatExec(ctx context.Context, config *Config, dbInstance libdb.DBManager, runtime *State, contextLen int) error {
 	tx, com, r, err := dbInstance.WithTransaction(ctx)
 	if err != nil {
@@ -121,7 +118,6 @@ func initOrUpdateModel(ctx context.Context, tx libdb.Exec, tenantID, modelName s
 
 	model, err := storeInstance.GetModelByName(ctx, modelName)
 
-	// Case 1: model does not exist, so we create it.
 	if errors.Is(err, libdb.ErrNotFound) {
 		newModel := &runtimetypes.Model{
 			Model:         modelName,
@@ -142,13 +138,10 @@ func initOrUpdateModel(ctx context.Context, tx libdb.Exec, tenantID, modelName s
 		return newModel, nil
 	}
 
-	// Case 2: an unexpected database error occurred.
 	if err != nil {
 		return nil, fmt.Errorf("failed to get model '%s': %w", modelName, err)
 	}
 
-	// Update capabilities only: context_length is set once at creation, then
-	// owned by the backend cycle or an explicit user action.
 	needsUpdate := false
 	switch capability {
 	case canEmbed:
@@ -185,7 +178,6 @@ func initChatModel(ctx context.Context, config *Config, tx libdb.Exec, contextLe
 	return initOrUpdateModel(ctx, tx, config.TenantID, config.ChatModel, contextLength, canChat)
 }
 
-// ExtraModelSpec describes an extra model to ensure exists in ollama_models (e.g. for contenox-cli extra_models config).
 type ExtraModelSpec struct {
 	Name          string
 	ContextLength int
@@ -194,9 +186,6 @@ type ExtraModelSpec struct {
 	CanEmbed      bool
 }
 
-// EnsureModels ensures each given model exists in ollama_models with the specified context length and capabilities.
-// It is intended for contenox-cli so that extra models (e.g. qwen2.5:7b for the vibes chain) are declared and
-// get correct context/capabilities during backend sync. Call after InitPromptExec/InitChatExec and before RunBackendCycle.
 func EnsureModels(ctx context.Context, dbInstance libdb.DBManager, tenantID string, specs []ExtraModelSpec) error {
 	if len(specs) == 0 {
 		return nil

@@ -25,7 +25,6 @@ var (
 	localToolsToolListTimeout = 5 * time.Second
 )
 
-// Service defines the interface for managing remote tools and querying tools capabilities.
 type Service interface {
 	Create(ctx context.Context, tools *runtimetypes.RemoteTools) error
 	Get(ctx context.Context, id string) (*runtimetypes.RemoteTools, error)
@@ -38,14 +37,12 @@ type Service interface {
 }
 
 type LocalTools struct {
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Type        string            `json:"type"`
-	Tools       []taskengine.Tool `json:"tools,omitempty"`
-	// Source is builtin (in-process), mcp (persisted MCP server), or remote (HTTP tools in DB).
-	Source string `json:"source,omitempty"`
-	// UnavailableReason is set when tools could not be loaded (e.g. unreachable MCP); other tools still list.
-	UnavailableReason string `json:"unavailableReason,omitempty"`
+	Name              string            `json:"name"`
+	Description       string            `json:"description"`
+	Type              string            `json:"type"`
+	Tools             []taskengine.Tool `json:"tools,omitempty"`
+	Source            string            `json:"source,omitempty"`
+	UnavailableReason string            `json:"unavailableReason,omitempty"`
 }
 
 type service struct {
@@ -54,7 +51,6 @@ type service struct {
 	tracker       libtracker.ActivityTracker
 }
 
-// New creates a new service instance. tracker may be nil (no-op tracking).
 func New(dbInstance libdb.DBManager, toolsRegistry taskengine.ToolsProvider, tracker libtracker.ActivityTracker) Service {
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
@@ -66,7 +62,6 @@ func New(dbInstance libdb.DBManager, toolsRegistry taskengine.ToolsProvider, tra
 	}
 }
 
-// GetSchemasForSupportedTools delegates the call to the tools registry.
 func (s *service) GetSchemasForSupportedTools(ctx context.Context) (map[string]*openapi3.T, error) {
 	if s.toolsRegistry == nil {
 		return nil, errors.New("tools registry is not configured for this service")
@@ -74,7 +69,6 @@ func (s *service) GetSchemasForSupportedTools(ctx context.Context) (map[string]*
 	return s.toolsRegistry.GetSchemasForSupportedTools(ctx)
 }
 
-// ListLocalTools returns all locally registered tools
 func (s *service) ListLocalTools(ctx context.Context) ([]LocalTools, error) {
 	reportErr, reportChange, end := s.tracker.Start(ctx, "list_tools", "local_tools")
 	defer end()
@@ -152,7 +146,6 @@ func (s *service) toolsSource(ctx context.Context, name string) string {
 	return "builtin"
 }
 
-// shortenToolsListError produces a short UI-safe message from a tool-listing failure.
 func shortenToolsListError(err error) string {
 	if err == nil {
 		return ""
@@ -222,7 +215,6 @@ func validate(tools *runtimetypes.RemoteTools) error {
 		return fmt.Errorf("%w %w: spec_url must be an http/https URL or file:///abs/path", ErrInvalidTools, errdefs.ErrUnprocessableEntity)
 	}
 
-	// Validate headers if provided
 	for key, value := range tools.Headers {
 		if key == "" {
 			return fmt.Errorf("%w %w: header name cannot be empty", ErrInvalidTools, errdefs.ErrUnprocessableEntity)
@@ -235,8 +227,6 @@ func validate(tools *runtimetypes.RemoteTools) error {
 	return nil
 }
 
-// isValidSpecSource reports whether s is an acceptable spec source:
-// an http/https URL or a file:// URI (absolute path stored by the CLI).
 func isValidSpecSource(s string) bool {
 	return strings.HasPrefix(s, "http://") ||
 		strings.HasPrefix(s, "https://") ||

@@ -11,21 +11,16 @@ import (
 )
 
 type discoveryLifecycle struct {
-	ctx     context.Context
-	cancel  context.CancelFunc
-	mu      sync.Mutex
-	running bool
-	stopped bool
-	// cycleDone is closed when the running full cycle ends; nil while none runs.
+	ctx       context.Context
+	cancel    context.CancelFunc
+	mu        sync.Mutex
+	running   bool
+	stopped   bool
 	cycleDone chan struct{}
-	// pending holds the connections whose scheduled refresh has not finished,
-	// so a burst of reads schedules each connection once.
-	pending map[string]bool
-	workers sync.WaitGroup
+	pending   map[string]bool
+	workers   sync.WaitGroup
 }
 
-// StartDiscovery starts background reconciliation and makes stale reads schedule
-// refreshes without waiting. Call before sharing State; stop joins owned work.
 func (s *State) StartDiscovery(ctx context.Context) (stop func(), err error) {
 	if s.discovery != nil {
 		return nil, errors.New("backend discovery already started")
@@ -79,8 +74,6 @@ func (d *discoveryLifecycle) refresh(ctx context.Context, s *State) error {
 	return nil
 }
 
-// refreshProviders schedules one owned refresh of the connections not already
-// scheduled.
 func (d *discoveryLifecycle) refreshProviders(s *State, ids []string) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -115,7 +108,6 @@ func (d *discoveryLifecycle) refreshProviders(s *State, ids []string) error {
 	return nil
 }
 
-// wait blocks until the running full cycle, if any, ends.
 func (d *discoveryLifecycle) wait(ctx context.Context) error {
 	d.mu.Lock()
 	done := d.cycleDone
@@ -139,9 +131,6 @@ func (d *discoveryLifecycle) stop() {
 	d.workers.Wait()
 }
 
-// ScheduleProviderRefresh invalidates and refreshes the discovery of the
-// selected connections. With StartDiscovery it schedules owned background work;
-// otherwise it waits.
 func (s *State) ScheduleProviderRefresh(ctx context.Context, providers ...string) error {
 	if s.discovery != nil {
 		return s.discovery.refreshProviders(s, providers)
@@ -149,9 +138,6 @@ func (s *State) ScheduleProviderRefresh(ctx context.Context, providers ...string
 	return s.RefreshProviderModels(ctx, providers...)
 }
 
-// RecheckIfStale returns once the observations are no older than
-// ReconcileDebounceInterval: it joins a running background cycle and runs a
-// cycle itself when the last one is older.
 func (s *State) RecheckIfStale(ctx context.Context) error {
 	if s.discovery != nil {
 		if err := s.discovery.wait(ctx); err != nil {
@@ -164,10 +150,6 @@ func (s *State) RecheckIfStale(ctx context.Context) error {
 	return s.RunBackendCycle(ctx)
 }
 
-// scheduleUnobserved schedules discovery for every saved connection the
-// snapshot has not observed at its current revision, whatever the debounce
-// clock says, so a connection saved by another process is discovered on the
-// next read.
 func (s *State) scheduleUnobserved(ctx context.Context) error {
 	backends, err := runtimetypes.New(s.dbInstance.WithoutTransaction()).ListAllBackends(ctx)
 	if err != nil {

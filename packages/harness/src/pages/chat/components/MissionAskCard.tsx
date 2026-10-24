@@ -4,19 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useReplyToAsk } from '../../../hooks/useApprovals';
 import type { MissionAsk } from '../../../lib/acp';
 
-/**
- * The answer box under a mission unit's QUESTION, right in the transcript where
- * the question arrived.
- *
- * It exists because the alternative was a dead end that looked like a
- * conversation: the unit's question was delivered into this session, the operator
- * read it here, and then had to go find the inbox to reply — while the unit sat
- * parked on the tool call that asked. Answering where you are told is the whole
- * point; the inbox remains the queue for questions whose session nobody has open.
- *
- * The same mutation the inbox uses, so an answer given here and one given there
- * are the same act on the same durable ask.
- */
 export function MissionAskCard({ ask }: { ask: MissionAsk }) {
   const { t } = useTranslation();
   const reply = useReplyToAsk();

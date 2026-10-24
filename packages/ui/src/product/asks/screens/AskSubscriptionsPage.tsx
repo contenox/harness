@@ -19,9 +19,6 @@ import {
   type AgentReach,
 } from '../../lib/askAgents';
 
-/**
- * Which agents may interrupt this person.
- */
 export default function AskSubscriptionsPage() {
   const {
     routes,
@@ -112,8 +109,7 @@ export default function AskSubscriptionsPage() {
                 ))
               )}
 
-              {/* Said once, under the list, because it is a property of every
-                  row above rather than of any one of them. */}
+
               <InlineNotice variant="info">
                 A subscription names an agent, not a machine — it covers that name on every machine
                 this team owns.

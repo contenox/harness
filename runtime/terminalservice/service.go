@@ -1,4 +1,3 @@
-// Package terminalservice manages local PTY-backed shell sessions.
 package terminalservice
 
 import (
@@ -47,7 +46,7 @@ type service struct {
 	db             libdb.DBManager
 	nodeInstanceID string
 	workspaceID    string
-	sessions       sync.Map // id -> *session
+	sessions       sync.Map
 }
 
 func New(cfg Config, db libdb.DBManager, nodeInstanceID string, workspaceID string) (Service, error) {

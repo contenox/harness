@@ -16,10 +16,6 @@ func hasIssueCode(r Result, code string) bool {
 	return false
 }
 
-// localFamilyInput models a host where modeld is live in the llama engine (llama
-// backend reachable with a chat model) while the openvino backend is dormant
-// (reconciled to an error). The user's default-provider names the *other* local
-// engine — which, with the one-local-provider fix, must still be satisfied.
 func localFamilyInput(defaultProvider, defaultModel string) Input {
 	llamaID, ovID := "llama-be", "openvino-be"
 	return Input{
@@ -48,9 +44,6 @@ func localFamilyInput(defaultProvider, defaultModel string) Input {
 	}
 }
 
-// The default-provider names openvino, but modeld is live in llama mode serving
-// the default-model. Readiness for the local family must be satisfied — no
-// provider/chat/model issues — because the engine is autodetected.
 func TestUnit_DefaultProvider_LocalFamily_SatisfiedByLiveEngine(t *testing.T) {
 	r := Evaluate(localFamilyInput("openvino", "coder"))
 
@@ -67,9 +60,6 @@ func TestUnit_DefaultProvider_LocalFamily_SatisfiedByLiveEngine(t *testing.T) {
 	}
 }
 
-// The flip side: a default-model that the live engine cannot serve (an openvino
-// model while modeld runs llama) is still honestly reported as unavailable — the
-// fix corrects the engine-name mismatch, it does not invent models.
 func TestUnit_DefaultProvider_LocalFamily_HonestWhenModelAbsent(t *testing.T) {
 	r := Evaluate(localFamilyInput("openvino", "phi-4-mini-ov"))
 	if !hasIssueCode(r, "default_model_not_available") {
@@ -77,8 +67,6 @@ func TestUnit_DefaultProvider_LocalFamily_HonestWhenModelAbsent(t *testing.T) {
 	}
 }
 
-// A remote provider with no reachable backend still reports a problem — the
-// local-family relaxation must not leak into non-local providers.
 func TestUnit_DefaultProvider_Remote_Unaffected(t *testing.T) {
 	in := localFamilyInput("openai", "gpt-5")
 	in.RegisteredBackends = append(in.RegisteredBackends, runtimetypes.Backend{ID: "oa", Name: "openai", Type: "openai", BaseURL: "https://api.openai.com/v1"})

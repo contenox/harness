@@ -13,25 +13,16 @@ export const WAV_HEADER_BYTES = 44;
 
 export const RECORDING_NAME = 'Voice note';
 
-/**
- * Longest recording (whole seconds) whose WAV fits `budgetBytes` of base64.
- */
 export function maxRecordingSeconds(budgetBytes: number): number {
 
   const rawBudget = Math.floor(budgetBytes / 4) * 3;
   return Math.max(0, Math.floor((rawBudget - WAV_HEADER_BYTES) / RECORDING_BYTES_PER_SECOND));
 }
 
-/**
- * Base64 length `sampleCount` recorded samples become on the wire.
- */
 export function recordingWireLength(sampleCount: number): number {
   return base64LengthForBytes(WAV_HEADER_BYTES + sampleCount * 2);
 }
 
-/**
- * Averages capture channels into mono; zero channels yield length 0.
- */
 export function mixToMono(channels: readonly Float32Array[]): Float32Array {
   if (channels.length === 0) return new Float32Array(0);
   if (channels.length === 1) return channels[0];
@@ -42,9 +33,6 @@ export function mixToMono(channels: readonly Float32Array[]): Float32Array {
   return out;
 }
 
-/**
- * Linear-interpolation resample — audibly fine for speech, dependency-free.
- */
 export function resampleLinear(
   input: Float32Array,
   fromRate: number,
@@ -64,9 +52,6 @@ export function resampleLinear(
   return out;
 }
 
-/**
- * Float [-1, 1] → 16-bit PCM.
- */
 export function floatTo16BitPcm(samples: Float32Array): Int16Array {
   const out = new Int16Array(samples.length);
   for (let i = 0; i < samples.length; i++) {
@@ -76,9 +61,6 @@ export function floatTo16BitPcm(samples: Float32Array): Int16Array {
   return out;
 }
 
-/**
- * Mono 16-bit PCM as a complete RIFF/WAV file.
- */
 export function encodeWavPcm16(samples: Int16Array, sampleRate: number): Uint8Array {
   const dataBytes = samples.length * 2;
   const buffer = new ArrayBuffer(WAV_HEADER_BYTES + dataBytes);
@@ -107,9 +89,6 @@ export function encodeWavPcm16(samples: Int16Array, sampleRate: number): Uint8Ar
 
 const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
-/**
- * Standard base64, written out rather than via `btoa` so the pure pipeline has no environment seam.
- */
 export function base64FromBytes(bytes: Uint8Array): string {
   const out: string[] = [];
   for (let i = 0; i < bytes.length; i += 3) {
@@ -126,21 +105,12 @@ export function base64FromBytes(bytes: Uint8Array): string {
   return out.join('');
 }
 
-/**
- * A finished capture in ACP wire form.
- */
 export interface FinishedRecording {
   data: string;
   mimeType: 'audio/wav';
-  /**
-   * Duration at the output rate, seconds (fractional).
-   */
   seconds: number;
 }
 
-/**
- * Captured Float32 blocks at `sourceRate` → one WAV clip on the wire.
- */
 export function finishRecording(
   chunks: readonly Float32Array[],
   sourceRate: number,
@@ -163,9 +133,6 @@ export function finishRecording(
   };
 }
 
-/**
- * `M:SS` for the elapsed/limit readout.
- */
 export function formatSeconds(seconds: number): string {
   const whole = Math.max(0, Math.floor(seconds));
   const m = Math.floor(whole / 60);
@@ -192,38 +159,17 @@ registerProcessor('contenox-capture', class extends AudioWorkletProcessor {
 });
 `;
 
-/**
- * One in-flight capture.
- */
 export interface ActiveRecording {
-  /**
-   * Seconds captured so far, at the source rate.
-   */
   elapsedSeconds(): number;
-  /**
-   * Stops the mic and encodes what was captured (null for an instant tap-stop).
-   */
   finish(): Promise<FinishedRecording | null>;
-  /**
-   * Stops the mic and keeps nothing.
-   */
   cancel(): void;
 }
 
 export interface StartRecordingOptions {
-  /**
-   * Capture STOPS here; frames past it are trimmed, never kept.
-   */
   maxSeconds: number;
-  /**
-   * Called once when the cap (not the user) stops the capture.
-   */
   onAutoStop?: () => void;
 }
 
-/**
- * Whether this browser can record at all — gates the affordance, not the failure sentence.
- */
 export function canRecordAudio(): boolean {
   return (
     typeof navigator !== 'undefined' &&
@@ -232,9 +178,6 @@ export function canRecordAudio(): boolean {
   );
 }
 
-/**
- * Asks for the microphone and starts capturing.
- */
 export async function startBrowserRecording(
   options: StartRecordingOptions,
 ): Promise<ActiveRecording> {

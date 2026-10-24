@@ -63,7 +63,7 @@ export function StatusIndicator({
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      {/* Status indicator */}
+
       <div className="flex items-center gap-2">
         <span
           className={cn(
@@ -78,7 +78,7 @@ export function StatusIndicator({
         )}
       </div>
 
-      {/* Label and progress */}
+
       <div className="flex-1">
         {label && (
           <P

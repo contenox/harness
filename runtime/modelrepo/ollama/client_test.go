@@ -12,8 +12,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// TestUnit_OllamaChat_SerializesImageInput asserts an image attachment reaches
-// Ollama's /api/chat as a base64 entry in the message's native images array.
 func TestUnit_OllamaChat_SerializesImageInput(t *testing.T) {
 	var gotBody map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -201,8 +199,6 @@ func TestUnit_BuildOllamaThink_NormalizesLevels(t *testing.T) {
 	}
 }
 
-// The model's own declaration decides which level may be sent, and `max` is one
-// of the vendor's levels: a request for it must reach the wire as itself.
 func TestUnit_BuildOllamaThink_UsesTheDeclaredLevels(t *testing.T) {
 	declared := &modelrepo.ThinkingTypes{Enabled: true, Disabled: true, EffortLevels: []string{"low", "medium", "high", "max"}}
 
@@ -258,9 +254,6 @@ func TestUnit_BuildOllamaOptions_ClampsPositiveNumPredictOnly(t *testing.T) {
 	}
 }
 
-// The window a model declared in its own metadata is requested on every turn,
-// so a generation runs in the window the catalogue measured rather than in
-// whatever the Modelfile happened to set.
 func TestUnit_BuildOllamaOptions_RequestsTheDeclaredWindow(t *testing.T) {
 	opts := buildOllamaOptions(&modelrepo.ChatConfig{}, 0, 8192)
 	if got := opts["num_ctx"]; got != 8192 {

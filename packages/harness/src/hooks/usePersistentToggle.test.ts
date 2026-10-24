@@ -1,14 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { toggleStore } from './usePersistentToggle';
 
-/**
- * Covers the pure store behind `usePersistentToggle` (the React binding needs a
- * DOM renderer, which this package's test env doesn't provide — see
- * AcpWorkspaceProvider.test.ts). The store is what keeps every open chat tab's
- * panel toggle in lockstep, so its subscribe/notify/dedup contract is the part
- * worth locking down. Each test uses a unique key since stores are cached for
- * the process lifetime.
- */
 describe('toggleStore', () => {
   it('defaults to false and caches one store per key', () => {
     const a = toggleStore('t:cache');
@@ -33,7 +25,7 @@ describe('toggleStore', () => {
     const store = toggleStore('t:noop');
     const listener = vi.fn();
     store.subscribe(listener);
-    store.set(false); // already false
+    store.set(false);
     expect(listener).not.toHaveBeenCalled();
   });
 

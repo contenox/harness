@@ -6,13 +6,7 @@ import { Spinner } from '../../components/Spinner';
 import type { ReactNode } from 'react';
 import { errorMessage, isRetryable } from '../lib/apiError';
 
-/**
- * The two things every screen does before it can show anything.
- */
 
-/**
- * Centred spinner filling whatever box it is given.
- */
 export function ScreenLoading({ label }: { label?: string }) {
   return (
     <div
@@ -25,9 +19,6 @@ export function ScreenLoading({ label }: { label?: string }) {
   );
 }
 
-/**
- * A loading LIST, shaped like the rows it is about to become.
- */
 export function ListSkeleton({ label, rows = 3 }: { label?: string; rows?: number }) {
   return (
     <div
@@ -45,9 +36,6 @@ export function ListSkeleton({ label, rows = 3 }: { label?: string; rows?: numbe
   );
 }
 
-/**
- * A failure, in the words the relay used — where the relay is the one that spoke.
- */
 export function ScreenError({
   error,
   onRetry,

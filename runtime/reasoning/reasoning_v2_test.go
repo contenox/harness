@@ -55,8 +55,6 @@ func TestUnit_NormalizeOptionalAndDisplay_V2(t *testing.T) {
 	}
 }
 
-// The vocabulary reaches the highest effort every vendor offers, and off is a
-// level of its own rather than an alias for the provider default.
 func TestUnit_Normalize_ReachesTheHighestLevelAndOff(t *testing.T) {
 	for _, in := range []string{"max", "MAX", " max "} {
 		got, err := reasoning.Normalize(in)
@@ -73,8 +71,6 @@ func TestUnit_Normalize_ReachesTheHighestLevelAndOff(t *testing.T) {
 	}
 }
 
-// The ascending order is the mapping every provider reads, so its ends and
-// strict increase matter more than its membership.
 func TestUnit_Levels_AreAscendingAndEndAtMax(t *testing.T) {
 	if len(reasoning.Levels) == 0 {
 		t.Fatal("the level vocabulary must not be empty")
@@ -95,9 +91,6 @@ func TestUnit_Levels_AreAscendingAndEndAtMax(t *testing.T) {
 	}
 }
 
-// A wire value is only produced for a level that asks for a specific effort:
-// unset, auto and off leave the provider default in place, and everything else
-// is refused rather than silently defaulted.
 func TestUnit_ResolveForWire_SaysNothingForUnsetAutoAndOff(t *testing.T) {
 	for _, in := range []string{"", "auto", "default"} {
 		got, err := reasoning.ResolveForWire(in)
@@ -108,8 +101,6 @@ func TestUnit_ResolveForWire_SaysNothingForUnsetAutoAndOff(t *testing.T) {
 			t.Fatalf("ResolveForWire(%q) = %q, want empty", in, got)
 		}
 	}
-	// Off is a level the provider expresses in its own control, so it resolves
-	// to itself rather than being folded into the unset default.
 	if got, err := reasoning.ResolveForWire("none"); err != nil || got != reasoning.Off {
 		t.Fatalf("ResolveForWire(none) = %q err %v, want %q", got, err, reasoning.Off)
 	}

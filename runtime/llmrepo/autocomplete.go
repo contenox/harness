@@ -10,7 +10,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// Autocomplete resolves the selected FIM route without choosing another model or operation.
 func (e *modelManager) Autocomplete(ctx context.Context, req Request, input modelrepo.AutocompleteRequest) (modelrepo.AutocompleteResult, Meta, error) {
 	if ctx == nil {
 		return modelrepo.AutocompleteResult{}, Meta{}, errors.New("autocomplete context is required")

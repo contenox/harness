@@ -92,9 +92,6 @@ func TestUnit_ResolveToolsNames_StarExcludeMiss_ReturnsAll(t *testing.T) {
 	}
 }
 
-// Runtime allowlist intersection (WithRuntimeToolsAllowlist) — caller can further
-// restrict but never expand what a task allowlist permits.
-
 func TestUnit_ResolveToolsNames_Runtime_Absent_TaskUnchanged(t *testing.T) {
 	repo := stubRepo()
 	names, err := taskengine.ExportedResolveToolsNames(context.Background(), []string{"*"}, repo)

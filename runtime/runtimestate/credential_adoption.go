@@ -11,12 +11,6 @@ import (
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
-// AdoptSharedCredentialRows moves the credential an earlier release kept in
-// one row for every connection of an adapter type into the own record of each
-// connection of that type that has none, exactly as those connections resolved
-// it before, then deletes the shared row so no connection saved afterwards can
-// borrow it. A connection of another type never adopts it, and a shared row
-// holding no credential is only deleted.
 func AdoptSharedCredentialRows(ctx context.Context, store runtimetypes.Store) error {
 	rows, err := store.ListKVPrefix(ctx, ProviderKeyPrefix, nil, runtimetypes.MAXLIMIT)
 	if err != nil {
@@ -52,9 +46,6 @@ func AdoptSharedCredentialRows(ctx context.Context, store runtimetypes.Store) er
 	return nil
 }
 
-// adoptSharedCredential writes the shared credential into the connection's own
-// record when it has none, keeping only the field its source reads, so a
-// literal beside a variable reference is dropped rather than copied.
 func adoptSharedCredential(ctx context.Context, store runtimetypes.Store, backend *runtimetypes.Backend, shared ProviderConfig) error {
 	key := BackendCredentialKey(backend.Type, backend.ID)
 	var existing ProviderConfig

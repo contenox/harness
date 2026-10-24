@@ -6,7 +6,7 @@ var geminiAudioFamilies = []string{
 	"gemini-1.5",
 	"gemini-2.0",
 	"gemini-2.5",
-	"gemini-3", // covers gemini-3, -3.1, -3.5, -3.6, ...
+	"gemini-3",
 }
 
 var geminiNonAudioMarkers = []string{
@@ -19,7 +19,6 @@ var geminiNonAudioMarkers = []string{
 	"aqa",
 }
 
-// GeminiModelSupportsAudio reports whether a Google model accepts audio input, matched against the hand-maintained allowlist by its trailing name segment.
 func GeminiModelSupportsAudio(modelName string) bool {
 	name := strings.ToLower(strings.TrimSpace(modelName))
 	if i := strings.LastIndex(name, "/"); i >= 0 {

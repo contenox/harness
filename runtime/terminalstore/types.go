@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// SessionStatus is the persisted lifecycle state for a terminal session.
 type SessionStatus string
 
 const (
@@ -13,7 +12,6 @@ const (
 	SessionStatusClosed SessionStatus = "closed"
 )
 
-// Session maps to the terminal_sessions table.
 type Session struct {
 	ID             string        `json:"id"`
 	Principal      string        `json:"principal"`
@@ -28,7 +26,6 @@ type Session struct {
 	UpdatedAt      time.Time     `json:"updatedAt"`
 }
 
-// Store is data access for interactive terminal session metadata.
 type Store interface {
 	Insert(ctx context.Context, s *Session) error
 	GetByID(ctx context.Context, id string) (*Session, error)

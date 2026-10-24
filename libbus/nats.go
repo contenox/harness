@@ -17,8 +17,6 @@ type natsSubscription struct {
 	sub *nats.Subscription
 }
 
-// maxHandlerConcurrency caps how many Serve handlers may run at once per
-// subscription.
 const maxHandlerConcurrency = 256
 
 type Config struct {
@@ -41,8 +39,6 @@ func NewPubSub(ctx context.Context, cfg *Config) (Messenger, error) {
 		nats.ReconnectHandler(func(nc *nats.Conn) {
 			log.Printf("NATS reconnected to %s", redactURL(nc.ConnectedUrl()))
 		}),
-		// Without this the client swallows async errors, above all
-		// nats.ErrSlowConsumer, making data loss invisible.
 		nats.ErrorHandler(func(_ *nats.Conn, sub *nats.Subscription, err error) {
 			subject := "<unknown>"
 			if sub != nil {
@@ -124,8 +120,6 @@ func (p *ps) stream(ctx context.Context, subject, queue string, ch chan<- []byte
 	}
 
 	go func() {
-		// The NATS client closes natsChan when the subscription is unsubscribed.
-		// Closing it here again would cause a panic.
 		defer func() {
 			if err := sub.Unsubscribe(); err != nil {
 				log.Printf("error unsubscribing from stream %s: %v", subject, err)
@@ -177,8 +171,6 @@ func (p *ps) Serve(ctx context.Context, subject string, handler Handler) (Subscr
 		return nil, ErrConnectionClosed
 	}
 
-	// Acquiring the slot inside the NATS callback applies backpressure to the
-	// subscription rather than growing goroutines without limit.
 	sem := make(chan struct{}, maxHandlerConcurrency)
 
 	sub, err := p.nc.QueueSubscribe(subject, subject, func(msg *nats.Msg) {

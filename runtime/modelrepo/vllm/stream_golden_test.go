@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Drives a recorded chat-completions SSE transcript through the real adapter
-// and the engine-side assembler, proving the raw-delta contract end to end.
 func TestUnit_VLLMStreamClient_GoldenFixture_ToolCallFragments(t *testing.T) {
 	t.Parallel()
 
@@ -69,10 +67,6 @@ func TestUnit_VLLMStreamClient_GoldenFixture_ToolCallFragments(t *testing.T) {
 	assert.Equal(t, 6, res.Usage.ThinkingTokens)
 }
 
-// An in-stream error frame ends the stream with an Error parcel. The vendor
-// sends the OpenAI error envelope, so the diagnosis is an object under "error";
-// a decoder that expects a bare string drops it and the failed turn then reads
-// as a short one.
 func TestUnit_VLLMStreamClient_ErrorChunkSurfaces(t *testing.T) {
 	t.Parallel()
 

@@ -1,6 +1,3 @@
-// Package statetype keeps the historical names for the runtime state value
-// types. The definitions moved into the runtime-state package; these aliases
-// exist so packages written against the old package keep compiling.
 package statetype
 
 import (
@@ -12,18 +9,12 @@ import (
 	ollamamodel "github.com/ollama/ollama/types/model"
 )
 
-// BackendRuntimeState is the observed state of one LLM backend.
 type BackendRuntimeState = runtimestate.BackendRuntimeState
 
-// ModelPullStatus is what the runtime observed about one pulled model.
 type ModelPullStatus = runtimestate.ModelPullStatus
 
-// ModelDetails is the model file's metadata.
 type ModelDetails = runtimestate.ModelDetails
 
-// EnrichFromOllamaShow populates capability and context fields on a
-// ModelPullStatus using the response from Ollama's /api/show endpoint.
-// Only zero/false fields are written — callers may override afterwards.
 func EnrichFromOllamaShow(m *ModelPullStatus, r *api.ShowResponse) {
 	for _, cap := range r.Capabilities {
 		switch cap {
@@ -49,7 +40,6 @@ func EnrichFromOllamaShow(m *ModelPullStatus, r *api.ShowResponse) {
 	}
 }
 
-// ConvertOllamaModelResponse maps an Ollama list entry onto ModelPullStatus.
 func ConvertOllamaModelResponse(model *api.ListModelResponse) *ModelPullStatus {
 	list := &ModelPullStatus{
 		Name:       model.Name,

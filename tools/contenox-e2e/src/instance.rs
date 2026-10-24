@@ -80,11 +80,6 @@ impl Instance {
         env.push(("HOME".into(), Some(home.clone().into_os_string())));
         env.push(("USERPROFILE".into(), Some(home.clone().into_os_string())));
         env.push(("TMPDIR".into(), Some(tmp.into_os_string())));
-        // Pinned for the same reason as HOME: an interactive shell exports
-        // these and a CI runner exports neither, so anything that reads the
-        // terminal description — the sandbox's env allowlist, the colour
-        // ladder — would assert against the developer's shell and diverge in
-        // CI. A pinned value is not a TTY; colour still needs one.
         env.push(("TERM".into(), Some("xterm-256color".into())));
         env.push(("COLORTERM".into(), Some("truecolor".into())));
 
@@ -172,8 +167,6 @@ impl Instance {
         Pty::spawn(self.cmd(args))
     }
 
-    /// Spawn an ACP surface and speak the protocol to it over stdio, the way an
-    /// editor does. Pass the whole argv: `["acp"]`, `["acp", "--auto"]`, `["acpx"]`.
     pub fn acp<I, S>(&self, args: I) -> Result<Acp>
     where
         I: IntoIterator<Item = S>,
@@ -184,9 +177,6 @@ impl Instance {
 
     pub fn init(&self) -> CmdOutput {
         let out = self.run(["init"]);
-        // The update banner is printed by commands that read config, and would
-        // otherwise land in the middle of an ACP stream; the e2e suite is
-        // offline by construction.
         self.run(["config", "set", "update-check", "false"]).ok();
         out
     }
@@ -214,8 +204,6 @@ impl Instance {
         self.home.join(".contenox-harness").join(relative)
     }
 
-    /// Write under the scratch `~/.contenox/`, creating the parents — the other
-    /// place declarations live, for an agent an operator wants everywhere.
     pub fn write_home_file(&self, relative: impl AsRef<Path>, contents: &str) -> Result<PathBuf> {
         let path = self.home_file(relative);
         if let Some(parent) = path.parent() {
@@ -235,10 +223,6 @@ impl Instance {
 
     pub fn scripted_backend(&self, name: &str, script: &Script) -> Result<PathBuf> {
         let path = self.write_script(&format!("{name}.json"), script)?;
-        // This checkout registers the scripted backend by pointing the backend
-        // URL at the script file (the scripted-test catalog provider resolves
-        // its dialog from the base URL); the enterprise tree used a dedicated
-        // --script flag and a `role assign` verb that do not exist here.
         self.run([
             OsStr::new("backend"),
             OsStr::new("add"),

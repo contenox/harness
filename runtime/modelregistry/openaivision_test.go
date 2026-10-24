@@ -11,7 +11,6 @@ func TestUnit_OpenAIModelSupportsVision(t *testing.T) {
 		name string
 		want bool
 	}{
-		// Vision-capable families.
 		{"gpt-4o", true},
 		{"gpt-4o-2024-08-06", true},
 		{"gpt-4o-mini", true},
@@ -34,17 +33,15 @@ func TestUnit_OpenAIModelSupportsVision(t *testing.T) {
 		{"gpt-4-vision-preview", true},
 		{"gpt-4-1106-vision-preview", true},
 
-		// Text-only chat/reasoning — the landmines.
-		{"gpt-4", false},               // base gpt-4 is text-only
-		{"gpt-4-0613", false},          // ...
-		{"gpt-4-32k", false},           // ...
-		{"gpt-4-turbo-preview", false}, // deprecated text-only alias
+		{"gpt-4", false},
+		{"gpt-4-0613", false},
+		{"gpt-4-32k", false},
+		{"gpt-4-turbo-preview", false},
 		{"gpt-3.5-turbo", false},
 		{"o1-mini", false},
 		{"o1-preview", false},
 		{"o3-mini", false},
 
-		// Non-chat / non-vision modalities.
 		{"gpt-4o-audio-preview", false},
 		{"gpt-4o-realtime-preview", false},
 		{"gpt-4o-transcribe", false},

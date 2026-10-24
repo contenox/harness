@@ -20,21 +20,15 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Egress-probe wiring. The probe (layer 2, the confined agent) resolves and
-// connects through the parent's userspace stack; these mirror the unexported
-// egress constants in the package (egressGatewayIP:egressDNSPort, and a host the
-// parent can resolve to the test backend).
 const (
-	egressProbePortEnv = "CONTENOX_SANDBOX_EGRESS_PORT" // backend port for the allow probe
-	egressProbeDNS     = "10.191.0.1:53"                // == egressGatewayIP:egressDNSPort
-	egressAllowedHost  = "localhost"                    // parent resolves this to the loopback backend
-	egressBlockedHost  = "blocked.example"              // never carved out
+	egressProbePortEnv = "CONTENOX_SANDBOX_EGRESS_PORT"
+	egressProbeDNS     = "10.191.0.1:53"
+	egressAllowedHost  = "localhost"
+	egressBlockedHost  = "blocked.example"
 
-	exitEgressBreach = 13 // a deny path unexpectedly succeeded — the wall leaked
+	exitEgressBreach = 13
 )
 
-// runEgressProbe performs one egress action inside the wall and maps the outcome
-// to an exit code. It is dispatched from runProbe (see shim_test.go).
 func runEgressProbe(action string) int {
 	switch action {
 	case "egress-allow":
@@ -58,8 +52,6 @@ func runEgressProbe(action string) int {
 		return exitDenied
 
 	case "egress-connect-deny":
-		// A literal address never handed out by the allow-listing DNS. The stack
-		// must refuse it (RST), so the dial fails; a success is a breach.
 		c, err := net.DialTimeout("tcp", "203.0.113.5:80", 5*time.Second)
 		if err == nil {
 			_ = c.Close()
@@ -69,15 +61,10 @@ func runEgressProbe(action string) int {
 		return exitDenied
 
 	case "egress-guarded-connect":
-		// The carve-out host DOES resolve at DNS (it is on the allow-list), so the
-		// agent gets a synthetic address and connects to it. The SSRF guard runs at
-		// the TCP layer in the parent: with AllowPrivateEgress off and the host
-		// resolving inward (loopback), the parent RSTs the connect. So resolve must
-		// SUCCEED but the connect must FAIL — a successful connect is a breach.
 		ip, err := probeResolve(egressAllowedHost)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "egress-guarded-connect resolve:", err)
-			return exitOther // the guard is at connect, not resolve; a resolve failure is a test-env problem
+			return exitOther
 		}
 		port := os.Getenv(egressProbePortEnv)
 		c, derr := net.DialTimeout("tcp", net.JoinHostPort(ip.String(), port), 5*time.Second)
@@ -93,10 +80,6 @@ func runEgressProbe(action string) int {
 	}
 }
 
-// probeResolve sends a single A query straight to the sandbox resolver and
-// returns the answer. It is a hand-built query (not net.Resolver) on purpose: it
-// bypasses /etc/hosts and IP-literal short-circuits, so every lookup — even
-// "localhost" — actually crosses the TUN to the stack's allow-listing DNS.
 func probeResolve(host string) (net.IP, error) {
 	name, err := dnsmessage.NewName(host + ".")
 	if err != nil {
@@ -151,8 +134,6 @@ func probeResolve(host string) (net.IP, error) {
 	return nil, fmt.Errorf("resolve %q: %w", host, lastErr)
 }
 
-// probeEcho connects to addr through the stack, sends a token, and requires it
-// back — proving a real end-to-end byte path to the allow-listed backend.
 func probeEcho(addr string) error {
 	c, err := net.DialTimeout("tcp", addr, 5*time.Second)
 	if err != nil {
@@ -173,10 +154,6 @@ func probeEcho(addr string) error {
 	return nil
 }
 
-// recTracker is a thread-safe ActivityTracker that records every event so a test
-// can assert which allows and denies the wall reported. The egress bridge logs
-// from several goroutines (DNS server, per-connection), so it must be safe for
-// concurrent Start/report.
 type recTracker struct {
 	mu     sync.Mutex
 	events []recEvent
@@ -185,10 +162,10 @@ type recTracker struct {
 type recEvent struct {
 	op, subj string
 	host     string
-	id       string // the id passed to reportChange (e.g. the tap's syscall path)
-	kv       []any  // the kvArgs passed to Start (e.g. "syscall", name)
-	allow    bool   // reportChange was called
-	deny     bool   // reportErr was called
+	id       string
+	kv       []any
+	allow    bool
+	deny     bool
 }
 
 func hostFromKV(kv []any) string {
@@ -226,20 +203,6 @@ func (t *recTracker) has(subj, host string, allow bool) bool {
 	return false
 }
 
-// TestIntegration_NetEgress drives the metered egress wall end to end. It starts
-// a loopback echo backend in the parent, declares "localhost" as the sole network
-// carve-out, and confines THIS test binary through the full seam (Landlock + the
-// user/network namespaces + the TUN/netstack egress bridge). From inside the wall
-// it proves:
-//
-//   - an allow-listed host resolves (to a synthetic address) and a TCP byte path
-//     to it reaches the real backend — enforced egress works;
-//   - a non-carve-out host fails to resolve (NXDOMAIN) — deny-by-default at DNS;
-//   - a literal address never handed out is refused — deny-by-default at TCP.
-//
-// It then asserts the injected tracker recorded both an allow event (for the
-// resolved host) and deny events (for the blocked name), with the host names —
-// the "watch the wall" telemetry for the network surface.
 func TestIntegration_NetEgress(t *testing.T) {
 	if !landlockSupported() {
 		t.Skip("landlock filesystem ABI unavailable on this kernel")
@@ -260,17 +223,10 @@ func TestIntegration_NetEgress(t *testing.T) {
 
 	newSpec := func(action string) libsandbox.Spec {
 		return libsandbox.Spec{
-			WorkspaceRoot: ws,
-			Home:          home,
-			// Carve-outs only mean anything with the network wall on — the wall is
-			// what these tests poke a metered hole in; without it the spec is refused.
-			NetworkWall: true,
-			// The sole carve-out. "localhost" is what the parent resolves the
-			// forwarded connection to — the loopback backend — while the agent only
-			// ever sees the synthetic address the DNS server mints for it.
-			Net: []libsandbox.NetCarveout{{Host: egressAllowedHost, Needs: "test egress backend"}},
-			// The backend is a loopback address, which the SSRF guard would refuse by
-			// default; this test legitimately egresses to it, so it opts in.
+			WorkspaceRoot:      ws,
+			Home:               home,
+			NetworkWall:        true,
+			Net:                []libsandbox.NetCarveout{{Host: egressAllowedHost, Needs: "test egress backend"}},
 			AllowPrivateEgress: true,
 			Tracker:            tracker,
 			EnvSet: map[string]string{
@@ -292,7 +248,7 @@ func TestIntegration_NetEgress(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel() // tears the egress bridge down after the run
+			defer cancel()
 
 			cmd, err := libsandbox.Command(ctx, newSpec(tc.action), "/proc/self/exe")
 			require.NoError(t, err)
@@ -307,14 +263,6 @@ func TestIntegration_NetEgress(t *testing.T) {
 		"expected a DENY telemetry event for %q", egressBlockedHost)
 }
 
-// TestIntegration_NetEgress_SSRFGuardRefusesLoopback proves the SSRF guard is
-// WIRED into the connect path, not just present as a helper: with the SAME
-// loopback carve-out as the allow test but AllowPrivateEgress OFF (the default),
-// the agent still resolves the host (DNS allow-list is unaffected) yet the
-// parent-side guard RSTs the connect because the carve-out resolves inward. The
-// probe therefore resolves-then-fails-to-connect (exitDenied), and the tracker
-// records a DENY for the host on the egress surface. This is the regression that a
-// carve-out cannot pivot the agent onto the host's own loopback/internal network.
 func TestIntegration_NetEgress_SSRFGuardRefusesLoopback(t *testing.T) {
 	if !landlockSupported() {
 		t.Skip("landlock filesystem ABI unavailable on this kernel")
@@ -336,12 +284,9 @@ func TestIntegration_NetEgress_SSRFGuardRefusesLoopback(t *testing.T) {
 	spec := libsandbox.Spec{
 		WorkspaceRoot: ws,
 		Home:          home,
-		// A loopback carve-out requires the wall (it only means something with it on).
-		NetworkWall: true,
-		// A loopback carve-out, but AllowPrivateEgress is deliberately OFF (default).
-		Net: []libsandbox.NetCarveout{{Host: egressAllowedHost, Needs: "test egress backend"}},
-		// AllowPrivateEgress: false — the guard must refuse the inward connect.
-		Tracker: tracker,
+		NetworkWall:   true,
+		Net:           []libsandbox.NetCarveout{{Host: egressAllowedHost, Needs: "test egress backend"}},
+		Tracker:       tracker,
 		EnvSet: map[string]string{
 			probeEnv:           "egress-guarded-connect",
 			egressProbePortEnv: strconv.Itoa(port),
@@ -360,15 +305,8 @@ func TestIntegration_NetEgress_SSRFGuardRefusesLoopback(t *testing.T) {
 		"expected a DENY telemetry event for the SSRF-refused host %q", egressAllowedHost)
 }
 
-// TestIntegration_EgressAndSyscallTap_Compose is the committed regression for the
-// combined fd-bookkeeping path (FIX 6): a spec with BOTH Net carve-outs AND
-// SyscallTap wires TWO inherited control sockets — the egress slot, then the tap
-// slot — and the parent receives two fds over them (the TUN, then the seccomp
-// notify fd), each close-on-exec. That composition previously had no checked-in
-// test. It asserts the egress connect SUCCEEDS end-to-end AND the exec is tapped,
-// so neither mechanism's fd handoff clobbers the other's.
 func TestIntegration_EgressAndSyscallTap_Compose(t *testing.T) {
-	requireTapPreconditions(t) // landlock + userns/netns + seccomp user-notify
+	requireTapPreconditions(t)
 	if !egressTunSupported() {
 		t.Skip("creating a TUN in an unprivileged user+network namespace is unavailable on this host")
 	}
@@ -383,9 +321,9 @@ func TestIntegration_EgressAndSyscallTap_Compose(t *testing.T) {
 	spec := libsandbox.Spec{
 		WorkspaceRoot:      ws,
 		Home:               home,
-		NetworkWall:        true, // carve-outs require the wall
+		NetworkWall:        true,
 		Net:                []libsandbox.NetCarveout{{Host: egressAllowedHost, Needs: "test egress backend"}},
-		AllowPrivateEgress: true, // the backend is a loopback address
+		AllowPrivateEgress: true,
 		SyscallTap:         true,
 		Tracker:            tracker,
 		EnvSet: map[string]string{
@@ -408,10 +346,6 @@ func TestIntegration_EgressAndSyscallTap_Compose(t *testing.T) {
 		"the tap must record the execve even while the egress bridge is also wired")
 }
 
-// startEchoBackend runs a loopback TCP echo server for the duration of the test
-// and returns it with its port. It stands in for the "real host" an allow-listed
-// carve-out names: the parent-side forwarder dials it when the agent connects to
-// the synthetic address for egressAllowedHost.
 func startEchoBackend(t *testing.T) (net.Listener, int) {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -440,12 +374,6 @@ func startEchoBackend(t *testing.T) (net.Listener, int) {
 	return ln, ln.Addr().(*net.TCPAddr).Port
 }
 
-// egressTunSupported reports whether this host lets an unprivileged process create
-// a TUN inside a user+network namespace — the extra precondition egress adds over
-// the netns floor. It re-execs this binary into the exact clone the sandbox uses
-// and has the child attempt the TUN creation the shim would, exiting 0 only if it
-// worked; a kernel or policy that forbids it makes Run fail, and the egress test
-// skips rather than failing on a host that structurally cannot do egress.
 func egressTunSupported() bool {
 	if _, err := os.Stat("/dev/net/tun"); err != nil {
 		return false
@@ -463,9 +391,6 @@ func egressTunSupported() bool {
 
 const egressTunCheckEnv = "CONTENOX_SANDBOX_EGRESS_TUN_CHECK"
 
-// egressTunCheckChild runs inside the clone (dispatched from TestMain) and exits 0
-// iff a TUN can be created and configured in the fresh netns, mirroring the shim's
-// createEgressTun without depending on package internals.
 func egressTunCheckChild() {
 	fd, err := unix.Open("/dev/net/tun", unix.O_RDWR|unix.O_CLOEXEC, 0)
 	if err != nil {

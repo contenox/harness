@@ -131,11 +131,9 @@ func TestFlattenContent(t *testing.T) {
 			wantDropped: []string{"image", "resource"},
 		},
 		{
-			name:     "empty type string is treated as unknown",
-			blocks:   []libacp.ContentBlock{{Type: "", Text: "ignored"}},
-			wantText: "",
-			// The zero-value block reports "" as the dropped kind; the caller
-			// still learns something was lost.
+			name:        "empty type string is treated as unknown",
+			blocks:      []libacp.ContentBlock{{Type: "", Text: "ignored"}},
+			wantText:    "",
 			wantDropped: []string{""},
 		},
 	}
@@ -153,7 +151,6 @@ func TestFlattenContent(t *testing.T) {
 	}
 }
 
-// FlattenContent must not mutate the blocks it walks; callers reuse them.
 func TestFlattenContentDoesNotMutateInput(t *testing.T) {
 	blocks := []libacp.ContentBlock{
 		libacp.NewTextContent("a"),

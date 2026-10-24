@@ -10,8 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// adaptiveOnly is the declaration the vendor publishes for a model that decides
-// its own thinking and accepts every effort level.
 func adaptiveOnly() *modelrepo.ThinkingTypes {
 	return &modelrepo.ThinkingTypes{
 		Adaptive:     true,
@@ -19,8 +17,6 @@ func adaptiveOnly() *modelrepo.ThinkingTypes {
 	}
 }
 
-// reasoningOff is the declaration the vendor publishes for a model that accepts
-// thinking turned off and no caller-set budget.
 func reasoningOff() *modelrepo.ThinkingTypes {
 	return &modelrepo.ThinkingTypes{Disabled: true}
 }
@@ -40,8 +36,6 @@ func effortOf(t *testing.T, body map[string]any) string {
 	return effort
 }
 
-// A model that decides its own thinking is sent the adaptive control with the
-// requested effort, and never the caller-set budget the vendor rejects for it.
 func TestUnit_AnthropicThinking_AdaptiveModelUsesAdaptiveAndEffort(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := thinkingBody(t, c, adaptiveOnly(), "xhigh")
@@ -53,7 +47,6 @@ func TestUnit_AnthropicThinking_AdaptiveModelUsesAdaptiveAndEffort(t *testing.T)
 	assert.Equal(t, "xhigh", effortOf(t, body))
 }
 
-// The effort ceiling is the vendor's own max rather than a downgrade to high.
 func TestUnit_AnthropicThinking_MaxEffortIsReachable(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := thinkingBody(t, c, adaptiveOnly(), "max")
@@ -62,7 +55,6 @@ func TestUnit_AnthropicThinking_MaxEffortIsReachable(t *testing.T) {
 	assert.Equal(t, "adaptive", thinkingOf(t, body)["type"])
 }
 
-// The runtime's minimal level is the vendor's lowest effort level.
 func TestUnit_AnthropicThinking_MinimalMapsToTheLowestEffort(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := thinkingBody(t, c, adaptiveOnly(), "minimal")
@@ -70,8 +62,6 @@ func TestUnit_AnthropicThinking_MinimalMapsToTheLowestEffort(t *testing.T) {
 	assert.Equal(t, "low", effortOf(t, body))
 }
 
-// An effort level the model does not declare descends to the highest level it
-// does declare, so the request still runs at the closest supported depth.
 func TestUnit_AnthropicThinking_UnsupportedEffortDescendsToTheHighestDeclared(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := thinkingBody(t, c, &modelrepo.ThinkingTypes{
@@ -82,9 +72,6 @@ func TestUnit_AnthropicThinking_UnsupportedEffortDescendsToTheHighestDeclared(t 
 	assert.Equal(t, "medium", effortOf(t, body))
 }
 
-// A model that declares adaptive thinking and no effort levels is sent none:
-// the vendor publishes that model's effort support separately, and an
-// undeclared level is one it rejects.
 func TestUnit_AnthropicThinking_DeclarationWithoutEffortSendsNoEffort(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := thinkingBody(t, c, &modelrepo.ThinkingTypes{Adaptive: true}, "high")
@@ -93,8 +80,6 @@ func TestUnit_AnthropicThinking_DeclarationWithoutEffortSendsNoEffort(t *testing
 	assert.NotContains(t, body, "output_config")
 }
 
-// A model whose only declared control is the caller-set budget gets one, and
-// the budget stays inside the documented bounds.
 func TestUnit_AnthropicThinking_EnabledModelGetsABudgetWithinBounds(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := thinkingBody(t, c, &modelrepo.ThinkingTypes{Enabled: true, Disabled: true}, "medium")
@@ -107,8 +92,6 @@ func TestUnit_AnthropicThinking_EnabledModelGetsABudgetWithinBounds(t *testing.T
 	assert.NotContains(t, body, "output_config", "a caller-set budget is steered by the budget, not by effort")
 }
 
-// A provider constructed without a declaration falls back to the control the
-// older API documents, so an endpoint that publishes no capabilities still runs.
 func TestUnit_AnthropicThinking_UndeclaredModelFallsBackToEnabled(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := thinkingBody(t, c, nil, "medium")
@@ -118,7 +101,6 @@ func TestUnit_AnthropicThinking_UndeclaredModelFallsBackToEnabled(t *testing.T) 
 	assert.Equal(t, float64(2048), thinking["budget_tokens"])
 }
 
-// Turning thinking off is expressed only where the model accepts it.
 func TestUnit_AnthropicThinking_OffIsDisabledWhereDeclared(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := thinkingBody(t, c, reasoningOff(), "off")
@@ -126,8 +108,6 @@ func TestUnit_AnthropicThinking_OffIsDisabledWhereDeclared(t *testing.T) {
 	assert.Equal(t, "disabled", thinkingOf(t, body)["type"])
 }
 
-// A model the vendor documents as rejecting thinking turned off is sent no
-// thinking member at all, rather than the value that returns a 400.
 func TestUnit_AnthropicThinking_OffOmitsTheControlWhereDisabledIsRejected(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := thinkingBody(t, c, adaptiveOnly(), "off")
@@ -136,8 +116,6 @@ func TestUnit_AnthropicThinking_OffOmitsTheControlWhereDisabledIsRejected(t *tes
 	assert.NotContains(t, body, "output_config")
 }
 
-// A level whose control the model does not declare is refused before the wire,
-// so the caller reads a local error instead of the vendor's 400.
 func TestUnit_AnthropicThinking_UndeclaredLevelIsRefusedLocally(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	provider := declaredProvider(t, c, "claude-no-controls", &modelrepo.ThinkingTypes{})
@@ -150,8 +128,6 @@ func TestUnit_AnthropicThinking_UndeclaredLevelIsRefusedLocally(t *testing.T) {
 	assert.Empty(t, c.bodies, "a refused request must not reach the vendor")
 }
 
-// A model that does not think at all is sent no thinking control, and no effort
-// either: effort is a thinking control on this wire.
 func TestUnit_AnthropicThinking_NonThinkingModelSendsNothing(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	provider := anthropic.NewAnthropicProvider("test-key", "claude-text-only", []string{c.server.URL},
@@ -162,8 +138,6 @@ func TestUnit_AnthropicThinking_NonThinkingModelSendsNothing(t *testing.T) {
 	assert.NotContains(t, body, "output_config")
 }
 
-// The documented budget floor is 1024 and the budget must stay below
-// max_tokens, so a max_tokens that admits no valid budget is refused locally.
 func TestUnit_AnthropicThinking_BudgetThatCannotFitIsRefusedLocally(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	provider := anthropic.NewAnthropicProvider("test-key", "claude-budget", []string{c.server.URL},
@@ -178,7 +152,6 @@ func TestUnit_AnthropicThinking_BudgetThatCannotFitIsRefusedLocally(t *testing.T
 	assert.Empty(t, c.bodies, "a refused request must not reach the vendor")
 }
 
-// The budget is computed against the clamped ceiling, not the requested one.
 func TestUnit_AnthropicThinking_BudgetFollowsTheClampedCeiling(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	provider := anthropic.NewAnthropicProvider("test-key", "claude-budget", []string{c.server.URL},
@@ -193,8 +166,6 @@ func TestUnit_AnthropicThinking_BudgetFollowsTheClampedCeiling(t *testing.T) {
 	assert.Equal(t, float64(1499), thinkingOf(t, body)["budget_tokens"])
 }
 
-// A model the vendor documents as rejecting non-default sampling parameters is
-// told apart from one that accepts them by its declaration, not its name.
 func TestUnit_AnthropicSampling_StrippedByDeclaration(t *testing.T) {
 	t.Run("adaptive-only declaration strips temperature and top_p", func(t *testing.T) {
 		c := newCapture(t, 200, endTurnResponse)
@@ -227,7 +198,6 @@ func TestUnit_AnthropicSampling_StripPredicate(t *testing.T) {
 	assert.False(t, anthropic.AnthropicStripsSamplingParams(nil))
 }
 
-// The Prompt path takes the same sampling decision as Chat.
 func TestUnit_AnthropicSampling_PromptPathFollowsTheDeclaration(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	provider := declaredProvider(t, c, "claude-x", adaptiveOnly())
@@ -239,7 +209,6 @@ func TestUnit_AnthropicSampling_PromptPathFollowsTheDeclaration(t *testing.T) {
 	assert.NotContains(t, c.body(t), "temperature")
 }
 
-// Every stop control the neutral request carries reaches the vendor's fields.
 func TestUnit_AnthropicChat_StopAndToolChoiceReachTheWire(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := chatBody(t, c, declaredProvider(t, c, "claude-x", nil),
@@ -255,8 +224,6 @@ func TestUnit_AnthropicChat_StopAndToolChoiceReachTheWire(t *testing.T) {
 	assert.Equal(t, true, choice["disable_parallel_tool_use"])
 }
 
-// A structured-output request carries the schema in output_config.format, and
-// the effort member the thinking control sets lives in that same object.
 func TestUnit_AnthropicChat_StructuredOutputAndEffortShareOutputConfig(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	schema := map[string]any{"type": "object", "properties": map[string]any{"city": map[string]any{"type": "string"}}}
@@ -272,7 +239,6 @@ func TestUnit_AnthropicChat_StructuredOutputAndEffortShareOutputConfig(t *testin
 	assert.Equal(t, "medium", output["effort"], "the format must survive the thinking control's effort")
 }
 
-// A format the vendor does not express as an output_config member is not sent.
 func TestUnit_AnthropicChat_TextFormatSendsNoOutputConfig(t *testing.T) {
 	c := newCapture(t, 200, endTurnResponse)
 	body := chatBody(t, c, declaredProvider(t, c, "claude-x", nil),

@@ -24,8 +24,6 @@ func setupRegistry(t *testing.T) (context.Context, agentregistryservice.Service)
 	return ctx, agentregistryservice.New(db)
 }
 
-// writeChain writes a minimal VALID chain (an id plus one task — what the shared
-// chain walker requires before it will list a file at all) into dir under name.
 func writeChain(t *testing.T, dir, name, chainID string) string {
 	t.Helper()
 	chain := taskengine.TaskChainDefinition{
@@ -46,10 +44,6 @@ func mustGet(t *testing.T, ctx context.Context, agents agentregistryservice.Serv
 	return agent
 }
 
-// TestUnit_Discover_FilenameConventionDeclaresAnAgent is the core of "naming the
-// file IS the declaration": a chain called agent-*.json becomes a dispatchable
-// agent with no registration step, and a chain that is not named that way — even
-// a perfectly good one sitting beside it — does not.
 func TestUnit_Discover_FilenameConventionDeclaresAnAgent(t *testing.T) {
 	ctx, agents := setupRegistry(t)
 	dir := t.TempDir()
@@ -75,19 +69,12 @@ func TestUnit_Discover_FilenameConventionDeclaresAnAgent(t *testing.T) {
 	require.ErrorIs(t, err, libdb.ErrNotFound, "an undeclared chain is not an agent")
 }
 
-// TestUnit_Discover_ShippedAgenticChainsAreEligibleByID pins the second
-// convention: the agent-shaped chains the runtime ships are eligible under
-// whatever filename they were installed as, and the utility chains shipped
-// alongside them are not — a chain the runtime calls on data the runtime built
-// is a subroutine, not a unit.
 func TestUnit_Discover_ShippedAgenticChainsAreEligibleByID(t *testing.T) {
 	ctx, agents := setupRegistry(t)
 	dir := t.TempDir()
-	// Shipped under their real installed filenames, which differ from their ids.
 	writeChain(t, dir, "default-chain.json", "chain-contenox")
 	writeChain(t, dir, "default-acp-chain.json", "chain-acp")
 	writeChain(t, dir, "headless-acp-chain.json", "chain-acpx")
-	// Utility chains shipped in the same directory.
 	writeChain(t, dir, "chain-compact.json", "chain-compact")
 	writeChain(t, dir, "default-fim-chain.json", "chain-fim")
 	writeChain(t, dir, "default-run-chain.json", "chain-run")
@@ -102,11 +89,6 @@ func TestUnit_Discover_ShippedAgenticChainsAreEligibleByID(t *testing.T) {
 	}
 }
 
-// TestUnit_Discover_IsIdempotent is the acceptance for "running twice changes
-// nothing". It is asserted on the stored row rather than on the return value,
-// because the failure mode worth catching is a blind Update that rewrites
-// updated_at on every startup — which would look like a no-op from the outside
-// while churning the table forever.
 func TestUnit_Discover_IsIdempotent(t *testing.T) {
 	ctx, agents := setupRegistry(t)
 	dir := t.TempDir()
@@ -136,15 +118,12 @@ func TestUnit_Discover_IsIdempotent(t *testing.T) {
 		require.JSONEq(t, string(was.ConfigJSON), string(now.ConfigJSON))
 	}
 
-	// And a third pass over the same tree is still a no-op.
 	third, err := chainagents.Discover(ctx, agents, dir)
 	require.NoError(t, err)
 	require.Empty(t, third.Created)
 	require.Empty(t, third.Updated)
 }
 
-// TestUnit_Discover_MovedChainIsRewritten covers the other half of idempotency:
-// when the fact on disk really did change, the row follows it.
 func TestUnit_Discover_MovedChainIsRewritten(t *testing.T) {
 	ctx, agents := setupRegistry(t)
 	first := t.TempDir()
@@ -163,11 +142,6 @@ func TestUnit_Discover_MovedChainIsRewritten(t *testing.T) {
 	require.Equal(t, moved, cfg.Path)
 }
 
-// TestUnit_Discover_VanishedChainIsDisabledNotDeleted documents what happens to
-// an agent whose chain file went away: the row survives (mission records and
-// telemetry still point at it) but is disabled, so the ONE shared spawn-path
-// judgement refuses it with a message that names the remedy. It is never left as
-// a phantom that would spawn and then fail.
 func TestUnit_Discover_VanishedChainIsDisabledNotDeleted(t *testing.T) {
 	ctx, agents := setupRegistry(t)
 	dir := t.TempDir()
@@ -189,15 +163,11 @@ func TestUnit_Discover_VanishedChainIsDisabledNotDeleted(t *testing.T) {
 	require.ErrorIs(t, err, agentregistryservice.ErrAgentDisabled,
 		"a vanished chain must be refused by the same judgement every other disabled agent is")
 
-	// Still idempotent afterwards: a second pass reports nothing new to disable.
 	again, err := chainagents.Discover(ctx, agents, dir)
 	require.NoError(t, err)
 	require.Empty(t, again.Disabled)
 }
 
-// TestUnit_Discover_NeverReEnablesAnExistingRow pins the deliberate asymmetry:
-// discovery brings a row into existence enabled, but never moves Enabled upward
-// afterwards, so an operator's `contenox agent disable` survives every restart.
 func TestUnit_Discover_NeverReEnablesAnExistingRow(t *testing.T) {
 	ctx, agents := setupRegistry(t)
 	dir := t.TempDir()
@@ -216,8 +186,6 @@ func TestUnit_Discover_NeverReEnablesAnExistingRow(t *testing.T) {
 		"discovery must not undo an operator's decision on the next startup")
 }
 
-// TestUnit_Discover_LeavesForeignRowsAlone: a name already held by an agent this
-// package does not own is not clobbered, whatever is on disk.
 func TestUnit_Discover_LeavesForeignRowsAlone(t *testing.T) {
 	ctx, agents := setupRegistry(t)
 	dir := t.TempDir()
@@ -241,9 +209,6 @@ func TestUnit_Discover_LeavesForeignRowsAlone(t *testing.T) {
 	require.Equal(t, manual.UpdatedAt, got.UpdatedAt)
 }
 
-// TestUnit_Discover_WorkspaceShadowsHome pins root precedence: the same chain id
-// present in two roots resolves to the first one listed, the way every other
-// contenox config file resolves workspace-before-home.
 func TestUnit_Discover_WorkspaceShadowsHome(t *testing.T) {
 	ctx, agents := setupRegistry(t)
 	workspace, home := t.TempDir(), t.TempDir()
@@ -259,10 +224,6 @@ func TestUnit_Discover_WorkspaceShadowsHome(t *testing.T) {
 	require.Equal(t, winner, cfg.Path)
 }
 
-// TestUnit_Discover_ToleratesMissingAndBrokenInput: a root that does not exist is
-// skipped without being created, and an unparseable file in a real root is
-// skipped without failing the pass — the same fail-soft the shared chain walker
-// already applies everywhere else.
 func TestUnit_Discover_ToleratesMissingAndBrokenInput(t *testing.T) {
 	ctx, agents := setupRegistry(t)
 	dir := t.TempDir()

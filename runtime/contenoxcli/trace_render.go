@@ -12,17 +12,8 @@ import (
 	"github.com/contenox/harness/runtime/taskengine"
 )
 
-// traceDrainGrace is the time we wait after a chain returns before cancelling
-// the trace subscription, so the SQLite bus poller (default 200ms cadence)
-// has a chance to deliver any final published step.
 const traceDrainGrace = 500 * time.Millisecond
 
-// startTraceStream subscribes to the per-request state bus subject and renders
-// each captured step to w in real time. Returns a stop function to call (via
-// defer) when the chain completes.
-//
-// No-ops when --trace is off, the engine has no bus, the ctx has no
-// requestID, or the bus subscription itself fails (reported via tracker).
 func startTraceStream(ctx context.Context, opts chatOpts, engine *Engine, w io.Writer) func() {
 	if !opts.EffectiveTracing || engine == nil || engine.Bus == nil {
 		return func() {}

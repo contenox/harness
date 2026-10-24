@@ -27,19 +27,10 @@ function highlight(code: string, language?: string): string {
 export interface CodeBlockViewProps {
   code: string;
   language?: string;
-  /**
-   * Accessible label for the copy control.
-   */
   copyLabel?: string;
-  /**
-   * Label shown briefly after a successful copy.
-   */
   copiedLabel?: string;
 }
 
-/**
- * A fenced code block for the chat transcript: a header bar (language + copy) over syntax-highlighted code.
- */
 export function CodeBlockView({
   code,
   language,

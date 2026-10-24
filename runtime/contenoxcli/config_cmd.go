@@ -16,7 +16,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// validConfigKeys lists the keys users can set via `contenox config set`.
 var validConfigKeys = map[string]string{
 	"default-model":                 "Default LLM model name (e.g. qwen2.5:7b)",
 	"default-provider":              "Default LLM provider type (e.g. llama, ollama, openrouter, openai, gemini; local aliases llama)",
@@ -208,7 +207,6 @@ func validConfigKeyNames() []string {
 	return keys
 }
 
-// getConfigKV retrieves a CLI setting from the KV store, returning "" if not set.
 func getConfigKV(ctx context.Context, store runtimetypes.Store, key string) (string, error) {
 	return clikv.Read(ctx, store, key), nil
 }

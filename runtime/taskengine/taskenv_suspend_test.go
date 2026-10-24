@@ -123,7 +123,6 @@ func TestContract_SuspendThenResume_ExecutesPendingWithoutDuplication(t *testing
 	require.Equal(t, "c2", susp.ApprovalID, "the approval ID IS the engine-minted call ID")
 	require.Equal(t, taskengine.EventScope{Chain: "chain.suspend", Task: "exec", ToolCall: "c2"}, susp.Scope)
 
-	// No stub results for pending c2/c3: the checkpointed transcript must end with them unanswered for the repair path to re-enter.
 	require.Equal(t, taskengine.DataTypeChatHistory, outType)
 	hist, ok := out.(taskengine.ChatHistory)
 	require.True(t, ok)
@@ -156,8 +155,8 @@ func TestContract_SuspendThenResume_ExecutesPendingWithoutDuplication(t *testing
 		taskengine.TaskEventStepStarted,
 		taskengine.TaskEventToolCallPending,
 		taskengine.TaskEventToolCall,
-		taskengine.TaskEventToolCallPending, // c2, left unbracketed by design
-		taskengine.TaskEventChainSuspended,  // after the checkpoint write
+		taskengine.TaskEventToolCallPending,
+		taskengine.TaskEventChainSuspended,
 	}, kinds)
 	suspEv := sink.events[len(sink.events)-1]
 	assert.Equal(t, "c2", suspEv.ApprovalID)
@@ -215,7 +214,6 @@ func TestContract_Suspend_SaverFailureFailsRun(t *testing.T) {
 	require.Contains(t, err.Error(), "disk full")
 }
 
-// TestContract_ResumeAfterDeny_CompletesWithDenyResult verifies a denied verdict resumes the run and completes with the wrapper's deny-message result.
 func TestContract_ResumeAfterDeny_CompletesWithDenyResult(t *testing.T) {
 	repo := &gatedToolsRepo{gated: true}
 	sink := &captureTaskEventSink{}

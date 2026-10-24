@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// openTestDB opens a temp SQLite DB for test assertions.
 func openTestDB(t *testing.T) (context.Context, libdbexec.DBManager, runtimetypes.Store) {
 	t.Helper()
 	ctx := context.Background()
@@ -25,10 +24,6 @@ func openTestDB(t *testing.T) (context.Context, libdbexec.DBManager, runtimetype
 	t.Cleanup(func() { _ = db.Close() })
 	return ctx, db, runtimetypes.New(db.WithoutTransaction())
 }
-
-// ---------------------------------------------------------------------------
-// getConfigKV / config cmd helpers
-// ---------------------------------------------------------------------------
 
 func TestUnit_getConfigKV_unset_returnsEmpty(t *testing.T) {
 	ctx, _, store := openTestDB(t)
@@ -105,10 +100,6 @@ func TestUnit_normalizeMaxTokensConfig(t *testing.T) {
 	require.Error(t, err)
 }
 
-// ---------------------------------------------------------------------------
-// resolveDBPath
-// ---------------------------------------------------------------------------
-
 func TestUnit_resolveDBPath_defaultsToGlobalDB(t *testing.T) {
 	home, err := os.UserHomeDir()
 	require.NoError(t, err)
@@ -125,7 +116,6 @@ func TestUnit_resolveDBPath_flagOverridesDefault(t *testing.T) {
 	customDB := filepath.Join(dir, "custom.db")
 
 	cmd := testCobraCmd()
-	// --db is a persistent flag on the real root command; mirror that here.
 	require.NoError(t, cmd.Root().PersistentFlags().Set("db", customDB))
 
 	dbPath, err := resolveDBPath(cmd)
@@ -133,12 +123,6 @@ func TestUnit_resolveDBPath_flagOverridesDefault(t *testing.T) {
 	assert.Equal(t, customDB, dbPath)
 }
 
-// ---------------------------------------------------------------------------
-// helpers
-// ---------------------------------------------------------------------------
-
-// testCobraCmd returns a minimal cobra root command with the --db persistent flag,
-// mimicking the subset of rootCmd setup that resolveDBPath needs.
 func testCobraCmd() *cobra.Command {
 	root := &cobra.Command{Use: "contenox"}
 	root.PersistentFlags().String("db", "", "SQLite database path")

@@ -9,8 +9,6 @@ import (
 	"github.com/contenox/harness/runtime/statetype"
 )
 
-// GatherInput builds Input from SQLite KV defaults, registered backend count, and a runtime state snapshot.
-// workspaceID scopes workspace-scoped keys (default-chain, hitl-policy-name) with global fallback.
 func GatherInput(ctx context.Context, db libdbexec.DBManager, states []statetype.BackendRuntimeState, workspaceID string) (Input, error) {
 	store := runtimetypes.New(db.WithoutTransaction())
 	backends, err := store.ListBackends(ctx, nil, runtimetypes.MAXLIMIT)
@@ -44,7 +42,6 @@ func GatherInput(ctx context.Context, db libdbexec.DBManager, states []statetype
 	}, nil
 }
 
-// StatesFromMap flattens runtime state snapshots for Evaluate / GatherInput.
 func StatesFromMap(m map[string]statetype.BackendRuntimeState) []statetype.BackendRuntimeState {
 	if len(m) == 0 {
 		return nil

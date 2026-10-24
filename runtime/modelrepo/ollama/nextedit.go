@@ -17,7 +17,6 @@ type nextEditClient struct {
 	maxTokens int
 }
 
-// CanNextEdit reports the endpoint's explicit independent edit capability.
 func (p *OllamaProvider) CanNextEdit() bool {
 	if !p.SupportsNextEdit {
 		return false
@@ -26,7 +25,6 @@ func (p *OllamaProvider) CanNextEdit() bool {
 	return err == nil
 }
 
-// GetNextEditConnection binds the model's declared edit protocol to Ollama generation.
 func (p *OllamaProvider) GetNextEditConnection(_ context.Context, backend string) (modelrepo.LLMNextEditClient, error) {
 	if !p.CanNextEdit() {
 		return nil, modelrepo.ErrNextEditUnsupported
@@ -38,7 +36,6 @@ func (p *OllamaProvider) GetNextEditConnection(_ context.Context, backend string
 	return &nextEditClient{client: client, model: p.Name, format: p.NextEditFormat, maxTokens: p.MaxOutputTokens}, nil
 }
 
-// NextEdit executes raw generation and validates its replacements.
 func (c *nextEditClient) NextEdit(ctx context.Context, input modelrepo.NextEditRequest) (modelrepo.NextEditResult, error) {
 	if err := input.Validate(); err != nil {
 		return modelrepo.NextEditResult{}, err

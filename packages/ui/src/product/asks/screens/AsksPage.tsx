@@ -6,9 +6,6 @@ import { ScreenBody } from '@contenox/ui';
 import { ScreenHeader } from '../../shell/ScreenHeader';
 import { useProductPorts } from '../../ports';
 
-/**
- * The inbox: every agent on this team that has stopped and is waiting for a person.
- */
 export default function AsksPage() {
   const { routes, useAuth } = useProductPorts();
   const accountID = useAuth().accountID ?? '';

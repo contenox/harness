@@ -8,9 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// isolateHome points ~/.contenox-harness at a temp dir so the token-file helpers operate
-// on a scratch location, not the developer's real home. globalContenoxDir reads
-// $HOME (os.UserHomeDir honors it on POSIX).
 func isolateHome(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
@@ -26,7 +23,6 @@ func TestUnit_ServeToken_FileRoundTrip(t *testing.T) {
 	require.NoError(t, writeServeTokenFile("s3cr3t"))
 	require.Equal(t, "s3cr3t", readServeTokenFile(), "written token reads back trimmed")
 
-	// It lands at ~/.contenox-harness/serve-token.txt with owner-only perms.
 	path := filepath.Join(home, ".contenox-harness", serveTokenFileName)
 	info, err := os.Stat(path)
 	require.NoError(t, err)

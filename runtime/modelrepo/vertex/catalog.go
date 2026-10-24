@@ -30,9 +30,6 @@ type googleCatalogProvider struct {
 	authErr    error
 }
 
-// vertexAuth is the authentication one vertex-google request carries: an
-// express mode API key when the backend stores one, otherwise a bearer token
-// and the quota project a user credential must name.
 type vertexAuth struct {
 	apiKey       string
 	quotaProject string
@@ -43,10 +40,6 @@ func (a vertexAuth) apply(ctx context.Context, req *http.Request) error {
 	return ApplyVertexAuth(ctx, req, a.apiKey, a.quotaProject, a.bearer)
 }
 
-// auth resolves the backend's credential once: an express mode key is used
-// alone, a user credential names the billing project, and a service account is
-// billed to its own project, which the vendor documents the quota project
-// header as not applying to.
 func (p *googleCatalogProvider) auth(ctx context.Context) (vertexAuth, error) {
 	p.authOnce.Do(func() {
 		if IsExpressAPIKey(p.spec.APIKey) {
@@ -90,7 +83,6 @@ func newGoogleCatalog(spec modelrepo.BackendSpec, opts modelrepo.CatalogOptions)
 func (p *googleCatalogProvider) Type() string { return "vertex-google" }
 
 func (p *googleCatalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	// Catalog listing is a non-streaming call: bound it end-to-end.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 
@@ -116,9 +108,6 @@ func (p *googleCatalogProvider) listGoogleModelsFromVertexPublisher(ctx context.
 func enrichGooglePublisherModel(name string) modelrepo.ObservedModel {
 	n := strings.ToLower(name)
 	om := modelrepo.ObservedModel{Name: name}
-	// The publisher list publishes no token limits, so the vendor's model pages
-	// are the source for the families they cover; an uncovered family declares
-	// none rather than inheriting another family's ceiling.
 	if fact, documented := gemini.ModelFactsFor(name); documented {
 		om.ContextLength = fact.ContextLength
 		om.MaxOutputTokens = fact.MaxOutputTokens
@@ -132,7 +121,6 @@ func enrichGooglePublisherModel(name string) modelrepo.ObservedModel {
 		om.CanChat = true
 		om.CanPrompt = true
 		om.CanStream = true
-		// The Vertex publisher API reports no input modalities; vision/audio come from hand-maintained allowlists.
 		om.CanVision = modelrepo.GeminiModelSupportsVision(name)
 		om.CanAudio = modelrepo.GeminiModelSupportsAudio(name)
 		om.ThinkingTypes = gemini.ThinkingDeclarationFor(name)

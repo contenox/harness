@@ -15,9 +15,6 @@ export type LabelWithHelpProps = {
   htmlFor?: string;
 };
 
-/**
- * A label (or read-only caption) paired with an optional info-icon tooltip.
- */
 export function LabelWithHelp({
   label,
   tooltip,

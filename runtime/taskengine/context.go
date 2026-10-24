@@ -10,13 +10,8 @@ import (
 
 type templateVarsKey struct{}
 
-// TemplateVarModelPinned is the template variable whose value "true" marks
-// the "model" variable as an explicit operator requirement. A step that fails
-// because no backend serves that model refuses the turn instead of routing to
-// its on_failure handler, so a recovery model never answers in its place.
 const TemplateVarModelPinned = "model_pinned"
 
-// WithTemplateVars attaches a map of template variables that MacroEnv expands {{var:name}} from.
 func WithTemplateVars(ctx context.Context, vars map[string]string) context.Context {
 	if vars == nil {
 		return ctx
@@ -24,7 +19,6 @@ func WithTemplateVars(ctx context.Context, vars map[string]string) context.Conte
 	return context.WithValue(ctx, templateVarsKey{}, vars)
 }
 
-// TemplateVarsFromContext returns the template variables attached via WithTemplateVars, or an error if none were set.
 func TemplateVarsFromContext(ctx context.Context) (map[string]string, error) {
 	v, ok := ctx.Value(templateVarsKey{}).(map[string]string)
 	if !ok {
@@ -33,7 +27,6 @@ func TemplateVarsFromContext(ctx context.Context) (map[string]string, error) {
 	return v, nil
 }
 
-// MergeTemplateVars overlays keys onto any template vars already in ctx and reattaches the combined map.
 func MergeTemplateVars(ctx context.Context, overlay map[string]string) context.Context {
 	base := make(map[string]string)
 	if existing, err := TemplateVarsFromContext(ctx); err == nil && existing != nil {
@@ -43,13 +36,10 @@ func MergeTemplateVars(ctx context.Context, overlay map[string]string) context.C
 	return WithTemplateVars(ctx, base)
 }
 
-// WithRequestedContextLength attaches a per-request context window used as the resolver's minimum, without replacing the chain's token_limit guardrail.
 func WithRequestedContextLength(ctx context.Context, contextLength int) context.Context {
 	return libmodelprovider.WithRequestedContextLength(ctx, contextLength)
 }
 
-// RequestedContextLengthFromContext returns the positive context window attached
-// by WithRequestedContextLength, or 0 when the caller did not request one.
 func RequestedContextLengthFromContext(ctx context.Context) int {
 	return libmodelprovider.RequestedContextLengthFromContext(ctx)
 }
@@ -60,12 +50,10 @@ type runtimeToolsAllowlist struct {
 	list []string
 }
 
-// WithRuntimeToolsAllowlist attaches a caller-supplied tools allowlist to ctx that is intersected with (never expands) each task's own allowlist.
 func WithRuntimeToolsAllowlist(ctx context.Context, allowlist []string) context.Context {
 	return context.WithValue(ctx, runtimeToolsAllowlistKey{}, runtimeToolsAllowlist{list: allowlist})
 }
 
-// RuntimeToolsAllowlistFromContext returns the allowlist attached via WithRuntimeToolsAllowlist, or (nil, false) if none was attached.
 func RuntimeToolsAllowlistFromContext(ctx context.Context) ([]string, bool) {
 	v, ok := ctx.Value(runtimeToolsAllowlistKey{}).(runtimeToolsAllowlist)
 	if !ok {
@@ -83,12 +71,10 @@ const (
 
 type edgeCountsKey struct{}
 
-// WithEdgeCounts attaches the in-flight edge traversal counts (keyed "<fromTaskID>-><toTaskID>") for the current chain run to ctx.
 func WithEdgeCounts(ctx context.Context, counts map[string]int) context.Context {
 	return context.WithValue(ctx, edgeCountsKey{}, counts)
 }
 
-// EdgeCountsFromContext returns the edge counts attached via WithEdgeCounts, or nil if not set.
 func EdgeCountsFromContext(ctx context.Context) map[string]int {
 	v, _ := ctx.Value(edgeCountsKey{}).(map[string]int)
 	return v

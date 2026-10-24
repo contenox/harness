@@ -40,7 +40,6 @@ CONTENOX_DEV_URL ?= http://$(CONTENOX_DEV_ADDR):$(CONTENOX_DEV_PORT)
 
 .PHONY: help \
 	deps-website dev-website build-website preview-website \
-	openapi \
 	build-contenox build-contenox-windows build-ui \
 	\
 	\
@@ -68,12 +67,6 @@ help:
 	@echo "verify-*   verify-ui-embed"
 	@echo "Version (maintainers): make -f Makefile.version help"
 	@echo "clean"
-
-# Regenerate the OpenAPI spec (runtime/internal/openapidocs/openapi.json) from
-# the route annotations. Run after changing any HTTP route or its @request/
-# @response/@param annotations; the result is embedded into the binary.
-openapi:
-	go run $(PROJECT_ROOT)/tools/openapi-gen
 
 # build
 # Build the pure-Go CLI.

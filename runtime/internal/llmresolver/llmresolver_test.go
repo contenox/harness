@@ -182,10 +182,6 @@ func TestUnit_ChatModelResolution(t *testing.T) {
 	}
 }
 
-// TestUnit_ChatModelResolution_ContextShortfallMessage pins that a request
-// whose context requirement exceeds every capable model's window fails with
-// an actionable message (required vs largest-available context + remedy),
-// wrapping ErrNoSatisfactoryModel, not the opaque generic listing.
 func TestUnit_ChatModelResolution_ContextShortfallMessage(t *testing.T) {
 	getModels := func(providers []modelrepo.Provider) func(context.Context, ...string) ([]modelrepo.Provider, error) {
 		return func(context.Context, ...string) ([]modelrepo.Provider, error) { return providers, nil }
@@ -237,12 +233,12 @@ func TestUnit_EmbedModelResolution(t *testing.T) {
 		ID:           "p2",
 		Name:         "text-embed-model",
 		CanEmbedFlag: true,
-		Backends:     []string{}, // No backends
+		Backends:     []string{},
 	}
 	providerEmbedCannotEmbed := &modelrepo.MockProvider{
 		ID:           "p4",
 		Name:         "text-embed-model",
-		CanEmbedFlag: false, // Cannot embed
+		CanEmbedFlag: false,
 		Backends:     []string{"b4"},
 	}
 
@@ -336,7 +332,7 @@ func TestUnit_EmbedModelResolution(t *testing.T) {
 			name:     "case-insensitive match after normalization",
 			embedReq: llmresolver.EmbedRequest{ModelName: "Text-Embed-Model"},
 			providers: []modelrepo.Provider{
-				providerEmbedOK, // Name: "text-embed-model"
+				providerEmbedOK,
 			},
 			resolver: llmresolver.Randomly,
 			wantErr:  nil,

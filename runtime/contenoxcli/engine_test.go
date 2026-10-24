@@ -60,8 +60,6 @@ func TestReadinessDefaults(t *testing.T) {
 			wantProvider: "llama",
 		},
 		{
-			// The reported bug: a healthy explicit override must beat a broken
-			// persisted default, not be ignored because config is non-empty.
 			name: "explicit flags override a broken persisted config",
 			opts: chatOpts{
 				EffectiveDefaultModel:       "gemini-2.5-flash",
@@ -73,8 +71,6 @@ func TestReadinessDefaults(t *testing.T) {
 			wantProvider: "vertex-google",
 		},
 		{
-			// Override only the provider; the model stays on persisted config and
-			// needs no readiness credit (effective == configured).
 			name: "provider override alone, model unchanged from config",
 			opts: chatOpts{
 				EffectiveDefaultModel:       "persisted",

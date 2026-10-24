@@ -11,21 +11,14 @@ import (
 	"strings"
 )
 
-// Action is the outcome of policy evaluation for a tool call.
 type Action string
 
 const (
-	// ActionAllow passes the tool call through without any approval step.
-	ActionAllow Action = "allow"
-	// ActionApprove blocks execution and requests human approval before proceeding.
+	ActionAllow   Action = "allow"
 	ActionApprove Action = "approve"
-	// ActionDeny rejects the tool call immediately with a soft message to the LLM.
-	ActionDeny Action = "deny"
+	ActionDeny    Action = "deny"
 )
 
-// ApprovalRequest describes a tool invocation that requires human review.
-// Diff is populated for file-mutation tools (write_file, sed) to show the
-// unified diff of what would change.
 type ApprovalRequest struct {
 	ToolCallID string
 	ToolsName  string
@@ -35,154 +28,57 @@ type ApprovalRequest struct {
 	DiffOld    string
 	DiffNew    string
 
-	// PolicyName, MatchedRule, TimeoutS, and OnTimeout carry the policy
-	// verdict (hitlservice.EvaluationResult) that produced this ask.
-	// HITLWrapper.Exec populates them from the same Evaluate() call it
-	// already makes; RequestApproval persists them onto the durable row so an
-	// operator can always name which rule gated an action, and so it knows
-	// how long to wait and what to do if nobody answers in time. Zero values
-	// are safe: TimeoutS<=0 means "the matched rule set no timeout of its
-	// own" and OnTimeout=="" means "default deny". The attached-session path
-	// (acpsvc.Transport.AskApproval) ignores these fields.
 	PolicyName  string
 	MatchedRule *int
 	TimeoutS    int
 	OnTimeout   Action
 
-	// InstanceID, SessionID, AgentName and MissionID attribute the ask to the
-	// fleet unit that raised it, and are persisted onto the durable row (see
-	// runtimetypes.HITLApproval's "Attribution" section for why an inbox needs
-	// them). All four are OPTIONAL: an ask raised by a native chain turn with
-	// no unit behind it leaves them empty, and MissionID is empty for an
-	// unattended session that is not on a mission. They are supplied by the
-	// unattended-permission answerer (fleetservice), which is the only caller
-	// that HAS this identity; the attached-session path ignores them.
 	InstanceID string
 	SessionID  string
 	AgentName  string
 	MissionID  string
 }
 
-// ConditionOp is the comparison operator for a rule condition.
 type ConditionOp string
 
 const (
-	// OpEq requires the argument value to equal the condition value exactly.
-	OpEq ConditionOp = "eq"
-	// OpGlob matches the argument value against a glob pattern.
-	// Both value and pattern are normalized with path.Clean before matching,
-	// preventing path-traversal bypass (e.g. ./src/../etc/passwd → etc/passwd).
-	// Supports * (within a path component), ? (single char), and ** (across separators).
-	OpGlob ConditionOp = "glob"
-	// OpHost treats the argument value as a URL and matches its host against a
-	// comma-separated list of host patterns in Value. It is the policy-native
-	// way to express SSRF-style host denial (e.g. webtools to localhost or a
-	// cloud-metadata endpoint): the host is parsed out of the URL, so a trailing
-	// :port or path cannot evade the match the way a raw URL glob can. IP
-	// literals match exactly; bare names match the host and any subdomain
-	// (api.example.com matches example.com).
-	OpHost ConditionOp = "host"
-	// OpCommandBlacklist matches the command basename against a comma-separated
-	// list of denied commands. Used to block dangerous commands like rm, sudo, dd.
-	OpCommandBlacklist ConditionOp = "command_blacklist"
-	// OpCommandAskAlways matches the command basename against a comma-separated
-	// list of commands that should always require human approval (e.g., rm, sudo, chmod).
-	// Unlike OpCommandBlacklist which denies, this operator with action:"approve" creates
-	// a HITL pause point for safety-critical commands.
-	OpCommandAskAlways ConditionOp = "command_ask_always"
-	// OpNoCommandSubstitution blocks commands containing shell substitution
-	// patterns ($(), backticks, <(), >()) that could indicate command injection.
+	OpEq                    ConditionOp = "eq"
+	OpGlob                  ConditionOp = "glob"
+	OpHost                  ConditionOp = "host"
+	OpCommandBlacklist      ConditionOp = "command_blacklist"
+	OpCommandAskAlways      ConditionOp = "command_ask_always"
 	OpNoCommandSubstitution ConditionOp = "no_command_substitution"
 )
 
-// Condition is a single key/op/value predicate applied to the args of a tool call.
 type Condition struct {
 	Key   string      `json:"key"`
 	Op    ConditionOp `json:"op"`
 	Value string      `json:"value"`
 }
 
-// Rule matches a tools+tool pair (with optional conditions) and assigns an action.
-// When contains zero conditions the name match alone is sufficient.
-// All conditions in When must hold for the rule to match (AND semantics).
 type Rule struct {
-	Tools  string      `json:"tools"`
-	Tool   string      `json:"tool"`
-	When   []Condition `json:"when,omitempty"`
-	Action Action      `json:"action"`
-	// TimeoutS is the number of seconds to wait for a human response when Action is
-	// ActionApprove. Zero means no timeout (block indefinitely until ctx is cancelled).
-	TimeoutS int `json:"timeout_s,omitempty"`
-	// OnTimeout is the fallback action when the approval window expires.
-	// Only "deny" and "approve" are valid (allow would silently bypass approval).
-	OnTimeout Action `json:"on_timeout,omitempty"`
+	Tools     string      `json:"tools"`
+	Tool      string      `json:"tool"`
+	When      []Condition `json:"when,omitempty"`
+	Action    Action      `json:"action"`
+	TimeoutS  int         `json:"timeout_s,omitempty"`
+	OnTimeout Action      `json:"on_timeout,omitempty"`
 }
 
-// Policy is the top-level document stored as hitl-policy.json in the VFS.
-// Rules are evaluated in order; the first matching rule wins.
-// DefaultAction is applied when no rule matches; it is fail-closed to "approve"
-// when absent so an unaccounted-for tool pauses for a human.
-//
-// Compute is the OPTIONAL compute half of the envelope (see ComputeBounds). A nil
-// Compute is the default and means UNBOUNDED — an envelope with no compute block
-// bounds only ACTIONS (the rules above), exactly as it did before this field
-// existed. It is a pointer so its absence is a first-class, wire-visible fact: a
-// policy that never grew a compute block round-trips through JSON byte-for-byte as
-// before, and the enforcement seams read `Compute == nil` as "this mission is
-// bounded only by its rules".
 type Policy struct {
-	DefaultAction Action         `json:"default_action,omitempty"`
-	Rules         []Rule         `json:"rules"`
-	Compute       *ComputeBounds `json:"compute,omitempty"`
-	// Attention is the OPTIONAL attention half of the envelope: who may answer a
-	// unit's question (see AttentionBounds). Nil — the default — means a HUMAN
-	// must, which is what the escalation was for.
-	Attention *AttentionBounds `json:"attention,omitempty"`
+	DefaultAction Action           `json:"default_action,omitempty"`
+	Rules         []Rule           `json:"rules"`
+	Compute       *ComputeBounds   `json:"compute,omitempty"`
+	Attention     *AttentionBounds `json:"attention,omitempty"`
 }
 
-// OnExhausted names what a mission does when it crosses one of its envelope's
-// compute bounds. It is a small, closed set — the terminal-vs-pause choice the
-// operator declares up front, the compute analogue of Rule.OnTimeout.
 type OnExhausted string
 
 const (
-	// OnExhaustedFinishStuck finishes the mission at StatusStuck through the
-	// runtime's real terminal machinery, with a reason naming the bound. It is the
-	// default when OnExhausted is unset, and the only behavior enforced today.
 	OnExhaustedFinishStuck OnExhausted = "finish_stuck"
-	// OnExhaustedPauseAsk is DECLARED but not yet enforced: it will file a durable
-	// ask ("this mission hit its compute bound — extend it or let it stop?") instead
-	// of finishing. Until that machinery lands, an envelope that sets it is honored
-	// AS finish_stuck at the enforcement seam. The validator accepts it so a
-	// forward-looking envelope parses today; the blueprint records the deferral.
-	OnExhaustedPauseAsk OnExhausted = "pause_ask"
+	OnExhaustedPauseAsk    OnExhausted = "pause_ask"
 )
 
-// ComputeBounds is the envelope's COMPUTE half: the ceiling a mission's TOTAL
-// compute is held under, alongside the per-tool ACTION rules above. It is the
-// constitutional widening of the envelope from "what a unit may DO" to "how much a
-// unit may SPEND" — the same envelope, now the unit's total boundary. These are
-// GATES by design, the legitimate kind: envelope-declared, operator-authored, and
-// deterministic at the boundary (turn start, tool dispatch) — not the advice the
-// attention layer appends.
-//
-// Every bound is a CEILING and OPT-IN: a zero/absent field is unbounded, so an
-// envelope with no compute block (or an empty one) runs exactly as it did before —
-// bounds only ever RESTRICT, never grant. Bounds are per MISSION, checked at
-// deterministic seams, and exhaustion is never silent (see OnExhausted).
-//
-// What is measured and what is NOT yet enforced (honest scope, per the blueprint):
-//   - MaxTurns and MaxToolCalls are countable deterministically host-side and ARE
-//     enforced — the drive loop's prompt turns, and the unattended answerer's
-//     envelope-gated tool dispatches.
-//   - MaxTokens is BEST-EFFORT: it is enforced only from the usage the downstream
-//     unit actually reports (ACP usage_update), which not every provider emits — it
-//     bounds a mission whose unit reports usage and is inert for one whose unit does
-//     not, rather than guessing.
-//   - ModelAllowlist / BackendAllowlist are DECLARED here and validated for shape,
-//     but model/backend resolution happens inside the unit's own process where the
-//     host cannot see it, so they are NOT yet enforced. They are parsed so an
-//     envelope can express the intent and a later llmrepo-side seam can honor it.
 type ComputeBounds struct {
 	MaxTurns         int         `json:"maxTurns,omitempty"`
 	MaxToolCalls     int         `json:"maxToolCalls,omitempty"`
@@ -192,12 +88,6 @@ type ComputeBounds struct {
 	OnExhausted      OnExhausted `json:"onExhausted,omitempty"`
 }
 
-// Compute-bound validation caps. They are DEFENSIVE, not aesthetic (the register
-// of the plan/handover caps in missionservice): they exist to reject a negative or
-// an absurd value a hand-edited or hallucinated policy might carry, not to impose a
-// house style on how tight a bound should be. A real operator ceiling sits far
-// below these; a value past them is a typo (an extra digit, a sign flip) that must
-// fail the policy to load rather than silently bound a mission at ten billion.
 const (
 	maxComputeTurns               = 100_000
 	maxComputeToolCalls           = 10_000_000
@@ -206,23 +96,20 @@ const (
 	maxComputeAllowlistEntryBytes = 512
 )
 
-// Reason constants used in EvaluationResult.Reason.
 const (
 	ReasonMatchedRule   = "matched_rule"
 	ReasonDefaultAction = "default_action"
 )
 
-// EvaluationResult carries the policy decision plus introspection data.
 type EvaluationResult struct {
 	Action      Action
-	MatchedRule *int   // nil when DefaultAction was applied (no rule matched)
-	Reason      string // ReasonMatchedRule or ReasonDefaultAction
+	MatchedRule *int
+	Reason      string
 	TimeoutS    int
 	OnTimeout   Action
 	PolicyName  string
 }
 
-// evaluate returns the EvaluationResult for the given tools, tool name, and call args.
 func evaluate(p *Policy, toolsName, toolName string, args map[string]any) EvaluationResult {
 	for i, r := range p.Rules {
 		if ruleMatches(r, toolsName, toolName, args) {
@@ -296,11 +183,6 @@ func conditionMatches(c Condition, args map[string]any) bool {
 	return false
 }
 
-// urlHostMatches parses rawURL and reports whether its host equals, or is a
-// subdomain of, any comma-separated pattern in patternsCSV. Parsing the host
-// out of the URL (rather than substring-matching the raw URL) is what makes a
-// host deny rule robust against :port and path evasion. IP literals match
-// exactly; bare names match the host and any subdomain.
 func urlHostMatches(rawURL, patternsCSV string) bool {
 	u, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil {
@@ -326,10 +208,6 @@ func urlHostMatches(rawURL, patternsCSV string) bool {
 	return false
 }
 
-// conditionValues flattens an argument value into the strings a condition is
-// tested against. A slice argument (e.g. {"path": ["a","/etc/passwd"]}) is
-// tested element-wise so a single stringified "[a /etc/passwd]" cannot slip a
-// restricted entry past a glob.
 func conditionValues(v any) []string {
 	switch t := v.(type) {
 	case string:
@@ -347,9 +225,6 @@ func conditionValues(v any) []string {
 	}
 }
 
-// globMatch reports whether s matches the glob pattern.
-// Both pattern and s are normalized with path.Clean before comparison to prevent
-// path-traversal bypasses. Supports *, ?, and ** (which matches across path separators).
 func globMatch(pattern, s string) bool {
 	s = path.Clean(s)
 	for _, expanded := range expandGlobBraces(pattern) {
@@ -372,12 +247,6 @@ func globMatchOne(pattern, s string) bool {
 	return matchDoubleGlob(pattern, s)
 }
 
-// expandGlobBraces expands {a,b,c} alternations into the cross product of
-// concrete patterns, supporting nesting and slashes inside an alternative.
-// Go's path.Match has no brace support, so "**/{.ssh,.gnupg}/**" would
-// otherwise match a literal "{" and silently never fire. Unbalanced braces
-// are treated literally. Expansion is bounded; past the cap the original
-// pattern is returned unexpanded.
 const maxGlobExpansions = 4096
 
 func expandGlobBraces(pattern string) []string {
@@ -455,8 +324,6 @@ func splitTopLevelCommas(s string) []string {
 	return append(parts, s[start:])
 }
 
-// matchDoubleGlob handles patterns that contain **.
-// ** matches zero or more path components.
 func matchDoubleGlob(pattern, s string) bool {
 	idx := strings.Index(pattern, "**")
 	prefix := strings.TrimSuffix(pattern[:idx], "/")
@@ -476,7 +343,6 @@ func matchDoubleGlob(pattern, s string) bool {
 		return true
 	}
 
-	// Try matching `after` against every path suffix of s (split at each /).
 	for {
 		if matchSuffix(after, s) {
 			return true
@@ -498,22 +364,17 @@ func matchSuffix(pattern, s string) bool {
 	return matchDoubleGlob(pattern, s)
 }
 
-// commandSubstitutionPatterns are shell metacharacters that enable command
-// substitution and should be blocked to prevent injection attacks.
 var commandSubstitutionPatterns = []string{
-	"$(",  // Command substitution
-	"`",   // Backtick command substitution
-	"<(",  // Process substitution (read)
-	">(",  // Process substitution (write)
-	"$[",  // Arithmetic expansion
-	"${}", // Parameter expansion
-	"$((", // Arithmetic expansion
+	"$(",
+	"`",
+	"<(",
+	">(",
+	"$[",
+	"${}",
+	"$((",
 }
 
-// detectCommandSubstitution checks if a command string or any of its arguments
-// contain shell metacharacters that could enable command injection.
 func detectCommandSubstitution(args map[string]any) bool {
-	// Check all argument values for substitution patterns
 	for _, v := range args {
 		for _, s := range conditionValues(v) {
 			for _, pattern := range commandSubstitutionPatterns {
@@ -526,29 +387,22 @@ func detectCommandSubstitution(args map[string]any) bool {
 	return false
 }
 
-// getCommandFromArgs extracts the command string from tool arguments.
-// For local_shell, this checks both "command" and the first element of "args".
 func getCommandFromArgs(args map[string]any) string {
 	if cmd, ok := args["command"].(string); ok {
 		return cmd
 	}
-	// If args is a string, it might contain the full command
 	if argStr, ok := args["args"].(string); ok {
-		// Extract first word as command
 		parts := strings.Fields(argStr)
 		if len(parts) > 0 {
 			return parts[0]
 		}
 	}
-	// If args is an array, first element might be command
 	if argList, ok := args["args"].([]string); ok && len(argList) > 0 {
 		return argList[0]
 	}
 	return ""
 }
 
-// isCommandBlacklisted checks if the command matches any in the blacklist.
-// The blacklist is a comma-separated string of command names (basenames).
 func isCommandBlacklisted(args map[string]any, blacklist string) bool {
 	if blacklist == "" {
 		return false
@@ -557,15 +411,11 @@ func isCommandBlacklisted(args map[string]any, blacklist string) bool {
 	if cmd == "" {
 		return false
 	}
-	// Get basename of command (strip path and any suffixes)
 	base := path.Base(cmd)
-	// Remove any arguments that might be appended
-	// e.g., "grep -n" -> "grep"
 	base = strings.Fields(base)[0]
 	if base == "" {
 		return false
 	}
-	// Check against blacklist
 	for _, denied := range strings.Split(blacklist, ",") {
 		denied = strings.TrimSpace(denied)
 		if denied == "" {
@@ -578,9 +428,6 @@ func isCommandBlacklisted(args map[string]any, blacklist string) bool {
 	return false
 }
 
-// isCommandInAskAlwaysList checks if the command matches any in the ask-always list.
-// The list is a comma-separated string of command names (basenames) that should
-// always require human approval before execution.
 func isCommandInAskAlwaysList(args map[string]any, commandList string) bool {
 	if commandList == "" {
 		return false
@@ -589,15 +436,11 @@ func isCommandInAskAlwaysList(args map[string]any, commandList string) bool {
 	if cmd == "" {
 		return false
 	}
-	// Get basename of command (strip path and any suffixes)
 	base := path.Base(cmd)
-	// Remove any arguments that might be appended
-	// e.g., "rm -rf" -> "rm"
 	base = strings.Fields(base)[0]
 	if base == "" {
 		return false
 	}
-	// Check against the ask-always list
 	for _, cmdName := range strings.Split(commandList, ",") {
 		cmdName = strings.TrimSpace(cmdName)
 		if cmdName == "" {
@@ -628,21 +471,11 @@ func loadPolicy(ctx context.Context, src PolicySource, tenantID, policyPath stri
 	return &p, nil
 }
 
-// rejectUnknownComputeFields strict-decodes JUST the policy's "compute" sub-object
-// so a typo in a NEW bound (maxTurn, onExhaust) fails the policy to load rather
-// than silently running the mission unbounded on the field the operator thought
-// they set. The strictness is deliberately scoped to the block being introduced:
-// the rest of the policy stays laxly parsed (json.Unmarshal above), so every
-// existing policy carrying an incidental extra top-level key — a "//"-style comment
-// note, a future field — keeps loading exactly as before. Only "compute" is held to
-// deny-unknown-fields, and only when it is present.
 func rejectUnknownComputeFields(data []byte) error {
 	var probe struct {
 		Compute json.RawMessage `json:"compute"`
 	}
 	if err := json.Unmarshal(data, &probe); err != nil {
-		// A malformed document was already reported by the top-level Unmarshal in
-		// loadPolicy; nothing to add here.
 		return nil
 	}
 	if len(probe.Compute) == 0 {
@@ -657,7 +490,6 @@ func rejectUnknownComputeFields(data []byte) error {
 	return nil
 }
 
-// validatePolicy checks semantic constraints that cannot be expressed in the JSON schema.
 func validatePolicy(p *Policy) error {
 	validActions := map[Action]bool{ActionAllow: true, ActionApprove: true, ActionDeny: true}
 	if p.DefaultAction != "" && !validActions[p.DefaultAction] {
@@ -698,11 +530,6 @@ func validatePolicy(p *Policy) error {
 	return nil
 }
 
-// validateComputeBounds checks the envelope's compute block for shape: every
-// ceiling non-negative and within its defensive cap, the onExhausted value known,
-// and each allowlist within bounds. It is HARD on shape and silent on tightness —
-// it will not tell an operator their maxTurns is too small, only that it is not a
-// negative or an absurd one — the same stance the plan/handover validators take.
 func validateComputeBounds(c *ComputeBounds) error {
 	if err := validateComputeCeiling("maxTurns", c.MaxTurns, maxComputeTurns); err != nil {
 		return err
@@ -749,11 +576,6 @@ func validateComputeAllowlist(name string, entries []string) error {
 	return nil
 }
 
-// validateGlobValue rejects glob patterns that would silently fail to match at
-// runtime: unbalanced braces (path.Match would treat "{" literally) and brace
-// expressions that explode past the expansion cap. A rejected policy fails to
-// load, so evaluation falls back to the built-in default rather than running
-// with a deny rule that never fires.
 func validateGlobValue(value string) error {
 	depth := 0
 	for i := 0; i < len(value); i++ {
@@ -776,10 +598,6 @@ func validateGlobValue(value string) error {
 	return nil
 }
 
-// secretDenyRules is the universal known-bad prefix: paths that never belong
-// in any agent workflow on any machine (credential stores, key material,
-// shell/persistence init, system dirs). It is kept in sync with
-// hitl-policy-acp.json by TestSeededACPPolicySecretInvariant.
 func secretDenyRules() []Rule {
 	const allTools = "*"
 	q := func(g string) Rule {
@@ -823,19 +641,10 @@ func defaultPolicy() *Policy {
 			{Tools: "local_fs", Tool: "count_stats", Action: ActionAllow},
 			{Tools: "local_fs", Tool: "write_file", Action: ActionApprove},
 			{Tools: "local_fs", Tool: "sed", Action: ActionApprove},
-			// local_shell: block commands that are never allowed under any circumstance.
-			// Values must be bare basenames — the matcher extracts path.Base(command) and compares
-			// exactly, so multi-word entries like "rm -rf" would silently never fire.
 			{Tools: "local_shell", Tool: "local_shell", Action: ActionDeny, When: []Condition{{Key: "command", Op: OpCommandBlacklist, Value: "mkfs,mke2fs,fdisk,shred,wipefs"}}},
-			// local_shell: require approval for dangerous commands (ask-always list)
 			{Tools: "local_shell", Tool: "local_shell", Action: ActionApprove, When: []Condition{{Key: "command", Op: OpCommandAskAlways, Value: "rm,sudo,dd,chmod,chown,mv,cp,>:,>>"}}},
-			// local_shell: require approval for command injection patterns
 			{Tools: "local_shell", Tool: "local_shell", Action: ActionApprove, When: []Condition{{Key: "args", Op: OpNoCommandSubstitution, Value: ""}}},
-			// local_shell: default to requiring approval (fail-closed safety)
 			{Tools: "local_shell", Tool: "local_shell", Action: ActionApprove},
-			// shell_session: reading scrollback is reference-only and never gated;
-			// submitting a line (shell_session_run) is gated exactly like local_shell,
-			// falling through to DefaultAction (approve) below.
 			{Tools: "shell_session", Tool: "shell_session_read", Action: ActionAllow},
 			{Tools: "webtools", Tool: "web_get", Action: ActionAllow},
 			{Tools: "webtools", Tool: "web_head", Action: ActionAllow},

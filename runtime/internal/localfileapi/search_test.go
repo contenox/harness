@@ -16,11 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ─── rg --json parsing (no live rg) ─────────────────────────────────────────
-
-// parseRipgrepMatch turns exactly the `match` events into frames, one per
-// submatch, with root-relative paths and a trimmed preview; every other rg event
-// (and any junk) yields (nil, false).
 func TestUnit_ParseRipgrepMatch(t *testing.T) {
 	const cap = 200
 
@@ -60,26 +55,19 @@ func TestUnit_ParseRipgrepMatch(t *testing.T) {
 	t.Run("garbage and non-text matches are skipped", func(t *testing.T) {
 		_, ok := parseRipgrepMatch([]byte("not json at all"), cap)
 		require.False(t, ok)
-		// A bytes-form (non-UTF8) path decodes to an empty Text and is dropped.
 		_, ok = parseRipgrepMatch([]byte(`{"type":"match","data":{"path":{"bytes":"AA=="},"lines":{"text":"x\n"},"line_number":1,"submatches":[{"match":{"text":"x"},"start":0,"end":1}]}}`), cap)
 		require.False(t, ok)
 	})
 }
 
-// trimPreview strips the trailing newline, caps at the byte limit, and never
-// splits a multibyte rune.
 func TestUnit_TrimPreview(t *testing.T) {
 	require.Equal(t, "hello world", trimPreview("hello world\n", 200))
 	require.Equal(t, "hello", trimPreview("hello world", 5), "capped at the byte limit")
 
-	// A cap that would land mid-rune backs off to the previous boundary rather
-	// than emitting invalid UTF-8.
-	got := trimPreview("héllo", 2) // 'é' is 2 bytes; cap 2 lands mid-é
+	got := trimPreview("héllo", 2)
 	require.Equal(t, "h", got)
 	require.True(t, len(got) <= 2)
 }
-
-// ─── refusals, all BEFORE any stream starts ─────────────────────────────────
 
 func newSearchMux(t *testing.T, root string) *http.ServeMux {
 	t.Helper()
@@ -90,11 +78,9 @@ func newSearchMux(t *testing.T, root string) *http.ServeMux {
 	return mux
 }
 
-// A root that is not on the allowlist is refused with 422 — the allowlist is the
-// authority, exactly as it is for the /files browse API — and no stream begins.
 func TestUnit_Search_RootValidationRefusal(t *testing.T) {
 	allowed := t.TempDir()
-	disallowed := t.TempDir() // exists, but never handed to the Factory
+	disallowed := t.TempDir()
 	mux := newSearchMux(t, allowed)
 
 	srv := httptest.NewServer(mux)
@@ -106,7 +92,6 @@ func TestUnit_Search_RootValidationRefusal(t *testing.T) {
 	require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode, "a non-allowlisted root is refused before any scan")
 }
 
-// An empty or oversized query is refused with 422 before any process spawns.
 func TestUnit_Search_QueryValidation(t *testing.T) {
 	mux := newSearchMux(t, t.TempDir())
 	srv := httptest.NewServer(mux)
@@ -123,9 +108,6 @@ func TestUnit_Search_QueryValidation(t *testing.T) {
 	require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode, "an oversized query is rejected")
 }
 
-// rg absent → a 501 teaching error that names the dependency, deterministically
-// exercised by stubbing lookPath (rg IS installed in CI, so we cannot rely on it
-// being absent).
 func TestUnit_Search_RipgrepMissing(t *testing.T) {
 	factory, err := vfs.NewFactory(t.TempDir())
 	require.NoError(t, err)
@@ -159,15 +141,11 @@ func TestUnit_Search_RipgrepMissing(t *testing.T) {
 	require.Equal(t, "dependency_missing", body.Error.Code)
 }
 
-// ─── live SSE stream (skips cleanly when rg is absent) ──────────────────────
-
 type sseEvent struct {
 	Event string
 	Data  string
 }
 
-// parseSSE splits a text/event-stream body into named events, dropping comment
-// frames (": ...").
 func parseSSE(t *testing.T, body string) []sseEvent {
 	t.Helper()
 	var out []sseEvent
@@ -192,8 +170,6 @@ func parseSSE(t *testing.T, body string) []sseEvent {
 	return out
 }
 
-// A real scan over a fixture directory streams a `match` frame per hit and closes
-// with a single `done` frame (truncated=false when everything fit).
 func TestUnit_Search_StreamsMatchesThenDone(t *testing.T) {
 	if _, err := exec.LookPath("rg"); err != nil {
 		t.Skip("ripgrep (rg) not installed; skipping live SSE search test")
@@ -238,7 +214,6 @@ func TestUnit_Search_StreamsMatchesThenDone(t *testing.T) {
 	require.Equal(t, 3, done.Matches)
 	require.False(t, done.Truncated)
 
-	// Paths are root-relative and previews carry the matched line.
 	paths := map[string]string{}
 	for _, m := range matches {
 		paths[m.Path] = m.Preview
@@ -248,14 +223,11 @@ func TestUnit_Search_StreamsMatchesThenDone(t *testing.T) {
 	require.Contains(t, paths["sub/b.txt"], "hello")
 }
 
-// When the total exceeds the hard cap, the scan stops at the cap and the done
-// frame reports truncated=true. A tiny cap makes this cheap to prove.
 func TestUnit_Search_TruncatesAtCap(t *testing.T) {
 	if _, err := exec.LookPath("rg"); err != nil {
 		t.Skip("ripgrep (rg) not installed; skipping live SSE truncation test")
 	}
 	root := t.TempDir()
-	// Five matching lines, cap of two.
 	require.NoError(t, os.WriteFile(filepath.Join(root, "many.txt"),
 		[]byte("hit 1\nhit 2\nhit 3\nhit 4\nhit 5\n"), 0o644))
 

@@ -41,10 +41,6 @@ func (p *catalogProvider) baseURL() string {
 	return defaultBaseURL
 }
 
-// modelCard is what Mistral's own model list publishes about one model: the
-// capabilities it executes and the sampling bounds its endpoints enforce. Every
-// declared capability below is a field of that response, never an inference from
-// the model id.
 type modelCard struct {
 	ID               string `json:"id"`
 	MaxContextLength int    `json:"max_context_length"`
@@ -98,11 +94,6 @@ func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedM
 	return models, nil
 }
 
-// capabilityFor restates one model card as the capabilities the runtime routes
-// on. The card declares which models serve chat and native FIM; it declares no
-// embedding, prompt-completion, reasoning or tool-calling flag, so those stay
-// undeclared rather than claimed, and the two the vendor does publish beyond the
-// runtime's list travel as model facts.
 func capabilityFor(item modelCard) modelrepo.CapabilityConfig {
 	return modelrepo.CapabilityConfig{
 		Dialect:         dialectName,
@@ -123,9 +114,6 @@ func completionMode(supported bool) string {
 	return ""
 }
 
-// modelFacts carries what the vendor publishes about a model beyond the
-// runtime's capability list, so a consumer reads the vendor's own declaration
-// instead of inferring it from the chat capability.
 func modelFacts(item modelCard) map[string]string {
 	facts := map[string]string{
 		modelrepo.ObservedFunctionCallingMetaKey: strconv.FormatBool(item.Capabilities.FunctionCalling),

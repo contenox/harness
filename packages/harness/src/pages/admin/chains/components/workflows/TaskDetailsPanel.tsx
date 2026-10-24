@@ -30,7 +30,6 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   const [isEditing, setIsEditing] = useState(isNewTask);
   const [editedTask, setEditedTask] = useState<ChainTask>({ ...task });
 
-  // Update edited task when task prop changes
   useEffect(() => {
     setEditedTask({ ...task });
   }, [task]);
@@ -84,7 +83,6 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
     },
   ];
 
-  // Custom render for complex nested data
   const renderTransitionData = (transition: ChainTask['transition']) => {
     return (
       <div className="space-y-3">
@@ -179,7 +177,6 @@ const TaskDetailsPanel: React.FC<TaskDetailsPanelProps> = ({
   };
 
   const handleSave = (data: Record<string, unknown>) => {
-    // Convert the generic data back to ChainTask
     const d = data as Partial<ChainTask>;
     const updatedTask: ChainTask = {
       id: d.id || editedTask.id,

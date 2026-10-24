@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// captureRequestBody decodes the request body into dest and replies with responseJSON.
 func captureRequestBody(t *testing.T, dest *map[string]any, responseJSON string) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +40,6 @@ func newGPT5ChatClient(t *testing.T, serverURL string) *OpenAIChatClient {
 
 const responsesOKBody = `{"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}],"reasoning":{}}`
 
-// An image attachment must reach the Responses API as an input_image part with an inline base64 data URI, alongside input_text.
 func TestUnit_GPT5Chat_SerializesImageInput(t *testing.T) {
 	t.Parallel()
 	var got map[string]any
@@ -57,7 +55,6 @@ func TestUnit_GPT5Chat_SerializesImageInput(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// gpt-5 uses the Responses API: input[0].content is [input_text, input_image].
 	input, ok := got["input"].([]any)
 	require.True(t, ok, "input array: %#v", got)
 	require.NotEmpty(t, input)
@@ -231,7 +228,6 @@ func TestUnit_GPT5Chat_ToolWithoutParametersSendsEmptyParametersObject(t *testin
 
 func TestUnit_GPT5Chat_VLLMChatCompletionsUnaffected(t *testing.T) {
 	t.Parallel()
-	// A vLLM model (non gpt-5 prefix) must go to /chat/completions, not /responses.
 	var gotPath string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
@@ -245,7 +241,7 @@ func TestUnit_GPT5Chat_VLLMChatCompletionsUnaffected(t *testing.T) {
 			baseURL:    srv.URL,
 			apiKey:     "key",
 			httpClient: srv.Client(),
-			modelName:  "meta-llama-3-8b-instruct", // vLLM model
+			modelName:  "meta-llama-3-8b-instruct",
 			tracker:    libtracker.NoopTracker{},
 		},
 	}

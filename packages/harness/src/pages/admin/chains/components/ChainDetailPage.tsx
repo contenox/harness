@@ -7,7 +7,6 @@ import { ChainTask } from '../../../../lib/types';
 import ChainEditor from './ChainEditor';
 import ChainVisualizer from './workflows/ChainVisualizer';
 
-/** Prefer navigating to `/chains?path=…` from the Chains page; this layout supports the same query param. */
 export default function ChainDetailPage() {
   const [searchParams] = useSearchParams();
   const vfsPath = searchParams.get('path') ?? '';

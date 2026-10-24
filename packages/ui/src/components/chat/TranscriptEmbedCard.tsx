@@ -29,9 +29,6 @@ export type TranscriptEmbedCardProps = {
   onOpenChange?: (open: boolean) => void;
 };
 
-/**
- * Collapsible block for non-message content inside a chat transcript (plans, previews).
- */
 export function TranscriptEmbedCard({
   title,
   headerRight,

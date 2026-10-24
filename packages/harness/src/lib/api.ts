@@ -82,7 +82,6 @@ const normalizeSetupStatus = (raw: SetupStatus): SetupStatus => ({
 });
 
 export const api = {
-  // Remote Hooks
   getRemoteHooks: (params?: { limit?: number; cursor?: string }) => {
     const search = new URLSearchParams();
     if (params?.limit !== undefined) search.set('limit', params.limit.toString());
@@ -106,7 +105,6 @@ export const api = {
 
   getRemoteHookSchemas: () => apiFetch<Record<string, unknown>>('/api/tools/schemas'),
 
-  // MCP servers (persisted configs; same DB as `contenox mcp`)
   getMcpServers: (params?: { limit?: number; cursor?: string }) => {
     const search = new URLSearchParams();
     if (params?.limit !== undefined) search.set('limit', params.limit.toString());
@@ -122,14 +120,12 @@ export const api = {
   updateMcpServer: (id: string, data: Partial<MCPServer>) =>
     apiFetch<MCPServer>(`/api/mcp-servers/${id}`, options('PUT', data)),
   deleteMcpServer: (id: string) => apiFetch<string>(`/api/mcp-servers/${id}`, options('DELETE')),
-  /** Starts OAuth 2.1 PKCE for an oauth-type MCP server; open authorizationUrl in the browser. */
   startMcpOAuth: (id: string, body: { redirectBase: string }) =>
     apiFetch<{ authorizationUrl: string }>(
       `/api/mcp-servers/${id}/oauth/start`,
       options('POST', body),
     ),
 
-  // Declared agents (read-only; registration stays with `contenox agent`).
   getAgents: (params?: { limit?: number; cursor?: string }) => {
     const search = new URLSearchParams();
     if (params?.limit !== undefined) search.set('limit', params.limit.toString());
@@ -140,41 +136,15 @@ export const api = {
   getAgentByName: (name: string) =>
     apiFetch<Agent>(`/api/agents/by-name/${encodeURIComponent(name)}`),
 
-  // Fleet — the live agent-instance board: the config+runtime join of every
-  // declared agent annotated with its running instances, plus the two
-  // lifecycle verbs the board is allowed to drive. Truthful under polling
-  // because Manager.List is an in-memory join (see runtime/internal/fleetapi).
   getFleet: () => apiFetch<FleetEntry[]>('/api/fleet'),
-  /**
-   * Stops an instance: kills the agent subprocess and drops it from the
-   * registry. Idempotent by kernel contract — an unknown or already-stopped id
-   * answers 200, not 404 — which is what lets Stop double as the reap action
-   * for a crashed row. There is no restart counterpart anywhere in the API.
-   * The response body is the plain string "deleted".
-   */
   stopInstance: (instanceId: string) =>
     apiFetch<string>(`/api/fleet/${encodeURIComponent(instanceId)}`, options('DELETE')),
-  /**
-   * Cancels in-flight turn(s) on an instance. The body is sent ONLY when a
-   * sessionId is supplied: the server reads an absent body as "cancel every
-   * session attached to this instance", so omitting it is the deliberate
-   * cancel-all call, not a degraded per-session one. Safe with no turn in
-   * flight. Unknown instance → 404. Response body is the string "cancelled".
-   */
   cancelInstance: (instanceId: string, sessionId?: string) =>
     apiFetch<string>(
       `/api/fleet/${encodeURIComponent(instanceId)}/cancel`,
       sessionId ? options('POST', { sessionId }) : options('POST'),
     ),
 
-  // Missions — mission mode's durable record (see runtime/missionservice and
-  // docs/development/blueprints/acp/fleet-consolidation.md, "Mission mode").
-  // list/get/reports are read-only surfaces for M2; dispatchMission is the
-  // one write, and it lives here (not a POST /api/missions passthrough)
-  // because firing a mission also brings an agent up and opens a session —
-  // fleetservice.Dispatch does all three atomically, which is why its route
-  // is POST /api/fleet/dispatch even though the result is fundamentally a
-  // mission.
   listMissions: (params?: { limit?: number; cursor?: string }) => {
     const search = new URLSearchParams();
     if (params?.limit !== undefined) search.set('limit', params.limit.toString());
@@ -186,119 +156,44 @@ export const api = {
   listMissionReports: (missionId: string) =>
     apiFetch<MissionReport[]>(`/api/missions/${encodeURIComponent(missionId)}/reports`),
 
-  // Mission changes — the attention layer's per-mission changed-files list and
-  // per-file diffs (see runtime/missionchanges + runtime/internal/
-  // missionchangesapi). The whole route group is NIL-GATED server-side: a serve
-  // without change tracking registers nothing and 404s, which the caller
-  // (useMissionChanges) reads as "feature absent" — the Changes tab and the
-  // scope/anomaly surfacing simply do not appear — rather than surfacing an
-  // error. `files` is non-nil and ordered by Degree-of-Interest score DESC;
-  // `incomplete` marks a capped list.
   getMissionChanges: (missionId: string) =>
     apiFetch<MissionChangesResponse>(`/api/missions/${encodeURIComponent(missionId)}/changes`),
-  /**
-   * One changed file's aggregated diff. `path` is the ABSOLUTE path from the
-   * changes list, passed verbatim. 422 when the path query param is missing,
-   * 404 when the path is not one of the mission's changed files; `truncated` in
-   * the body marks a diff capped at 128 KiB per side.
-   */
   getMissionChangeDiff: (missionId: string, path: string) =>
     apiFetch<MissionFileDiff>(
       `/api/missions/${encodeURIComponent(missionId)}/changes/diff?path=${encodeURIComponent(path)}`,
     ),
-  /**
-   * Fires a mission: brings `agentName` up, opens a session, and runs
-   * `intent` as its first turn, detached. 202 with the ids as soon as the
-   * session is open (see fleetservice.Service.Dispatch) — the unit's own
-   * first-turn outcome is observable later, on the board or the mission's
-   * reports, not in this response.
-   */
   dispatchMission: (data: DispatchRequest) =>
     apiFetch<DispatchResult>('/api/fleet/dispatch', options('POST', data)),
 
-  // Approvals — the attention inbox's durable asks (see runtime/internal/
-  // approvalapi and docs/development/blueprints/acp/fleet-consolidation.md,
-  // slice C2). listApprovals returns pending asks newest-first; answerApproval
-  // resolves one. There is deliberately no create over REST — an ask is raised
-  // by an unattended unit's HITL path, never by a client.
   listApprovals: (limit?: number) => {
     const qs = limit !== undefined ? `?limit=${encodeURIComponent(limit)}` : '';
     return apiFetch<HITLApproval[]>(`/api/approvals${qs}`);
   },
-  /**
-   * Answers a pending ask. `approved` is the whole payload: true allows the
-   * gated action, false denies it. 404 when the id is unknown, 409 when the ask
-   * was already resolved or has expired (both mean "can no longer be answered",
-   * distinguished by message). The response body is the plain string
-   * "approved" / "denied".
-   */
-  /**
-   * Replies to an ATTENTION ask — a running unit's question — with text. The
-   * unit is parked on the tool call that asked it and receives this as the
-   * call's result, so it continues on the same turn. Refused by the runtime on
-   * a permission ask, where prose is not a verdict.
-   */
   replyToAsk: (id: string, answer: string) =>
     apiFetch<string>(`/api/approvals/${encodeURIComponent(id)}`, options('POST', { answer })),
 
   answerApproval: (id: string, approved: boolean) =>
     apiFetch<string>(`/api/approvals/${encodeURIComponent(id)}`, options('POST', { approved })),
 
-  // Operator inbox (runtime/operatorinbox) — mission reports that reached NO
-  // live supervising session: an operator-fired mission's reports, or reports
-  // whose parent session had ended by the time they arrived. Newest first.
-  // The route is NIL-GATED server-side (registered only when serve builds an
-  // operator-inbox service), so a 404 here means the feature is absent — the
-  // caller (useOperatorInbox) folds that into a quiet "no rows", not an error.
   getOperatorInbox: (limit?: number) => {
     const qs = limit !== undefined ? `?limit=${encodeURIComponent(limit)}` : '';
     return apiFetch<OperatorInboxItem[]>(`/api/operator-inbox${qs}`);
   },
 
-  // Workspace roots — the serve-configured folder allowlist a client offers as
-  // a picker (per-session cwd, dispatch cwd, workspace switcher) instead of
-  // reverse-engineering the boundary from 422s (see runtime/internal/
-  // localfileapi/workspace_roots.go). The route is NIL-GATED server-side: a
-  // serve with no allowlist configured registers nothing and 404s, which the
-  // caller (useWorkspaceRoots) reads as "feature absent" — the picker
-  // affordances simply do not appear — rather than surfacing an error.
   getWorkspaceRoots: () => apiFetch<WorkspaceRootsResponse>('/api/workspace/roots'),
-  /**
-   * Registers a folder as a managed workspace root and returns the SAME roots
-   * list the picker reads (re-render from it, no separate refetch needed). A bad
-   * path — not a directory, the control plane, or a broad parent like `~` /
-   * `/home` / `/` — answers 422 with a teaching message in the standard error
-   * envelope, which apiFetch surfaces as an ApiError (`.message` / `.status`).
-   */
   addWorkspaceRoot: (body: { path: string; name: string }) =>
     apiFetch<WorkspaceRootsResponse>('/api/workspace/roots', options('POST', body)),
-  /**
-   * Forgets a managed workspace root, returning the updated roots list.
-   * Idempotent — forgetting an unknown path still answers 200. Only `managed`
-   * roots are forgettable server-side; the default and launch roots are not.
-   */
   removeWorkspaceRoot: (path: string) =>
     apiFetch<WorkspaceRootsResponse>(
       `/api/workspace/roots?path=${encodeURIComponent(path)}`,
       options('DELETE'),
     ),
 
-  // Interactive terminal (see runtime/internal/terminalapi). createTerminalSession
-  // opens a PTY under `cwd` (validated against the workspace-root allowlist,
-  // empty → default root) and returns the id plus the already-`/api`-prefixed
-  // WebSocket path to attach to. The whole route group is registered only when
-  // serve enables it, so a 404 here means the terminal feature is absent — the
-  // caller degrades to a graceful "unavailable" state, it does not retry. The WS
-  // itself is authenticated by the same-origin `auth_token` cookie riding the
-  // upgrade handshake (see lib/hostTerminal.ts), exactly like the /acp socket;
-  // no token is handled in JS. 422 (UnprocessableEntity) is a real refusal
-  // (too many sessions, or a cwd outside the roots).
   createTerminalSession: (data: TerminalSessionRequest) =>
     apiFetch<TerminalSession>('/api/terminal/sessions', options('POST', data)),
   deleteTerminalSession: (id: string) =>
     apiFetch<void>(`/api/terminal/sessions/${encodeURIComponent(id)}`, options('DELETE')),
 
-  // Backends
   getBackends: () => apiFetch<Backend[]>('/api/backends'),
   getBackend: (id: string) => apiFetch<Backend>(`/api/backends/${id}`),
   createBackend: (data: Partial<Backend>) =>
@@ -314,15 +209,10 @@ export const api = {
   putCLIConfig: (body: CLIConfigUpdateRequest) =>
     apiFetch<CLIConfigUpdateResponse>('/api/cli-config', options('PUT', body)),
 
-  /**
-   * Global shell environment variables injected into spawned shells. PUT is a
-   * FULL replacement (omitting a key deletes it), returning the same shape.
-   */
   getShellEnv: () => apiFetch<ShellEnvResponse>('/api/shell-env'),
   putShellEnv: (body: ShellEnvUpdateRequest) =>
     apiFetch<ShellEnvResponse>('/api/shell-env', options('PUT', body)),
 
-  /** HITL policy presets stored alongside task chains. */
   listPolicies: () => apiFetch<string[]>('/api/hitl-policies/list'),
   getPolicy: (name: string) =>
     apiFetch<HITLPolicy>(`/api/hitl-policies?name=${encodeURIComponent(name)}`),
@@ -339,12 +229,9 @@ export const api = {
   deletePolicy: (name: string) =>
     apiFetch<string>(`/api/hitl-policies?name=${encodeURIComponent(name)}`, options('DELETE')),
 
-  /** Runtime sync snapshot per backend (OSS backend refresh loop; not a managed download queue). */
   getRuntimeBackendState: () => apiFetch<BackendRuntimeState[]>('/api/state'),
 
   taskEvents(requestId: string): EventSource {
-    // Must be root-absolute: on routes like /chat/:id, a relative "api/..." resolves to
-    // /chat/api/... and hits the SPA shell instead of the API mux.
     return new EventSource(`/api/task-events?requestId=${encodeURIComponent(requestId)}`);
   },
 
@@ -355,17 +242,10 @@ export const api = {
     apiFetch<StatusResponse>(`/api/providers/${provider}/status`),
   getSupportedProviders: () => apiFetch<SupportedProvider[]>('/api/providers/supported'),
 
-  // Auth endpoints. The runtime has a single local "user"; identity is not
-  // modeled server-side, so getCurrentUser is a static stand-in. Remote access
-  // is gated by a shared token exchanged for an HttpOnly session cookie via the
-  // /ui/* endpoints below (see runtime/serverapi/ui_auth.go).
   getCurrentUser: async (): Promise<AuthenticatedUser> => localAuthenticatedUser,
 
-  /** Whether remote-access login is required and whether this browser is already authenticated (via the session cookie). Always readable. */
   getAuthStatus: () => apiFetch<AuthStatus>('/ui/auth-status', { credentials: 'same-origin' }),
-  /** Exchange the shared access token for an HttpOnly session cookie. Throws (401) on a wrong token. */
   loginWithToken: (token: string) => apiFetch<AuthStatus>('/ui/login', options('POST', { token })),
-  /** Clear the session cookie. */
   logout: () => apiFetch<AuthStatus>('/ui/logout', options('POST')),
 
   executeTaskChain: (
@@ -385,7 +265,6 @@ export const api = {
     });
   },
 
-  /** Task chains are managed by the runtime task-chain service. */
   listChains: () => apiFetch<string[]>('/api/taskchains/list'),
   getChain: (path: string) =>
     apiFetch<ChainDefinition>(`/api/taskchains?path=${encodeURIComponent(path)}`),
@@ -402,7 +281,6 @@ export const api = {
   deleteChain: (path: string) =>
     apiFetch<void>(`/api/taskchains?path=${encodeURIComponent(path)}`, options('DELETE')),
 
-  // ── Model Registry ───────────────────────────────────────────────
   listModelRegistry: () => apiFetch<ModelDescriptor[]>('/api/model-registry'),
   createModelRegistryEntry: (data: Omit<ModelRegistryEntry, 'id' | 'createdAt' | 'updatedAt'>) =>
     apiFetch<ModelRegistryEntry>('/api/model-registry', options('POST', data)),

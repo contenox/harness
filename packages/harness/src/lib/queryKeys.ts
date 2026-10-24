@@ -79,7 +79,6 @@ export const typeKeys = {
 export const chainKeys = {
   all: ['chains'] as const,
   list: () => [...chainKeys.all, 'list'] as const,
-  /** Local task-chain path (e.g. my-chain.json) */
   byPath: (vfsPath: string) => [...chainKeys.all, 'path', vfsPath] as const,
   triggers: (vfsPath: string) => [...chainKeys.byPath(vfsPath), 'triggers'] as const,
   tasks: (vfsPath: string) => [...chainKeys.byPath(vfsPath), 'tasks'] as const,
@@ -206,9 +205,7 @@ export const missionKeys = {
   list: () => [...missionKeys.all, 'list'] as const,
   detail: (id: string) => [...missionKeys.all, id] as const,
   reports: (id: string) => [...missionKeys.all, id, 'reports'] as const,
-  /** A mission's aggregated changed-files list + scope (the attention layer). */
   changes: (id: string) => [...missionKeys.all, id, 'changes'] as const,
-  /** One changed file's diff, keyed by the absolute path the endpoint takes. */
   changeDiff: (id: string, path: string) =>
     [...missionKeys.all, id, 'changes', 'diff', path] as const,
 };
@@ -230,26 +227,12 @@ export const workspaceRootKeys = {
 
 export const workspaceAccessKeys = {
   all: ['workspaceAccess'] as const,
-  /**
-   * One `POST /workspace/access` batch, keyed by root, resolved-policy, and the
-   * sorted/de-duped loaded-path union (`pathsKey`). Keying on the union means an
-   * expand that grows the union re-requests it, while re-visiting a previously
-   * loaded union hits the cache instead of re-POSTing (`keepPreviousData` keeps
-   * the last verdicts on screen through the refetch, so expands don't thrash).
-   */
   batch: (root: string, policy: string, pathsKey: string) =>
     [...workspaceAccessKeys.all, root, policy, pathsKey] as const,
 };
 
 export const terminalKeys = {
   all: ['terminal'] as const,
-  /**
-   * One host-terminal session, keyed by an opaque owner key (e.g. a mission
-   * id). Keyed rather than a bare list so react-query memoizes the POST that
-   * opens the PTY: while the entry is cached, switching away from and back to
-   * the terminal tab reattaches to the SAME session instead of spawning a new
-   * shell (the "reconnect by session id on remount" behavior).
-   */
   session: (ownerKey: string) => [...terminalKeys.all, 'session', ownerKey] as const,
 };
 

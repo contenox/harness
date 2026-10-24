@@ -9,18 +9,10 @@ import {
   ImageAttachmentNoticeView,
 } from './ComposerImageAttachments';
 
-// Pin the language so labels are deterministic (the app default is German).
 beforeAll(async () => {
   await i18n.changeLanguage('en');
 });
 
-/**
- * `@testing-library/react` is not a dependency of `packages/beam` (see
- * PermissionCard.test.tsx) — these render to static markup, which pins the
- * chip/button/notice DOM contract; the add/remove/paste STATE logic lives in
- * pure helpers (lib/imageAttachments.ts) and the reducer/controller seams,
- * each covered by their own suites.
- */
 const images: PendingImageAttachment[] = [
   { id: 'img-1', name: 'shot.png', data: 'aGVsbG8=', mimeType: 'image/png' },
   { id: 'img-2', name: '', data: 'd29ybGQ=', mimeType: 'image/jpeg' },
@@ -35,9 +27,7 @@ describe('ComposerImageAttachments', () => {
     expect((html.match(/data-testid="composer-image-attachment"/g) ?? []).length).toBe(2);
     expect(html).toContain('src="data:image/png;base64,aGVsbG8="');
     expect(html).toContain('src="data:image/jpeg;base64,d29ybGQ="');
-    // Remove button per chip, named after the file…
     expect(html).toContain('aria-label="Remove attachment: shot.png"');
-    // …with the localized fallback for a nameless clipboard image.
     expect(html).toContain('aria-label="Remove attachment: Image"');
   });
 

@@ -1,18 +1,3 @@
-/**
- * The composer's image-attachment surface: `useImageAttachments` owns the
- * pending-attachment state + paste/drop/file-pick handlers (capability-gated —
- * see `canAttachImages`), `ComposerImageAttachments` renders the removable
- * thumbnail chips above the textarea (via `ChatComposer`'s `attachments`
- * slot), and `AttachImageButton` is the explicit picker for the composer
- * footer. The encode pipeline itself lives in `../lib/imageAttachments.ts`;
- * this file only wires it to React state, mirroring how `MentionMenu.tsx`
- * wires `mentions.ts`.
- *
- * i18n keys referenced here (namespace `acp_chat`; see i18n.ts):
- *   attach_image_label / attach_image_tooltip / attachment_remove_label /
- *   image_attachment_fallback_name / image_not_supported_notice /
- *   image_too_large_notice / image_prepare_failed_notice
- */
 import { Button, InlineNotice } from '@contenox/ui';
 import { ImagePlus, X } from 'lucide-react';
 import {
@@ -33,36 +18,22 @@ import {
   type PendingImageAttachment,
 } from '../lib/imageAttachments';
 
-/** What the transient composer notice reports: a rejected capability, or a per-file failure reason. */
 export type ImageAttachmentNotice = 'not_supported' | ImageAttachmentErrorReason;
 
-/** How long a rejection notice stays up before clearing itself (ms). */
 const NOTICE_TIMEOUT_MS = 5000;
 
 export interface UseImageAttachmentsResult {
   images: PendingImageAttachment[];
-  /** Transient rejection notice, or null — render via `ImageAttachmentNoticeView`. */
   notice: ImageAttachmentNotice | null;
-  /** Encodes + stages picked/pasted/dropped files (rejections surface on `notice`). */
   addFiles: (files: File[]) => Promise<void>;
   removeImage: (id: string) => void;
-  /** Empties the strip (on submit) and returns what was pending, so a failed submit can `restoreImages`. */
   takeImages: () => PendingImageAttachment[];
   restoreImages: (images: PendingImageAttachment[]) => void;
-  /** Composer textarea `onPaste`: intercepts image payloads (stages them, or rejects when unsupported); plain-text pastes pass through untouched. */
   handlePaste: (e: ClipboardEvent<HTMLTextAreaElement>) => void;
-  /** Composer wrapper `onDrop`: same interception for dropped image files. */
   handleDrop: (e: DragEvent<HTMLElement>) => void;
-  /** Composer wrapper `onDragOver`: accepts the drag exactly when it carries images (required for drop to fire). */
   handleDragOver: (e: DragEvent<HTMLElement>) => void;
 }
 
-/**
- * Pending-image state for one composer. `supported` is the session agent's
- * advertised `PromptCapabilities.image` — when false there is NO attach
- * affordance (the caller hides `AttachImageButton`), and paste/drop of images
- * is swallowed with a `not_supported` notice instead of being staged.
- */
 export function useImageAttachments(supported: boolean): UseImageAttachmentsResult {
   const [images, setImages] = useState<PendingImageAttachment[]>([]);
   const [notice, setNotice] = useState<ImageAttachmentNotice | null>(null);
@@ -107,8 +78,6 @@ export function useImageAttachments(supported: boolean): UseImageAttachmentsResu
     setImages(prev => prev.filter(img => img.id !== id));
   }, []);
 
-  // Read-then-clear via the state updater so a submit races nothing: whatever
-  // the strip held at that instant is exactly what the turn carries.
   const imagesRef = useRef(images);
   imagesRef.current = images;
   const takeImages = useCallback(() => {
@@ -125,7 +94,7 @@ export function useImageAttachments(supported: boolean): UseImageAttachmentsResu
   const handlePaste = useCallback(
     (e: ClipboardEvent<HTMLTextAreaElement>) => {
       const files = imageFilesFromDataTransfer(e.clipboardData);
-      if (files.length === 0) return; // Plain text paste — default behavior.
+      if (files.length === 0) return;
       e.preventDefault();
       void addFiles(files);
     },
@@ -143,9 +112,6 @@ export function useImageAttachments(supported: boolean): UseImageAttachmentsResu
   );
 
   const handleDragOver = useCallback((e: DragEvent<HTMLElement>) => {
-    // Accept the drag whenever it carries images — even when unsupported, so
-    // the drop lands here and gets the explanatory notice instead of the
-    // browser navigating to the dropped file.
     if (dataTransferHasImages(e.dataTransfer)) e.preventDefault();
   }, []);
 
@@ -162,11 +128,6 @@ export function useImageAttachments(supported: boolean): UseImageAttachmentsResu
   };
 }
 
-/**
- * Removable thumbnail chips for the pending attachments, rendered inside the
- * composer shell via `ChatComposer`'s `attachments` slot. Renders null when
- * empty so the caller can pass it unconditionally.
- */
 export function ComposerImageAttachments({
   images,
   onRemove,
@@ -203,11 +164,6 @@ export function ComposerImageAttachments({
   );
 }
 
-/**
- * The explicit attach affordance for the composer footer: an icon button
- * driving a hidden `<input type="file" accept="image/*">`. The caller renders
- * it ONLY when the agent advertises image support (see `canAttachImages`).
- */
 export function AttachImageButton({
   onFiles,
   disabled,
@@ -228,7 +184,6 @@ export function AttachImageButton({
         data-testid="composer-image-input"
         onChange={e => {
           const files = Array.from(e.currentTarget.files ?? []);
-          // Reset so picking the same file again re-fires onChange.
           e.currentTarget.value = '';
           if (files.length > 0) onFiles(files);
         }}
@@ -248,7 +203,6 @@ export function AttachImageButton({
   );
 }
 
-/** The transient rejection notice above the composer — maps each `ImageAttachmentNotice` to its localized text. */
 export function ImageAttachmentNoticeView({ notice }: { notice: ImageAttachmentNotice | null }) {
   const { t } = useTranslation();
   if (!notice) return null;

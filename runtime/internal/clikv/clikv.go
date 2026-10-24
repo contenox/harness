@@ -23,8 +23,6 @@ func Read(ctx context.Context, store runtimetypes.Store, key string) string {
 	return strings.TrimSpace(val)
 }
 
-// ReadConfig reads key using workspace scope with global fallback for workspace-scoped keys.
-// Returns (value, "workspace"|"global").
 func ReadConfig(ctx context.Context, store runtimetypes.Store, workspaceID, key string) (string, string) {
 	if workspaceScopedKeys[key] && workspaceID != "" {
 		var val string
@@ -54,7 +52,6 @@ func SetString(ctx context.Context, store runtimetypes.Store, key, value string)
 	return store.SetKV(ctx, Prefix+key, json.RawMessage(data))
 }
 
-// WriteConfig writes key to workspace scope for workspace-scoped keys, global scope otherwise.
 func WriteConfig(ctx context.Context, store runtimetypes.Store, workspaceID, key, value string) error {
 	v := strings.TrimSpace(value)
 	data, err := json.Marshal(v)

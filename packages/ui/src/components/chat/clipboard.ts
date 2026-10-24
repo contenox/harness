@@ -1,6 +1,3 @@
-/**
- * Copy text to the clipboard with a fallback for non-secure contexts.
- */
 export async function copyTextToClipboard(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard && window.isSecureContext) {

@@ -3,9 +3,6 @@ import { InlineNotice } from '../../components/InlineNotice';
 import { useNavigate } from 'react-router-dom';
 import { useProductPorts } from '../ports';
 
-/**
- * Renders the way forward from a commercial refusal, when `lib/refusals.ts` knows one.
- */
 export function RefusalCta({ error }: { error: unknown }) {
   const { refusalSell } = useProductPorts();
   const navigate = useNavigate();

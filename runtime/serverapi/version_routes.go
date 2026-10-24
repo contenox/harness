@@ -6,12 +6,8 @@ import (
 	"github.com/contenox/harness/apiframework"
 )
 
-// AddVersionRoutes registers GET /version. serverapi.New mounts it on the api
-// mux (as well as serve's root mux), so /api/version is a real, documented
-// endpoint.
 func AddVersionRoutes(mux *http.ServeMux, version, nodeInstanceID, tenancy string) {
 	mux.HandleFunc("GET /version", func(w http.ResponseWriter, r *http.Request) {
-		// @response apiframework.AboutServer
 		_ = apiframework.Encode(w, r, http.StatusOK, apiframework.AboutServer{
 			Version:        version,
 			NodeInstanceID: nodeInstanceID,

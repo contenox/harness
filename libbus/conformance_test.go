@@ -14,23 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// This file is the shared conformance suite for the Messenger interface: every
-// backend runs the same matrix, with legitimate differences asserted per backend
-// in the divergence section at the bottom. NATS is skipped when Docker is
-// unavailable; set LIBBUS_REQUIRE_NATS=1 to turn that skip into a failure.
-
-// newBusFunc builds a fresh Messenger. It registers its own cleanup on t and
-// skips the test if the backend's infrastructure is unavailable.
 type newBusFunc func(t *testing.T) libbus.Messenger
 
-// backendProps records the behaviours that genuinely differ between backends.
-// They are not excuses: each one is asserted by a divergence test below.
 type backendProps struct {
-	// waitsForLateHandler is true when Request tolerates a handler that is
-	// registered after the request was issued (only the durable SQLite backend).
 	waitsForLateHandler bool
-	// drainsOnUnsubscribe is true when Unsubscribe delivers events published
-	// before it was called (only SQLite).
 	drainsOnUnsubscribe bool
 }
 
@@ -55,7 +42,7 @@ func conformanceBackends() []backend {
 			name: "SQLite",
 			newBus: func(t *testing.T) libbus.Messenger {
 				t.Helper()
-				return newTestBus(t) // fast poll intervals, see sqlite_test.go
+				return newTestBus(t)
 			},
 			props: backendProps{waitsForLateHandler: true, drainsOnUnsubscribe: true},
 		},
@@ -66,7 +53,6 @@ func conformanceBackends() []backend {
 	}
 }
 
-// runConformance executes one behavioural test against every backend.
 func runConformance(t *testing.T, name string, fn func(t *testing.T, newBus newBusFunc)) {
 	t.Helper()
 	for _, be := range conformanceBackends() {
@@ -78,8 +64,6 @@ func runConformance(t *testing.T, name string, fn func(t *testing.T, newBus newB
 
 var subjectCounter atomic.Uint64
 
-// uniqueSubject keeps NATS tests isolated: all NATS buses share one server, so
-// two tests using the same subject would cross-talk.
 func uniqueSubject(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("conformance.s%d", subjectCounter.Add(1))
@@ -92,8 +76,6 @@ var (
 	natsCleanup = func() {}
 )
 
-// newNATSBus connects to a NATS server started once for the whole package.
-// Starting a container per test would dominate the suite's runtime.
 func newNATSBus(t *testing.T) libbus.Messenger {
 	t.Helper()
 	natsOnce.Do(func() {
@@ -122,7 +104,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// receive waits for one message, failing the test rather than hanging forever.
 func receive(t *testing.T, ch <-chan []byte, within time.Duration) []byte {
 	t.Helper()
 	select {
@@ -134,8 +115,6 @@ func receive(t *testing.T, ch <-chan []byte, within time.Duration) []byte {
 	}
 }
 
-// expectNoMessage asserts nothing arrives during the window. The window has to
-// exceed the SQLite poll interval, otherwise it proves nothing there.
 func expectNoMessage(t *testing.T, ch <-chan []byte, within time.Duration) {
 	t.Helper()
 	select {
@@ -179,8 +158,6 @@ func TestConformance_PublishPreservesOrder(t *testing.T) {
 			require.NoError(t, bus.Publish(ctx, subject, fmt.Appendf(nil, "msg-%02d", i)))
 		}
 
-		// Fits comfortably inside every backend's subscriber buffer, so nothing
-		// may be dropped here even on the at-most-once backends.
 		got := make([]string, 0, n)
 		for range n {
 			got = append(got, string(receive(t, ch, 5*time.Second)))
@@ -235,7 +212,6 @@ func TestConformance_PublishWithNoSubscribers(t *testing.T) {
 	runConformance(t, "publish_without_subscribers_succeeds", func(t *testing.T, newBus newBusFunc) {
 		ctx := t.Context()
 		bus := newBus(t)
-		// Fire-and-forget: nobody listening is not an error on any backend.
 		require.NoError(t, bus.Publish(ctx, uniqueSubject(t), []byte("into the void")))
 	})
 }
@@ -274,7 +250,7 @@ func TestConformance_StreamContextCancelStopsDelivery(t *testing.T) {
 		assert.Equal(t, "before", string(receive(t, ch, 5*time.Second)))
 
 		cancel()
-		time.Sleep(settle) // let the backend tear the subscription down
+		time.Sleep(settle)
 
 		require.NoError(t, bus.Publish(t.Context(), subject, []byte("after")))
 		expectNoMessage(t, ch, settle)
@@ -298,8 +274,6 @@ func TestConformance_PublishWithCancelledContext(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		// Must fail even though nobody is subscribed: the failure has to depend
-		// on the caller's context, not on whether a subscriber happens to exist.
 		require.Error(t, bus.Publish(ctx, uniqueSubject(t), []byte("data")))
 	})
 }
@@ -310,9 +284,6 @@ func TestConformance_PublishDoesNotBlockOnStuckConsumer(t *testing.T) {
 		bus := newBus(t)
 		subject := uniqueSubject(t)
 
-		// Unbuffered channel that is never read: the worst kind of consumer.
-		// Whether the messages are dropped (NATS/InMem) or kept (SQLite) is a
-		// documented difference; that the publisher survives is not negotiable.
 		stuck := make(chan []byte)
 		sub, err := bus.Stream(ctx, subject, stuck)
 		require.NoError(t, err)
@@ -350,7 +321,6 @@ func TestConformance_RequestReply(t *testing.T) {
 		require.NoError(t, err)
 		defer sub.Unsubscribe()
 
-		// No sleep: once Serve has returned, a Request must reach the handler.
 		reqCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		reply, err := bus.Request(reqCtx, subject, []byte("ping"))
@@ -385,9 +355,6 @@ func TestConformance_RequestHandlerErrorBecomesReply(t *testing.T) {
 		reqCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		reply, err := bus.Request(reqCtx, subject, []byte("boom"))
-		// A non-nil error from Request must mean transport failure, never a
-		// handler failure — otherwise the same caller code branches differently
-		// depending on which backend is wired in.
 		require.NoError(t, err)
 		assert.Equal(t, "error: handler exploded", string(reply))
 	})
@@ -452,7 +419,7 @@ func TestConformance_ServeContextCancelStopsHandling(t *testing.T) {
 		require.NoError(t, err)
 
 		cancel()
-		time.Sleep(settle) // let the backend deregister the handler
+		time.Sleep(settle)
 
 		reqCtx, reqCancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
 		defer reqCancel()
@@ -497,8 +464,6 @@ func TestConformance_SequentialRequests(t *testing.T) {
 
 		var served atomic.Int64
 		sub, err := bus.Serve(ctx, subject, func(_ context.Context, _ []byte) ([]byte, error) {
-			// Handlers must be concurrency-safe: NATS may run several at once,
-			// even though InMem and SQLite never do.
 			return fmt.Appendf(nil, "%d", served.Add(1)), nil
 		})
 		require.NoError(t, err)
@@ -520,8 +485,6 @@ func TestConformance_CloseSemantics(t *testing.T) {
 		bus := newBus(t)
 		subject := uniqueSubject(t)
 
-		// Live subscriptions whose context outlives the bus: Close must tear them
-		// down itself rather than wait on a context that will never be cancelled.
 		_, err := bus.Stream(ctx, subject, make(chan []byte, 1)) //nolint:errcheck // subscription is torn down by Close
 		require.NoError(t, err)
 		_, err = bus.Serve(ctx, subject, func(_ context.Context, _ []byte) ([]byte, error) {
@@ -558,17 +521,7 @@ func TestConformance_CloseIsIdempotent(t *testing.T) {
 	})
 }
 
-//
-// These assert the differences documented on the Messenger interface. They
-// exist so that a backend which quietly changes behaviour breaks a test
-// instead of breaking a caller in production.
-
 func TestConformanceDivergence_LateHandler(t *testing.T) {
-	// The classic startup race: `go Serve(...)` followed immediately by Request.
-	// Only the durable SQLite backend survives it — NATS resolves responders at
-	// request time and fails within microseconds, and InMem matches NATS on
-	// purpose so that code developed against InMem fails the same way it would
-	// in production rather than passing locally and breaking on NATS.
 	for _, be := range conformanceBackends() {
 		t.Run(be.name, func(t *testing.T) {
 			bus := be.newBus(t)
@@ -599,9 +552,6 @@ func TestConformanceDivergence_LateHandler(t *testing.T) {
 }
 
 func TestConformanceDivergence_UnsubscribeDrain(t *testing.T) {
-	// SQLite drains events published before Unsubscribe; NATS and InMem discard
-	// whatever is still buffered. Callers that need the last event must not
-	// assume the SQLite behaviour.
 	for _, be := range conformanceBackends() {
 		t.Run(be.name, func(t *testing.T) {
 			if !be.props.drainsOnUnsubscribe {
@@ -644,9 +594,6 @@ func TestConformance_TwoHandlersOnOneSubjectBothSurvive(t *testing.T) {
 			if err := asked(bus); err == nil {
 				return true
 			}
-			// A backend whose Reply can be delivered before its handler is
-			// visible to Request needs a second try; the durable one documents
-			// that as waitsForLateHandler.
 			require.Eventually(t, func() bool { return asked(bus) == nil }, 3*time.Second, 50*time.Millisecond)
 			return false
 		}
@@ -662,7 +609,6 @@ func TestConformance_TwoHandlersOnOneSubjectBothSurvive(t *testing.T) {
 
 		require.True(t, served(bus), "a subject with two handlers must still answer")
 
-		// The older subscription stops: the newer one is still serving.
 		require.NoError(t, first.Unsubscribe())
 		require.True(t, served(bus), "unsubscribing the shadowed handler must not silence the one serving")
 		require.NoError(t, second.Unsubscribe())

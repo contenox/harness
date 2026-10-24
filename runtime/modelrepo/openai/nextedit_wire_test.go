@@ -46,8 +46,6 @@ func TestUnit_OpenAINativeNextEditRejectsTruncatedOutput(t *testing.T) {
 	require.ErrorContains(t, err, "complete")
 }
 
-// The vendor's model list defines no next-edit profile, so the capability is the
-// operator's explicit declaration and never a field off the wire.
 func TestUnit_OpenAICatalogRequiresExplicitNextEditProfile(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "/models", r.URL.Path)

@@ -1,11 +1,8 @@
-//! `contenox-cli acp` / `contenox-cli acpx` — the editor shape, driven from outside as
-//! an ACP client over stdio.
 
 use contenox_e2e::{Acp, Instance, Script, ToolCall, Turn, Verdict};
 use serde_json::{Value, json};
 use std::time::Duration;
 
-/// A scratch instance whose model is the scripted dialog.
 fn editor(label: &str, script: &Script) -> Instance {
     let cx = Instance::named(label).expect("scratch instance");
     cx.init().ok();
@@ -13,7 +10,6 @@ fn editor(label: &str, script: &Script) -> Instance {
     cx
 }
 
-/// The turn that writes a file, and the answer after it.
 fn write_note(content: &str) -> Vec<Turn> {
     vec![
         Turn::new().text("Writing the note.").call(
@@ -41,7 +37,6 @@ fn handshake(cx: &Instance, argv: &[&str]) -> (Acp, Value) {
     (acp, init)
 }
 
-// ---------------------------------------------------------------- the protocol
 
 #[test]
 fn acp_speaks_the_protocol_over_stdio_and_answers_a_prompt() {
@@ -72,7 +67,6 @@ fn acp_speaks_the_protocol_over_stdio_and_answers_a_prompt() {
 
 #[test]
 fn acpx_speaks_the_same_protocol_for_a_headless_driver() {
-    // The acpx chain is a single loop, so its script needs no routing label.
     let cx = editor("acpx-stdio", &Script::new().turn("Reporting in."));
     let (mut acp, init) = handshake(&cx, &["acpx"]);
 
@@ -123,7 +117,6 @@ fn a_prompt_streams_the_answer_with_the_usage_and_title_a_client_renders() {
         "the first user message titles the session"
     );
 }
-// ------------------------------------------------------- approvals in the editor
 
 #[test]
 fn a_gated_write_asks_the_editors_permission_ui_and_shows_the_diff() {
@@ -177,7 +170,6 @@ fn a_gated_write_asks_the_editors_permission_ui_and_shows_the_diff() {
     assert_eq!(turn.stop_reason, "end_turn");
     assert_eq!(cx.read_file("notes.txt").expect("the note"), "approved\n");
 }
-// -------------------------------------------------------------- the workspace
 
 #[test]
 fn the_session_works_in_the_directory_the_editor_opened() {
@@ -187,7 +179,6 @@ fn the_session_works_in_the_directory_the_editor_opened() {
             .route("coding")
             .turns(write_note("in project\n")),
     );
-    // The agent process is started in work/, the editor opens work/project.
     let project = cx.work().join("project");
     std::fs::create_dir_all(&project).expect("the project directory");
 
@@ -242,10 +233,7 @@ fn the_hardened_profile_never_offers_mission() {
     );
 }
 
-// ------------------------------------------------------------ chain resolution
 
-/// The acpx chain is flat where the acp chain is a router, so serving it under
-/// the acp profile is visible in what actually ran.
 fn plant_flat_chain(cx: &Instance, at: std::path::PathBuf) -> std::path::PathBuf {
     let source = cx.home_file(".generated/chain-agent-acpx.json");
     if let Some(parent) = at.parent() {
@@ -278,7 +266,6 @@ fn a_named_chain_path_that_is_missing_is_a_hard_error() {
         .expect_stderr("CONTENOX_ACP_CHAIN_PATH");
 }
 
-// -------------------------------------------------------------- what it leaves
 
 #[test]
 fn an_editor_session_transcript_is_readable_from_the_cli_afterwards() {
@@ -308,11 +295,3 @@ fn an_editor_session_transcript_is_readable_from_the_cli_afterwards() {
         shown.render()
     );
 }
-
-// -------------------------------------------- autocomplete: the other editor wire
-//
-// `contenox-cli autocomplete --stdio` is the second thing an editor can attach to:
-// fill-in-the-middle completions over JSON lines, for a client that wants them
-// without a full ACP session. It is not ACP, but it is the same audience, and
-// the reference documents it beside `contenox-cli acp`.
-

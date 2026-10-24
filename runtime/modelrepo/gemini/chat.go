@@ -13,7 +13,6 @@ type GeminiChatClient struct {
 	geminiClient
 }
 
-// Chat implements modelrepo.LLMChatClient
 func (c *GeminiChatClient) Chat(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (modelrepo.ChatResult, error) {
 	reportErr, reportChange, end := c.tracker.Start(ctx, "chat", "gemini", "model", c.modelName)
 	defer end()
@@ -63,7 +62,6 @@ func (c *GeminiChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 	for _, p := range cand.Content.Parts {
 		switch {
 		case p.Thought && p.Text != "":
-			// Gemini 2.5+ returns thinking content in Parts with thought=true
 			thinkingText += p.Text
 		case p.Text != "":
 			outText += p.Text
@@ -83,9 +81,6 @@ func (c *GeminiChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 					Arguments: string(argsJSON),
 				},
 			}
-			// A signature belongs to the part the API returned it on: the
-			// first of a parallel group carries one and the rest carry none, so
-			// one call's signature is never replayed as another's.
 			if p.ThoughtSignature != "" {
 				tc.ProviderMeta = map[string]string{thoughtSignatureMetaKey: p.ThoughtSignature}
 			}
@@ -94,10 +89,6 @@ func (c *GeminiChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 	}
 
 	if outText == "" && len(toolCalls) == 0 {
-		// MALFORMED_FUNCTION_CALL is a broken tool-call turn, not a degenerate
-		// end-of-turn: reported as success it lands in history as a completed
-		// reply and the caller's retry never fires. Thinking-only and
-		// signature-only turns on a normal finish stay tolerated.
 		if cand.FinishReason == "MALFORMED_FUNCTION_CALL" {
 			err := fmt.Errorf("empty content from Gemini model %s: finish reason (%s)", c.modelName, cand.FinishReason)
 			reportErr(err)

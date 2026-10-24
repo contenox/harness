@@ -65,7 +65,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
 
       <foreignObject width={width} height={height}>
         <div className="flex h-full flex-col p-3">
-          {/* Header */}
+
           <div className="flex items-start justify-between">
             <div className="grow overflow-hidden">
               <div
@@ -80,14 +80,14 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
             </div>
           </div>
 
-          {/* Description */}
+
           {description && (
             <div className="mt-2 line-clamp-2 grow text-sm text-text-muted dark:text-dark-text-muted">
               {description}
             </div>
           )}
 
-          {/* Metadata */}
+
           {metadata?.branches !== undefined && (
             <div className="mt-2 flex items-center justify-end text-xs text-text-muted dark:text-dark-text-muted">
               <GitBranch className="mr-1 h-3 w-3" />

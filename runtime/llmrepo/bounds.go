@@ -10,32 +10,22 @@ import (
 	libmodelprovider "github.com/contenox/harness/runtime/modelrepo"
 )
 
-// ErrResolutionOutOfBounds is the sentinel every allowlist refusal wraps.
 var ErrResolutionOutOfBounds = errors.New("resolution outside the mission envelope")
 
 const resolutionBoundLead = "compute bound refused"
 
-// BackendHealth reports whether a backend may be asked at all. A caller that
-// quarantines an endpoint
 type BackendHealth func(backendID string) bool
 
-// WithBackendHealth returns a copy of req carrying a health view; a nil view
-// changes nothing.
 func (req Request) WithBackendHealth(health BackendHealth) Request {
 	req.BackendHealth = health
 	return req
 }
 
-// ResolutionBounds is the envelope's model/backend allowlist enforced at the resolution seam; matching is exact and case-insensitive, and applies across chat, prompt, stream, and embed alike.
 type ResolutionBounds struct {
-	// Models bounds which model names may be resolved; empty means unbounded.
-	Models []string
-	// Backends bounds which backends may serve them, matched by operator-facing name or id; empty means unbounded.
+	Models   []string
 	Backends []string
 }
 
-// IsZero reports whether these bounds restrict nothing, which is the case for
-// every request that is not a bounded mission's.
 func (b ResolutionBounds) IsZero() bool {
 	return len(b.Models) == 0 && len(b.Backends) == 0
 }
@@ -44,7 +34,6 @@ type resolutionBoundsContextKeyType struct{}
 
 var resolutionBoundsContextKey resolutionBoundsContextKeyType
 
-// WithResolutionBounds binds an envelope's model/backend allowlist to ctx, replacing any bound already present.
 func WithResolutionBounds(ctx context.Context, b ResolutionBounds) context.Context {
 	if b.IsZero() {
 		return ctx
@@ -52,8 +41,6 @@ func WithResolutionBounds(ctx context.Context, b ResolutionBounds) context.Conte
 	return context.WithValue(ctx, resolutionBoundsContextKey, b)
 }
 
-// ResolutionBoundsFromContext returns the bound bound onto ctx, or the zero
-// (unbounded) value when the request carries none.
 func ResolutionBoundsFromContext(ctx context.Context) ResolutionBounds {
 	b, _ := ctx.Value(resolutionBoundsContextKey).(ResolutionBounds)
 	return b

@@ -18,8 +18,6 @@ import (
 	"github.com/contenox/harness/runtime/taskengine"
 )
 
-// chainUsesVar reports whether any task in the chain references {{var:varName}}
-// in its execute_config model, provider, think, max_tokens, prompt_template, or system_instruction.
 func chainUsesVar(chain *taskengine.TaskChainDefinition, varName string) bool {
 	if chain == nil {
 		return false
@@ -53,9 +51,6 @@ func runtimeDefaults(ctx context.Context, deps CompatDeps) stateservice.RuntimeD
 	return stateservice.ResolveRuntimeDefaults(ctx, deps.StateService, deps.Defaults)
 }
 
-// buildTemplateVars constructs the template-var map for a compat request.
-// Values are only injected when the chain actually uses the corresponding
-// {{var:*}} macro, so hardcoded chain configs remain authoritative.
 func buildTemplateVars(chain *taskengine.TaskChainDefinition, defaults stateservice.RuntimeDefaults, model string, maxTokens *int) map[string]string {
 	defaults = defaults.Trimmed()
 	vars := map[string]string{}
@@ -96,10 +91,6 @@ func unixNow() int64 {
 	return time.Now().Unix()
 }
 
-// resolveRequestedModel keeps client model selection inside the models Contenox
-// can route through the configured provider. Empty, "default", unknown IDE model
-// IDs, and cross-provider model IDs resolve to the configured default model
-// when one exists. Known models for the configured provider pass through.
 func resolveRequestedModel(ctx context.Context, deps CompatDeps, defaults stateservice.RuntimeDefaults, requested string) string {
 	r := strings.TrimSpace(requested)
 	defaultModel := strings.TrimSpace(defaults.Model)
@@ -230,7 +221,6 @@ func buildFIMHistory(prompt, suffix string) taskengine.ChatHistory {
 	}
 }
 
-// lastAssistantMessage returns the content of the last assistant message in the history.
 func lastAssistantMessage(messages []taskengine.Message) string {
 	for i := len(messages) - 1; i >= 0; i-- {
 		m := messages[i]
@@ -241,7 +231,6 @@ func lastAssistantMessage(messages []taskengine.Message) string {
 	return ""
 }
 
-// writeSSE writes a single SSE data frame and flushes if possible.
 func writeSSE(w http.ResponseWriter, payload any) error {
 	b, err := json.Marshal(payload)
 	if err != nil {
@@ -256,7 +245,6 @@ func writeSSE(w http.ResponseWriter, payload any) error {
 	return nil
 }
 
-// writeDone writes the terminal SSE [DONE] frame.
 func writeDone(w http.ResponseWriter) {
 	fmt.Fprintf(w, "data: [DONE]\n\n")
 	if f, ok := w.(http.Flusher); ok {
@@ -264,7 +252,6 @@ func writeDone(w http.ResponseWriter) {
 	}
 }
 
-// setSSEHeaders sets the required headers for an SSE response.
 func setSSEHeaders(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -272,7 +259,6 @@ func setSSEHeaders(w http.ResponseWriter) {
 	w.Header().Set("Connection", "keep-alive")
 }
 
-// rootModels returns a handler that serves GET /v1/models using the stateService.
 func rootModels(deps CompatDeps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := authorizeCompatRequest(r, deps, false); err != nil {
@@ -283,7 +269,6 @@ func rootModels(deps CompatDeps) http.HandlerFunc {
 	}
 }
 
-// listModels writes the OpenAI-compatible model list from stateService.
 func listModels(w http.ResponseWriter, r *http.Request, deps CompatDeps) {
 	limit := 100
 	limitStr := strings.TrimSpace(r.URL.Query().Get("limit"))
@@ -337,7 +322,6 @@ func extractCompatToken(r *http.Request) string {
 	return apiKey
 }
 
-// authorize checks the auth reader when it is non-nil.
 func authorize(ctx context.Context, auth interface {
 	GetIdentity(context.Context) (string, error)
 }) error {
@@ -377,6 +361,5 @@ func openAIFinishReason(resp *agentservice.PromptResponse) string {
 	return "stop"
 }
 
-// finishReason returns a pointer to the given string (for optional JSON fields).
 func finishReason(s string) *string { return &s }
 func nullFinishReason() *string     { return nil }

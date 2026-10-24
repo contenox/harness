@@ -13,18 +13,9 @@ import { TERMINAL_GLYPH } from "./glyphs";
 export interface TerminalPromptInputProps {
   value: string;
   onChange: (value: string) => void;
-  /**
-   * Consumer handles Enter/Tab/completion here.
-   */
   onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   disabled?: boolean;
-  /**
-   * Prompt glyph.
-   */
   prompt?: React.ReactNode;
-  /**
-   * Dim hint shown when empty and unfocused.
-   */
   hint?: string;
   className?: string;
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/contenox/harness/libacp"
 )
 
-// Pins that a timeout whose message contains "not found" is not misclassified.
 func TestUnit_IsNotFound_TimeoutIsNotMisreadAsNotFound(t *testing.T) {
 	e := libacp.AsError(fmt.Errorf("upstream model not found in cache: %w", context.DeadlineExceeded))
 	t.Logf("code=%d msg=%q", e.Code, e.Message)

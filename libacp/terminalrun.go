@@ -9,8 +9,6 @@ import (
 
 const terminalDetachedTimeout = 5 * time.Second
 
-// TerminalPeer is the subset of the ACP client side that RunTerminal drives;
-// *AgentSideConnection satisfies it.
 type TerminalPeer interface {
 	CreateTerminal(context.Context, CreateTerminalRequest) (CreateTerminalResponse, error)
 	TerminalOutput(context.Context, TerminalOutputRequest) (TerminalOutputResponse, error)
@@ -19,25 +17,17 @@ type TerminalPeer interface {
 	ReleaseTerminal(context.Context, ReleaseTerminalRequest) (ReleaseTerminalResponse, error)
 }
 
-// Compile-time assertion: the real agent-side connection is a TerminalPeer.
 var _ TerminalPeer = (*AgentSideConnection)(nil)
 
-// TerminalResult is the reconciled outcome of one command run over a peer
-// terminal; Cancelled and TimedOut are kept distinct (deadline vs. an
-// external stop, usually session/cancel), and either way the terminal was
-// killed before the result was read.
 type TerminalResult struct {
 	Output    string
 	Truncated bool
 	ExitCode  int
 	Signal    *string
-	Cancelled bool // ctx was cancelled; the terminal was killed
-	TimedOut  bool // ctx hit its deadline; the terminal was killed
+	Cancelled bool
+	TimedOut  bool
 }
 
-// RunTerminal creates a terminal on the peer, waits for it to exit, collects
-// its output, and always releases it before returning, invoking onCreated
-// (if non-nil) once the terminal exists but before the wait begins.
 func RunTerminal(ctx context.Context, p TerminalPeer, req CreateTerminalRequest, onCreated func(terminalID string)) (TerminalResult, error) {
 	createResp, err := p.CreateTerminal(ctx, req)
 	if err != nil {
@@ -68,8 +58,6 @@ func RunTerminal(ctx context.Context, p TerminalPeer, req CreateTerminalRequest,
 			res.ExitCode = -1
 			return res, fmt.Errorf("libacp terminal: wait: %w", waitErr)
 		}
-		// Wait ended early; the process is still running — kill it before
-		// reading what it produced.
 		kctx, kcancel := context.WithTimeout(context.WithoutCancel(ctx), terminalDetachedTimeout)
 		_, _ = p.KillTerminal(kctx, KillTerminalRequest{SessionID: req.SessionID, TerminalID: termID})
 		kcancel()
@@ -87,8 +75,6 @@ func RunTerminal(ctx context.Context, p TerminalPeer, req CreateTerminalRequest,
 	res.Truncated = outputResp.Truncated
 	res.Signal = exitResp.Signal
 
-	// Peers populate either the wait response's exit code or the one attached
-	// to the output, not necessarily both — fall back rather than assume.
 	switch {
 	case exitResp.ExitCode != nil:
 		res.ExitCode = *exitResp.ExitCode
@@ -98,7 +84,6 @@ func RunTerminal(ctx context.Context, p TerminalPeer, req CreateTerminalRequest,
 	if res.Signal == nil && outputResp.ExitStatus != nil {
 		res.Signal = outputResp.ExitStatus.Signal
 	}
-	// A signalled process did not exit cleanly even if no code was reported.
 	if res.Signal != nil && res.ExitCode == 0 {
 		res.ExitCode = -1
 	}

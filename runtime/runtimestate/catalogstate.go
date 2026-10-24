@@ -25,7 +25,6 @@ func observedModelCacheKey(backendID string) string {
 	return observedModelCachePrefix + backendID
 }
 
-// RefreshProviderModels invalidates discovery caches for selected connections and refreshes only those providers.
 func (s *State) RefreshProviderModels(ctx context.Context, providers ...string) error {
 	backends, err := runtimetypes.New(s.dbInstance.WithoutTransaction()).ListBackends(ctx, nil, runtimetypes.MAXLIMIT)
 	if err != nil {
@@ -45,9 +44,6 @@ func (s *State) RefreshProviderModels(ctx context.Context, providers ...string) 
 	return s.RunProviderCycle(ctx, providers...)
 }
 
-// InvalidateModelCache removes the cached observed-model list for one backend,
-// forcing the next backend cycle to refetch from the provider. Safe when no
-// entry exists; no-op when kv is nil.
 func InvalidateModelCache(ctx context.Context, kv libkvstore.KVManager, backendID string) error {
 	if kv == nil {
 		return nil
@@ -59,8 +55,6 @@ func InvalidateModelCache(ctx context.Context, kv libkvstore.KVManager, backendI
 	return exec.Delete(ctx, observedModelCacheKey(backendID))
 }
 
-// ClearModelCache removes every cached observed-model list (all "prov:*" keys)
-// and returns how many were cleared. No-op (0) when kv is nil.
 func ClearModelCache(ctx context.Context, kv libkvstore.KVManager) (int, error) {
 	if kv == nil {
 		return 0, nil
@@ -91,7 +85,6 @@ func takesCredential(backendType string) bool {
 	return false
 }
 
-// BackendCredentialKey is where one connection's credential record lives. It is the only record a connection's credential is read from: no connection borrows another's, and no record is shared by every connection of an adapter type.
 func BackendCredentialKey(backendType, backendID string) string {
 	return ProviderKeyPrefix + strings.ToLower(backendType) + ":" + backendID
 }
@@ -100,9 +93,6 @@ func (s *State) loadProviderAPIKey(ctx context.Context, backend *runtimetypes.Ba
 	return loadProviderAPIKey(ctx, runtimetypes.New(s.dbInstance.WithoutTransaction()), backend)
 }
 
-// LoadProviderAPIKey reads the credential a connection's turns are sent with,
-// through the same lookup the resolver uses, so a caller reporting on a
-// connection reads the credential that connection actually presents.
 func LoadProviderAPIKey(ctx context.Context, db libdbexec.DBManager, backend runtimetypes.Backend) (string, error) {
 	return loadProviderAPIKey(ctx, runtimetypes.New(db.WithoutTransaction()), &backend)
 }
@@ -130,7 +120,6 @@ func loadProviderAPIKey(ctx context.Context, store runtimetypes.Store, backend *
 	return credential, nil
 }
 
-// optionalCredential reports whether a connection type is complete without a credential record, as a local Ollama daemon or a self-hosted vLLM is.
 func optionalCredential(backendType string) bool {
 	switch modelrepo.CanonicalBackendType(backendType) {
 	case "ollama", "local", "modeld", "vllm":
@@ -150,7 +139,6 @@ func (s *State) newCatalogProvider(backend *runtimetypes.Backend, apiKey string)
 	)
 }
 
-// storedCacheEntry reads a persisted row; APIKey marks a legacy row that held the credential in plaintext and is deleted unread.
 type storedCacheEntry struct {
 	providerCacheEntry
 	APIKey *string `json:"api_key,omitempty"`
@@ -275,7 +263,6 @@ func (s *State) applyDeclaredModel(ctx context.Context, backend *runtimetypes.Ba
 	return s.applyDeclarations(ctx, backend, model)
 }
 
-// mergeDeclaredRow never takes embedding capability from a declared row: only the catalog says a model embeds.
 func (s *State) mergeDeclaredRow(ctx context.Context, declared *runtimetypes.Model, model ModelPullStatus) ModelPullStatus {
 	if declared.ContextLength == 0 && model.ContextLength > 0 {
 		learned := *declared
@@ -435,6 +422,4 @@ func declaredModelsUnavailableError(provider string, declaredModels map[string]*
 	)
 }
 
-// OpenaiKey is the legacy KV key that stores the OpenAI provider credential.
-// Kept for callers written before provider credentials keyed by backend type.
 const OpenaiKey = ProviderKeyPrefix + "openai"

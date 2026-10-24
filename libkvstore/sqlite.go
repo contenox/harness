@@ -12,7 +12,6 @@ import (
 	"github.com/contenox/harness/libdbexec"
 )
 
-// SQLiteSchema is the DDL that bootstraps the kv store table in SQLite.
 const SQLiteSchema = `
 CREATE TABLE IF NOT EXISTS kv_store (
     key        TEXT    NOT NULL PRIMARY KEY,
@@ -21,28 +20,22 @@ CREATE TABLE IF NOT EXISTS kv_store (
 );
 `
 
-// SQLiteManager implements KVManager on top of a libdbexec.DBManager (SQLite).
 type SQLiteManager struct {
 	db libdbexec.DBManager
 }
 
-// NewSQLiteManager wraps an existing libdbexec.DBManager. The caller opens the
-// database and applies SQLiteSchema.
 func NewSQLiteManager(db libdbexec.DBManager) *SQLiteManager {
 	return &SQLiteManager{db: db}
 }
 
-// Executor returns a KVExecutor bound to a non-transactional connection.
 func (m *SQLiteManager) Executor(_ context.Context) (KVExecutor, error) {
 	return &sqliteExecutor{exec: m.db.WithoutTransaction(), db: m.db}, nil
 }
 
-// Close closes the underlying database.
 func (m *SQLiteManager) Close() error {
 	return m.db.Close()
 }
 
-// db is nil for executors already running inside a transaction.
 type sqliteExecutor struct {
 	exec libdbexec.Exec
 	db   libdbexec.DBManager
@@ -61,10 +54,6 @@ func translateSQLiteKVError(err error) error {
 	return fmt.Errorf("libkvstore/sqlite: %w", err)
 }
 
-// withWriteTx runs fn inside a transaction that already holds SQLite's write
-// lock, so a read-modify-write cycle cannot interleave with another writer's. A
-// no-op write promotes libdbexec's DEFERRED transaction to BEGIN IMMEDIATE
-// semantics.
 func (e *sqliteExecutor) withWriteTx(ctx context.Context, key Key, fn func(txe *sqliteExecutor) error) error {
 	if e.db == nil {
 		return fmt.Errorf("libkvstore/sqlite: executor has no transaction capability")
@@ -101,7 +90,6 @@ func (e *sqliteExecutor) writeTxOnce(ctx context.Context, key Key, fn func(txe *
 	return translateSQLiteKVError(commit(ctx))
 }
 
-// isSQLiteBusy reports whether err is a lock-contention error worth retrying.
 func isSQLiteBusy(err error) bool {
 	if err == nil {
 		return false
@@ -131,7 +119,6 @@ func (e *sqliteExecutor) Get(ctx context.Context, key Key) (json.RawMessage, err
 		return nil, translateSQLiteKVError(err)
 	}
 
-	// Honour TTL: treat expired entries as not found.
 	if expiresAtNs.Valid && time.Now().UnixNano() > expiresAtNs.Int64 {
 		_, _ = e.exec.ExecContext(ctx, `DELETE FROM kv_store WHERE key = ?`, key)
 		return nil, ErrNotFound
@@ -176,8 +163,6 @@ func (e *sqliteExecutor) Exists(ctx context.Context, key Key) (bool, error) {
 }
 
 func (e *sqliteExecutor) Keys(ctx context.Context, pattern string) ([]Key, error) {
-	// ESCAPE is mandatory: SQLite's LIKE has no default escape character, so
-	// globToLike's backslash escapes would otherwise match literally.
 	likePattern := globToLike(pattern)
 	rows, err := e.exec.QueryContext(ctx,
 		`SELECT key FROM kv_store WHERE key LIKE ? ESCAPE '\' AND (expires_at IS NULL OR expires_at > ?)`,
@@ -198,9 +183,6 @@ func (e *sqliteExecutor) Keys(ctx context.Context, pattern string) ([]Key, error
 	}
 	return keys, translateSQLiteKVError(rows.Err())
 }
-
-//
-// Lists are stored as a JSON array in a single kv_store row.
 
 func (e *sqliteExecutor) listLoad(ctx context.Context, key Key) ([]json.RawMessage, error) {
 	raw, err := e.Get(ctx, key)
@@ -225,15 +207,13 @@ func (e *sqliteExecutor) listSave(ctx context.Context, key Key, list []json.RawM
 	return e.Set(ctx, key, data)
 }
 
-// ListPush prepends value (LPUSH semantics), under a write transaction so
-// concurrent pushes can't clobber each other, matching valkey's atomic LPUSH.
 func (e *sqliteExecutor) ListPush(ctx context.Context, key Key, value json.RawMessage) error {
 	return e.withWriteTx(ctx, key, func(txe *sqliteExecutor) error {
 		list, err := txe.listLoad(ctx, key)
 		if err != nil {
 			return err
 		}
-		list = append([]json.RawMessage{value}, list...) // LPUSH: prepend
+		list = append([]json.RawMessage{value}, list...)
 		return txe.listSave(ctx, key, list)
 	})
 }
@@ -258,14 +238,12 @@ func (e *sqliteExecutor) ListRange(ctx context.Context, key Key, start, stop int
 	return list[start : stop+1], nil
 }
 
-// ListTrim keeps only the given range. Transactional for the reason given on ListPush.
 func (e *sqliteExecutor) ListTrim(ctx context.Context, key Key, start, stop int64) error {
 	return e.withWriteTx(ctx, key, func(txe *sqliteExecutor) error {
 		list, err := txe.listLoad(ctx, key)
 		if err != nil {
 			return err
 		}
-		// withWriteTx may retry this closure; the normalisation below isn't idempotent.
 		lo, hi := start, stop
 		n := int64(len(list))
 		if lo < 0 {
@@ -293,8 +271,6 @@ func (e *sqliteExecutor) ListLength(ctx context.Context, key Key) (int64, error)
 	return int64(len(list)), nil
 }
 
-// ListRPop removes and returns the tail element; transactional so two poppers
-// can't return the same element.
 func (e *sqliteExecutor) ListRPop(ctx context.Context, key Key) (json.RawMessage, error) {
 	var popped json.RawMessage
 	err := e.withWriteTx(ctx, key, func(txe *sqliteExecutor) error {
@@ -315,18 +291,14 @@ func (e *sqliteExecutor) ListRPop(ctx context.Context, key Key) (json.RawMessage
 	return popped, nil
 }
 
-//
-// Sets are stored as a JSON array without duplicates in a single kv_store row.
-
 func (e *sqliteExecutor) setLoad(ctx context.Context, key Key) ([]json.RawMessage, error) {
-	return e.listLoad(ctx, key) // same storage shape
+	return e.listLoad(ctx, key)
 }
 
 func (e *sqliteExecutor) setSave(ctx context.Context, key Key, members []json.RawMessage) error {
 	return e.listSave(ctx, key, members)
 }
 
-// SetAdd adds member if absent. Transactional for the reason given on ListPush.
 func (e *sqliteExecutor) SetAdd(ctx context.Context, key Key, member json.RawMessage) error {
 	return e.withWriteTx(ctx, key, func(txe *sqliteExecutor) error {
 		members, err := txe.setLoad(ctx, key)
@@ -335,7 +307,7 @@ func (e *sqliteExecutor) SetAdd(ctx context.Context, key Key, member json.RawMes
 		}
 		for _, m := range members {
 			if string(m) == string(member) {
-				return nil // already present
+				return nil
 			}
 		}
 		members = append(members, member)
@@ -347,7 +319,6 @@ func (e *sqliteExecutor) SetMembers(ctx context.Context, key Key) ([]json.RawMes
 	return e.setLoad(ctx, key)
 }
 
-// SetRemove drops member if present. Transactional for the reason given on ListPush.
 func (e *sqliteExecutor) SetRemove(ctx context.Context, key Key, member json.RawMessage) error {
 	return e.withWriteTx(ctx, key, func(txe *sqliteExecutor) error {
 		members, err := txe.setLoad(ctx, key)
@@ -364,8 +335,6 @@ func (e *sqliteExecutor) SetRemove(ctx context.Context, key Key, member json.Raw
 	})
 }
 
-// globToLike converts a glob-style pattern (*, ?) to an SQL LIKE pattern (%, _),
-// escaping literal %, _, and \. Only correct paired with ESCAPE '\' — see Keys.
 func globToLike(pattern string) string {
 	out := make([]byte, 0, len(pattern))
 	for i := 0; i < len(pattern); i++ {
@@ -375,7 +344,7 @@ func globToLike(pattern string) string {
 		case '?':
 			out = append(out, '_')
 		case '%', '_', '\\':
-			out = append(out, '\\', pattern[i]) // escape native LIKE specials
+			out = append(out, '\\', pattern[i])
 		default:
 			out = append(out, pattern[i])
 		}

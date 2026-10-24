@@ -33,9 +33,7 @@ func (h *handler) authorize(r *http.Request) error {
 	return err
 }
 
-// stream subscribes the caller to a Server-Sent Events stream of TaskEvent objects.
 func (h *handler) stream(w http.ResponseWriter, r *http.Request) {
-	// @response sse SSE stream over text/event-stream: each data frame is one taskengine.TaskEvent JSON object for the subscribed requestId.
 	if err := h.authorize(r); err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.AuthorizeOperation)
 		return

@@ -1,13 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './api';
 
-/**
- * Wire-level tests for the two fleet lifecycle verbs, in the same shape as
- * authApi.test.ts: `fetch` is stubbed, so these pin the exact path, method and
- * — for cancel — whether a body is sent at all. The presence/absence of the
- * body is the whole cancel-all-vs-per-session distinction on the wire
- * (runtime/internal/fleetapi: an absent body means "every session").
- */
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
     ok,

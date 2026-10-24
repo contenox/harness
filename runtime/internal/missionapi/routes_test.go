@@ -89,8 +89,6 @@ func TestIntegration_MissionAPI_CreateValidationFailure(t *testing.T) {
 	require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
 }
 
-// A mission without an envelope has no bounds, which mission mode must not
-// permit: POST /missions rejects a missing HITLPolicyName.
 func TestIntegration_MissionAPI_CreateMissingEnvelopeFailure(t *testing.T) {
 	_, _, srv := setupMissionAPI(t)
 
@@ -172,9 +170,6 @@ func TestIntegration_MissionAPI_PatchBind(t *testing.T) {
 	require.Equal(t, "instance-1", got.InstanceID)
 }
 
-// Rebinding a different session id over one already bound is a conflict, not
-// an append: this is mission mode's one-mission-one-unit invariant enforced
-// over HTTP.
 func TestIntegration_MissionAPI_PatchBindConflictIsConflict(t *testing.T) {
 	ctx, svc, srv := setupMissionAPI(t)
 
@@ -239,8 +234,6 @@ func TestIntegration_MissionAPI_DeleteUnknownReturns404(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
-// ─── Reports ────────────────────────────────────────────────────────────────
-
 func TestIntegration_MissionAPI_AddReportThenList(t *testing.T) {
 	ctx, svc, srv := setupMissionAPI(t)
 
@@ -304,7 +297,7 @@ func TestIntegration_MissionAPI_ListReportsNewestFirst(t *testing.T) {
 		})
 		resp.Body.Close()
 		require.Equal(t, http.StatusCreated, resp.StatusCode)
-		time.Sleep(1 * time.Millisecond) // force distinct createdAt for a stable newest-first order
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	resp, err := http.Get(srv.URL + "/missions/" + m.ID + "/reports")

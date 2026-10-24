@@ -28,7 +28,7 @@ func TestUnit_Marker_ReadsJSON(t *testing.T) {
 
 func TestUnit_Marker_ReadsLegacyBareUUID(t *testing.T) {
 	root := t.TempDir()
-	writeMarkerFile(t, root, "0000-legacy-uuid\n") // pre-JSON format
+	writeMarkerFile(t, root, "0000-legacy-uuid\n")
 	m, ok := project.ReadFromProjectRoot(root)
 	require.True(t, ok)
 	require.Equal(t, "0000-legacy-uuid", m.ID, "a bare-UUID marker keeps working — the DB token is stable")
@@ -48,7 +48,7 @@ func TestUnit_DisplayName(t *testing.T) {
 	require.Equal(t, "acme-api", project.DisplayName(root), "named marker → name")
 
 	root2 := t.TempDir()
-	writeMarkerFile(t, root2, `{"id":"y"}`) // marker, no name
+	writeMarkerFile(t, root2, `{"id":"y"}`)
 	require.Equal(t, filepath.Base(root2), project.DisplayName(root2), "unnamed marker → basename")
 }
 
@@ -59,14 +59,12 @@ func TestUnit_EnsureInProjectRoot_CreatesWithNameAndStableID(t *testing.T) {
 	require.NotEmpty(t, m.ID)
 	require.Equal(t, "scratch", m.Name)
 
-	// An explicit new name RENAMES (the rename affordance) — but the ID is stable.
 	renamed, err := project.EnsureInProjectRoot(root, "renamed")
 	require.NoError(t, err)
 	require.Equal(t, m.ID, renamed.ID, "ID is stable across ensures")
 	require.Equal(t, "renamed", renamed.Name, "an explicit name renames the project")
 	require.Equal(t, "renamed", project.DisplayName(root), "the rename persists")
 
-	// An empty name never clears an existing one.
 	kept, err := project.EnsureInProjectRoot(root, "")
 	require.NoError(t, err)
 	require.Equal(t, m.ID, kept.ID)
@@ -86,14 +84,11 @@ func TestUnit_MarkerName_NeverInventsAFallback(t *testing.T) {
 }
 
 func TestUnit_Register_NamesFreshButNeverClobbers(t *testing.T) {
-	// Registering an unmarked dir without a name defaults to the basename —
-	// registering IS naming.
 	fresh := t.TempDir()
 	m, err := project.Register(fresh, "")
 	require.NoError(t, err)
 	require.Equal(t, filepath.Base(fresh), m.Name)
 
-	// Re-registering without a name keeps the chosen name intact.
 	named := t.TempDir()
 	first, err := project.Register(named, "Chosen Name")
 	require.NoError(t, err)
@@ -102,7 +97,6 @@ func TestUnit_Register_NamesFreshButNeverClobbers(t *testing.T) {
 	require.Equal(t, first.ID, again.ID)
 	require.Equal(t, "Chosen Name", again.Name, "a nameless re-registration never clobbers a chosen name")
 
-	// An explicit name still renames.
 	renamed, err := project.Register(named, "New Name")
 	require.NoError(t, err)
 	require.Equal(t, first.ID, renamed.ID)
@@ -131,12 +125,11 @@ func TestUnit_NormalizeName(t *testing.T) {
 
 func TestUnit_EnsureInProjectRoot_BackfillsNameOnBareMarker(t *testing.T) {
 	root := t.TempDir()
-	writeMarkerFile(t, root, "legacy-id") // a bare `contenox init` marker, no name
+	writeMarkerFile(t, root, "legacy-id")
 	m, err := project.EnsureInProjectRoot(root, "scratch")
 	require.NoError(t, err)
 	require.Equal(t, "legacy-id", m.ID, "the existing token is preserved")
 	require.Equal(t, "scratch", m.Name, "registering under a name backfills it")
 
-	// And it now persists as named.
 	require.Equal(t, "scratch", project.DisplayName(root))
 }

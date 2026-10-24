@@ -41,10 +41,9 @@ func (h *mcpServerHandler) authorize(r *http.Request) error {
 	return err
 }
 
-// create registers an MCP server and returns it with its assigned ID.
 func (h *mcpServerHandler) create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	srv, err := apiframework.Decode[runtimetypes.MCPServer](r) // @request runtimetypes.MCPServer
+	srv, err := apiframework.Decode[runtimetypes.MCPServer](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -54,10 +53,9 @@ func (h *mcpServerHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.publishCreated(ctx, &srv)
-	_ = apiframework.Encode(w, r, http.StatusCreated, srv) // @response runtimetypes.MCPServer
+	_ = apiframework.Encode(w, r, http.StatusCreated, srv)
 }
 
-// list returns the registered MCP servers, paginated by cursor.
 func (h *mcpServerHandler) list(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -72,10 +70,9 @@ func (h *mcpServerHandler) list(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, items) // @response []*runtimetypes.MCPServer
+	_ = apiframework.Encode(w, r, http.StatusOK, items)
 }
 
-// get returns one MCP server by ID.
 func (h *mcpServerHandler) get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique ID of the MCP server.")
@@ -84,10 +81,9 @@ func (h *mcpServerHandler) get(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.GetOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, srv) // @response runtimetypes.MCPServer
+	_ = apiframework.Encode(w, r, http.StatusOK, srv)
 }
 
-// getByName returns one MCP server by its unique name.
 func (h *mcpServerHandler) getByName(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	name := apiframework.GetPathParam(r, "name", "The unique name of the MCP server.")
@@ -96,15 +92,13 @@ func (h *mcpServerHandler) getByName(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.GetOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, srv) // @response runtimetypes.MCPServer
+	_ = apiframework.Encode(w, r, http.StatusOK, srv)
 }
 
-// update replaces an MCP server's configuration by ID and returns the stored
-// result.
 func (h *mcpServerHandler) update(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique ID of the MCP server.")
-	srv, err := apiframework.Decode[runtimetypes.MCPServer](r) // @request runtimetypes.MCPServer
+	srv, err := apiframework.Decode[runtimetypes.MCPServer](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
@@ -116,10 +110,9 @@ func (h *mcpServerHandler) update(w http.ResponseWriter, r *http.Request) {
 	}
 	h.publishDeleted(ctx, srv.Name)
 	h.publishCreated(ctx, &srv)
-	_ = apiframework.Encode(w, r, http.StatusOK, srv) // @response runtimetypes.MCPServer
+	_ = apiframework.Encode(w, r, http.StatusOK, srv)
 }
 
-// delete removes an MCP server registration by ID.
 func (h *mcpServerHandler) delete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique ID of the MCP server.")
@@ -134,7 +127,7 @@ func (h *mcpServerHandler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.publishDeleted(ctx, srv.Name)
-	_ = apiframework.Encode(w, r, http.StatusOK, "deleted") // @response string
+	_ = apiframework.Encode(w, r, http.StatusOK, "deleted")
 }
 
 func (h *mcpServerHandler) publishCreated(ctx context.Context, srv *runtimetypes.MCPServer) {

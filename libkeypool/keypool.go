@@ -9,36 +9,21 @@ import (
 	"time"
 )
 
-// Policy names how one upstream key is chosen from a pool. It is the vocabulary
-// an operator writes in a provider declaration, so the values are wire strings
-// and never renamed in place.
 type Policy string
 
 const (
-	// PolicyStickyClient hashes the client identity onto one key, so a machine
-	// keeps hitting the upstream prefix cache its previous turn warmed.
 	PolicyStickyClient Policy = "sticky_client"
-	// PolicyRoundRobin advances to the next healthy key per request.
-	PolicyRoundRobin Policy = "round_robin"
+	PolicyRoundRobin   Policy = "round_robin"
 )
 
-// Policies is every rotation policy a declaration may name.
 func Policies() []Policy {
 	return []Policy{PolicyStickyClient, PolicyRoundRobin}
 }
 
-// ValidPolicy reports whether name is a policy a reader honours. The empty
-// string is one of them: it is a pool that declared no policy, which selects
-// round robin because that is the order the keys were stated in.
 func ValidPolicy(name Policy) bool {
 	return name == "" || slices.Contains(Policies(), name)
 }
 
-// KeyPool holds one provider's upstream API keys and picks among them, skipping
-// keys a [ProviderCircuitBreaker] has quarantined. Whether a provider may serve
-// a turn at all is the provider-level breaker's decision and not the pool's, so
-// a pool whose every key is quarantined still names one: the caller's breaker
-// refuses the turn before the key matters.
 type KeyPool struct {
 	keys    []string
 	policy  Policy
@@ -46,10 +31,6 @@ type KeyPool struct {
 	breaker *ProviderCircuitBreaker
 }
 
-// NewKeyPool creates a pool from a provider's declared keys and rotation policy,
-// spelled as [Policies] spells them. Blank and duplicate keys are dropped; a
-// policy outside that vocabulary is refused rather than stored inert, and so is
-// an empty pool, because neither selects a key an operator could predict.
 func NewKeyPool(keys []string, policy Policy, breaker *ProviderCircuitBreaker) (*KeyPool, error) {
 	if !ValidPolicy(policy) {
 		names := make([]string, 0, len(Policies()))
@@ -74,7 +55,6 @@ func NewKeyPool(keys []string, policy Policy, breaker *ProviderCircuitBreaker) (
 	return &KeyPool{keys: cleaned, policy: policy, breaker: breaker}, nil
 }
 
-// Keys returns the pool's keys in the order they were declared.
 func (p *KeyPool) Keys() []string {
 	if p == nil {
 		return nil
@@ -82,7 +62,6 @@ func (p *KeyPool) Keys() []string {
 	return slices.Clone(p.keys)
 }
 
-// Policy returns the rotation policy the pool selects under.
 func (p *KeyPool) Policy() Policy {
 	if p == nil {
 		return ""
@@ -90,8 +69,6 @@ func (p *KeyPool) Policy() Policy {
 	return p.policy
 }
 
-// SelectKey names the key identity should use at now, preferring one the breaker
-// has not quarantined. A nil pool names no key.
 func (p *KeyPool) SelectKey(identity string, now time.Time) string {
 	if p == nil || len(p.keys) == 0 {
 		return ""

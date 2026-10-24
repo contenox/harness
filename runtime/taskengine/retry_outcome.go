@@ -7,13 +7,11 @@ import (
 	"github.com/contenox/harness/runtime/taskengine/llmretry"
 )
 
-// RetryOutcomeSink collects per-call retry outcomes from chat_completion tasks running inside one chain invocation; safe for concurrent appenders.
 type RetryOutcomeSink struct {
 	mu       sync.Mutex
 	outcomes []llmretry.Outcome
 }
 
-// Append records one outcome; safe for concurrent use.
 func (s *RetryOutcomeSink) Append(o llmretry.Outcome) {
 	if s == nil {
 		return
@@ -23,7 +21,6 @@ func (s *RetryOutcomeSink) Append(o llmretry.Outcome) {
 	s.mu.Unlock()
 }
 
-// Outcomes returns a snapshot of recorded outcomes in append order.
 func (s *RetryOutcomeSink) Outcomes() []llmretry.Outcome {
 	if s == nil {
 		return nil
@@ -35,8 +32,6 @@ func (s *RetryOutcomeSink) Outcomes() []llmretry.Outcome {
 	return out
 }
 
-// LastErrorClass returns the class of the most recent recorded outcome, or
-// [llmretry.ClassNone] if no outcomes were recorded.
 func (s *RetryOutcomeSink) LastErrorClass() llmretry.ErrorClass {
 	if s == nil {
 		return llmretry.ClassNone
@@ -51,8 +46,6 @@ func (s *RetryOutcomeSink) LastErrorClass() llmretry.ErrorClass {
 
 type retryOutcomeSinkKey struct{}
 
-// WithRetryOutcomeSink attaches sink to ctx so chat_completion tasks can append
-// outcomes via [appendRetryOutcome].
 func WithRetryOutcomeSink(ctx context.Context, sink *RetryOutcomeSink) context.Context {
 	if sink == nil {
 		return ctx

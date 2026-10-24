@@ -16,10 +16,6 @@ import (
 	"github.com/contenox/harness/runtime/taskengine"
 )
 
-// AddOllamaRoutes registers the Ollama-native compat aliases (/api/chat,
-// /api/generate, ...) for clients that point an Ollama base URL at the bare host.
-//
-// openapi:exclude mounted on the serve ROOT mux (contenoxcli/serve_cmd.go); under the spec's servers:/api these would document /api/api/* URLs that do not exist
 func AddOllamaRoutes(mux *http.ServeMux, deps CompatDeps) {
 	h := &ollamaHandler{deps: deps}
 
@@ -59,12 +55,9 @@ type ollamaModelDetails struct {
 }
 
 type ollamaMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-	// Images are base64-encoded image attachments (Ollama's native multimodal
-	// field). Request-only: responses never carry images, so omitempty keeps
-	// them out of the reply.
-	Images []string `json:"images,omitempty"`
+	Role    string   `json:"role"`
+	Content string   `json:"content"`
+	Images  []string `json:"images,omitempty"`
 }
 
 type ollamaChatRequest struct {
@@ -705,11 +698,6 @@ func writeJSONLine(w http.ResponseWriter, payload any) error {
 	return nil
 }
 
-// decodeOllamaImages decodes Ollama's native base64 image list into image
-// attachments. Ollama sends raw base64 (no data: URI and no declared media
-// type), so the media type is sniffed from the decoded bytes; a payload that
-// does not sniff as an image is rejected rather than forwarded as a phantom
-// attachment the model would silently ignore.
 func decodeOllamaImages(images []string) ([]taskengine.ImagePart, error) {
 	if len(images) == 0 {
 		return nil, nil

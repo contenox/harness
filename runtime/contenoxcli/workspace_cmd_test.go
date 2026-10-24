@@ -14,9 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// workspaceTestRoot builds an isolated root command carrying the persistent --db
-// flag (as the real rootCmd does) with sub attached, so tests exercise the real
-// RunE logic without touching the package-global rootCmd's flag/parent state.
 func workspaceTestRoot(sub *cobra.Command) *cobra.Command {
 	root := &cobra.Command{Use: "contenox", SilenceUsage: true, SilenceErrors: true}
 	root.PersistentFlags().String("db", "", "SQLite database path")
@@ -62,7 +59,6 @@ func TestUnit_WorkspaceCLI_AddListRemoveRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, out, filepath.Clean(grant), "add echoes the granted root")
 
-	// The grant is durable in the shared config DB.
 	ctx, store, done := storeAt(t, dbPath)
 	require.Equal(t, []string{filepath.Clean(grant)}, workspacegrants.ReadGrants(ctx, store))
 	done()
@@ -80,10 +76,6 @@ func TestUnit_WorkspaceCLI_AddListRemoveRoundTrip(t *testing.T) {
 	done()
 }
 
-// TestUnit_WorkspaceCLI_AddStampsProjectMarker verifies CLI/serve parity for the
-// project registry: `workspace add --name` stamps the same .contenox marker the
-// serve-side REST mutator writes, `list` shows the friendly name, re-adding with
-// a new --name renames, and a bad name is refused before anything persists.
 func TestUnit_WorkspaceCLI_AddStampsProjectMarker(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "workspace-cli.db")
 	grant := t.TempDir()
@@ -101,7 +93,6 @@ func TestUnit_WorkspaceCLI_AddStampsProjectMarker(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, out, "(acme-api)", "list shows the friendly name next to the path")
 
-	// Re-adding under a new name renames the project; the ID stays stable.
 	out, err = runWorkspace(t, dbPath, "add", grant, "--name", "acme-api-v2")
 	require.NoError(t, err)
 	require.Contains(t, out, "(acme-api-v2)")
@@ -110,7 +101,6 @@ func TestUnit_WorkspaceCLI_AddStampsProjectMarker(t *testing.T) {
 	require.Equal(t, m.ID, renamed.ID, "renaming never rewrites the workspace id")
 	require.Equal(t, "acme-api-v2", renamed.Name)
 
-	// A control-character name is refused BEFORE the grant persists.
 	other := t.TempDir()
 	_, err = runWorkspace(t, dbPath, "add", other, "--name", "bad\nname")
 	require.Error(t, err)

@@ -20,8 +20,6 @@ type vLLMEmbedClient struct {
 	tracker    libtracker.ActivityTracker
 }
 
-// NewVLLMEmbedClient binds a pooling model to the vendor's OpenAI-compatible
-// embedding route, which only a deployment served for a pooling task mounts.
 func NewVLLMEmbedClient(baseURL, modelName string, httpClient *http.Client, apiKey string, tracker libtracker.ActivityTracker) (modelrepo.LLMEmbedClient, error) {
 	if httpClient == nil {
 		httpClient = modelrepo.SharedHTTPClient

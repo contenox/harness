@@ -13,12 +13,6 @@ import (
 	"github.com/contenox/harness/runtime/vfs"
 )
 
-// AddRoutes registers the /files browse API in single-root mode, fixed to one
-// localfileservice root. It is the ProjectRoot FALLBACK mount: serve uses it
-// only when no workspace-root allowlist is configured (serverapi's primary
-// branch mounts AddWorkspaceRoutes instead).
-//
-// openapi:exclude fallback mount registering the same method+path surface as the primary per-root AddWorkspaceRoutes mount, which the spec documents (including its `root` query parameter)
 func AddRoutes(mux *http.ServeMux, service localfileservice.Service) {
 	h := &handler{service: service}
 	mux.HandleFunc("GET /files", h.list)
@@ -35,9 +29,6 @@ func AddRoutes(mux *http.ServeMux, service localfileservice.Service) {
 
 type handler struct {
 	service localfileservice.Service
-	// view, filters, and hitlFor are set only by the workspace (per-root) mount
-	// and power the GET /files `filter` param. They are nil on the legacy
-	// single-root AddRoutes mount, where filters are unavailable.
 	view    *vfs.View
 	filters map[string]FileFilter
 	hitlFor PolicyEvaluatorFactory
@@ -66,8 +57,6 @@ type fileContentResponse struct {
 	Metadata      localfileservice.Entry `json:"metadata"`
 }
 
-// list returns the directory entries under path, optionally filtered to a
-// server-side tree view (e.g. the agent's view with access verdicts).
 func (h *handler) list(w http.ResponseWriter, r *http.Request) {
 	path := apiframework.GetQueryParam(r, "path", ".", "Directory path relative to the project root.")
 	entries, err := h.service.List(r.Context(), path)
@@ -76,12 +65,9 @@ func (h *handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// filter selects a server-side view of the tree. Absent or "full" returns
-	// today's raw listing byte-identically (backward compatible). "agent" (and
-	// any future token) is looked up in the registry and applied.
 	filterName := strings.TrimSpace(apiframework.GetQueryParam(r, "filter", "", "Tree view to apply: 'full' (default, raw tree) or 'agent' (the tree as the agent sees it, with per-path access verdicts)."))
 	if filterName == "" || filterName == "full" {
-		_ = apiframework.Encode(w, r, http.StatusOK, entries) // @response []localfileservice.Entry
+		_ = apiframework.Encode(w, r, http.StatusOK, entries)
 		return
 	}
 
@@ -99,8 +85,6 @@ func (h *handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// policy names the session's active HITL policy; omitted -> the runtime's
-	// default resolution (matching the live agent).
 	policyName := strings.TrimSpace(apiframework.GetQueryParam(r, "policy", "", "HITL policy name to evaluate the agent view against; omitted uses the configured default."))
 	ev := agentview.NewEvaluator(h.view, h.hitlFor(policyName), policyName)
 
@@ -113,10 +97,9 @@ func (h *handler) list(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, result) // @response []localfileapi.Entry
+	_ = apiframework.Encode(w, r, http.StatusOK, result)
 }
 
-// stat returns the metadata entry for one path.
 func (h *handler) stat(w http.ResponseWriter, r *http.Request) {
 	path := apiframework.GetQueryParam(r, "path", "", "Path relative to the project root.")
 	entry, err := h.service.Stat(r.Context(), path)
@@ -124,11 +107,9 @@ func (h *handler) stat(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.GetOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, entry) // @response localfileservice.Entry
+	_ = apiframework.Encode(w, r, http.StatusOK, entry)
 }
 
-// content returns a file's contents with metadata, UTF-8 inline or base64
-// for binary data.
 func (h *handler) content(w http.ResponseWriter, r *http.Request) {
 	path := apiframework.GetQueryParam(r, "path", "", "File path relative to the project root.")
 	data, meta, err := h.service.Read(r.Context(), path)
@@ -147,12 +128,10 @@ func (h *handler) content(w http.ResponseWriter, r *http.Request) {
 		resp.ContentBase64 = base64.StdEncoding.EncodeToString(data)
 		resp.Encoding = "base64"
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, resp) // @response localfileapi.fileContentResponse
+	_ = apiframework.Encode(w, r, http.StatusOK, resp)
 }
 
-// download serves a file's raw bytes with its stored content type.
 func (h *handler) download(w http.ResponseWriter, r *http.Request) {
-	// @response binary The file's raw bytes, served with its stored content type (application/octet-stream fallback).
 	path := apiframework.GetQueryParam(r, "path", "", "File path relative to the project root.")
 	data, meta, err := h.service.Read(r.Context(), path)
 	if err != nil {
@@ -169,10 +148,8 @@ func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
-// createFile writes a new file from the request payload and returns its
-// entry.
 func (h *handler) createFile(w http.ResponseWriter, r *http.Request) {
-	req, err := apiframework.Decode[writeFileRequest](r) // @request localfileapi.writeFileRequest
+	req, err := apiframework.Decode[writeFileRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -187,13 +164,11 @@ func (h *handler) createFile(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusCreated, entry) // @response localfileservice.Entry
+	_ = apiframework.Encode(w, r, http.StatusCreated, entry)
 }
 
-// updateFile overwrites an existing file from the request payload and
-// returns its entry.
 func (h *handler) updateFile(w http.ResponseWriter, r *http.Request) {
-	req, err := apiframework.Decode[writeFileRequest](r) // @request localfileapi.writeFileRequest
+	req, err := apiframework.Decode[writeFileRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
@@ -208,12 +183,11 @@ func (h *handler) updateFile(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, entry) // @response localfileservice.Entry
+	_ = apiframework.Encode(w, r, http.StatusOK, entry)
 }
 
-// createFolder creates a directory and returns its entry.
 func (h *handler) createFolder(w http.ResponseWriter, r *http.Request) {
-	req, err := apiframework.Decode[createFolderRequest](r) // @request localfileapi.createFolderRequest
+	req, err := apiframework.Decode[createFolderRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -223,13 +197,11 @@ func (h *handler) createFolder(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusCreated, entry) // @response localfileservice.Entry
+	_ = apiframework.Encode(w, r, http.StatusCreated, entry)
 }
 
-// movePath renames or moves a file or folder and returns the entry at its
-// new path.
 func (h *handler) movePath(w http.ResponseWriter, r *http.Request) {
-	req, err := apiframework.Decode[moveRequest](r) // @request localfileapi.moveRequest
+	req, err := apiframework.Decode[moveRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
@@ -239,38 +211,25 @@ func (h *handler) movePath(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, entry) // @response localfileservice.Entry
+	_ = apiframework.Encode(w, r, http.StatusOK, entry)
 }
 
-// Delete a file.
-//
-// Removes the file at the given path, relative to the project root.
-//
-// Deleting a folder is a separate operation (DELETE /folders). The two share an
-// implementation but not a handler: the generator derives one operationId and
-// one description per handler function, so two routes bound to a single handler
-// collide and their annotations attach order-dependently — see
-// docs/development/api_spec_generation.md.
 func (h *handler) deleteFile(w http.ResponseWriter, r *http.Request) {
 	path := apiframework.GetQueryParam(r, "path", "", "File path relative to the project root.")
 	if err := h.service.Delete(r.Context(), path); err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.DeleteOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, apiframework.MessageResponse{Message: "path removed"}) // @response apiframework.MessageResponse
+	_ = apiframework.Encode(w, r, http.StatusOK, apiframework.MessageResponse{Message: "path removed"})
 }
 
-// Delete a folder.
-//
-// Removes the folder at the given path, relative to the project root, together
-// with everything beneath it.
 func (h *handler) deleteFolder(w http.ResponseWriter, r *http.Request) {
 	path := apiframework.GetQueryParam(r, "path", "", "Folder path relative to the project root.")
 	if err := h.service.Delete(r.Context(), path); err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.DeleteOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, apiframework.MessageResponse{Message: "path removed"}) // @response apiframework.MessageResponse
+	_ = apiframework.Encode(w, r, http.StatusOK, apiframework.MessageResponse{Message: "path removed"})
 }
 
 func decodeFileContent(req writeFileRequest) ([]byte, error) {

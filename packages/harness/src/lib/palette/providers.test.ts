@@ -14,8 +14,6 @@ import {
 } from './providers';
 import type { PaletteProviderContext } from './types';
 
-// A t() stub that echoes the key (interpolating {{shortId}} when present) — the
-// provider mapping is what is under test, not the German copy.
 const t = ((key: string, opts?: { shortId?: string }) =>
   opts?.shortId ? `${key}:${opts.shortId}` : key) as unknown as TFunction;
 
@@ -239,7 +237,6 @@ describe('actionsProvider + buildPaletteItems', () => {
         ],
       }),
     );
-    // actions (9) + inbox (1) + mission (1)
     expect(items.filter(i => i.type === 'mission')).toHaveLength(1);
     expect(items.filter(i => i.type === 'inbox')).toHaveLength(1);
     expect(items.filter(i => i.type === 'action').length).toBeGreaterThanOrEqual(8);

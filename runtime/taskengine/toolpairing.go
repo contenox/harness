@@ -81,7 +81,6 @@ func resumableToolCallBatch(msgs []Message) (assistantIdx int, answered map[stri
 		return -1, nil
 	}
 	for _, tc := range msgs[i].CallTools {
-		// An ID-less call can never be matched by a result, so it always counts as unanswered.
 		if tc.ID == "" || !answered[tc.ID] {
 			return i, answered
 		}

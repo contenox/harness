@@ -11,7 +11,6 @@ interface ThemeProviderProps {
   children: ReactNode;
 }
 
-/** Subscribe to OS prefers-color-scheme changes via matchMedia. */
 const darkMQ = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
 function subscribeToScheme(cb: () => void) {
@@ -27,7 +26,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const systemTheme = useSyncExternalStore(subscribeToScheme, getSystemTheme, () => 'light');
   const [theme, setTheme] = useState(systemTheme);
 
-  // Sync with OS preference changes
   useEffect(() => {
     setTheme(systemTheme);
   }, [systemTheme]);

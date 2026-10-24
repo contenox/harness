@@ -8,10 +8,6 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-/// What this client answers when the agent asks for permission. `Defer` leaves
-/// the request unanswered, which is how a case proves the ask outlives the
-/// editor's own UI; `Cancel` answers `cancelled`, which is a card the operator
-/// dismissed without deciding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {
     Allow,
@@ -20,7 +16,6 @@ pub enum Verdict {
     Cancel,
 }
 
-/// A JSON-RPC reply plus every notification that preceded it.
 #[derive(Debug, Clone)]
 pub struct Reply {
     pub result: Option<Value>,
@@ -55,16 +50,12 @@ impl Reply {
     }
 }
 
-/// Everything one `session/prompt` produced, from the client's side of the wire.
 #[derive(Debug, Clone, Default)]
 pub struct PromptTurn {
     pub stop_reason: String,
     pub error: Option<Value>,
-    /// The `update` object of every session/update notification, in order.
     pub updates: Vec<Value>,
-    /// The params of every session/request_permission the agent sent.
     pub permissions: Vec<Value>,
-    /// Every other agent-to-client request: fs/*, terminal/*.
     pub client_calls: Vec<(String, Value)>,
 }
 
@@ -83,7 +74,6 @@ impl PromptTurn {
             .collect()
     }
 
-    /// The assistant's streamed answer, reassembled from its chunks.
     pub fn text(&self) -> String {
         self.of_kind("agent_message_chunk")
             .iter()
@@ -99,7 +89,6 @@ impl PromptTurn {
         self.of_kind("tool_call_update")
     }
 
-    /// Every `rawOutput` a tool reported — what the model is told about its call.
     pub fn tool_outputs(&self) -> String {
         let mut out = String::new();
         for update in self.updates.iter() {
@@ -117,7 +106,6 @@ impl PromptTurn {
         out
     }
 
-    /// The paths the agent asked this client to read, in order.
     pub fn read_paths(&self) -> Vec<String> {
         self.client_calls
             .iter()
@@ -127,7 +115,6 @@ impl PromptTurn {
             .collect()
     }
 
-    /// The command line of every terminal the agent asked this client to open.
     pub fn terminal_commands(&self) -> Vec<String> {
         self.client_calls
             .iter()
@@ -151,7 +138,6 @@ impl PromptTurn {
             .collect()
     }
 
-    /// The paths the agent asked this client to write, in order.
     pub fn written_paths(&self) -> Vec<String> {
         self.client_calls
             .iter()
@@ -180,8 +166,6 @@ fn render(value: &Value) -> String {
     }
 }
 
-/// An ACP client speaking JSON-RPC over a child process's stdio — the same
-/// position an editor is in.
 pub struct Acp {
     argv: Vec<String>,
     child: Child,
@@ -199,10 +183,6 @@ pub struct Acp {
     terminals: Vec<Terminal>,
 }
 
-/// A command this client ran on the agent's behalf. The whole run happens
-/// inside `terminal/create`, which is why `wait_for_exit` can answer at once —
-/// an editor may buffer a short command the same way, and no case here drives
-/// a terminal it means to interrupt.
 #[derive(Debug, Clone)]
 struct Terminal {
     id: String,
@@ -282,23 +262,16 @@ impl Acp {
         self
     }
 
-    /// How this client answers session/request_permission from now on.
     pub fn answers(&mut self, verdict: Verdict) -> &mut Self {
         self.verdict = verdict;
         self
     }
 
-    /// Whether this client actually carries out the writes it is asked for.
-    /// A client that takes `fs/write_text_file` and does nothing is the proof
-    /// that the agent has no filesystem of its own: the request arrives, the
-    /// answer is an error, and the file never appears.
     pub fn performs_writes(&mut self, performs: bool) -> &mut Self {
         self.performs_writes = performs;
         self
     }
 
-    /// Make one path unreadable to this client — an editor holding a buffer it
-    /// cannot hand over, or a file it has no permission for.
     pub fn cannot_read(&mut self, path: impl Into<String>) -> &mut Self {
         self.unreadable.push(path.into());
         self
@@ -308,7 +281,6 @@ impl Acp {
         self.stderr.lock().expect("stderr buffer").clone()
     }
 
-    /// stderr with the structured log lines dropped.
     pub fn notices(&self) -> String {
         self.stderr()
             .lines()
@@ -317,7 +289,6 @@ impl Acp {
             .join("\n")
     }
 
-    /// The commands the agent advertised for the current session.
     pub fn commands(&self) -> Vec<String> {
         let mut names: Vec<String> = self
             .commands
@@ -359,8 +330,6 @@ impl Acp {
         }
     }
 
-    /// The handshake, with a client that can read and write files and open
-    /// terminals — what an editor declares.
     pub fn initialize(&mut self) -> Result<Value> {
         self.initialize_with(json!({
             "fs": {"readTextFile": true, "writeTextFile": true},
@@ -380,8 +349,6 @@ impl Acp {
         .ok()
     }
 
-    /// Open a session on the directory this client has open, and collect the
-    /// command menu the agent pushes afterwards.
     pub fn new_session(&mut self, cwd: impl AsRef<Path>) -> Result<String> {
         let reply = self.call(
             "session/new",
@@ -414,8 +381,6 @@ impl Acp {
         Ok(session)
     }
 
-    /// Send a prompt and collect the whole turn: the updates, the permission
-    /// requests, and the calls the agent made back into this client.
     pub fn prompt(&mut self, session: &str, text: &str) -> Result<PromptTurn> {
         let permissions_before = self.permissions.len();
         let calls_before = self.client_calls.len();
@@ -424,9 +389,6 @@ impl Acp {
             json!({"sessionId": session, "prompt": [{"type": "text", "text": text}]}),
         )?;
 
-        // An editor does not stop listening at the result: the agent flushes
-        // session_info_update behind it by design, and a tool update produced
-        // as the turn ends can land just after it too.
         let trailing = self.drain_idle(Duration::from_millis(250), Duration::from_secs(5))?;
 
         let mut turn = PromptTurn {
@@ -460,9 +422,6 @@ impl Acp {
             .unwrap_or_default())
     }
 
-    /// Read notifications the agent flushed after a response.
-    /// Read notifications until the agent has been quiet for `idle`, or `cap`
-    /// has passed — how a client that stays connected sees a stream settle.
     pub fn drain_idle(&mut self, idle: Duration, cap: Duration) -> Result<Vec<Value>> {
         let deadline = Instant::now() + cap;
         let mut notes = Vec::new();
@@ -541,8 +500,6 @@ impl Acp {
         }
     }
 
-    /// Answer an agent-to-client request the way an editor would: rule on
-    /// permission, and perform the filesystem work in this process.
     fn serve(&mut self, request: &Value) -> Result<()> {
         let id = request.get("id").cloned().unwrap_or(Value::Null);
         let method = request
@@ -660,8 +617,6 @@ impl Acp {
         }
     }
 
-    /// Run what `terminal/create` asked for, in this process, and keep what it
-    /// produced for the `output` and `wait_for_exit` calls that follow.
     fn open_terminal(&mut self, params: &Value) -> Terminal {
         let id = format!("term-{}", self.terminals.len() + 1);
         let command = params

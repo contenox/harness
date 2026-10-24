@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeSupervisor is the supervising session's view: which missions it fired and
-// what they reported.
 type fakeSupervisor struct {
 	missions []*missionservice.Mission
 	reports  map[string][]*missionservice.Report
@@ -33,7 +31,6 @@ func (f *fakeSupervisor) ListReports(_ context.Context, missionID string, _ int)
 	return f.reports[missionID], nil
 }
 
-// fakeResolver is the ask side: what is waiting, and what answering does.
 type fakeResolver struct {
 	pending  map[string][]missiontools.PendingAsk
 	answered map[string]string
@@ -70,9 +67,6 @@ func supervisorFixture(t *testing.T) (context.Context, taskengine.ToolsRepo, *fa
 	return ctx, missiontools.New(svc, nil, missiontools.WithSupervision(sup, res)), res
 }
 
-// TestUnit_Supervisor_ToolsUnlockForAFiringSessionOnly pins the gate: the
-// supervisor surface appears for a session that HAS missions, the unit surface
-// for a session that IS one, and an ordinary chat gets neither.
 func TestUnit_Supervisor_ToolsUnlockForAFiringSessionOnly(t *testing.T) {
 	ctx, tools, _ := supervisorFixture(t)
 	repo := tools.(interface {
@@ -95,9 +89,6 @@ func TestUnit_Supervisor_ToolsUnlockForAFiringSessionOnly(t *testing.T) {
 		"a unit answers nothing — it asks")
 }
 
-// TestUnit_Supervisor_ListShowsOwnMissionsAndWhatWaitsOnYou is the awareness the
-// firing agent never had: what it dispatched, how it is going, and the question
-// blocking it — including the askId needed to answer.
 func TestUnit_Supervisor_ListShowsOwnMissionsAndWhatWaitsOnYou(t *testing.T) {
 	ctx, tools, _ := supervisorFixture(t)
 
@@ -114,8 +105,6 @@ func TestUnit_Supervisor_ListShowsOwnMissionsAndWhatWaitsOnYou(t *testing.T) {
 	require.NotContains(t, text, "m-other", "a supervisor sees ITS missions, never another session's")
 }
 
-// TestUnit_Supervisor_AnswerReachesTheUnit covers the point of the surface, and
-// TestUnit_Supervisor_AnswerRefusesAnotherSessionsUnit its one hard boundary.
 func TestUnit_Supervisor_AnswerReachesTheUnit(t *testing.T) {
 	ctx, tools, res := supervisorFixture(t)
 
@@ -132,8 +121,6 @@ func TestUnit_Supervisor_AnswerReachesTheUnit(t *testing.T) {
 func TestUnit_Supervisor_AnswerRefusesAnotherSessionsUnit(t *testing.T) {
 	ctx, tools, res := supervisorFixture(t)
 
-	// An answer is an INSTRUCTION a unit acts on immediately, so guessing another
-	// session's ask id must not work.
 	_, _, err := tools.Exec(missiontools.WithParentSessionID(ctx, "cnx-parent"), time.Now(), nil, false,
 		&taskengine.ToolsCall{
 			Name: missiontools.ToolsProviderName, ToolName: missiontools.ToolNameAnswer,
@@ -143,9 +130,6 @@ func TestUnit_Supervisor_AnswerRefusesAnotherSessionsUnit(t *testing.T) {
 	require.Empty(t, res.answered)
 }
 
-// TestUnit_Supervisor_ToolsRefuseWithoutASupervisingSession guards the Exec-side
-// gate, not just the listing: a call that arrives without a supervising session
-// (a stale menu, a replayed transcript) is refused rather than run unattributed.
 func TestUnit_Supervisor_ToolsRefuseWithoutASupervisingSession(t *testing.T) {
 	ctx, tools, _ := supervisorFixture(t)
 	_, _, err := tools.Exec(ctx, time.Now(), nil, false,

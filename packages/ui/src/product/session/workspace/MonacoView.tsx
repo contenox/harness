@@ -6,9 +6,6 @@ import { defineCanvasMonacoThemes, useCanvasMonacoTheme } from '../../../compone
 import type { MonacoViewProps } from './monacoViewShared';
 import { MONACO_READONLY_OPTIONS } from './monacoViewShared';
 
-/**
- * The read-only Monaco file viewer of the session canvas.
- */
 export default function MonacoView({
   value,
   path,

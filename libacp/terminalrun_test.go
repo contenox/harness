@@ -260,14 +260,12 @@ func TestRunTerminal_CancellationIsNotTimeout(t *testing.T) {
 	}
 }
 
-// TestRunTerminal_ReleasesOnDeadContext pins that release still runs when the
-// request context is already dead, so cancelled turns don't leak terminals.
 func TestRunTerminal_ReleasesOnDeadContext(t *testing.T) {
 	f := newFake()
 	f.waitBlocks = true
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // already dead before we even start
+	cancel()
 
 	res, err := libacp.RunTerminal(ctx, f, libacp.CreateTerminalRequest{Command: "sleep"}, nil)
 	if err != nil {

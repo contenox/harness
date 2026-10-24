@@ -30,13 +30,6 @@ func newTestManager(t *testing.T, idle time.Duration) *manager {
 	return m
 }
 
-// TestManager_RefusesCwdOutsideWorkspaceAllowlist pins the envelope at the PTY
-// boundary. CwdResolver is a pluggable func(ctx) string, so the manager cannot
-// assume its answer was checked by whoever supplied it; a shell is a live
-// interactive foothold, and rooting one outside the operator's configured
-// workspace roots is exactly the escape the allowlist exists to prevent. The
-// judgement is vfs.ResolveSessionCwd — the same one the ACP session paths and
-// fleet dispatch use — so it cannot drift from them.
 func TestManager_RefusesCwdOutsideWorkspaceAllowlist(t *testing.T) {
 	allowed := t.TempDir()
 	outside := t.TempDir()
@@ -65,7 +58,6 @@ func ctxWithSession(id string) context.Context {
 	return context.WithValue(context.Background(), runtimetypes.SessionIDContextKey, id)
 }
 
-// waitFor polls until cond is true or the deadline elapses.
 func waitFor(t *testing.T, d time.Duration, cond func() bool) bool {
 	t.Helper()
 	deadline := time.Now().Add(d)
@@ -125,7 +117,6 @@ func TestManager_SubscribeReceivesOutput(t *testing.T) {
 	})
 	defer cancel()
 
-	// The initial Reset snapshot arrives even before any shell exists.
 	if !waitFor(t, time.Second, func() bool { mu.Lock(); defer mu.Unlock(); return sawReset }) {
 		t.Fatalf("subscriber never received the initial reset snapshot")
 	}

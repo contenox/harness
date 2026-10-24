@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { ToolCallEvent } from '../lib/acp';
 import { acpSessionReducer, initialAcpSessionState, type AcpSessionState } from './acpSessionState';
 
-/** Applies a sequence of actions to `initialAcpSessionState` and returns the final state. */
 function run(...actions: Parameters<typeof acpSessionReducer>[1][]): AcpSessionState {
   return actions.reduce(acpSessionReducer, initialAcpSessionState);
 }
@@ -37,7 +36,6 @@ describe('acpSessionReducer: unified timeline (D4)', () => {
       streaming: true,
     });
     expect(state.toolCalls['tc-1']).toMatchObject({ title: 'ls', status: 'completed' });
-    // tool_call_update merges into the existing card, not a second timeline item.
     expect(state.items.filter(it => it.id === 'tc-1')).toHaveLength(1);
   });
 
@@ -60,8 +58,6 @@ describe('acpSessionReducer: unified timeline (D4)', () => {
     expect(turnId).toBeDefined();
     expect(state.items.map(it => it.turnId)).toEqual([turnId, turnId, turnId]);
 
-    // A user's echoed prompt and a session/load replay are NOT part of a
-    // turn's step trail — they stay untagged.
     const untagged = run(
       { type: 'session_reset', sessionId: 'sess-1' },
       { type: 'user_message_chunk', id: 'u1', text: 'hi' },
@@ -79,8 +75,6 @@ describe('acpSessionReducer: unified timeline (D4)', () => {
       { type: 'message_chunk', id: 'a1', text: 'Sure, here you go.' },
     );
 
-    // Thinking arrived first — the message item is created on the thought
-    // chunk, not duplicated when the text chunk for the same id follows.
     expect(state.items).toEqual([{ kind: 'message', id: 'a1', turnId: 'turn-0' }]);
     expect(state.messages['a1']).toMatchObject({
       role: 'assistant',
@@ -127,13 +121,11 @@ describe('acpSessionReducer: unified timeline (D4)', () => {
     );
     const errorItems = state.items.filter(it => it.kind === 'error');
     expect(errorItems).toHaveLength(1);
-    // Ordered after the user message it failed to answer.
     expect(state.items.at(-1)).toEqual(errorItems[0]);
     expect(state.errorCards[errorItems[0].id]).toEqual({
       id: errorItems[0].id,
       message: 'chain execution failed: model unavailable',
     });
-    // Still drives the existing top recovery banner too.
     expect(state.error).toBe('chain execution failed: model unavailable');
     expect(state.isPrompting).toBe(false);
   });
@@ -154,22 +146,12 @@ describe('acpSessionReducer: unified timeline (D4)', () => {
 });
 
 describe('acpSessionReducer: stable message identity within one turn', () => {
-  // Root cause: `acpWorkspaceController.ts`'s `buildSessionHandlers` groups
-  // `message_chunk`/`thought_chunk`s by `id ?? currentTurnId` — if the
-  // agent's chunks switch between carrying a real `messageId` and falling
-  // back to the turn-id alias (or a thought chunk disagrees with the text
-  // chunk's id) mid-turn, keying the reducer purely off `action.id` would
-  // split one message into two timeline items, orphaning open/closed state.
-  // Per the documented one-assistant-message-per-turn contract, all of these
-  // must resolve onto a single item.
 
   it('no-id-then-id: a turn-id-fallback chunk followed by a real messageId chunk yields ONE item', () => {
     const state = run(
       { type: 'session_reset', sessionId: 's1' },
       { type: 'prompt_start' },
-      // No server messageId yet — the controller falls back to its turn id.
       { type: 'message_chunk', id: 'assistant-1', text: 'Hello' },
-      // The agent starts tagging chunks with a real messageId mid-turn.
       { type: 'message_chunk', id: 'msg-42', text: ' world' },
     );
 
@@ -187,7 +169,6 @@ describe('acpSessionReducer: stable message identity within one turn', () => {
       { type: 'session_reset', sessionId: 's1' },
       { type: 'prompt_start' },
       { type: 'message_chunk', id: 'msg-42', text: 'Hello' },
-      // The agent stops sending a messageId partway through the same turn.
       { type: 'message_chunk', id: 'assistant-1', text: ' world' },
     );
 
@@ -241,9 +222,6 @@ describe('acpSessionReducer: stable message identity within one turn', () => {
   });
 
   it('a NEW turn whose first chunk REUSES a prior closed turn id is disambiguated, not merged into the old message (thought_chunk)', () => {
-    // Reproduces the bug where a backend that reuses (or omits, falling back
-    // to the same value) a message id across turns made turn 2's thinking
-    // silently vanish into turn 1's already-rendered, already-collapsed box.
     const first = run(
       { type: 'session_reset', sessionId: 's1' },
       { type: 'prompt_start' },
@@ -256,12 +234,10 @@ describe('acpSessionReducer: stable message identity within one turn', () => {
       { type: 'thought_chunk', id: 'assistant-1', text: 'second turn thinking' },
     );
 
-    // The stale id must NOT gain a second turn's content...
     expect(second.messages['assistant-1']).toMatchObject({
       thinking: 'first turn thinking',
       text: 'first turn answer',
     });
-    // ...it must land on a fresh, distinct message instead.
     const secondTurnId = second.items[second.items.length - 1]?.id;
     expect(secondTurnId).toBeDefined();
     expect(secondTurnId).not.toBe('assistant-1');
@@ -289,9 +265,6 @@ describe('acpSessionReducer: stable message identity within one turn', () => {
   });
 
   it('out-of-turn (no active prompt) chunks are never merged, even with differing ids', () => {
-    // No prompt_start dispatched — mirrors session/load replay, where each
-    // historical message legitimately keeps its own id (see the replay
-    // ordering suite below).
     const state = run(
       { type: 'session_reset', sessionId: 's1' },
       { type: 'message_chunk', id: 'replay-a', text: 'one' },
@@ -306,8 +279,6 @@ describe('acpSessionReducer: stable message identity within one turn', () => {
 
 describe('acpSessionReducer: session/load replay ordering', () => {
   it('reproduces a full replay sequence (user -> thought -> assistant -> tool -> tool result) in wire-arrival order', () => {
-    // Mirrors acpsvc/session.go's replayMessages: one messageId per historical
-    // message, thinking+text of one assistant turn share an id.
     const state = run(
       { type: 'session_reset', sessionId: 'sess-replay' },
       { type: 'user_message_chunk', id: 'replay-0', text: 'hi there' },
@@ -335,9 +306,6 @@ describe('acpSessionReducer: session/load replay ordering', () => {
       text: 'Hello!',
       thinking: 'thinking about it',
     });
-    // BUG 4c: replay lands with no prompt turn in flight — nothing will ever
-    // call endStreaming() for these chunks, so they must render as already
-    // complete, not stuck mid-typing-indicator.
     expect(state.messages['replay-0'].streaming).toBeFalsy();
     expect(state.messages['replay-1'].streaming).toBeFalsy();
     expect(state.messages['replay-1'].thinkingStreaming).toBeFalsy();
@@ -595,9 +563,6 @@ describe('acpSessionReducer: connection banner', () => {
     expect(prompting.messages['a1']).toMatchObject({ streaming: true, thinkingStreaming: true });
 
     const dropped = acpSessionReducer(prompting, { type: 'connection_lost' });
-    // No prompt_end/prompt_error is ever coming for a dropped connection —
-    // without this, the message would show a stuck "..." typing indicator
-    // forever (see acpWorkspaceController.ts's handleTransportClose).
     expect(dropped.messages['a1']).toMatchObject({
       streaming: false,
       thinkingStreaming: false,
@@ -633,9 +598,6 @@ describe('acpSessionReducer: streaming only marked during an active prompt turn 
       { type: 'prompt_start' },
       { type: 'message_chunk', id: 'a1', text: 'hi' },
       { type: 'prompt_end', stopReason: 'end_turn' },
-      // Out-of-turn: the standing subscription still routes it (see
-      // acpWorkspaceController.ts's buildSessionHandlers), but isPrompting
-      // is already false again by now.
       { type: 'message_chunk', id: 'a1', text: ' again' },
     );
     expect(state.messages['a1']).toMatchObject({ text: 'hi again', streaming: false });
@@ -659,22 +621,15 @@ describe('acpSessionReducer: streaming only marked during an active prompt turn 
 });
 
 describe('acpSessionReducer: purity underpins per-session multiplexing', () => {
-  // The multiplexing layer (acpWorkspaceState.ts's acpSessionsReducer) keeps one
-  // independent state value per open session and feeds each session's traffic
-  // through THIS reducer against its own value. That only stays isolated because
-  // the reducer is pure — it never mutates the input state — so a chunk for
-  // session A can never leak into session B's separately-held value.
   it('does not mutate the input state (each dispatch returns a fresh value, leaving prior slices intact)', () => {
     const a0 = run({ type: 'session_reset', sessionId: 'sess-a' });
     const b0 = run({ type: 'session_reset', sessionId: 'sess-b' });
 
     const a1 = acpSessionReducer(a0, { type: 'message_chunk', id: 'm-a', text: 'for A' });
 
-    // The two sessions' values are wholly independent: advancing A left B's
-    // held value — and A's own prior snapshot — untouched.
     expect(a1).not.toBe(a0);
-    expect(a0.messages['m-a']).toBeUndefined(); // prior A snapshot not mutated
-    expect(b0.messages['m-a']).toBeUndefined(); // B never saw A's chunk
+    expect(a0.messages['m-a']).toBeUndefined();
+    expect(b0.messages['m-a']).toBeUndefined();
     expect(a1.messages['m-a']).toMatchObject({ text: 'for A' });
     expect(a1.sessionId).toBe('sess-a');
     expect(b0.sessionId).toBe('sess-b');
@@ -699,7 +654,6 @@ describe('acpSessionReducer: image parts on messages', () => {
         image: { data: 'd29ybGQ=', mimeType: 'image/jpeg' },
       },
     );
-    // One timeline item, one message — the image chunks merged in, not split out.
     expect(state.items).toEqual([{ kind: 'message', id: 'u1' }]);
     expect(state.messages['u1']).toMatchObject({
       role: 'user',
@@ -722,7 +676,6 @@ describe('acpSessionReducer: image parts on messages', () => {
       },
     );
     expect(state.items).toEqual([{ kind: 'message', id: 'replay-0' }]);
-    // Replay arrives with no turn in flight — completed, not stuck streaming.
     expect(state.messages['replay-0']).toMatchObject({
       text: '',
       streaming: false,
@@ -735,8 +688,6 @@ describe('acpSessionReducer: image parts on messages', () => {
       { type: 'session_reset', sessionId: 'sess-1' },
       { type: 'prompt_start' },
       { type: 'message_chunk', id: 'a1', text: 'here you go' },
-      // Mid-turn image chunk under a DIFFERENT id still resolves onto the
-      // canonical turn message (one assistant message per turn).
       {
         type: 'message_chunk',
         id: 'other',
@@ -763,11 +714,6 @@ describe('acpSessionReducer: image parts on messages', () => {
 });
 
 describe('delivered mission questions', () => {
-  // REGRESSION: two questions from the same unit arrived as message chunks with
-  // no id of their own, so they merged into ONE transcript message sharing ONE
-  // answer box — and once the first was answered, that box showed "answer sent"
-  // for good, leaving the second question with no field at all. Each question is
-  // its own message.
   it('keeps each question in its own message, with its own answer handle', () => {
     let state = acpSessionReducer(initialAcpSessionState, {
       type: 'session_reset',
@@ -792,9 +738,6 @@ describe('delivered mission questions', () => {
   });
 
   it('does not fold a question into the turn a session is streaming', () => {
-    // A question can land while the supervising agent is mid-turn (that is how
-    // the agent-answer path works). Merging it into that turn's message would
-    // hide the answer box inside the assistant's reply.
     let state = acpSessionReducer(initialAcpSessionState, {
       type: 'session_reset',
       sessionId: 's1',

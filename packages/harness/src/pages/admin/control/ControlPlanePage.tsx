@@ -9,10 +9,7 @@ export default function ControlPlanePage() {
 
   return (
     <Page bodyScroll="auto">
-      {/* Plain vertical-stack wrapper — the same idiom InboxPage/MissionDetailPage
-          use — rather than GridLayout: GridLayout's grid is an `auto-fit`
-          MULTI-COLUMN layout, so a second top-level child added here later
-          would land beside this Section instead of stacking under it. */}
+
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 p-4 md:p-6">
         <Section>
           <H1 variant="page">{t('control_plane.hub_title')}</H1>

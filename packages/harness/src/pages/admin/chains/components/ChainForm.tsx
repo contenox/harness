@@ -5,7 +5,6 @@ import { useCreateChain, useUpdateChain } from '../../../../hooks/useChains';
 import { ChainDefinition } from '../../../../lib/types';
 
 interface ChainFormProps {
-  /** Local chain path for the JSON file (e.g. my-chain.json). */
   vfsPath: string;
   chain?: ChainDefinition;
 }

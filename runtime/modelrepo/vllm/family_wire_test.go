@@ -16,8 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// vllmStub serves the vendor's endpoints from a scripted transcript and keeps
-// every request body, so a test asserts the bytes a real vLLM server sees.
 type vllmStub struct {
 	health      int
 	openAPI     string
@@ -127,9 +125,6 @@ func vllmChat(t *testing.T, srv *httptest.Server, caps modelrepo.CapabilityConfi
 	return client
 }
 
-// The vendor's error reference publishes the error envelope without the outer
-// member; that documented body reaches the caller as a failure rather than as a
-// short successful turn.
 func TestSystem_VLLMStream_FlatErrorFrameSurfaces(t *testing.T) {
 	stub := &vllmStub{chat: []string{`{"object":"error","message":"matryoshka unsupported","type":"BadRequestError","param":null,"code":400}`}}
 	srv := stub.start(t)
@@ -147,8 +142,6 @@ func TestSystem_VLLMStream_FlatErrorFrameSurfaces(t *testing.T) {
 	require.ErrorContains(t, err, "matryoshka unsupported")
 }
 
-// The vendor's embedding route is executed, not merely claimed: a model whose
-// declaration carries the embedding capability reaches /v1/embeddings.
 func TestSystem_VLLMEmbed_ExecutesTheEmbeddingRoute(t *testing.T) {
 	stub := &vllmStub{embeddings: `{"object":"list","data":[{"index":0,"object":"embedding","embedding":[0.5,-0.25]}],"usage":{"prompt_tokens":5,"total_tokens":5}}`}
 	srv := stub.start(t)
@@ -167,8 +160,6 @@ func TestSystem_VLLMEmbed_ExecutesTheEmbeddingRoute(t *testing.T) {
 	assert.Equal(t, "float", body["encoding_format"])
 }
 
-// A provider that declares no embedding capability refuses by name rather than
-// advertising the operation and failing later.
 func TestSystem_VLLMEmbed_RefusesWithoutTheDeclaration(t *testing.T) {
 	stub := &vllmStub{}
 	srv := stub.start(t)
@@ -178,8 +169,6 @@ func TestSystem_VLLMEmbed_RefusesWithoutTheDeclaration(t *testing.T) {
 	assert.False(t, vllmProvider(t, srv, modelrepo.CapabilityConfig{CanChat: true}).CanEmbed())
 }
 
-// Every neutral control the shared request carries reaches the vendor's own
-// member: generation bounds, tool selection and structured output.
 func TestSystem_VLLMChat_SendsTheVendorsSamplingControls(t *testing.T) {
 	stub := &vllmStub{}
 	srv := stub.start(t)
@@ -206,8 +195,6 @@ func TestSystem_VLLMChat_SendsTheVendorsSamplingControls(t *testing.T) {
 	assert.Equal(t, "json_object", format["type"])
 }
 
-// The vendor reports the prompt-cache dimensions beside the token counts, and
-// the accounting that reaches the caller carries them.
 func TestSystem_VLLMChat_ReportsTheCacheDimensions(t *testing.T) {
 	stub := &vllmStub{chat: []string{`{"choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":100,"completion_tokens":5,"total_tokens":105,"prompt_tokens_details":{"cached_tokens":64,"created_cache_tokens":32},"completion_tokens_details":{"reasoning_tokens":3}}}`}}
 	srv := stub.start(t)
@@ -220,7 +207,6 @@ func TestSystem_VLLMChat_ReportsTheCacheDimensions(t *testing.T) {
 	assert.Equal(t, 3, res.Usage.ThinkingTokens)
 }
 
-// A base URL written with a trailing slash still addresses the vendor's path.
 func TestSystem_VLLMChat_NormalizesATrailingSlashBaseURL(t *testing.T) {
 	stub := &vllmStub{}
 	srv := stub.start(t)
@@ -233,8 +219,6 @@ func TestSystem_VLLMChat_NormalizesATrailingSlashBaseURL(t *testing.T) {
 	require.NotNil(t, stub.bodyFor("/v1/chat/completions"), "the doubled path was requested: %#v", stub.bodies)
 }
 
-// The session a caller declared is the affinity a deployment fronting several
-// replicas routes on, and it reaches the vendor's own session member.
 func TestSystem_VLLMChat_SendsTheSessionIdentity(t *testing.T) {
 	stub := &vllmStub{}
 	srv := stub.start(t)
@@ -249,8 +233,6 @@ func TestSystem_VLLMChat_SendsTheSessionIdentity(t *testing.T) {
 	assert.Equal(t, "session-7", body["session_id"])
 }
 
-// The vendor's level vocabulary carries one literal per level, so the level the
-// caller asked for is the level the server receives.
 func TestSystem_VLLMChat_SendsTheVendorsReasoningLiteral(t *testing.T) {
 	stub := &vllmStub{}
 	srv := stub.start(t)
@@ -265,8 +247,6 @@ func TestSystem_VLLMChat_SendsTheVendorsReasoningLiteral(t *testing.T) {
 	assert.Equal(t, "xhigh", stub.bodyFor("/v1/chat/completions")["reasoning_effort"])
 }
 
-// The Chat API documents audio input, so a deployment that declared it receives
-// the audio part instead of a refusal.
 func TestSystem_VLLMChat_SendsAudioInputParts(t *testing.T) {
 	stub := &vllmStub{}
 	srv := stub.start(t)
@@ -306,8 +286,6 @@ func TestSystem_VLLMChat_SendsAudioInputParts(t *testing.T) {
 	assert.Equal(t, "wav", audio.Format)
 }
 
-// A deployment that never declared audio input is refused by name, so the
-// capability and the execution agree.
 func TestSystem_VLLMChat_RefusesAudioWithoutTheDeclaration(t *testing.T) {
 	stub := &vllmStub{}
 	srv := stub.start(t)
@@ -320,9 +298,6 @@ func TestSystem_VLLMChat_RefusesAudioWithoutTheDeclaration(t *testing.T) {
 	assert.True(t, errors.Is(err, modelrepo.ErrAudioNotSupported), "error = %v, want ErrAudioNotSupported", err)
 }
 
-// vLLM mounts its generation and pooling routes according to the task the
-// deployment was started for, so the mounted route table — not the model id —
-// decides what a served model can be asked to do.
 func TestSystem_VLLMCatalog_DerivesCapabilitiesFromTheServedTask(t *testing.T) {
 	stub := &vllmStub{
 		openAPI:    `{"paths":{"/v1/embeddings":{},"/health":{}}}`,
@@ -352,7 +327,6 @@ func TestSystem_VLLMCatalog_DerivesCapabilitiesFromTheServedTask(t *testing.T) {
 	assert.Error(t, err, "a model the deployment cannot chat with must not offer a chat connection")
 }
 
-// A serving deployment that mounts the generation routes declares them.
 func TestSystem_VLLMCatalog_DerivesTheGenerationRoutes(t *testing.T) {
 	stub := &vllmStub{
 		openAPI: `{"paths":{"/v1/chat/completions":{},"/v1/completions":{}}}`,
@@ -371,8 +345,6 @@ func TestSystem_VLLMCatalog_DerivesTheGenerationRoutes(t *testing.T) {
 	assert.False(t, models[0].CanEmbed)
 }
 
-// A deployment whose engine is dead still answers its model list; reporting
-// those models would claim an operation the deployment cannot perform.
 func TestSystem_VLLMCatalog_ReportsADeadEngine(t *testing.T) {
 	stub := &vllmStub{
 		health: http.StatusServiceUnavailable,
@@ -387,8 +359,6 @@ func TestSystem_VLLMCatalog_ReportsADeadEngine(t *testing.T) {
 	assert.Contains(t, err.Error(), "503")
 }
 
-// An OpenAI-compatible server that mounts no health route states nothing about
-// its engine; the model list it answers is what discovery reports.
 func TestSystem_VLLMCatalog_ListsModelsWhenTheServerMountsNoHealthRoute(t *testing.T) {
 	stub := &vllmStub{
 		health: http.StatusNotFound,
@@ -405,9 +375,6 @@ func TestSystem_VLLMCatalog_ListsModelsWhenTheServerMountsNoHealthRoute(t *testi
 	assert.True(t, models[0].CanChat)
 }
 
-// The vendor's model list publishes a model identifier and its window; a card
-// carrying nothing else must not become a claim about completion or edit
-// profiles the server never stated.
 func TestSystem_VLLMCatalog_ReadsOnlyWhatTheVendorPublishes(t *testing.T) {
 	stub := &vllmStub{
 		openAPI: `{"paths":{"/v1/chat/completions":{}}}`,

@@ -34,10 +34,6 @@ func (s *store) CreateBackend(ctx context.Context, backend *Backend) error {
 	return err
 }
 
-// CountBackendsByTypeAndURL reports how many backends other than excludeID
-// share an implementation type and base URL. The service treats that pair as
-// the identity of a connection: two rows for the same endpoint would shadow
-// each other in resolution.
 func (s *store) CountBackendsByTypeAndURL(ctx context.Context, typ, baseURL, excludeID string) (int, error) {
 	var count int
 	err := s.Exec.QueryRowContext(ctx, `
@@ -222,7 +218,6 @@ func (s *store) EstimateBackendCount(ctx context.Context) (int64, error) {
 	return s.estimateCount(ctx, "llm_backends")
 }
 
-// LockBackend locks a backend row for the duration of the transaction.
 func (s *store) LockBackend(ctx context.Context, id string) error {
 	result, err := s.Exec.ExecContext(ctx, `UPDATE llm_backends SET name = name WHERE id = $1`, id)
 	if err != nil {

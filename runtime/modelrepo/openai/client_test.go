@@ -41,8 +41,6 @@ func TestUnit_OpenAIReasoningEffort(t *testing.T) {
 	}
 }
 
-// A level the model's page does not name is refused, naming the documented
-// literals, rather than silently downgraded to a different effort.
 func TestUnit_OpenAIReasoningEffortRefusesUndocumentedLevel(t *testing.T) {
 	t.Parallel()
 
@@ -63,7 +61,6 @@ func TestUnit_OpenAIReasoningEffortRefusesUndocumentedLevel(t *testing.T) {
 	}
 }
 
-// A model no vendor page covers takes the operator's own declaration.
 func TestUnit_OpenAIReasoningEffortUsesDeclaredControls(t *testing.T) {
 	t.Parallel()
 

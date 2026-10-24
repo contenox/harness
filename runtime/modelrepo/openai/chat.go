@@ -13,8 +13,6 @@ type OpenAIChatClient struct {
 	openAIClient
 }
 
-// refusalFinishReason is the finish reason an OpenAI-compatible dialect reports
-// for a declined turn, alongside the documented message refusal member.
 const refusalFinishReason = "refusal"
 
 type openAIChatCompletionResponse struct {
@@ -76,18 +74,11 @@ type openAIToolCall struct {
 	} `json:"function"`
 }
 
-// openAIContent is an assistant message's content, which these dialects spell
-// either as a plain string of text or as an ordered list of typed chunks. A
-// reasoning dialect puts the model's trace in that list as a thinking chunk
-// beside the answer, so a decoder that reads only the string spelling loses the
-// trace and fails the whole response.
 type openAIContent struct {
 	text     string
 	thinking string
 }
 
-// UnmarshalJSON accepts both documented spellings, and the null content an
-// assistant turn carrying only tool calls sends.
 func (c *openAIContent) UnmarshalJSON(data []byte) error {
 	trimmed := strings.TrimSpace(string(data))
 	if trimmed == "" || trimmed == "null" {
@@ -154,7 +145,6 @@ func (c *OpenAIChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 	reportErr, reportChange, end := c.tracker.Start(ctx, "chat", "openai", "model", c.modelName)
 	defer end()
 
-	// No audio encoding on this wire format; refuse instead of dropping silently.
 	if err := modelrepo.RefuseAudioInput("openai", c.modelName, messages); err != nil {
 		reportErr(err)
 		return modelrepo.ChatResult{}, err

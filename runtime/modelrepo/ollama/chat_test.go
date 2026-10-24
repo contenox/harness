@@ -14,11 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_Chat_SendsToolCallIDs asserts the pairing ids reach the wire. A tool
-// result is matched to its call by string equality upstream, and an
-// OpenAI-compatible provider refuses the whole turn when either side is missing
-// its id — while Ollama itself neither sends nor needs one, so nothing local
-// notices when the conversion drops them.
 func TestUnit_Chat_SendsToolCallIDs(t *testing.T) {
 	const callID = "call_00_vYiHOCMbz8E11RpCtp1o7524"
 	var body []byte

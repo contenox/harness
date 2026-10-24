@@ -6,9 +6,6 @@ import { Dialog } from "./Dialog";
 import { Span } from "./Typography";
 import { FileText, TerminalSquare, ListChecks, Workflow, Database } from "lucide-react";
 
-/**
- * Discriminated union representing every typed attachment kind that can be rendered inline adjacent to a chat message.
- */
 export type InlineAttachment =
   | { kind: "file_view"; path: string; text: string; truncated?: boolean }
   | {
@@ -38,9 +35,6 @@ export type InlineAttachment =
       alt?: string;
     };
 
-/**
- * Overridable UI strings for attachment titles and captions.
- */
 export type InlineAttachmentLabels = {
 
   line?: string;
@@ -289,9 +283,6 @@ function ImageAttachmentView({
   );
 }
 
-/**
- * Dispatch to the renderer for `attachment.kind`.
- */
 export function InlineAttachmentRenderer({
   attachment,
   labels,
@@ -319,9 +310,6 @@ export function InlineAttachmentRenderer({
   }
 }
 
-/**
- * Render a list of attachments.
- */
 export function InlineAttachments({
   attachments,
   labels,

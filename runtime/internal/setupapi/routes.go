@@ -29,8 +29,6 @@ func (h *setupHandler) authorize(r *http.Request) error {
 	return err
 }
 
-// getStatus reports the cached setup-check result: which pieces of the local
-// runtime are configured and working.
 func (h *setupHandler) getStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if err := h.authorize(r); err != nil {
@@ -42,12 +40,10 @@ func (h *setupHandler) getStatus(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, res) // @response setupcheck.Result
+	_ = apiframework.Encode(w, r, http.StatusOK, res)
 }
 
-// refreshStatus re-runs the setup checks and returns the fresh result.
 func (h *setupHandler) refreshStatus(w http.ResponseWriter, r *http.Request) {
-	// @request none triggers a server-side re-check of the setup state; the request carries no body
 	ctx := r.Context()
 	if err := h.authorize(r); err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.AuthorizeOperation)
@@ -58,7 +54,7 @@ func (h *setupHandler) refreshStatus(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, res) // @response setupcheck.Result
+	_ = apiframework.Encode(w, r, http.StatusOK, res)
 }
 
 type putCLIConfigRequest struct {
@@ -78,8 +74,6 @@ type putCLIConfigRequest struct {
 	DefaultMissionPolicy        *string `json:"default-mission-policy"`
 }
 
-// putCLIConfigResponse is the resolved CLI config snapshot, shared by
-// GET /cli-config (full read) and PUT /cli-config (post-update read).
 type putCLIConfigResponse struct {
 	DefaultModel                string            `json:"defaultModel"`
 	DefaultProvider             string            `json:"defaultProvider"`
@@ -118,8 +112,6 @@ func cliConfigResponseFromSnapshot(snap stateservice.CLIConfigSnapshot) putCLICo
 	}
 }
 
-// getCLIConfig returns the resolved CLI configuration snapshot (default
-// model, provider, chain, and related settings).
 func (h *setupHandler) getCLIConfig(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if err := h.authorize(r); err != nil {
@@ -131,18 +123,16 @@ func (h *setupHandler) getCLIConfig(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, cliConfigResponseFromSnapshot(snap)) // @response setupapi.putCLIConfigResponse
+	_ = apiframework.Encode(w, r, http.StatusOK, cliConfigResponseFromSnapshot(snap))
 }
 
-// putCLIConfig updates the provided CLI configuration keys and returns the
-// resolved snapshot after the change.
 func (h *setupHandler) putCLIConfig(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if err := h.authorize(r); err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.AuthorizeOperation)
 		return
 	}
-	body, err := apiframework.Decode[putCLIConfigRequest](r) // @request setupapi.putCLIConfigRequest
+	body, err := apiframework.Decode[putCLIConfigRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
@@ -184,5 +174,5 @@ func (h *setupHandler) putCLIConfig(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, cliConfigResponseFromSnapshot(snap)) // @response setupapi.putCLIConfigResponse
+	_ = apiframework.Encode(w, r, http.StatusOK, cliConfigResponseFromSnapshot(snap))
 }

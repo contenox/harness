@@ -13,13 +13,7 @@ export interface DropdownProps {
   children?: React.ReactNode;
   contentClassName?: string;
   className?: string;
-  /**
-   * Which edge of the trigger the panel aligns to.
-   */
   align?: "start" | "end";
-  /**
-   * Accessible label of the built-in trigger when no option is selected.
-   */
   placeholder?: string;
 }
 

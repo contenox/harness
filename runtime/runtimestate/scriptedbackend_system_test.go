@@ -71,8 +71,6 @@ func scriptedProvider(t *testing.T, ctx context.Context, state *State) modelrepo
 	return providers[0]
 }
 
-// The scripted backend must reach the runtime the way any backend does: a
-// registered row, a backend cycle, then a provider the resolver can pick.
 func TestSystem_ScriptedBackendStreamsToolCallThenAnswer(t *testing.T) {
 	ctx, state, scriptPath := scriptedBackendState(t, scriptedDialog)
 	provider := scriptedProvider(t, ctx, state)
@@ -107,8 +105,6 @@ func TestSystem_ScriptedBackendStreamsToolCallThenAnswer(t *testing.T) {
 	require.Equal(t, "stop", second.FinishReason)
 }
 
-// Past the last turn the backend must accuse itself: no invented reply, and a
-// message that names the script file and the turn nobody wrote.
 func TestSystem_ScriptedBackendRefusesToRunPastTheScript(t *testing.T) {
 	ctx, state, scriptPath := scriptedBackendState(t, scriptedDialog)
 	provider := scriptedProvider(t, ctx, state)

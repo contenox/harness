@@ -155,9 +155,6 @@ func TestSystem_Ollama_Tools(t *testing.T) {
 		}
 	})
 
-	// Tool calls arriving over NDJSON exercise ToolCallFunctionArguments'
-	// decode-then-remarshal path per frame, which the non-streaming tests
-	// above never reach.
 	t.Run("StreamedToolCalls", func(t *testing.T) {
 		caps := modelrepo.CapabilityConfig{
 			ContextLength: 2048,

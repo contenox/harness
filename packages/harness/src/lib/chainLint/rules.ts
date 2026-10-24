@@ -1,29 +1,15 @@
 import type { ChainDefinition, ChainTask } from '../types';
 import type { DiagnosticSeverity } from './index';
 
-/**
- * A single lint rule. `check` returns null when the rule does not fire for
- * `task`, or a short human-readable diagnostic message when it does. Pure
- * function — must not read any external state, so the same engine works in
- * the browser, Node, or a future server-side validator.
- */
 export interface LintRule {
   id: string;
   severity: DiagnosticSeverity;
   check: (task: ChainTask, chain: ChainDefinition) => string | null;
 }
 
-/**
- * Returns true when the task's `execute_config.tools` allowlist effectively
- * exposes the named tools provider. Honours wildcard (`"*"`) and the negation form
- * (`"!local_shell"`). When `tools` is undefined or null the backend exposes
- * no registry tools by default, but legacy copied chains may still carry
- * `hooks`; use that as a read-only fallback.
- */
 function exposesToolsProvider(task: ChainTask, toolsName: string): boolean {
   const tools = task.execute_config?.tools ?? task.execute_config?.hooks;
   if (tools == null) return false;
-  // Negation always wins.
   if (tools.includes(`!${toolsName}`)) return false;
   if (tools.includes(toolsName)) return true;
   if (tools.includes('*')) return true;
@@ -34,10 +20,6 @@ function getPolicy(task: ChainTask, toolsName: string): Record<string, string> |
   return task.execute_config?.tools_policies?.[toolsName] ?? task.execute_config?.hook_policies?.[toolsName];
 }
 
-/**
- * Only `chat_completion` tasks make LLM calls; rules about retry / compaction
- * apply only to them.
- */
 function isChatCompletion(task: ChainTask): boolean {
   return task.handler === 'chat_completion';
 }
@@ -83,7 +65,6 @@ export const ruleChatCompletionNoCompactPolicy: LintRule = {
     if (!isChatCompletion(task)) return null;
     if (task.execute_config?.compact_policy) return null;
     if (!task.execute_config?.shift) {
-      // Without shift, an overflowing chat will hard-fail. Surface as info.
       return 'chat_completion task has neither compact_policy nor shift:true. Long sessions / large tool outputs will overflow context with no recovery.';
     }
     return null;

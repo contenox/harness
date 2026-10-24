@@ -2,7 +2,6 @@ import { formatCompactNumber, ProgressBar, Span } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
 import type { AcpUsageState } from '../../../hooks/acpSessionState';
 
-/** Compact used/size meter for the session's context window — hidden entirely until the agent reports usage. */
 export function UsageMeter({ usage }: { usage: AcpUsageState | null }) {
   const { t } = useTranslation();
   if (!usage || usage.size <= 0) return null;

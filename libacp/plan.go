@@ -29,21 +29,17 @@ type AvailableCommandInput struct {
 	Hint string `json:"hint,omitempty"`
 }
 
-// CommandCompletion offers values and guidance after an exact argument prefix.
 type CommandCompletion struct {
 	Values []string `json:"values,omitempty"`
 	Hint   string   `json:"hint,omitempty"`
 }
 
-// CommandCompletionMeta carries optional argument completion hints in command _meta.
 type CommandCompletionMeta struct {
 	Completions map[string]CommandCompletion `json:"contenox.argumentCompletions,omitempty"`
 }
 
 type AvailableCommand struct {
-	Name string `json:"name"`
-	// Description is spec-required (strict clients reject commands without
-	// it), so no omitempty: an empty string still reaches the wire.
+	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	Input       *AvailableCommandInput `json:"input,omitempty"`
 	Meta        json.RawMessage        `json:"_meta,omitempty"`

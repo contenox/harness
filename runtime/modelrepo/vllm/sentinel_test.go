@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_VLLM_TypedSentinels maps vLLM's OpenAI-style token-limit error
-// string onto the context-overflow sentinel.
 func TestUnit_VLLM_TypedSentinels(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -31,8 +29,6 @@ func TestUnit_VLLM_TypedSentinels(t *testing.T) {
 	require.ErrorIs(t, err, modelrepo.ErrContextLengthExceeded)
 }
 
-// Engine-qualified tool names ("toolsName.toolName") are sanitized in both
-// the tool schemas and prior-turn assistant tool calls, and translated back.
 func TestUnit_VLLM_ToolNameSanitization(t *testing.T) {
 	fn := &modelrepo.FunctionTool{Name: "filesystem.list_directory"}
 	cfg := &modelrepo.ChatConfig{Tools: []modelrepo.Tool{{Type: "function", Function: fn}}}

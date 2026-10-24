@@ -36,13 +36,9 @@ func (p *catalogProvider) Type() string {
 }
 
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	// Catalog listing is a non-streaming call: bound it end-to-end.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 
-	// GET /models returns one page of {id, created, object, owned_by,
-	// shutdown_date} and defines neither a pagination envelope nor a capability
-	// member, so neither is read here.
 	type modelItem struct {
 		ID string `json:"id"`
 	}
@@ -108,7 +104,7 @@ func inferObservedModel(id string) modelrepo.ObservedModel {
 	lower := strings.ToLower(id)
 	observed := modelrepo.ObservedModel{
 		Name:          id,
-		ContextLength: 0, // unknown; resolver treats 0 as "do not filter on context"
+		ContextLength: 0,
 	}
 	observed.MaxOutputTokens = openAIMaxOutputTokens(id)
 
@@ -147,9 +143,6 @@ func inferObservedModel(id string) modelrepo.ObservedModel {
 		observed.CanStream = true
 	}
 
-	// OpenAI's model API reports no modality, so the vendor's own model pages
-	// are the source; gated on CanChat so audio/embedding/image-gen models never
-	// claim it.
 	observed.CanVision = observed.CanChat && openAIModelSupportsVision(id)
 	observed.CanThink = observed.CanChat && openAIModelReasons(id)
 	if observed.CanThink {

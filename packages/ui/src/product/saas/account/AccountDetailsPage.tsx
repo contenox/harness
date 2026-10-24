@@ -82,9 +82,6 @@ function businessPayload(form: BusinessForm): BusinessDetails {
   return details;
 }
 
-/**
- * What the tenant is called, and who its invoice is addressed to.
- */
 export default function AccountDetailsPage() {
   const { routes, useAccount, useAuth } = useProductPorts();
   const accountID = useAuth().accountID ?? '';
@@ -174,9 +171,7 @@ function DetailsForm({ account }: { account: Account }) {
         autoCorrect="off"
         error={errors.fields.slug}
       />
-      {/* The relay REFUSES a handle it would have had to rewrite rather than
-          rewriting it, so this screen states the rule instead of previewing a
-          normalised value it could not then store. */}
+
       <Small>
         Lower-case letters, digits and single hyphens. Nothing links to it, so changing it breaks
         nothing.

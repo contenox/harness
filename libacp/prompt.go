@@ -18,9 +18,6 @@ type PromptRequest struct {
 	Meta      json.RawMessage `json:"_meta,omitempty"`
 }
 
-// PromptResponse is the result of a "session/prompt" request; per the ACP v1
-// schema it carries only stopReason and _meta, with per-turn usage/cost
-// belonging on the "usage_update" SessionUpdate instead.
 type PromptResponse struct {
 	StopReason StopReason      `json:"stopReason"`
 	Meta       json.RawMessage `json:"_meta,omitempty"`
@@ -43,9 +40,6 @@ const (
 	SessionUpdateSessionInfo       SessionUpdateKind = "session_info_update"
 )
 
-// AllSessionUpdateKinds returns every SessionUpdateKind the spec defines, in
-// declaration order, so a consumer's translation table can be tested for
-// completeness against the library.
 func AllSessionUpdateKinds() []SessionUpdateKind {
 	return []SessionUpdateKind{
 		SessionUpdateUserMessageChunk,
@@ -85,20 +79,14 @@ type SessionUpdate struct {
 
 	ConfigOptions []SessionConfigOption `json:"configOptions,omitempty"`
 
-	// Used, Size, Cost: usage_update fields (session context indicator).
 	Used int        `json:"used,omitempty"`
 	Size int        `json:"size,omitempty"`
 	Cost *UsageCost `json:"cost,omitempty"`
 
-	// Stats is the session-level usage record; only usage_stats carries it.
 	Stats *SessionStats `json:"stats,omitempty"`
 
-	// MessageID groups streamed chunks into messages: all chunks of one message
-	// share an id, and a change marks a new message.
 	MessageID string `json:"messageId,omitempty"`
 
-	// UpdatedAt is the session_info_update timestamp (ISO 8601); Title above is
-	// shared with tool_call updates (same wire key).
 	UpdatedAt string `json:"updatedAt,omitempty"`
 
 	Meta json.RawMessage `json:"_meta,omitempty"`
@@ -119,25 +107,16 @@ type sessionUpdateWire struct {
 
 	Entries []PlanEntry `json:"entries,omitempty"`
 
-	// AvailableCommands is a pointer: required on available_commands_update
-	// (an empty list must reach the wire as `[]`, not be omitted — omitempty
-	// on a plain slice can't distinguish "empty" from "absent"), omitted
-	// entirely on every other update kind.
 	AvailableCommands *[]AvailableCommand `json:"availableCommands,omitempty"`
 
 	CurrentModeID string `json:"currentModeId,omitempty"`
 
-	// ConfigOptions: same pointer reasoning as AvailableCommands, required on
-	// config_option_update.
 	ConfigOptions *[]SessionConfigOption `json:"configOptions,omitempty"`
 
-	// Used/Size: pointers because usage_update requires them on the wire even
-	// when zero; every other update kind omits them.
 	Used *int       `json:"used,omitempty"`
 	Size *int       `json:"size,omitempty"`
 	Cost *UsageCost `json:"cost,omitempty"`
 
-	// Stats is the session usage record; only usage_stats carries it.
 	Stats *SessionStats `json:"stats,omitempty"`
 
 	MessageID string `json:"messageId,omitempty"`
@@ -151,8 +130,6 @@ type UsageCost struct {
 	Currency string  `json:"currency"`
 }
 
-// SessionModelStats is one model's slice of a session usage record; Provider
-// names the backend that served the calls.
 type SessionModelStats struct {
 	Model    string `json:"model"`
 	Provider string `json:"provider,omitempty"`
@@ -165,11 +142,6 @@ type SessionModelStats struct {
 	CacheWriteTokens int64 `json:"cacheWriteTokens"`
 }
 
-// SessionStats is the session-level usage record a usage_stats update carries:
-// the same shape every client renders, derived server-side from engine events.
-// Token fields are provider-reported; times are milliseconds. TtftSamples and
-// TtftMs together give the average first-token latency (per sample), and
-// output throughput is OutputTokens/StreamMs.
 type SessionStats struct {
 	SessionID string `json:"sessionId"`
 
@@ -305,14 +277,8 @@ type SessionNotification struct {
 	Meta      json.RawMessage `json:"_meta,omitempty"`
 }
 
-// EventSeqMetaKey is the `_meta` key under which a notification carries its
-// session-local monotonic sequence (the SSE resume cursor). Present on every
-// notification the runtime sends for a session that journals its events; a
-// reconnecting client names its last seen value as sinceSeq.
 const EventSeqMetaKey = "contenox.seq"
 
-// WithSeq returns a copy of the notification whose `_meta` records seq under
-// EventSeqMetaKey, preserving any existing `_meta` fields.
 func (n SessionNotification) WithSeq(seq uint64) SessionNotification {
 	meta := make(map[string]any)
 	if len(n.Meta) > 0 {

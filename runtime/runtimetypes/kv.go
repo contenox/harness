@@ -55,9 +55,6 @@ func (s *store) GetWorkspaceKV(ctx context.Context, workspaceID string, key stri
 
 func (s *store) getKVScoped(ctx context.Context, workspaceID string, key string, out interface{}) error {
 	var kv KV
-	// Scan value into a plain []byte so that both Postgres (returns []byte for JSONB)
-	// and SQLite (returns string for TEXT, auto-converted to []byte by database/sql)
-	// work correctly. Scanning directly into json.RawMessage fails on SQLite.
 	var rawValue []byte
 	err := s.Exec.QueryRowContext(ctx, `
 		SELECT key, value, created_at, updated_at

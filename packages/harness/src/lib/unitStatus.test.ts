@@ -25,7 +25,6 @@ describe('composeUnitStatus — the one composed truth', () => {
 
   it('frames an open mission as "no result yet" (neutral), never as a health warning', () => {
     const [verdict] = composeUnitStatus({ missionStatus: 'open' });
-    // Neutral outline badge, and a label that reads as "no verdict", not an alarm.
     expect(verdict).toMatchObject({
       kind: 'verdict',
       variant: 'outline',
@@ -39,8 +38,6 @@ describe('composeUnitStatus — the one composed truth', () => {
   });
 
   it('separates stuck from derailed: attention (warning), not a verdict (error)', () => {
-    // The runtime keeps these distinct on purpose — stuck asks for a nudge, a
-    // derailment asks for a post-mortem — so the chips must not read alike.
     expect(composeUnitStatus({ missionStatus: 'stuck' })[0]).toMatchObject({
       kind: 'verdict',
       variant: 'warning',
@@ -49,11 +46,6 @@ describe('composeUnitStatus — the one composed truth', () => {
   });
 
   it('survives a mission status this build does not know, echoing the runtime word', () => {
-    // REGRESSION: `stuck` shipped in the runtime while this map had four entries,
-    // and the undefined lookup threw during render — the whole missions page fell
-    // to the error boundary ("can't access property labelKey"). The Go status set
-    // is contracted to only GROW, and a runtime is routinely newer than the Beam
-    // served beside it, so an unknown value must degrade, never throw.
     const atoms = composeUnitStatus({
       missionStatus: 'quarantined' as never,
       instanceState: 'running',
@@ -61,7 +53,6 @@ describe('composeUnitStatus — the one composed truth', () => {
     const verdict = atoms.find(a => a.kind === 'verdict');
     expect(verdict).toMatchObject({ variant: 'secondary', label: 'quarantined' });
     expect(verdict?.labelKey).toBeUndefined();
-    // and the atoms around it still compose normally
     expect(atoms.map(a => a.kind)).toEqual(['process', 'verdict', 'liveness']);
   });
 

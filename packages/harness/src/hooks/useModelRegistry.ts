@@ -36,9 +36,6 @@ export function useDownloadModel() {
   return useMutation({
     mutationFn: (name: string) => api.downloadModel(name),
     onSuccess: () => {
-      // A downloaded model shows up in a backend's pulledModels once the runtime
-      // reconciles it — invalidate that alongside the registry so the lists (and
-      // the ACP model dropdown built from them) refresh instead of staying stale.
       queryClient.invalidateQueries({ queryKey: modelRegistryKeys.all });
       queryClient.invalidateQueries({ queryKey: backendKeys.all });
     },

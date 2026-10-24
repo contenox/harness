@@ -1,4 +1,3 @@
-// src/pages/admin/backends/index.tsx
 import { Page, TabbedPage } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';

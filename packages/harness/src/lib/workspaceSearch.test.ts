@@ -15,7 +15,6 @@ describe('byteSlice — byte-offset highlighting', () => {
   });
 
   it('aligns to BYTE offsets across a multi-byte character before the match', () => {
-    // "héllo " is 7 bytes (é = 2), so "world" starts at byte 7.
     const { before, match, after } = byteSlice('héllo world', 7, 5);
     expect(before).toBe('héllo ');
     expect(match).toBe('world');
@@ -71,7 +70,6 @@ describe('buildSearchUrl', () => {
   });
 });
 
-// ── runWorkspaceSearch against a mocked fetch stream ─────────────────────────
 
 function streamResponse(chunks: string[]): SearchResponseLike {
   const enc = new TextEncoder();

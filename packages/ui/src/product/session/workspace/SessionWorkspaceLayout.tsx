@@ -9,7 +9,6 @@ import { CanvasTabStrip, FilePane, FileTreePanel, type FileTreeManagement } from
 import { activeFileTab } from './fileCanvasState';
 import type { SessionWorkspace } from './useSessionWorkspace';
 
-/** The machine's asset actions, offered on a previewed file only where the session serves them. */
 export interface AssetActionsSource {
   list: () => Promise<AssetAction[]>;
   run: (action: string, path: string) => Promise<AssetActionResult>;
@@ -18,21 +17,11 @@ export interface AssetActionsSource {
 export interface SessionWorkspaceLayoutProps {
   workspace: SessionWorkspace;
   session: AcpSessionState;
-  /** The conversation column: transcript, approvals and composer. */
   chat: ReactNode;
-  /** Absent where the session serves no asset actions; the preview then offers none. */
   assetActions?: AssetActionsSource;
-  /** Absent where the tree is read-only; present, it adds the file-management controls to the tree. */
   management?: FileTreeManagement;
 }
 
-/**
- * The tree, the Chat and Activity tabs, the open files and their preview, laid
- * out around a conversation. Wide screens keep the tree and a preview pane
- * beside the chat; a narrow one shows the tree on demand and one pane at a time.
- * The wide preview pane stays even with nothing open, so closing the last tab
- * does not rearrange the screen.
- */
 export function SessionWorkspaceLayout({
   workspace,
   session,
@@ -124,7 +113,6 @@ export function SessionWorkspaceLayout({
   );
 }
 
-/** The `@` mention browser, shown while a mention is being typed. */
 export function SessionMentionMenu({ menu }: { menu: UseMentionMenuResult }) {
   if (!menu.open) return null;
   return (

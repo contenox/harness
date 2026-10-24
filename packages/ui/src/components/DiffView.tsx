@@ -8,9 +8,6 @@ export interface DiffLine {
   newLineNumber?: number;
 }
 
-/**
- * Builds `DiffLine[]` from old→new file text for `DiffView` using an LCS line diff (common prefix/suffix trimmed first, so typical single-hunk edits skip the DP entirely).
- */
 export function diffLinesFromTexts(
   oldText: string,
   newText: string,
@@ -124,17 +121,8 @@ function emitMiddleDiff(
 }
 
 export interface DiffViewProps extends React.HTMLAttributes<HTMLDivElement> {
-  /**
-   * The file path shown in the header.
-   */
   filePath: string;
-  /**
-   * Parsed diff lines.
-   */
   lines: DiffLine[];
-  /**
-   * Optional language hint (for future syntax highlighting).
-   */
   language?: string;
 }
 
@@ -172,7 +160,7 @@ export const DiffView = forwardRef<HTMLDivElement, DiffViewProps>(
         )}
         {...props}
       >
-        {/* File header */}
+
         <div
           className={cn(
             "flex items-center gap-2 border-b px-3 py-1.5",
@@ -190,13 +178,13 @@ export const DiffView = forwardRef<HTMLDivElement, DiffViewProps>(
           )}
         </div>
 
-        {/* Lines */}
+
         <div className="overflow-x-auto">
           <table className="w-full border-collapse font-mono text-xs leading-5">
             <tbody>
               {lines.map((line, i) => (
                 <tr key={i} className={lineTypeStyles[line.type]}>
-                  {/* Old line number */}
+
                   <td
                     className={cn(
                       "w-10 select-none px-2 text-right align-top",
@@ -205,7 +193,7 @@ export const DiffView = forwardRef<HTMLDivElement, DiffViewProps>(
                   >
                     {line.type !== "add" ? (line.oldLineNumber ?? "") : ""}
                   </td>
-                  {/* New line number */}
+
                   <td
                     className={cn(
                       "w-10 select-none px-2 text-right align-top",
@@ -214,11 +202,11 @@ export const DiffView = forwardRef<HTMLDivElement, DiffViewProps>(
                   >
                     {line.type !== "remove" ? (line.newLineNumber ?? "") : ""}
                   </td>
-                  {/* Prefix */}
+
                   <td className="w-4 select-none px-1 text-center align-top">
                     {prefixChar[line.type]}
                   </td>
-                  {/* Content */}
+
                   <td className="whitespace-pre-wrap break-all px-2 align-top">
                     {line.content}
                   </td>

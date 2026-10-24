@@ -62,20 +62,10 @@ type setupProvider struct {
 	defaultModel string
 	envKey       string
 	needsAPIKey  bool
-	// needsBaseURL marks providers whose endpoint is account-specific and cannot
-	// be defaulted (e.g. Vertex, whose URL carries the GCP project + region).
 	needsBaseURL bool
 	baseURLHint  string
 }
 
-// setupProviders is the terminal wizard's provider menu. DRIFT HAZARD: it
-// duplicates provider metadata (base-URL / secret requirements) that
-// providerservice.providerDefaultsByType already owns; keep the two in sync and,
-// ideally, derive this menu from providerservice.ListSupportedProviders instead
-// of hand-listing (the per-provider defaultModel is the only field not yet in
-// that catalog). Adding a provider here without a matching providerservice entry
-// — or vice versa — is exactly the class of drift that hid vertex-google from
-// this menu even though the runtime, CLI, and serve already supported it.
 var setupProviders = []setupProvider{
 	{key: "ollama", label: "Ollama (local daemon)", defaultModel: "qwen2.5:7b", needsAPIKey: false},
 	{key: "openai", label: "OpenAI", defaultModel: "gpt-5-mini", envKey: "OPENAI_API_KEY", needsAPIKey: true},
@@ -84,9 +74,6 @@ var setupProviders = []setupProvider{
 	{key: "vertex-google", label: "Google Vertex AI (Gemini via gcloud ADC)", defaultModel: "gemini-flash-latest", needsAPIKey: false, needsBaseURL: true, baseURLHint: "https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT/locations/us-central1"},
 }
 
-// errSetupNoInput is returned when setup's interactive provider choice reaches
-// EOF without an answer, so the command exits non-zero (an accidental pipe / CI
-// step is told setup did nothing) rather than silently committing a default.
 var errSetupNoInput = errors.New("setup: no input received (interactive); nothing changed")
 
 func runSetup(cmd *cobra.Command, out io.Writer) error {
@@ -98,7 +85,6 @@ func runSetup(cmd *cobra.Command, out io.Writer) error {
 		return fmt.Errorf("global init: %w", err)
 	}
 
-	// Show current configuration status.
 	alreadyConfigured := false
 	if dbPath, gpErr := globalDBPath(); gpErr == nil {
 		if db, openErr := OpenDBAt(libtracker.WithNewRequestID(context.Background()), dbPath); openErr == nil {
@@ -146,9 +132,6 @@ func runSetup(cmd *cobra.Command, out io.Writer) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	chosen := promptChoiceOrQuit(out, scanner, "  Provider", len(setupProviders), alreadyConfigured)
 	if chosen == promptEOF {
-		// No answer was given (piped /dev/null, closed stdin, non-interactive run).
-		// Refuse to commit a guessed default — an accidental pipe or a CI step must
-		// never silently reconfigure the runtime. Fail loudly instead of exit 0.
 		fmt.Fprintln(out, "")
 		fmt.Fprintln(out, "  No input received — `contenox setup` is interactive and made no changes.")
 		fmt.Fprintln(out, "  Run it in a terminal, or configure non-interactively with `contenox config set`")
@@ -169,7 +152,6 @@ func runSetup(cmd *cobra.Command, out io.Writer) error {
 		if apiKey != "" {
 			fmt.Fprintf(out, "  ✓ Found %s in environment.\n\n", sp.envKey)
 		} else {
-			// Check if a key is already stored in the database.
 			if dbPath, gpErr := globalDBPath(); gpErr == nil {
 				if db, openErr := OpenDBAt(libtracker.WithNewRequestID(context.Background()), dbPath); openErr == nil {
 					store := runtimetypes.New(db.WithoutTransaction())
@@ -251,25 +233,6 @@ func runSetup(cmd *cobra.Command, out io.Writer) error {
 	return nil
 }
 
-// setupLocalModeld resolves a protocol-compatible prebuilt modeld package for
-// this platform and installs it. On any soft failure (no index, no compatible
-// package, unsupported platform, network error) it falls back to the source-build
-// instructions; a checksum mismatch is reported as a hard failure without
-// falling back. Backend selection is never forced here — modeld picks its live
-// backend at `serve` time.
-
-// runLocalModeldSetup is the testable core of setupLocalModeld: it takes the
-// install options (so tests can point at a fake server + temp data root) and
-// drives the prebuilt-check / install / fallback UX.
-
-// printModeldInstallFallback explains why the prebuilt path did not apply and,
-// except for a checksum mismatch, prints the source-build instructions.
-
-// reportSetupReadiness runs the same read-only reachability check as
-// `contenox doctor` (a backend sync, never a model completion) and prints an
-// honest verdict instead of unconditionally claiming success. Config is already
-// saved; this only reports — it never second-guesses the operator or mutates
-// anything, so it is safe even against ERP/audited tool backends.
 func reportSetupReadiness(ctx context.Context, cmd *cobra.Command, db libdb.DBManager, out io.Writer, provider, model string) {
 	contenoxDir, _ := ResolveContenoxDir(cmd)
 	opts, err := buildRunOpts(cmd, db, contenoxDir)
@@ -313,8 +276,6 @@ func registerSetupBackend(ctx context.Context, db libdb.DBManager, providerType,
 
 	backendURL := strings.TrimSpace(baseURL)
 	if backendURL == "" {
-		// Providers with a stable, account-independent endpoint default it here;
-		// account-specific providers (vertex-google) supply baseURL from the wizard.
 		switch providerType {
 		case "ollama":
 			if base, ok := setupcheck.ProbeLocalOllamaAPI(ctx); ok {
@@ -336,9 +297,6 @@ func registerSetupBackend(ctx context.Context, db libdb.DBManager, providerType,
 		if !strings.EqualFold(b.Type, providerType) {
 			continue
 		}
-		// Re-running setup should be able to rewire an account-specific endpoint
-		// (e.g. point Vertex at a new project/region) rather than silently keeping
-		// the stale URL. Only touch the record when the URL actually changed.
 		if backendURL != "" && b.BaseURL != backendURL {
 			b.BaseURL = backendURL
 			if err := svc.Update(ctx, b); err != nil {
@@ -381,12 +339,6 @@ func promptOllamaModel(out io.Writer, scanner *bufio.Scanner, defaultModel strin
 	return promptLine(out, scanner, fmt.Sprintf("  Model [%s]", defaultModel), defaultModel)
 }
 
-// promptEOF is returned when the input stream ends before the user answers the
-// gating provider choice (e.g. `contenox setup </dev/null`, a closed or piped-dry
-// stdin). It is distinct from -1 (an intentional "q" quit): EOF means "no answer
-// given", so setup must abort WITHOUT committing a guessed default rather than
-// silently reconfigure the runtime. A genuine piped run supplies the answer lines
-// and never reaches this branch.
 const promptEOF = -2
 
 func promptChoiceOrQuit(out io.Writer, scanner *bufio.Scanner, label string, max int, allowQuit bool) int {

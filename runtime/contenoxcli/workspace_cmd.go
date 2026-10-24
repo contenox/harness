@@ -1,23 +1,3 @@
-// workspace_cmd.go is the `contenox workspace` command tree — the shell-side
-// grant verbs for the workspace-root allowlist that bounds what a session (a
-// chat, a dispatched unit, a Beam file browse) may choose as its working
-// directory.
-//
-// Unlike `contenox fleet` / `mission`, these do NOT reach serve over REST. A
-// grant is DURABLE config in the shared ~/.contenox-harness/local.db every process opens,
-// so `workspace add/remove` writes it directly (the config-command register of
-// `contenox config`) and then rings a reload doorbell on the shared SQLite bus —
-// the same cross-process rail the report-routing slice proved (CLI writer → serve
-// reader). A running `contenox serve` re-reads the config on that signal and
-// swaps its live root set without a restart; a serve started later reads the same
-// durable config at boot. So these verbs work whether or not serve is up, and a
-// running serve applies them live.
-//
-// `workspace` manages the GRANTS — the roots an operator adds beyond serve's
-// launch-time roots (its served directory, --workspace-root flags,
-// WORKSPACE_ROOTS). serve always also allows its own launched default root; that
-// one is not a grant and is not listed here (it shows in the API / Beam picker,
-// GET /workspace/roots).
 package contenoxcli
 
 import (
@@ -101,20 +81,12 @@ func init() {
 }
 
 func runWorkspaceAdd(cmd *cobra.Command, args []string) error {
-	// Same boundary rule as the REST mutator (workspace_reload.go): a bad friendly
-	// name is refused BEFORE anything persists, never silently dropped.
 	rawName, _ := cmd.Flags().GetString("name")
 	name, err := project.NormalizeName(rawName)
 	if err != nil {
 		return fmt.Errorf("%w: %v", workspacegrants.ErrInvalidGrant, err)
 	}
 
-	// Control-plane isolation (vfs-invariant slice): refuse granting the runtime's
-	// own state dir (~/.contenox-harness: config, database, HITL policies, declared agents)
-	// as a workspace root. This CLI runs in a SEPARATE process from serve, which is
-	// where the vfs global denylist is set, so we compute the control-plane dirs
-	// here (the same set serve denies) and check against them directly. See
-	// runtime/vfs/controlplane.go.
 	if contenoxDir, derr := ResolveContenoxDir(cmd); derr == nil {
 		if denied, ok := vfs.WithinControlPlane(controlPlaneDirs(contenoxDir), args[0]); ok {
 			return fmt.Errorf("%w: %q is inside the runtime's control plane (%s) and can never be a workspace root — the runtime never lets a session reach its own config, database, or policies", workspacegrants.ErrInvalidGrant, args[0], denied)
@@ -132,12 +104,6 @@ func runWorkspaceAdd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	// Register the granted directory as a project — the SAME best-effort marker
-	// stamp the serve-side REST mutator applies (fresh markers default their name
-	// to the folder basename; an explicit --name renames), so a CLI grant and a
-	// Beam "Add project" produce the same on-disk result. The grant is already
-	// durable, so a marker write failure (e.g. a read-only folder) only costs the
-	// friendly name, never the grant.
 	if _, merr := project.Register(args[0], name); merr != nil {
 		fmt.Fprintf(cmd.ErrOrStderr(),
 			"note: root granted, but its project marker could not be written (the name falls back to the folder name): %v\n", merr)
@@ -176,11 +142,6 @@ func runWorkspaceList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// ringReloadDoorbell publishes the reload signal on the shared SQLite bus so a
-// running serve applies the change live. Best-effort by contract: the grant is
-// already durable, so a publish failure (no serve to hear it, a bus hiccup)
-// leaves the grant intact and serve converges on its next boot or signal — it is
-// noted on stderr, never a command failure.
 func ringReloadDoorbell(ctx context.Context, cmd *cobra.Command, db libdb.DBManager, roots []string) {
 	bus := libbus.NewSQLite(db.WithoutTransaction())
 	defer bus.Close()
@@ -198,8 +159,6 @@ func printWorkspaceGrants(cmd *cobra.Command, roots []string) {
 	}
 	fmt.Fprintln(out, "Granted workspace roots:")
 	for _, r := range roots {
-		// The project's friendly name, when its marker carries one — the same label
-		// the API and the Beam picker show for this root.
 		if m, ok := project.ReadFromProjectRoot(r); ok && m.Name != "" {
 			fmt.Fprintf(out, "  %s  (%s)\n", r, m.Name)
 			continue

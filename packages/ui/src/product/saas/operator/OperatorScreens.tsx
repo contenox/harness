@@ -6,9 +6,6 @@ import { ScreenError, ScreenLoading } from '../ScreenState';
 import { ScreenHeader } from '../../shell/ScreenHeader';
 import { BackTo } from '../../shell/BackTo';
 
-/**
- * A role as the console lists and edits it.
- */
 export interface OperatorRole {
   name: string;
   description?: string;
@@ -17,9 +14,6 @@ export interface OperatorRole {
   expiresAt?: string;
 }
 
-/**
- * One grant of a role to an account.
- */
 export interface OperatorRoleAssignment {
   id: string;
   accountID: string;
@@ -31,9 +25,6 @@ export interface OperatorRoleAssignment {
   revokedAt?: string;
 }
 
-/**
- * What an operator states a role to be.
- */
 export interface RoleDraft {
   description: string;
   deny: boolean;
@@ -44,9 +35,6 @@ export interface RoleDraft {
 
 const SEATS = 'seats';
 
-/**
- * The operator console: what each role confers, who holds it, and the two ways to change that.
- */
 export function OperatorRolesScreen({
   roles,
   define,
@@ -122,9 +110,6 @@ export function OperatorRolesScreen({
   );
 }
 
-/**
- * One role: what it grants, who holds it, and granting it to somebody.
- */
 export function OperatorRoleScreen({
   role,
   save,
@@ -256,9 +241,6 @@ function draftFromFields(name: string, description: string, deny: boolean, seats
   };
 }
 
-/**
- * Re-exported so a caller can render a role's headline without re-deriving it.
- */
 export function roleSummary(role: OperatorRole): string {
   if (role.deny) return 'withholds access';
   const seats = role.grant.allowances?.[SEATS] ?? 0;
@@ -266,9 +248,6 @@ export function roleSummary(role: OperatorRole): string {
   return `${seats} seats${capabilities.length > 0 ? ` · ${capabilities.join(', ')}` : ''}`;
 }
 
-/**
- * Kept for callers that want the grant as key/value rows.
- */
 export function RoleGrantRows({ role }: { role: OperatorRole }) {
   return (
     <>

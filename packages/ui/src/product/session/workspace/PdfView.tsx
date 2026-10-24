@@ -1,8 +1,5 @@
 import type { PreviewViewerProps } from './previewRegistry';
 
-/**
- * The PDF viewer of the preview pipe.
- */
 export default function PdfView({ content, name }: PreviewViewerProps) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1">

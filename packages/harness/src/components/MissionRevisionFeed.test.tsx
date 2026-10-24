@@ -35,7 +35,6 @@ describe('MissionRevisionFeed', () => {
     expect(html).toContain('Plan revisions');
     expect(html).toContain('+1/−2');
     expect(html).toContain('Reordered after the runner came back');
-    // newest (revision 2) appears before oldest (revision 1)
     expect(html.indexOf('Reordered after the runner came back')).toBeLessThan(
       html.indexOf('Initial plan'),
     );

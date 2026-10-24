@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// An image attachment becomes an OpenAI content-parts array; a text-only
-// message keeps a plain-string content.
 func TestUnit_Build_SerializesImageAsContentParts(t *testing.T) {
 	pngBytes := []byte{0x89, 0x50, 0x4e, 0x47}
 	msgs := []modelrepo.Message{
@@ -40,7 +38,6 @@ func TestUnit_Build_SerializesImageAsContentParts(t *testing.T) {
 	if len(got.Messages) != 2 {
 		t.Fatalf("expected 2 messages, got %d", len(got.Messages))
 	}
-	// Text-only message: content is a bare JSON string (unchanged wire shape).
 	if b := got.Messages[0].Content; len(b) == 0 || b[0] != '"' {
 		t.Errorf("text-only content should be a JSON string, got %s", b)
 	}
@@ -116,7 +113,6 @@ func TestUnit_Build_ToolOnlyAssistantHasNullContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// content must serialize as null, not "".
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal(b, &probe); err != nil {
 		t.Fatal(err)
@@ -127,7 +123,6 @@ func TestUnit_Build_ToolOnlyAssistantHasNullContent(t *testing.T) {
 }
 
 func TestUnit_DecodeResponse_TextAndToolCalls(t *testing.T) {
-	// "fs_list" is the sanitized name; caller's original was "fs.list".
 	nameMap := map[string]string{"fs_list": "fs.list"}
 	raw := []byte(`{"choices":[{"index":0,"finish_reason":"tool_calls","message":{"role":"assistant","content":"working","tool_calls":[{"id":"call_9","type":"function","function":{"name":"fs_list","arguments":"{\"path\":\"/tmp\"}"}}]}}]}`)
 
@@ -149,7 +144,6 @@ func TestUnit_DecodeResponse_TextAndToolCalls(t *testing.T) {
 	}
 }
 
-// The decoder only translates the wire; assembly happens once in modelrepo.StreamAssembler.
 func TestUnit_StreamDecoder_EmitsRawDeltasForAssembler(t *testing.T) {
 	nameMap := map[string]string{"fs_list": "fs.list"}
 	d := chatcompletions.NewStreamDecoder(nameMap)
@@ -202,8 +196,6 @@ func TestUnit_StreamDecoder_EmitsRawDeltasForAssembler(t *testing.T) {
 	}
 }
 
-// A connection that ends before the dialect's [DONE] sentinel is truncated, and
-// assembly fails by naming it rather than returning a completed turn.
 func TestUnit_StreamDecoder_UnterminatedStreamIsTruncated(t *testing.T) {
 	d := chatcompletions.NewStreamDecoder(nil)
 	asm := modelrepo.NewStreamAssembler("openai", "test-model")
@@ -224,7 +216,6 @@ func TestUnit_StreamDecoder_UnterminatedStreamIsTruncated(t *testing.T) {
 	}
 }
 
-// The finish reason the vendor reported survives onto the assembled turn.
 func TestUnit_StreamDecoder_FinishReasonIsPreserved(t *testing.T) {
 	d := chatcompletions.NewStreamDecoder(nil)
 	asm := modelrepo.NewStreamAssembler("openai", "test-model")
@@ -270,8 +261,6 @@ func TestUnit_ReasoningEffort_MapsThinkOntoTheWire(t *testing.T) {
 	assert.Equal(t, "", chatcompletions.ReasoningEffort(&invalid))
 }
 
-// wireRequest marshals a built request and decodes it into a probe, so each
-// assertion reads the JSON member the vendor receives rather than the Go field.
 func wireRequest(t *testing.T, cfg *modelrepo.ChatConfig) map[string]json.RawMessage {
 	t.Helper()
 	req, _ := chatcompletions.Build("m", []modelrepo.Message{{Role: "user", Content: "hi"}}, cfg)
@@ -387,8 +376,6 @@ func TestUnit_Build_TextFormatIsAbsentFromTheWire(t *testing.T) {
 	}
 }
 
-// Decoding a request the vendor shape allows keeps the object form, so a
-// surface that receives one can read the selected function.
 func TestUnit_DecodeRequest_AcceptsBothToolChoiceForms(t *testing.T) {
 	var named chatcompletions.Request
 	if err := json.Unmarshal([]byte(`{"model":"m","tool_choice":{"type":"function","function":{"name":"fs_list"}}}`), &named); err != nil {
@@ -441,8 +428,6 @@ func toolCall(id, name, args string) modelrepo.ToolCall {
 	return call
 }
 
-// A refusal is a vendor-reported outcome, not an empty answer: it reaches the
-// caller as the typed refusal with the vendor's own explanation.
 func TestUnit_DecodeResponse_RefusalIsTheTypedRefusal(t *testing.T) {
 	raw := []byte(`{"choices":[{"index":0,"finish_reason":"refusal","message":{"role":"assistant","content":"","refusal":"I can't help with that."}}]}`)
 	_, err := chatcompletions.DecodeResponse(raw, nil)
@@ -454,8 +439,6 @@ func TestUnit_DecodeResponse_RefusalIsTheTypedRefusal(t *testing.T) {
 	}
 }
 
-// A finish reason that reports the refusal without a reason string is still the
-// typed refusal, not the empty-content error.
 func TestUnit_DecodeResponse_RefusalFinishReasonIsTheTypedRefusal(t *testing.T) {
 	raw := []byte(`{"choices":[{"index":0,"finish_reason":"refusal","message":{"role":"assistant","content":""}}]}`)
 	_, err := chatcompletions.DecodeResponse(raw, nil)
@@ -464,7 +447,6 @@ func TestUnit_DecodeResponse_RefusalFinishReasonIsTheTypedRefusal(t *testing.T) 
 	}
 }
 
-// A genuinely empty answer is still an error, and it is not a refusal.
 func TestUnit_DecodeResponse_EmptyAnswerStaysAnError(t *testing.T) {
 	raw := []byte(`{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":""}}]}`)
 	_, err := chatcompletions.DecodeResponse(raw, nil)
@@ -476,8 +458,6 @@ func TestUnit_DecodeResponse_EmptyAnswerStaysAnError(t *testing.T) {
 	}
 }
 
-// A streamed refusal fails the turn as the typed refusal instead of assembling
-// an empty answer.
 func TestUnit_StreamDecoder_RefusalIsTheTypedRefusal(t *testing.T) {
 	d := chatcompletions.NewStreamDecoder(nil)
 	parcels, err := d.DecodeLine([]byte(`{"choices":[{"index":0,"delta":{"refusal":"I won't."}}]}`))
@@ -500,8 +480,6 @@ func TestUnit_StreamDecoder_RefusalIsTheTypedRefusal(t *testing.T) {
 	}
 }
 
-// The dialects report cache writes, cache reads and thinking tokens in
-// different members, and all of them land on the neutral usage type.
 func TestUnit_DecodeResponse_UsageDetailIsCarried(t *testing.T) {
 	raw := []byte(`{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"ok"}}],
 		"usage":{"prompt_tokens":100,"completion_tokens":40,"total_tokens":140,
@@ -525,8 +503,6 @@ func TestUnit_DecodeResponse_UsageDetailIsCarried(t *testing.T) {
 	}
 }
 
-// A streamed error envelope fails the turn with the vendor's message instead of
-// leaving the partial text to assemble into a completed answer.
 func TestUnit_StreamDecoder_ErrorFrameFailsTheTurn(t *testing.T) {
 	d := chatcompletions.NewStreamDecoder(nil)
 	asm := modelrepo.NewStreamAssembler("openai", "test-model")
@@ -564,8 +540,6 @@ func TestUnit_StreamDecoder_ErrorFrameFailsTheTurn(t *testing.T) {
 	}
 }
 
-// OpenAI streams a vendor string code; the frame still fails the turn and the
-// code reaches the classifier.
 func TestUnit_StreamDecoder_ErrorFrameWithVendorCodeIsClassified(t *testing.T) {
 	d := chatcompletions.NewStreamDecoder(nil)
 	parcels, err := d.DecodeLine([]byte(`{"error":{"message":"This request is over the limit","type":"invalid_request_error","code":"context_length_exceeded"}}`))

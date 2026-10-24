@@ -52,7 +52,6 @@ describe('matchChangedFile', () => {
 
   it('resolves a root-relative hit to the changed file by joining the root', () => {
     expect(matchChangedFile(files, 'src/app.tsx', '/repo')?.path).toBe('/repo/src/app.tsx');
-    // A leading "./" on the hit path is tolerated.
     expect(matchChangedFile(files, './README.md', '/repo')?.path).toBe('/repo/README.md');
   });
 

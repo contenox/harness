@@ -8,11 +8,6 @@ import (
 	"github.com/contenox/harness/runtime/project"
 )
 
-// TestUnit_InitProject_ForcesLocalMarker verifies the `init --project` contract:
-// a child directory nested under a parent that already carries a project marker
-// must get its OWN local .contenox/workspace.id with a FRESH id (a distinct
-// project), instead of reusing the ancestor's marker that the git-style walk-up
-// would otherwise return.
 func TestUnit_InitProject_ForcesLocalMarker(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "contenox-init-project-*")
 	if err != nil {
@@ -20,7 +15,6 @@ func TestUnit_InitProject_ForcesLocalMarker(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	// parent/ carries a project marker; child/ is nested under it.
 	parentDir := filepath.Join(tempDir, "parent")
 	childDir := filepath.Join(parentDir, "sub1", "child")
 	if err := os.MkdirAll(childDir, 0o755); err != nil {
@@ -35,8 +29,6 @@ func TestUnit_InitProject_ForcesLocalMarker(t *testing.T) {
 		t.Fatal("expected parent marker to carry a non-empty id")
 	}
 
-	// Sanity: WITHOUT --project, resolving from the child walks up and reuses the
-	// parent's .contenox — this is exactly the behavior --project must bypass.
 	t.Chdir(childDir)
 	resolved, err := ResolveContenoxDir(nil)
 	if err != nil {
@@ -46,9 +38,6 @@ func TestUnit_InitProject_ForcesLocalMarker(t *testing.T) {
 		t.Fatalf("walk-up should reuse the ancestor marker: want %q, got %q", want, resolved)
 	}
 
-	// The --project path: resolve a LOCAL marker in cwd and write it. This mirrors
-	// runInitCmd's --project branch (resolveProjectInit + EnsureInContenoxDir), the
-	// only marker-writing step of RunInit exercised without its heavy scaffolding.
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Getwd: %v", err)
@@ -67,31 +56,24 @@ func TestUnit_InitProject_ForcesLocalMarker(t *testing.T) {
 		t.Fatalf("EnsureInContenoxDir: %v", err)
 	}
 
-	// A NEW local marker file must exist under the child.
 	if _, err := os.Stat(filepath.Join(contenoxDir, project.MarkerFileName)); err != nil {
 		t.Fatalf("expected a local marker at %s: %v", contenoxDir, err)
 	}
-	// It must carry a DIFFERENT id than the parent (a distinct project/workspace).
 	if childMarker.ID == "" {
 		t.Fatal("expected child marker to carry a non-empty id")
 	}
 	if childMarker.ID == parentMarker.ID {
 		t.Fatalf("child marker id %q must differ from parent id %q", childMarker.ID, parentMarker.ID)
 	}
-	// And its name must be set to the child dir basename.
 	if childMarker.Name != filepath.Base(childDir) {
 		t.Fatalf("expected child marker name %q, got %q", filepath.Base(childDir), childMarker.Name)
 	}
 
-	// The workspace-id resolver must now report the child's OWN id from the child
-	// dir, confirming the ancestor marker no longer shadows it.
 	if got := ResolveWorkspaceID(contenoxDir); got != childMarker.ID {
 		t.Fatalf("ResolveWorkspaceID(child) = %q, want %q", got, childMarker.ID)
 	}
 }
 
-// TestUnit_ResolveProjectInit_ExplicitNameWins verifies an explicit --name is
-// used verbatim rather than being replaced by the directory basename.
 func TestUnit_ResolveProjectInit_ExplicitNameWins(t *testing.T) {
 	cwd := filepath.Join(string(filepath.Separator), "tmp", "some-dir")
 	contenoxDir, projectName := resolveProjectInit(cwd, "My Project")

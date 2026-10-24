@@ -1,4 +1,3 @@
-// src/pages/admin/chains/components/workflows/EnhancedWorkflowEdge.tsx
 import { LayoutDirection, NodePosition, WorkflowEdge } from '@contenox/ui';
 import React from 'react';
 
@@ -11,7 +10,7 @@ interface EnhancedWorkflowEdgeProps {
   isHighlighted?: boolean;
   addButtonPositions?: Array<{ x: number; y: number }>;
   hasCompose?: boolean;
-  composeStrategy?: string | null; // upstream can be null
+  composeStrategy?: string | null;
   onComposeClick?: () => void;
 }
 
@@ -29,7 +28,7 @@ export const EnhancedWorkflowEdge: React.FC<EnhancedWorkflowEdgeProps> = ({
         source={source}
         target={target}
         hasCompose={hasCompose}
-        composeStrategy={composeStrategy ?? undefined} // coerce null → undefined
+        composeStrategy={composeStrategy ?? undefined}
         onComposeClick={onComposeClick}
         {...props}
       />

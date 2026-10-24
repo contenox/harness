@@ -30,9 +30,7 @@ type vertexProvider struct {
 	canVision       bool
 	canAudio        bool
 	tracker         libtracker.ActivityTracker
-	// expressKey is an Agent Platform express mode API key; a backend that
-	// stores one authenticates with the key alone.
-	expressKey string
+	expressKey      string
 
 	tokenOnce    sync.Once
 	tokenSrc     oauth2.TokenSource
@@ -42,7 +40,6 @@ type vertexProvider struct {
 	authErr      error
 }
 
-// NewVertexProvider returns a modelrepo.Provider for a Vertex AI model; credJSON is the service account key JSON, empty falls back to ADC.
 func NewVertexProvider(publisher, modelName string, baseURLs []string, cap modelrepo.CapabilityConfig, credJSON string, httpClient *http.Client, tracker libtracker.ActivityTracker) modelrepo.Provider {
 	if httpClient == nil {
 		httpClient = modelrepo.SharedHTTPClient
@@ -102,9 +99,6 @@ func (p *vertexProvider) tokenFn(_ context.Context) (string, error) {
 	return tok.AccessToken, nil
 }
 
-// resolveAuth classifies the stored secret once: express mode uses the key by
-// itself, and a user credential names the billing project, which a service
-// account does not.
 func (p *vertexProvider) resolveAuth() error {
 	p.authOnce.Do(func() {
 		if IsExpressAPIKey(p.credJSON) {

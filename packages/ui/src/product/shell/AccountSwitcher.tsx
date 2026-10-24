@@ -4,9 +4,6 @@ import { useState } from 'react';
 import { useProductPorts } from '../ports';
 import { roleLabel } from '../lib/roles';
 
-/**
- * Which team the app is acting under, and the way to another one.
- */
 export function AccountSwitcher() {
   const { useAuth, useSwitchAccount } = useProductPorts();
   const { accounts, accountID } = useAuth();

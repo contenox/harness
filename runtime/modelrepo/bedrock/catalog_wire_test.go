@@ -61,9 +61,6 @@ func modelSummary(id string, name string, streaming bool, inputs []string, outpu
 	return summary
 }
 
-// Every capability the catalogue declares is a member of the vendor's own model
-// summary, so a model the vendor does not describe is not given a capability it
-// never declared.
 func TestUnit_BedrockCatalog_CapabilitiesComeFromTheVendorSummary(t *testing.T) {
 	transport := catalogueTransport(catalogueFixture{models: []map[string]any{
 		modelSummary("anthropic.claude-3-5-sonnet-20241022-v2:0", "Claude 3.5 Sonnet v2", true, []string{"TEXT", "IMAGE"}, []string{"TEXT"}),
@@ -108,8 +105,6 @@ func TestUnit_BedrockCatalog_CapabilitiesComeFromTheVendorSummary(t *testing.T) 
 	require.False(t, undescribed.CanVision)
 }
 
-// A model the vendor offers only through a cross-region inference profile is
-// invoked through that profile, preferring the geographic one over the global.
 func TestUnit_BedrockCatalog_ResolvesTheInvocableModelID(t *testing.T) {
 	transport := catalogueTransport(catalogueFixture{
 		models: []map[string]any{
@@ -148,9 +143,6 @@ func TestUnit_BedrockCatalog_ResolvesTheInvocableModelID(t *testing.T) {
 	}, names, "a profile-only model resolves to its geographic profile, its global profile when that is all there is, and is omitted when it has neither")
 }
 
-// The vendor documents which request body each Mistral model takes, and
-// mistral.mistral-large-2407-v1:0 is a chat-completion and Converse model, not a
-// text-completion one.
 func TestUnit_BedrockMistralClassification(t *testing.T) {
 	catalogue, err := modelrepo.NewCatalogProvider(modelrepo.BackendSpec{Type: "bedrock"})
 	require.NoError(t, err)

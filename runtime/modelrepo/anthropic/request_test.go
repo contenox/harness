@@ -338,9 +338,6 @@ func TestUnit_AnthropicSampling_ThinkingOnForbidsTemperature(t *testing.T) {
 	})
 }
 
-// Forced tool use is incompatible with a caller-set thinking budget, so the
-// adapter refuses it where the caller can fix it rather than sending a request
-// the vendor answers with a 400.
 func TestUnit_AnthropicChat_ForcedToolUseRefusedWithManualThinking(t *testing.T) {
 	budgeted := &modelrepo.ThinkingTypes{Enabled: true, Disabled: true}
 	adaptive := &modelrepo.ThinkingTypes{Adaptive: true}

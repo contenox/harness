@@ -1,9 +1,3 @@
-/**
- * i18n keys referenced in this file (namespace `canvas`/`terminal`; see i18n.ts):
- *   terminal.panel_title    = "Terminal"          (canvas terminal-tab label)
- *   terminal.open_in_canvas = "Open the terminal…" (open-terminal affordance)
- *   canvas.close_tab        = "Close {{name}}"     (canvas tab ✕ aria-label)
- */
 import {
   Button,
   cn,
@@ -25,40 +19,16 @@ import { TERMINAL_CANVAS_TAB, type CanvasTab } from '../lib/canvasTabs';
 import { FileViewTab } from './FileViewTab';
 import { TerminalTab } from './TerminalTab';
 
-/** The canvas becomes a side-by-side split at/above this width; below it, a full-width takeover. */
 const SIDE_BY_SIDE_QUERY = '(min-width: 1024px)';
 
 export interface CanvasRegionProps {
-  /** The focused session whose surfaces the canvas reflects (`null` = empty/new-chat). */
   sessionId: string | null;
-  /** The canvas tab-model (open list, active id, open/close/focus). */
   canvas: UseCanvasTabsResult;
-  /** Reads a file's content — threaded to the read-only `file` canvas tabs. */
   readFile: (path: string) => Promise<WorkspaceFilePeek>;
-  /** The primary (chat) body — rendered beside the canvas when open, full-width when the canvas is empty. */
   children: ReactNode;
   className?: string;
 }
 
-/**
- * The chat's secondary CANVAS region (workspace-canvas Slice B1): a resizable,
- * tabbed pane to the RIGHT of the chat body holding the terminal (B1) and, later,
- * file/diff surfaces (B2+). It wraps the chat `children` and:
- *
- *  - **Collapses** entirely when no canvas tab is open — the chat takes the full
- *    width and no split/handle renders.
- *  - **Side-by-side** at ≥1024px: an `@contenox/ui` `ResizablePanelGroup` splits
- *    chat | canvas with a draggable handle; the canvas defaults to 480px and is
- *    resizable within bounds.
- *  - **Full-width takeover** below 1024px: the canvas fills the region so it is
- *    never a cramped side rail on a narrow viewport. The chat body stays MOUNTED
- *    (hidden) so its stream/draft survive; closing the canvas tab returns to it.
- *
- * The breakpoint is resolved in JS (`useMediaQuery`) rather than pure CSS because
- * the split's sizing lives in `ResizablePanel`'s inline flex styles, which a
- * responsive class can't override — so the two layouts are distinct subtrees, and
- * `children` renders in exactly one of them at a time (single mount).
- */
 export function CanvasRegion({
   sessionId,
   canvas,
@@ -70,8 +40,6 @@ export function CanvasRegion({
   const sideBySide = useMediaQuery(SIDE_BY_SIDE_QUERY);
   const { open, close } = canvas;
 
-  // The single terminal affordance is a real toggle: open the terminal canvas
-  // tab if it isn't open, close it if it is (so a second click dismisses it).
   const terminalOpen = canvas.tabs.some(tab => tab.id === TERMINAL_CANVAS_TAB.id);
   const toggleTerminal = useCallback(
     () => (terminalOpen ? close(TERMINAL_CANVAS_TAB.id) : open(TERMINAL_CANVAS_TAB)),
@@ -97,11 +65,6 @@ export function CanvasRegion({
     </Button>
   );
 
-  // Collapsed: no canvas tab open — the chat body takes the full width, with a
-  // slim rail carrying the always-available "open sidecar" affordance. The rail
-  // is `hidden sm:flex`: on a phone it would just eat ~28px of the chat, so the
-  // opener moves to the header toggle (see ChatSessionToolbar) and the chat gets
-  // the full width.
   if (canvas.tabs.length === 0) {
     return (
       <div className={cn('flex min-h-0 min-w-0 flex-1', className)}>
@@ -126,9 +89,6 @@ export function CanvasRegion({
 
   const stripTabs: Tab[] = canvas.tabs.map(tab => {
     const label = tabLabel(tab);
-    // Cap the tab width so a long file path (canvas tabs can carry one) truncates
-    // with an ellipsis instead of stretching the tab and forcing the strip to
-    // scroll — matching the session strip's label treatment (WorkspaceTabs).
     return {
       id: tab.id,
       label: <span className="block max-w-[12rem] truncate">{label}</span>,
@@ -165,7 +125,6 @@ export function CanvasRegion({
     </div>
   );
 
-  // Narrow: full-width takeover — the canvas replaces the (still-mounted) chat.
   if (!sideBySide) {
     return (
       <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col', className)}>
@@ -175,7 +134,6 @@ export function CanvasRegion({
     );
   }
 
-  // Wide: side-by-side resizable chat | canvas split.
   return (
     <ResizablePanelGroup className={cn('min-w-0 flex-1', className)}>
       <ResizablePanel className="flex min-h-0 flex-col">{children}</ResizablePanel>

@@ -55,7 +55,6 @@ function toolCallCardStatus(
   }
 }
 
-/** Content-identity key for a diff entry — stable across a `tool_call_update` that replaces the whole `content` array wholesale, so React doesn't remount (and lose UI state on) an unchanged diff just because its array position shifted. Falls back to the positional index only when the path itself repeats within one call. */
 function diffKey(path: string | undefined, indexOfKind: number): string {
   return `diff-${path ?? 'unnamed'}-${indexOfKind}`;
 }
@@ -68,12 +67,6 @@ function locationKey(
   return `loc-${path ?? 'unnamed'}-${line ?? ''}-${indexOfKind}`;
 }
 
-/**
- * The contenox agent's avatar mark, theme-paired exactly like `Layout.tsx`'s
- * header logo. Agent-name-gated (case-insensitive `contenox` match) so a
- * differently-named/fleet ACP agent still falls back to `ChatMessage`'s
- * default letter avatar instead of showing a mark that isn't its own.
- */
 function useAssistantAvatar(agentName: string | null): ReactNode {
   const { theme } = useTheme();
   if (!agentName || !/contenox/i.test(agentName)) return undefined;
@@ -113,9 +106,6 @@ function TranscriptMessage({
       avatar={avatar}
       isLatest={isLatest}
       latestLabel={t('acp_chat.latest_label')}
-      // This transcript surface doesn't collapse plain messages — only thought
-      // blocks and tool detail collapse (see the Collapsible below and
-      // ToolCallCard's own detail toggle).
       collapsible={false}
       copyText={message.text || undefined}
       copyLabel={t('acp_chat.copy')}
@@ -140,15 +130,11 @@ function TranscriptMessage({
           {t('acp_chat.typing_label')}
         </ChatTranscriptStreamingPlaceholder>
       ) : null}
-      {/* A message that IS a unit's question gets its answer box here: the unit is
-          parked on the call that asked, so replying in place unblocks it. */}
+
       {message.missionAsk && (
         <MissionAskCard key={message.missionAsk.askId} ask={message.missionAsk} />
       )}
       {message.images && message.images.length > 0 && (
-        // Image parts render after the flattened text (see AcpChatMessage.images),
-        // via the shared inline-attachment image kind: constrained thumbnail,
-        // click-to-expand dialog.
         <InlineAttachments
           attachments={message.images.map(img => ({
             kind: 'image' as const,
@@ -172,10 +158,6 @@ function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; 
   const other = (toolCall.content ?? []).filter(c => c.type !== 'diff');
   const hasRaw = toolCall.rawInput != null || toolCall.rawOutput != null || other.length > 0;
 
-  // `execute`-kind calls (local_shell, run/exec tools) render like the actual
-  // shell they ran in, not a JSON dump — same TerminalOutput component the
-  // live `!`-passthrough terminal tab uses (packages/beam TerminalTab.tsx),
-  // just fed this one call's command + output instead of a PTY stream.
   const shellLines =
     toolCall.kind === 'execute' && other.length === 0 ? shellOutputLines(toolCall.rawOutput) : null;
   if (shellLines) {
@@ -247,7 +229,6 @@ function TranscriptToolCall({ toolCall, onOpenFile }: { toolCall: AcpToolCallSta
     toolCall.rawOutput != null ||
     (toolCall.locations?.length ?? 0) > 0;
 
-  // Force re-render every second for running tools to update elapsed time
   const isRunning = toolCall.status === 'in_progress' || toolCall.status === 'pending';
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -256,7 +237,6 @@ function TranscriptToolCall({ toolCall, onOpenFile }: { toolCall: AcpToolCallSta
     return () => clearInterval(timer);
   }, [isRunning]);
 
-  // Calculate elapsed time for running/pending tools
   const elapsedSeconds =
     isRunning && toolCall.startTime ? Math.floor((Date.now() - toolCall.startTime) / 1000) : null;
   const duration = elapsedSeconds !== null ? `${elapsedSeconds}s` : undefined;
@@ -279,11 +259,6 @@ function TranscriptToolCall({ toolCall, onOpenFile }: { toolCall: AcpToolCallSta
   );
 }
 
-/**
- * A `!` passthrough line recorded in the transcript: a compact, collapsible
- * terminal-output excerpt (reuses the shared `terminal_excerpt` attachment). The
- * live/full stream lives in the terminal panel; this is the durable record.
- */
 function TranscriptTerminal({ card }: { card: AcpTerminalCard }) {
   const { t } = useTranslation();
   return (
@@ -294,18 +269,8 @@ function TranscriptTerminal({ card }: { card: AcpTerminalCard }) {
   );
 }
 
-/**
- * A failed turn, rendered inline in the transcript where it happened. Reuses
- * the same `classifyAcpExecutionError` taxonomy and `acpFailureCopyKeys`
- * mapping as the top recovery banner (see SessionBanners' `ExecutionErrorBanner`)
- * so a backend-unreachable / model-not-servable / workspace-required / generic
- * failure each gets a matching localized headline and plain-language body,
- * with the raw runtime error kept behind a collapsed disclosure. This is what
- * replaces the old silent dead-state: the chat can no longer just go quiet.
- */
 function TranscriptError({ card }: { card: AcpErrorCard }) {
   const { t } = useTranslation();
-  // Loosened `t` for the dynamic keys acpFailureCopyKeys returns (mirrors WorkspacePanel's `tk`).
   const tk = t as (key: string) => string;
   const kind = classifyAcpExecutionError(card.message);
   const copy = acpFailureCopyKeys(kind);
@@ -331,9 +296,7 @@ function TranscriptError({ card }: { card: AcpErrorCard }) {
 export interface TranscriptItemsProps {
   session: AcpSessionState;
   agentName: string | null;
-  /** Answers this session's pending permission (see `PermissionCard`). The card is only rendered when `session.pendingPermission` is set. */
   onRespondPermission: (optionId: string) => void;
-  /** Opens a file path in the canvas side panel. */
   onOpenFile?: (path: string) => void;
 }
 
@@ -347,7 +310,6 @@ interface RenderItemContext {
   onOpenFile?: (path: string) => void;
 }
 
-/** Renders ONE timeline item (plus its anchored permission card, if any). Shared by the flat path and the turn-grouped path below so both stay in sync. */
 function renderItem(item: AcpTimelineItem, isLatest: boolean, ctx: RenderItemContext): ReactNode {
   const { session, agentName, latestErrorItemId, pending, anchorId, onRespondPermission, onOpenFile } = ctx;
   let rendered: ReactNode = null;
@@ -369,16 +331,12 @@ function renderItem(item: AcpTimelineItem, isLatest: boolean, ctx: RenderItemCon
   }
   const anchorHere = pending && anchorId != null && item.kind === 'tool_call' && item.id === anchorId;
   if (!anchorHere) return rendered;
-  // Return a keyed array (not a wrapper element) so the tool-call card keeps
-  // its own stable key and is NOT remounted when the permission arrives or
-  // resolves; the card is anchored as its immediate sibling.
   return [
     rendered,
     <PermissionCard key={`perm-${item.id}`} permission={pending} onRespond={onRespondPermission} />,
   ];
 }
 
-/** One maximal run of consecutive `session.items` sharing a defined `turnId`, or a lone untagged item. */
 interface TimelineGroup {
   turnId: string | undefined;
   entries: Array<{ item: AcpTimelineItem; index: number }>;
@@ -397,50 +355,16 @@ function groupByTurn(items: AcpTimelineItem[]): TimelineGroup[] {
   return groups;
 }
 
-/**
- * Renders `session.items` in arrival order (D4's unified timeline) —
- * messages via `ChatMessage`, tool calls via `ToolCallCard`. Overall order is
- * exactly `session.items`; the only derivation this component adds is
- * grouping ONE turn's `tool_call`/`terminal` steps into a collapsible trail
- * that sits above that turn's answer, instead of interleaving them as flat
- * siblings — the steps happen first chronologically, but the answer is what
- * the user actually reads, so it gets top billing once the steps are done.
- * Items with no `turnId` (session/load replay, user echoes, out-of-band
- * mission questions) render exactly as before, ungrouped.
- *
- * A pending permission request (`session.pendingPermission`) is rendered inline
- * as a `PermissionCard` anchored right after the tool-call item it belongs to
- * (matched by `toolCallId`, wherever that item ends up — flat or inside a
- * step trail), so the approve/deny surface lives chronologically where the
- * request happened instead of in a page-covering modal. When the pending
- * request references no tool-call item yet (it can arrive before its
- * `tool_call` update), the card falls back to the end of the transcript. The
- * card answers ONLY via its explicit buttons — there is no dismiss/deny-on-
- * outside-click path anywhere in this flow.
- */
 export function TranscriptItems({ session, agentName, onRespondPermission, onOpenFile }: TranscriptItemsProps) {
   const { t } = useTranslation();
   const pending = session.pendingPermission;
   const pendingToolCallId = pending?.toolCall.toolCallId ?? null;
-  // Anchor the card after a real tool-call item only when one matches; otherwise
-  // it renders once at the end (see the fallback below).
   const anchorId =
     pendingToolCallId != null &&
     session.items.some(it => it.kind === 'tool_call' && it.id === pendingToolCallId)
       ? pendingToolCallId
       : null;
 
-  // The reducer's `prompt_error` case (acpSessionState.ts) sets `session.error`
-  // AND appends this SAME failed turn's card to `errorCards` in one atomic
-  // step, so for as long as `session.error` is non-null it is, by
-  // construction, exactly this most-recently-added error item's message.
-  // `ChatSessionTab` renders that live message once already, at the top, via
-  // `ExecutionErrorBanner` — skipping its in-transcript twin here (by item id,
-  // not by message text, so two DIFFERENT failed turns that happen to carry
-  // identical wording still both get their own card) is what collapses the
-  // "shown twice" bug into one presentation. `session.error` is cleared on the
-  // next `prompt_start`/`session_reset`, at which point this card starts
-  // rendering normally as part of the permanent history.
   const latestErrorItemId =
     session.error != null
       ? ([...session.items].reverse().find(it => it.kind === 'error')?.id ?? null)
@@ -455,16 +379,9 @@ export function TranscriptItems({ session, agentName, onRespondPermission, onOpe
       {groupByTurn(session.items).map(group => {
         const steps = group.entries.filter(({ item }) => item.kind === 'tool_call' || item.kind === 'terminal');
         const rest = group.entries.filter(({ item }) => item.kind !== 'tool_call' && item.kind !== 'terminal');
-        // Only worth a collapsible wrapper once there's both something that
-        // happened (steps) AND something to read below it (the answer). A
-        // steps-only group (still streaming, no text yet) or a message-only
-        // group (no tool calls this turn) renders exactly like the flat path.
         if (group.turnId === undefined || steps.length === 0 || rest.length === 0) {
           return group.entries.map(render);
         }
-        // Keep steps visible by default so the work that just happened remains
-        // legible. User can manually collapse if desired. The Collapsible
-        // component maintains its own internal open/closed state from here on.
         return (
           <div key={`turn-${group.turnId}`} className="space-y-2">
             <Collapsible

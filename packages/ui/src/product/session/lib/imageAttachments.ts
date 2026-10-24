@@ -22,9 +22,6 @@ const ATTACHABLE_IMAGE_TYPES = new Set([
   'image/bmp',
 ]);
 
-/**
- * Whether the session's agent advertises image prompt support (`initialize` → `agentCapabilities.promptCapabilities.image`).
- */
 export function canAttachImages(capabilities: PromptCapabilities | undefined): boolean {
   return capabilities?.image === true;
 }
@@ -33,17 +30,11 @@ export function isAttachableImageType(mimeType: string): boolean {
   return ATTACHABLE_IMAGE_TYPES.has(mimeType);
 }
 
-/**
- * One pending composer attachment: the wire payload (`ImagePart`) plus client-local presentation fields.
- */
 export interface PendingImageAttachment extends ImagePart {
   id: string;
   name: string;
 }
 
-/**
- * Why an image could not become an attachment — the UI maps each reason to a sentence.
- */
 export type ImageAttachmentErrorReason = 'unsupported' | 'too_large' | 'process_failed';
 
 export class ImageAttachmentError extends Error {
@@ -53,17 +44,11 @@ export class ImageAttachmentError extends Error {
   }
 }
 
-/**
- * Minimal structural view of `DataTransfer` (paste's `clipboardData`, drop's `dataTransfer`) so extraction is testable without a DOM.
- */
 export interface DataTransferLike {
   items?: ArrayLike<{ kind: string; type: string; getAsFile(): File | null }>;
   files?: ArrayLike<File>;
 }
 
-/**
- * The attachable image files in a paste/drop payload, in payload order.
- */
 export function imageFilesFromDataTransfer(dt: DataTransferLike | null | undefined): File[] {
   if (!dt) return [];
   const out: File[] = [];
@@ -85,9 +70,6 @@ export function imageFilesFromDataTransfer(dt: DataTransferLike | null | undefin
   return out;
 }
 
-/**
- * Whether a drag payload contains at least one attachable image, judged by the item TYPES only — usable during `dragover`, where `getAsFile()` still returns null (files materialize only on drop).
- */
 export function dataTransferHasImages(
   dt: { items?: ArrayLike<{ kind: string; type: string }> } | null | undefined,
 ): boolean {
@@ -99,9 +81,6 @@ export function dataTransferHasImages(
   return false;
 }
 
-/**
- * Decoded byte length of a base64 payload (without materializing it).
- */
 export function base64ByteLength(b64: string): number {
   if (b64 === '') return 0;
   let padding = 0;
@@ -110,9 +89,6 @@ export function base64ByteLength(b64: string): number {
   return (b64.length * 3) / 4 - padding;
 }
 
-/**
- * How many base64 CHARACTERS `bytes` of binary become — the inverse of {@link base64ByteLength}, and the only direction that matters for the budget, because base64 is what travels.
- */
 export function base64LengthForBytes(bytes: number): number {
   return Math.ceil(bytes / 3) * 4;
 }
@@ -128,9 +104,6 @@ const IMAGE_BLOCK_OVERHEAD_BYTES = 96;
 
 const JSON_RPC_SCAFFOLD_BYTES = 256;
 
-/**
- * The size of the `session/prompt` message a draft and its attachments would become — the number that must stay under {@link WS_READ_LIMIT_BYTES}.
- */
 export function promptWireBytes(text: string, images: readonly ImagePart[]): number {
   let total = JSON_RPC_SCAFFOLD_BYTES + utf8Bytes(text);
   for (const image of images) {
@@ -139,46 +112,28 @@ export function promptWireBytes(text: string, images: readonly ImagePart[]): num
   return total;
 }
 
-/**
- * Whether the message this draft would send is one the relay will read rather than one it will close the socket over.
- */
 export function fitsPromptWireLimit(text: string, images: readonly ImagePart[]): boolean {
   return promptWireBytes(text, images) <= WS_READ_LIMIT_BYTES;
 }
 
-/**
- * How much base64 a NEW attachment may add, given what is already staged.
- */
 export function remainingImageBudget(images: readonly ImagePart[]): number {
   let used = 0;
   for (const image of images) used += image.data.length + IMAGE_BLOCK_OVERHEAD_BYTES;
   return Math.max(0, IMAGE_PAYLOAD_BUDGET_BYTES - used);
 }
 
-/**
- * Parses a `data:<mime>;base64,<data>` URL into the ACP wire form (raw base64, no prefix), or null for anything else.
- */
 export function imagePartFromDataUrl(dataUrl: string): ImagePart | null {
   const m = /^data:([^;,]+);base64,(.+)$/.exec(dataUrl);
   if (!m) return null;
   return { mimeType: m[1], data: m[2] };
 }
 
-/**
- * One rung of the shrink ladder: a long-edge cap and what to encode at it.
- */
 export interface EncodeAttempt {
   maxEdgePx: number;
   mimeType: 'image/png' | 'image/jpeg';
-  /**
-   * Ignored for PNG, which has no quality knob.
-   */
   quality?: number;
 }
 
-/**
- * The rungs, largest first.
- */
 export function encodeLadderFor(sourceType: string): EncodeAttempt[] {
   const jpeg: EncodeAttempt[] = [
     { maxEdgePx: MAX_IMAGE_EDGE_PX, mimeType: 'image/jpeg', quality: 0.85 },
@@ -190,9 +145,6 @@ export function encodeLadderFor(sourceType: string): EncodeAttempt[] {
   return [{ maxEdgePx: MAX_IMAGE_EDGE_PX, mimeType: 'image/png' }, ...jpeg];
 }
 
-/**
- * The pixel size a `width`×`height` image is drawn at to bring its long edge under `maxEdgePx`.
- */
 export function scaledSize(
   width: number,
   height: number,
@@ -205,9 +157,6 @@ export function scaledSize(
   };
 }
 
-/**
- * Whether the original file can travel untouched: already small enough on the wire, already a format the agent takes, and already within the long-edge cap.
- */
 export function canPassThrough(
   file: { type: string; size: number },
   width: number,
@@ -219,9 +168,6 @@ export function canPassThrough(
   return base64LengthForBytes(file.size) <= budgetBytes;
 }
 
-/**
- * A decoded image the codec can draw from.
- */
 export interface DecodedImage {
   width: number;
   height: number;
@@ -229,18 +175,9 @@ export interface DecodedImage {
   close(): void;
 }
 
-/**
- * The browser I/O `prepareImageAttachment` needs, as an injectable seam: decoding a File, re-encoding it at a size, and reading it back verbatim.
- */
 export interface ImageCodec {
   decode(file: File): Promise<DecodedImage>;
-  /**
-   * Draws `image` at `width`×`height` and returns a `data:` URL.
-   */
   encode(image: DecodedImage, width: number, height: number, attempt: EncodeAttempt): string;
-  /**
-   * The file itself as a `data:` URL, for the pass-through case.
-   */
   readAsDataUrl(file: File): Promise<string>;
 }
 
@@ -291,16 +228,10 @@ function nextAttachmentId(): string {
 }
 
 export interface PrepareImageOptions {
-  /**
-   * Base64 length this attachment may not exceed.
-   */
   budgetBytes?: number;
   codec?: ImageCodec;
 }
 
-/**
- * Turns a user-supplied image file into a pending attachment that the socket can carry, or refuses it.
- */
 export async function prepareImageAttachment(
   file: File,
   options: PrepareImageOptions = {},

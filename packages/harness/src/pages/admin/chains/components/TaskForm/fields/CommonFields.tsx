@@ -6,7 +6,6 @@ import { FormTask } from '../../../../../../lib/types';
 type Props = {
   task: FormTask;
   onChange: (updates: Partial<FormTask>) => void;
-  /** TODO: Suggestions for things like input_var, etc. */
   availableVariables?: string[];
 };
 

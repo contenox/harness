@@ -3,9 +3,6 @@ import { P } from './Typography';
 import { cn } from '../utils';
 import type { ReactNode } from 'react';
 
-/**
- * A filled card whose top row names an entity — a title and its meta on the left, a trailing status or control on the right — above whatever the entity itself offers.
- */
 export function ListCard({
   title,
   titleClassName = 'truncate font-medium',

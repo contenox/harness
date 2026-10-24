@@ -15,19 +15,6 @@ import { meaningfulTitle, workspaceLabel } from '../../pages/chat/lib/sessionLab
 import { AgentPicker } from '../AgentPicker';
 import { startNewChat } from './newChatIntent';
 
-/**
- * App-shell rail for the ACP workspace (Stage 4 replaced the console/REST
- * chat-history-backed rail with this ACP-native one — see `App.tsx`, which
- * mounts both this and `pages/chat/AcpChatPage.tsx` under the same hoisted
- * `AcpWorkspaceProvider` so they share one connection and roster). The old
- * rail and the console/legacy chat pages were deleted in Stage 5.
- *
- * Workspace-tabs Slice 2: clicking a session no longer just navigates a
- * single-view page — the `/chat/:sessionId` route now opens/focuses that
- * session's TAB (the tab-model reconciles the param; see `WorkspaceTabs`), so
- * the rail keeps driving via `<Link to="/chat/:id">` and several sessions stay
- * open at once.
- */
 
 export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) => void }) {
   const { t, i18n } = useTranslation();
@@ -39,17 +26,6 @@ export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) =>
   const { setStagedAgent } = useStagedAgent();
   const { setStagedRoot } = useStagedRoot();
 
-  // ONE path for starting a fresh chat: the plain "New session" button is just
-  // `startNew(null)` (native contenox — clears any staged agent), and the agent
-  // picker's `onSelect` is `startNew(name)`. Sharing `startNewChat` guarantees
-  // the two affordances behave identically (stage the pick, drive the tab-model
-  // to the empty surface via `focusEmptyTab`, route to `/chat`, collapse the
-  // mobile rail) and can never drift. Driving `focusEmptyTab` — the same
-  // controller action `useWorkspaceTabs` uses — is what makes the transition
-  // deterministic from a focused session tab: a bare navigate alone was reverted
-  // by the tab↔route sync. The empty surface reads the staged agent reactively,
-  // so a pick made while already on `/chat` (where the navigate is a no-op) still
-  // shows and binds. See `newChatIntent.ts`.
   const startNew = useCallback(
     (agent: string | null) =>
       startNewChat(agent, {
@@ -63,11 +39,6 @@ export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) =>
   );
 
   const handleDelete = (session: SessionInfo) => {
-    // An ADOPTED session is never deletable from here: session/delete STOPS the
-    // running dispatch (including for any other viewer of it — see
-    // acpsvc/adopt.go's teardown asymmetry), so the delete affordance is hidden
-    // for adopted sessions and this is a defensive second gate. Leaving/closing
-    // the tab detaches; ending the run is a fleet-board Stop, not a chat delete.
     if (adoptResultFromMeta(session._meta)) return;
     const label =
       meaningfulTitle(session) ??
@@ -81,43 +52,21 @@ export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) =>
 
   const isInitialLoad = workspace.status === 'connecting' && workspace.sessions.length === 0;
 
-  // The PROJECT a session belongs to — the explicit name of the registered root
-  // that contains its cwd, else the cwd basename (see workspaceNameForCwd). This
-  // is BOTH the per-row label and the grouping key, so a row and its group header
-  // always read the same name.
   const projectLabelFor = (session: SessionInfo): string =>
     workspaceNameForCwd(session.cwd, roots) ?? workspaceLabel(session.cwd) ?? '';
 
-  // One session row. `showProjectLabel` is false when the row sits under a project
-  // group header (which already names the project), so the per-row folder line is
-  // dropped as redundant; it stays true in the flat, single-project layout.
   const renderSessionRow = (session: SessionInfo, showProjectLabel: boolean) => {
     const isActive = activeSessionId === session.sessionId;
     const label =
       meaningfulTitle(session) ??
       t('acp_sidebar.session_fallback_label', { shortId: session.sessionId.slice(0, 8) });
-    // relativeTime is total (non-optional string in, string out); a session
-    // with no updatedAt yet is this call site's own absent-timestamp case, so
-    // it is handled here rather than by widening the shared function.
     const relative = session.updatedAt
       ? relativeTime(session.updatedAt, i18n.language, t('common.just_now'))
       : null;
     const agentName = externalAgentFromMeta(session._meta);
-    // A session a fleet dispatch created is the UNIT of a mission, not a chat the
-    // operator started. It lives in the same workspace under the same identity as
-    // their own sessions and — having real messages while the session that FIRED it
-    // may have none — sorts above them, so without this badge the rail read as if a
-    // fired mission had quietly taken over an existing chat.
     const missionId = missionFromMeta(session._meta);
     const workspaceName = showProjectLabel ? projectLabelFor(session) : null;
-    // Adopted sessions expose NO delete affordance here: deleting one
-    // stops the running dispatch (see handleDelete). Detach is via close.
     const adopted = adoptResultFromMeta(session._meta) != null;
-    // A background (non-focused) session with a permission request waiting
-    // on the user surfaces a subtle dot here so it is discoverable while
-    // its tab is out of view. Only OPEN (subscribed) sessions have a live
-    // slice, so this is naturally scoped to sessions that can actually have
-    // a pending request.
     const hasPendingPermission = sessions.slices[session.sessionId]?.pendingPermission != null;
     return (
       <div
@@ -185,10 +134,6 @@ export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) =>
     );
   };
 
-  // Group the (already newest-first) sessions by project, preserving that order
-  // both across groups (a group appears when its most-recent session does) and
-  // within each group. One project → render flat (a lone header would be noise,
-  // and the per-row label already disambiguates); two or more → header per group.
   const sessionGroups: { name: string; items: SessionInfo[] }[] = [];
   const groupIndexByName = new Map<string, number>();
   for (const session of workspace.sessions) {
@@ -213,8 +158,7 @@ export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) =>
           onClick={() => startNew(null)}>
           <span className="truncate">{t('acp_sidebar.new_session')}</span>
         </Button>
-        {/* Start a new chat with a specific registered agent (native contenox at
-            top). Hidden when no enabled agents are registered. */}
+
         <AgentPicker
           value={null}
           onSelect={startNew}

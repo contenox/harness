@@ -133,7 +133,7 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
       className={cn("h-full min-h-0 gap-4", className)}
       responsive={{ base: 1, lg: 2 }}
     >
-      {/* LEFT: Main editor */}
+
       <Card className="flex h-full min-h-0 flex-col overflow-hidden p-4 gap-4">
         <div className="flex-shrink-0 space-y-2">
           <h3 className="text-lg font-semibold text-text dark:text-dark-text">

@@ -6,7 +6,6 @@ import (
 	"net/http"
 )
 
-// APIError wraps an error with parameter context for API responses.
 type APIError struct {
 	err       error
 	message   string

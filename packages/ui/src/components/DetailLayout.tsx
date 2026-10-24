@@ -2,9 +2,6 @@ import type { ReactNode } from 'react';
 import { BackButton } from './BackButton';
 import { cn } from '../utils';
 
-/**
- * DetailLayout switches a list-detail surface between stacked and split layouts.
- */
 export function DetailLayout({
   children,
   detail,

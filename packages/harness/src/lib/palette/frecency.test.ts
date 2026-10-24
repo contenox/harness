@@ -49,7 +49,7 @@ describe('recordUsage', () => {
     const store: FrecencyStore = { a: { count: 2, lastUsed: 1 } };
     const next = recordUsage(store, 'a', NOW);
     expect(next.a).toEqual({ count: 3, lastUsed: NOW });
-    expect(store.a).toEqual({ count: 2, lastUsed: 1 }); // unchanged
+    expect(store.a).toEqual({ count: 2, lastUsed: 1 });
   });
 
   it('creates an entry for a first-time id', () => {
@@ -69,8 +69,8 @@ describe('pruneStore', () => {
     for (let i = 0; i < 260; i++) store[`id${i}`] = { count: 1, lastUsed: i };
     const pruned = pruneStore(store);
     expect(Object.keys(pruned).length).toBe(250);
-    expect(pruned.id259).toBeDefined(); // newest kept
-    expect(pruned.id0).toBeUndefined(); // oldest dropped
+    expect(pruned.id259).toBeDefined();
+    expect(pruned.id0).toBeUndefined();
   });
 
   it('leaves a small store untouched', () => {

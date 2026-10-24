@@ -1,7 +1,6 @@
 import { SidebarProps } from './Sidebar';
 import { SidebarNav } from './SidebarNav';
 
-// MobileSidebar.tsx
 export function MobileSidebar({ isOpen, setIsOpen, items = [], children }: SidebarProps) {
   if (!isOpen) return null;
 

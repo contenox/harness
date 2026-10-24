@@ -28,26 +28,11 @@ import { useStagedRoot } from '../../../lib/stagedRoot';
 import type { WorkspaceRoot } from '../../../lib/types';
 import { projectForCwd, projectName } from '../../../lib/workspaceRoots';
 
-/**
- * The project-registry management surface (Slice 4): add, name, and forget the
- * folders this runtime is allowed to open sessions in. Reads the allowlist
- * through the same cached `useWorkspaceRoots` the pickers use, and mutates it
- * through the add/forget mutations, which invalidate that key so every surface
- * re-renders from one source of truth.
- *
- * A project is a `managed` workspace root; the `default` root and the launch
- * roots are structural (not operator-forgettable), so the Forget affordance is
- * offered ONLY on `managed` rows.
- */
 export default function ProjectsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { roots, isLoading, error } = useWorkspaceRoots();
-  // The live session roster, only to name how many open sessions live under a
-  // root in the forget confirmation. A missing/empty roster degrades to a
-  // generic confirm — it never blocks the page. focusEmptyTab drives the "New
-  // session here" launcher to the empty chat surface (see the launch handler).
   const { workspace, focusEmptyTab } = useAcpWorkspace();
   const { setStagedAgent } = useStagedAgent();
   const { setStagedRoot } = useStagedRoot();
@@ -56,17 +41,9 @@ export default function ProjectsPage() {
 
   const [addOpen, setAddOpen] = useState(false);
 
-  // Sessions whose cwd resolves (deepest segment-aware match) to THIS root —
-  // the same containment rule the sidebar uses to label a session's project.
   const sessionCountForRoot = (root: WorkspaceRoot): number =>
     workspace.sessions.filter(s => projectForCwd(s.cwd, roots)?.path === root.path).length;
 
-  // Each project row is a LAUNCHER (the JetBrains welcome-screen journey):
-  // "New session here" opens the empty chat already scoped to this project,
-  // through the SAME single funnel the sidebar's New-session button uses — native
-  // agent (cleared), this project staged as the cwd. It closes the register →
-  // work gap: today you register a project here, then separately pick its root in
-  // the chat's Workspace control; the launcher does both in one click.
   const handleOpen = useCallback(
     (root: WorkspaceRoot) =>
       startNewChat(
@@ -158,7 +135,7 @@ export default function ProjectsPage() {
                       </Span>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      {/* Every project is a launcher: open a session scoped to it. */}
+
                       <Button
                         variant="outline"
                         palette="primary"
@@ -167,8 +144,7 @@ export default function ProjectsPage() {
                         <MessageSquarePlus className="h-4 w-4" aria-hidden />
                         {t('projects.open')}
                       </Button>
-                      {/* Forget is offered ONLY on managed roots — the default and
-                          launch roots are structural and not forgettable. */}
+
                       {root.managed && (
                         <Button
                           variant="outline"

@@ -8,14 +8,8 @@ import (
 	"time"
 )
 
-// legacySQLiteDSNSuffix is the query string NewSQLiteDBManager has always
-// produced. It is written out literally rather than derived from the option
-// types so that a change to shared DSN-building code has to update this
-// constant explicitly instead of drifting the existing constructor silently.
 const legacySQLiteDSNSuffix = "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"
 
-// TestBuildSQLiteDSNLegacyVerbatim pins the DSN of the pre-existing
-// constructor, which NewSQLiteDBManager reaches through a zero SQLiteOptions.
 func TestBuildSQLiteDSNLegacyVerbatim(t *testing.T) {
 	got := buildSQLiteDSN("/var/lib/contenox/local.db", SQLiteOptions{})
 	want := "/var/lib/contenox/local.db" + legacySQLiteDSNSuffix
@@ -24,8 +18,6 @@ func TestBuildSQLiteDSNLegacyVerbatim(t *testing.T) {
 	}
 }
 
-// TestBuildSQLiteDSNPreservesExistingQuery checks the separator choice for a
-// path that already carries query parameters.
 func TestBuildSQLiteDSNPreservesExistingQuery(t *testing.T) {
 	got := buildSQLiteDSN("file:local.db?mode=rwc", SQLiteOptions{})
 	want := "file:local.db?mode=rwc&" + legacySQLiteDSNSuffix[1:]
@@ -34,8 +26,6 @@ func TestBuildSQLiteDSNPreservesExistingQuery(t *testing.T) {
 	}
 }
 
-// TestBuildSQLiteDSNWithOptions asserts the extras are appended after the
-// legacy prefix, leaving that prefix byte-for-byte intact.
 func TestBuildSQLiteDSNWithOptions(t *testing.T) {
 	opts := SQLiteOptions{
 		Synchronous: SQLiteSynchronousNormal,
@@ -48,8 +38,6 @@ func TestBuildSQLiteDSNWithOptions(t *testing.T) {
 	}
 }
 
-// TestBuildSQLiteDSNOverrides covers the fields that replace a legacy pragma
-// value rather than appending a new one.
 func TestBuildSQLiteDSNOverrides(t *testing.T) {
 	opts := SQLiteOptions{
 		JournalMode:        SQLiteJournalDelete,
@@ -64,10 +52,6 @@ func TestBuildSQLiteDSNOverrides(t *testing.T) {
 	}
 }
 
-// TestSQLiteCacheHelpersSignConvention guards the negative-is-KiB convention,
-// which is silently wrong in both directions if inverted. The negative
-// arguments cover the trap the helpers exist to close: a caller who writes the
-// sign themselves must not end up selecting the other unit.
 func TestSQLiteCacheHelpersSignConvention(t *testing.T) {
 	cases := []struct {
 		name string
@@ -86,8 +70,6 @@ func TestSQLiteCacheHelpersSignConvention(t *testing.T) {
 	}
 }
 
-// TestSQLiteOptionsValidateRejects covers every combination refused before a
-// connection is opened.
 func TestSQLiteOptionsValidateRejects(t *testing.T) {
 	cases := []struct {
 		name string
@@ -129,8 +111,6 @@ func TestSQLiteOptionsValidateRejects(t *testing.T) {
 	}
 }
 
-// TestSQLiteOptionsValidateAccepts covers combinations that must not be
-// refused, including the reduced synchronous level under its required WAL mode.
 func TestSQLiteOptionsValidateAccepts(t *testing.T) {
 	cases := []struct {
 		name string
@@ -159,8 +139,6 @@ func TestSQLiteOptionsValidateAccepts(t *testing.T) {
 	}
 }
 
-// TestNewSQLiteDBManagerRefusesUnsafeOptions checks the refusal happens at
-// construction and that no database file is produced as a side effect.
 func TestNewSQLiteDBManagerRefusesUnsafeOptions(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "unsafe.db")
 	mgr, err := NewSQLiteDBManagerWithOptions(context.Background(), path, "", SQLiteOptions{
@@ -179,7 +157,6 @@ func TestNewSQLiteDBManagerRefusesUnsafeOptions(t *testing.T) {
 	}
 }
 
-// sqlitePragma reads a single-value pragma through the manager's pool.
 func sqlitePragma(t *testing.T, mgr DBManager, name string) string {
 	t.Helper()
 	var v string
@@ -189,9 +166,6 @@ func sqlitePragma(t *testing.T, mgr DBManager, name string) string {
 	return v
 }
 
-// TestNewSQLiteDBManagerZeroOptionsMatchesLegacy asserts the two constructors
-// leave an opened database in the same observable state, pragmas and pool
-// alike.
 func TestNewSQLiteDBManagerZeroOptionsMatchesLegacy(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -225,8 +199,6 @@ func TestNewSQLiteDBManagerZeroOptionsMatchesLegacy(t *testing.T) {
 	}
 }
 
-// TestNewSQLiteDBManagerAppliesPragmas confirms the extras survive the driver,
-// which executes _pragma values verbatim and ignores ones it cannot parse.
 func TestNewSQLiteDBManagerAppliesPragmas(t *testing.T) {
 	mgr, err := NewSQLiteDBManagerWithOptions(context.Background(), filepath.Join(t.TempDir(), "tuned.db"), "", SQLiteOptions{
 		Synchronous: SQLiteSynchronousNormal,
@@ -251,10 +223,6 @@ func TestNewSQLiteDBManagerAppliesPragmas(t *testing.T) {
 	}
 }
 
-// TestNewSQLiteDBManagerAppliesPoolLimit checks the cap is both reported by
-// database/sql and actually enforced: with a single connection allowed, an
-// open transaction starves every other caller, which is the cost the
-// constructor documents.
 func TestNewSQLiteDBManagerAppliesPoolLimit(t *testing.T) {
 	ctx := context.Background()
 	mgr, err := NewSQLiteDBManagerWithOptions(ctx, filepath.Join(t.TempDir(), "capped.db"), "", SQLiteOptions{
@@ -286,9 +254,6 @@ func TestNewSQLiteDBManagerAppliesPoolLimit(t *testing.T) {
 	}
 }
 
-// TestNewSQLiteDBManagerUnboundedPoolDoesNotStarve is the control for
-// TestNewSQLiteDBManagerAppliesPoolLimit: the same sequence must succeed when
-// no cap is configured, so the starvation above is attributable to the cap.
 func TestNewSQLiteDBManagerUnboundedPoolDoesNotStarve(t *testing.T) {
 	ctx := context.Background()
 	mgr, err := NewSQLiteDBManager(ctx, filepath.Join(t.TempDir(), "uncapped.db"), "")

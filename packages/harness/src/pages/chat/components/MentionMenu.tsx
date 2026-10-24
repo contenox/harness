@@ -1,7 +1,3 @@
-/**
- * i18n keys referenced in this file (namespace `workspace`; add to i18n.ts):
- *   workspace.mention_menu_label = "Workspace files"
- */
 import { cn } from '@contenox/ui';
 import { ChevronRight, File as FileIcon, Folder } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
@@ -22,31 +18,22 @@ import type { FilePreviewState } from '../lib/filePreview';
 import { clampIndex } from '../lib/slashMenuState';
 import { MentionFilePreview } from './MentionFilePreview';
 
-/** Candidates shown per scope are capped for render/perf; the leaf filter narrows this in practice. */
 const MAX_ENTRIES = 50;
 
 export interface UseMentionMenuArgs {
   draft: string;
-  /** Current caret index in the composer textarea. */
   caret: number;
-  /** Per-directory listing cache from `useWorkspaceFiles` (root keyed by `''`). */
   cache: DirCache;
-  /** Lazily loads a directory's children when the menu browses into it. */
   ensureLoaded: (dir: string) => void;
-  /** Whether a directory's listing is still loading. */
   isLoading: (dir: string) => boolean;
-  /** Inserts a picked FILE as a mention: new draft, caret after the token, the file. */
   onInsert: (nextDraft: string, nextCaret: number, file: WorkspaceFileRef) => void;
-  /** Drills into a picked FOLDER: new draft (`@dir/`) and caret; the menu keeps browsing. */
   onDrill: (nextDraft: string, nextCaret: number) => void;
 }
 
 export interface UseMentionMenuResult {
   open: boolean;
   entries: MentionCandidate[];
-  /** The directory currently being browsed (root is `''`), shown as a breadcrumb. */
   scope: string;
-  /** True when the browsed directory's listing has not arrived yet. */
   loading: boolean;
   activeIndex: number;
   pick: (entry: MentionCandidate) => void;
@@ -56,21 +43,10 @@ export interface UseMentionMenuResult {
 
 const EMPTY_ENTRIES: MentionCandidate[] = [];
 
-/**
- * Drives the composer's `@`-mention popover as a scoped file BROWSER: the
- * `@query` is read as a path, split into a directory scope and a leaf filter
- * (`lib/mentions.ts`). Files in scope insert as `resource_link` mentions;
- * directories are navigable — picking one rewrites the draft to `@dir/` and
- * the menu re-scopes into it, lazily loading its children. This is how a deep
- * file is reached without pre-expanding the side panel. Keydown mapping (arrow
- * nav/accept/close) is shared with the slash menu (`lib/slashMenuState.ts`).
- */
 export function useMentionMenu({ draft, caret, cache, ensureLoaded, isLoading, onInsert, onDrill }: UseMentionMenuArgs): UseMentionMenuResult {
   const query = useMemo(() => deriveMentionQuery(draft, caret), [draft, caret]);
   const { dir: scope, leaf } = useMemo(() => splitMentionQuery(query.query), [query.query]);
 
-  // Ask the data hook for the browsed directory's children as soon as the
-  // scope points at one we haven't listed yet (idempotent in the hook).
   useEffect(() => {
     if (query.active) ensureLoaded(scope);
   }, [query.active, scope, ensureLoaded]);
@@ -84,9 +60,6 @@ export function useMentionMenu({ draft, caret, cache, ensureLoaded, isLoading, o
   const filtered = useMemo(() => mentionCandidatesForScope(scopeEntries, leaf).slice(0, MAX_ENTRIES), [scopeEntries, leaf]);
   const loading = query.active && cache[scope] === undefined && isLoading(scope);
 
-  // Escape closes the popover for the CURRENT draft text without touching the
-  // draft itself; any draft change re-derives the query fresh, so the
-  // dismissal doesn't stick past the keystroke that caused it.
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
   const open = query.active && dismissedFor !== draft && (filtered.length > 0 || loading);
 
@@ -119,9 +92,6 @@ export function useMentionMenu({ draft, caret, cache, ensureLoaded, isLoading, o
       if (!open) return;
       const action = mentionMenuKeyFromEvent(e.key);
       if (!action) return;
-      // Consume (preventDefault) only when the key drives a menu action, so
-      // →/← still move the text caret when there is no folder to drill into
-      // or no parent to ascend to.
       switch (action.type) {
         case 'move':
           e.preventDefault();
@@ -137,7 +107,7 @@ export function useMentionMenu({ draft, caret, cache, ensureLoaded, isLoading, o
           const entry = filtered[activeIndex];
           if (entry?.isDirectory) {
             e.preventDefault();
-            pick(entry); // folders drill via pick()
+            pick(entry);
           }
           break;
         }
@@ -163,29 +133,14 @@ export function useMentionMenu({ draft, caret, cache, ensureLoaded, isLoading, o
 
 export interface MentionMenuProps {
   entries: MentionCandidate[];
-  /** The directory being browsed (root is `''`) — shown as a breadcrumb header. */
   scope: string;
-  /** Listing not yet loaded for the browsed directory. */
   loading: boolean;
   activeIndex: number;
   onPick: (entry: MentionCandidate) => void;
   onHoverIndex?: (index: number) => void;
-  /** Live preview of the highlighted FILE, rendered as the popover's top section (hidden for directories). */
   preview: FilePreviewState;
 }
 
-/**
- * The `@`-mention browser popover — pure presentation, anchored by the caller
- * (`position: relative` wrapper) above the composer. It is an
- * absolutely-positioned overlay (`bottom-full`), so everything it holds floats
- * ABOVE the composer without affecting page layout: the live file preview lives
- * as the popover's TOP section (stacked above the list) precisely so navigating
- * files never reflows the transcript/composer. The whole popover is capped
- * (`max-h-[60vh]`) and each region (preview, list) scrolls internally, so it can
- * never exceed the viewport or push the composer off-screen. Folders carry a
- * folder glyph and a drill chevron; files carry a file glyph. A breadcrumb
- * header shows the current directory when browsing below the root.
- */
 export function MentionMenu({ entries, scope, loading, activeIndex, onPick, onHoverIndex, preview }: MentionMenuProps) {
   const { t } = useTranslation();
 
@@ -214,8 +169,6 @@ export function MentionMenu({ entries, scope, loading, activeIndex, onPick, onHo
               role="option"
               aria-selected={i === activeIndex}
               onMouseEnter={() => onHoverIndex?.(i)}
-              // mousedown (not click) + preventDefault so the textarea never
-              // blurs before the pick registers.
               onMouseDown={e => {
                 e.preventDefault();
                 onPick(entry);

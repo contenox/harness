@@ -2,20 +2,11 @@ import type { SessionConfigOption, SessionConfigOptionValue } from '@contenox/ac
 import { flattenGroups, fromControlValue, toControlProps } from '../lib/configOptions';
 import { CheckboxField, SelectField } from '../../../components/forms/Fields';
 
-/**
- * One control for one `SessionConfigOption`, whichever option it is.
- */
 export interface ConfigOptionControlProps {
   option: SessionConfigOption;
-  /**
-   * Overrides the option's own `currentValue`.
-   */
   value?: SessionConfigOptionValue;
   onChange: (value: SessionConfigOptionValue) => void;
   disabled?: boolean;
-  /**
-   * Standing guidance under the control.
-   */
   hint?: string;
 }
 

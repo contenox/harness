@@ -14,9 +14,6 @@ import {
 } from '../lib/permissionRequest';
 import { formatDateTime } from '../../lib/relativeTime';
 
-/**
- * The agent is asking before it does something, and the turn is parked until this is answered.
- */
 export function PermissionRequest({
   request,
   onRespond,
@@ -59,20 +56,7 @@ export function PermissionRequest({
         <Deadline meta={meta} />
       </div>
 
-      {/*
-        The one scrolling surface on this card. `min-h-0` is what lets it
-        actually shrink inside the card's flex column — without it a tall diff
-        sets the card's height and the buttons below leave the screen, which is
-        the exact failure this card cannot have.
 
-        ⚠ A BLOCK with `space-y-3`, NOT a flex column, and that is the whole
-        point of the comment. As a flex column its children are flex items and
-        shrink by default: a 400px diff was squeezed to 155px inside
-        `DiffView`'s own `overflow-hidden` root, which cut it off mid-file with
-        no scrollbar and no seam — the diff LOOKED complete and its last lines
-        could not be reached by any gesture. A block box does not shrink its
-        children, so the diff keeps its height and this container scrolls.
-      */}
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain">
         {evidence.diffs.map((diff, index) => (
           <DiffView
@@ -87,14 +71,7 @@ export function PermissionRequest({
         <Disclosure meta={meta} evidence={evidence} argumentsOnFace={argumentsOnFace} />
       </div>
 
-      {/*
-        The rule is not decoration. The evidence above is a window onto content
-        taller than it, and on a phone there is no scrollbar to say so — the
-        first render of this card ended a diff mid-line directly against the
-        Allow button, and it read as a diff that was simply short. A seam
-        between the region and the answer is what makes the cut legible as a
-        cut.
-      */}
+
       <div className="border-surface-200 dark:border-dark-surface-500 flex shrink-0 flex-col gap-2 border-t pt-3">
         {request.options.map((option: PermissionOption) => (
           <Button
@@ -117,12 +94,7 @@ function Deadline({ meta }: { meta: PermissionMeta }) {
   return (
     <>
       <Small>Expires {formatDateTime(meta.expiresAt)}</Small>
-      {/*
-        Its own line rather than a clause after the date. The two together are
-        two lines on a 412px column either way, and as one sentence the wrap
-        fell inside "denied if / unanswered" — so the consequence gets the line
-        instead of the break.
-      */}
+
       {meta.onTimeout !== '' && (
         <Small className={grants ? 'text-warning-700 dark:text-dark-warning-700' : undefined}>
           {capitalise(outcomeWord(meta.onTimeout))} if nobody answers
@@ -233,12 +205,7 @@ function Disclosure({
         {meta.policyName !== '' && (
           <DetailRow label="Policy" value={meta.policyName} note={meta.policyPath} />
         )}
-        {/*
-          Only a real index is rendered. An absent `matchedRule` means the
-          policy default applied OR that no envelope arrived at all, and this
-          side cannot tell those apart — so it says nothing rather than
-          attributing the stop to a rule that may not exist.
-        */}
+
         {meta.matchedRule !== null && (
           <DetailRow label="Matched rule" value={`#${meta.matchedRule}`} note={meta.detail} />
         )}

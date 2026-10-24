@@ -8,16 +8,6 @@ export interface ConfigOptionControlsProps {
   onChange: (configId: string, value: string | boolean) => void;
 }
 
-/**
- * One control per `session.configOptions` entry. Values come straight from
- * `session.configOptions` — which is replaced wholesale on every
- * `config_option_update` (see acpSessionState.ts) — so a change made from
- * another surface (or the agent itself) round-trips into these controls with
- * no extra plumbing here.
- *
- * Renders inline on `sm:` and wider; collapses into a `Dropdown` below that so
- * a handful of selects don't crowd a 375px header.
- */
 export function ConfigOptionControls({ configOptions, onChange }: ConfigOptionControlsProps) {
   const { t } = useTranslation();
   if (configOptions.length === 0) return null;

@@ -100,7 +100,6 @@ func TestUnit_Service_ThinkAndVisionOverridesMerge(t *testing.T) {
 	require.NotNil(t, got.CanVision)
 	require.False(t, *got.CanVision)
 
-	// And the other direction: re-setting think keeps the vision override.
 	_, err = svc.SetThink(ctx, "openai", "gpt-5-mini", false)
 	require.NoError(t, err)
 	got, ok, err = svc.Get(ctx, "openai", "gpt-5-mini")

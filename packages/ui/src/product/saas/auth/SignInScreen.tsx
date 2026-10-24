@@ -8,9 +8,6 @@ import { AuthForm, AuthLink, AuthScreen, ProductIntro } from './AuthScreen';
 
 const FIELDS = ['email', 'password'] as const;
 
-/**
- * Email and password to the relay; an httpOnly cookie back.
- */
 export function SignInScreen({ from }: { from?: string }) {
   const { routes, useAuth, useSignIn } = useProductPorts();
   const { user } = useAuth();

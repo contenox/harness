@@ -15,21 +15,14 @@ import (
 	"github.com/contenox/harness/runtime/statetype"
 )
 
-// Service exposes runtime backend state plus onboarding/setup evaluation (same inputs as GET /setup-status).
 type Service interface {
 	Get(ctx context.Context) ([]statetype.BackendRuntimeState, error)
-	// SetupStatus returns readiness from KV defaults, registered backends, and current runtime state.
 	SetupStatus(ctx context.Context) (setupcheck.Result, error)
-	// Refresh reconciles registered backends/models, then returns the updated setup status.
 	Refresh(ctx context.Context) (setupcheck.Result, error)
-	// CLIConfig returns the current resolved CLI config without mutating it.
 	CLIConfig(ctx context.Context) (CLIConfigSnapshot, error)
-	// SetCLIConfig updates CLI default keys in SQLite KV (same as contenox config set / PUT /cli-config).
-	// Nil fields in the patch are left unchanged. Empty string fields are written and can clear a resolved setting.
 	SetCLIConfig(ctx context.Context, patch CLIConfigPatch) (CLIConfigSnapshot, error)
 }
 
-// CLIConfigPatch selects which CLI default keys to write; nil means "do not change".
 type CLIConfigPatch struct {
 	DefaultModel                *string
 	DefaultProvider             *string
@@ -43,16 +36,10 @@ type CLIConfigPatch struct {
 	HITLPolicyName              *string
 	TelemetryEnabled            *string
 	UpdateCheck                 *string
-	// DefaultMissionAgent and DefaultMissionPolicy are the two halves of a fireable
-	// `/mission <intent>`: which declared agent runs it, and the HITL policy that
-	// bounds it. Both are GLOBAL keys (a mission is not a per-workspace notion), and
-	// both must be set before /mission works at all — the dispatch refuses an
-	// unnamed agent or an unnamed envelope rather than choosing one.
-	DefaultMissionAgent  *string
-	DefaultMissionPolicy *string
+	DefaultMissionAgent         *string
+	DefaultMissionPolicy        *string
 }
 
-// CLIConfigSnapshot is the resolved KV values after an update.
 type CLIConfigSnapshot struct {
 	DefaultModel                string
 	DefaultProvider             string
@@ -78,13 +65,7 @@ type service struct {
 	workspaceID string
 }
 
-// Get implements Service.
 func (s *service) Get(ctx context.Context) ([]statetype.BackendRuntimeState, error) {
-	// The runtime reconciles backends at startup and on explicit refresh only;
-	// without this a backend that comes up after startup (most commonly a
-	// (re)started modeld) stays invisible to /state and /setup-status until the
-	// server is restarted. A debounced reconcile lets these read views self-heal.
-	// Best-effort: serve the existing snapshot even if the reconcile fails.
 	_ = s.state.ReconcileIfStale(ctx)
 	m := s.state.Get(ctx)
 	l := make([]statetype.BackendRuntimeState, 0, len(m))
@@ -94,7 +75,6 @@ func (s *service) Get(ctx context.Context) ([]statetype.BackendRuntimeState, err
 	return l, nil
 }
 
-// SetupStatus implements Service.
 func (s *service) SetupStatus(ctx context.Context) (setupcheck.Result, error) {
 	states, err := s.Get(ctx)
 	if err != nil {
@@ -107,7 +87,6 @@ func (s *service) SetupStatus(ctx context.Context) (setupcheck.Result, error) {
 	return setupcheck.Evaluate(in), nil
 }
 
-// Refresh implements Service.
 func (s *service) Refresh(ctx context.Context) (setupcheck.Result, error) {
 	if err := s.state.RunBackendCycle(ctx); err != nil {
 		return setupcheck.Result{}, err
@@ -115,13 +94,11 @@ func (s *service) Refresh(ctx context.Context) (setupcheck.Result, error) {
 	return s.SetupStatus(ctx)
 }
 
-// CLIConfig implements Service.
 func (s *service) CLIConfig(ctx context.Context) (CLIConfigSnapshot, error) {
 	store := runtimetypes.New(s.db.WithoutTransaction())
 	return s.cliConfigSnapshot(ctx, store), nil
 }
 
-// SetCLIConfig implements Service.
 func (s *service) SetCLIConfig(ctx context.Context, patch CLIConfigPatch) (CLIConfigSnapshot, error) {
 	if patch.DefaultModel == nil &&
 		patch.DefaultProvider == nil &&
@@ -208,11 +185,6 @@ func (s *service) SetCLIConfig(ctx context.Context, patch CLIConfigPatch) (CLICo
 			return CLIConfigSnapshot{}, fmt.Errorf("set update-check: %w", err)
 		}
 	}
-	// Global, like the model defaults and unlike default-chain/hitl-policy-name: a
-	// mission is fired at the fleet, not at a project, so the same pair answers from
-	// every workspace. Written verbatim (trimmed) — the names are validated where
-	// they are USED (the dispatch resolves the agent and the policy), so a value set
-	// before its agent exists is a stale pointer, not a corrupt config.
 	if patch.DefaultMissionAgent != nil {
 		if err := clikv.SetString(ctx, store, "default-mission-agent", strings.TrimSpace(*patch.DefaultMissionAgent)); err != nil {
 			return CLIConfigSnapshot{}, fmt.Errorf("set default-mission-agent: %w", err)
@@ -298,9 +270,6 @@ func readWorkspaceCLIConfigValue(ctx context.Context, store runtimetypes.Store, 
 	return val, "global", present
 }
 
-// normalizeDefaultThink validates/normalizes a default-think value the same
-// way `contenox config set default-think` does (see reasoning.Normalize).
-// Empty clears the override, letting the runtime's own "high" fallback apply.
 func normalizeDefaultThink(value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -324,8 +293,6 @@ func normalizeDefaultMaxTokens(value string) (string, error) {
 	return strconv.Itoa(n), nil
 }
 
-// New returns a state service backed by runtime state and the same DB used for backends + CLI KV.
-// workspaceID scopes workspace-specific config (default-chain, hitl-policy-name) with global fallback.
 func New(state *runtimestate.State, db libdbexec.DBManager, workspaceID string) Service {
 	return &service{
 		state:       state,

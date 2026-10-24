@@ -10,7 +10,6 @@ export default function ComposeEdgeBadge({
   onClick: () => void;
   position: { x: number; y: number };
 }) {
-  // Map strategy to neutral token colors (CSS variables from @contenox/ui).
   const colorFor = useCallback((s?: string | null) => {
     const style = getComputedStyle(document.documentElement);
     const get = (v: string) => style.getPropertyValue(v).trim() || undefined;
@@ -28,7 +27,6 @@ export default function ComposeEdgeBadge({
 
   const { fill, stroke } = colorFor(composeStrategy);
 
-  // Get short label for strategy
   const getShortLabel = (strategy?: string | null) => {
     if (!strategy) return 'default';
 
@@ -50,7 +48,7 @@ export default function ComposeEdgeBadge({
       style={{ cursor: 'pointer' }}
       className="compose-edge-badge"
       opacity={1}>
-      {/* chip background */}
+
       <rect
         x={-40}
         y={-12}
@@ -63,7 +61,7 @@ export default function ComposeEdgeBadge({
         filter="url(#shadow-filter)"
       />
 
-      {/* shadow filter definition */}
+
       <defs>
         <filter id="shadow-filter" x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur in="SourceAlpha" stdDeviation="1" />
@@ -77,14 +75,14 @@ export default function ComposeEdgeBadge({
         </filter>
       </defs>
 
-      {/* icon */}
+
       <foreignObject x={-36} y={-10} width={18} height={18} pointerEvents="none">
         <div className="flex items-center justify-center" style={{ width: 18, height: 18 }}>
           <Settings width={12} height={12} color="white" />
         </div>
       </foreignObject>
 
-      {/* text */}
+
       <text
         x={-18}
         y={4}
@@ -96,7 +94,7 @@ export default function ComposeEdgeBadge({
         {getShortLabel(composeStrategy)}
       </text>
 
-      {/* tooltip indicator */}
+
       <circle cx={24} cy={0} r={3} fill="white" opacity={0.7} pointerEvents="none" />
     </g>
   );

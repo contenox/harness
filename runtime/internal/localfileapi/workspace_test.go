@@ -53,18 +53,15 @@ func TestUnit_WorkspaceRoutes_PerRootAndAllowlist(t *testing.T) {
 		return out
 	}
 
-	// Default root (no `root` param) serves rootA.
 	resp, entries := list("")
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Contains(t, names(entries), "in-a.txt")
 
-	// Explicit allowlisted rootB serves rootB.
 	resp, entries = list(rootB)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Contains(t, names(entries), "in-b.txt")
 	assert.NotContains(t, names(entries), "in-a.txt")
 
-	// A non-allowlisted root is refused.
 	resp, _ = list(t.TempDir())
 	assert.GreaterOrEqual(t, resp.StatusCode, 400, "a root outside the allowlist must be rejected")
 }

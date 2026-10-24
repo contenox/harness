@@ -118,8 +118,6 @@ func validate(backend *runtimetypes.Backend) error {
 	return nil
 }
 
-// sameConnectionExists reports whether another row already names the same
-// implementation type and endpoint, the pair that identifies a connection.
 func sameConnectionExists(ctx context.Context, store runtimetypes.Store, backend *runtimetypes.Backend, excludeID string) (bool, error) {
 	count, err := store.CountBackendsByTypeAndURL(
 		ctx,

@@ -82,9 +82,6 @@ function businessPayload(form: BusinessForm): BusinessDetails {
   return details;
 }
 
-/**
- * Creates the account and signs in, in one round trip.
- */
 export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
   const {
     routes,
@@ -233,9 +230,7 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
         onSubmit={submit}>
         {joining && <JoiningNotice preview={preview.data} />}
 
-        {/* The one refusal this form cannot act on: the address is real and
-            already registered, so no amount of retyping helps. The way out is
-            sign-in, which is a click away rather than a deduction. */}
+
         {joining && signUp.error instanceof ApiError && signUp.error.status === 409 && (
           <InlineNotice variant="warning">
             Sign in with that address instead — the invitation is still waiting, and you will be
@@ -396,11 +391,7 @@ function AcceptInviteScreen({
           You are signed in as {email}. An invitation is only valid for the address it was sent to.
         </Small>
 
-        {/* 404 is every dead state AND "issued to somebody else", deliberately
-            indistinguishable — so this names both possibilities rather than
-            guessing the one that reads better and might be the wrong one. The
-            banner above already says what the relay said; this says what to do
-            about it. */}
+
         {status === 404 && (
           <InlineNotice variant="warning">
             It may have been used, revoked or expired — or sent to an address other than {email},

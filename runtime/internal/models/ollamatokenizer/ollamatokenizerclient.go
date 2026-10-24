@@ -12,18 +12,15 @@ import (
 	"github.com/contenox/harness/libtracker"
 )
 
-// HTTPClient implements the Tokenizer interface using HTTP calls to the tokenizer service.
 type HTTPClient struct {
 	baseURL string
 	client  *http.Client
 }
 
-// ConfigHTTP contains configuration for the HTTP client.
 type ConfigHTTP struct {
 	BaseURL string
 }
 
-// NewHTTPClient creates a new HTTP-based tokenizer client.
 func NewHTTPClient(ctx context.Context, cfg ConfigHTTP) (Tokenizer, func() error, error) {
 	cleanup := func() error { return nil }
 	client := &HTTPClient{
@@ -52,8 +49,6 @@ func (c *HTTPClient) ping(ctx context.Context) error {
 	return nil
 }
 
-// -------- /tokenize types --------
-
 type tokenizeRequest struct {
 	Model  string `json:"model"`
 	Prompt string `json:"prompt"`
@@ -64,8 +59,6 @@ type tokenizeResponse struct {
 	Count  int   `json:"count"`
 }
 
-// -------- /count types --------
-
 type countRequest struct {
 	Model  string `json:"model"`
 	Prompt string `json:"prompt"`
@@ -75,7 +68,6 @@ type countResponse struct {
 	Count int `json:"count"`
 }
 
-// Tokenize sends a tokenization request to the HTTP service.
 func (c *HTTPClient) Tokenize(ctx context.Context, modelName string, prompt string) ([]int, error) {
 	reqBody := tokenizeRequest{
 		Model:  modelName,
@@ -115,7 +107,6 @@ func (c *HTTPClient) Tokenize(ctx context.Context, modelName string, prompt stri
 	return response.Tokens, nil
 }
 
-// CountTokens uses the dedicated /count endpoint, with a backward-compatible fallback to /tokenize.
 func (c *HTTPClient) CountTokens(ctx context.Context, modelName string, prompt string) (int, error) {
 	reqBody := countRequest{
 		Model:  modelName,
@@ -152,10 +143,7 @@ func (c *HTTPClient) CountTokens(ctx context.Context, modelName string, prompt s
 	return response.Count, nil
 }
 
-// OptimalModel returns the optimal model for tokenization based on the given model.
-// This is a client-side implementation mirroring the server's logic.
 func (c *HTTPClient) OptimalModel(ctx context.Context, baseModel string) (string, error) {
-	// Mirrors the server's mappings with USE_DEFAULT_URLS=true.
 	modelURLs := map[string]string{
 		"tiny":                  "https://huggingface.co/Hjgugugjhuhjggg/FastThink-0.5B-Tiny-Q2_K-GGUF/resolve/main/fastthink-0.5b-tiny-q2_k.gguf",
 		"llama-3.1":             "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-IQ2_M.gguf",
@@ -173,7 +161,7 @@ func (c *HTTPClient) OptimalModel(ctx context.Context, baseModel string) (string
 		{CanonicalName: "phi-3", Substrings: []string{"phi-3", "phi3"}},
 	}
 
-	fallback := "granite-embedding-30m" // From docker-compose environment
+	fallback := "granite-embedding-30m"
 
 	baseModel = strings.ToLower(baseModel)
 	baseModel = strings.Split(baseModel, ":")[0]
@@ -261,7 +249,6 @@ func (d *activityTrackerDecorator) OptimalModel(ctx context.Context, baseModel s
 	return model, err
 }
 
-// WithActivityTracker decorates the given Tokenizer with activity tracking
 func WithActivityTracker(client Tokenizer, tracker libtracker.ActivityTracker) Tokenizer {
 	return &activityTrackerDecorator{
 		client:  client,

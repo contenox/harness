@@ -9,18 +9,6 @@ interface HookPoliciesFieldsProps {
   onChange: (updates: Partial<FormTask>) => void;
 }
 
-/**
- * Edits `execute_config.tools_policies`. Three rendering tiers:
- *   1. Typed form for `local_shell` (always shown — most-common footgun).
- *   2. Typed form for `local_fs` (always shown).
- *   3. One sub-section per OTHER tools-provider name found in tools_policies,
- *      plus an "Add tools" button for declaring a new policy bag.
- *
- * Each sub-section omits its own JSON branch when all fields are empty, and
- * the whole `tools_policies` object is dropped from `execute_config` when no
- * sub-section has any populated value. Same omit-empty discipline as the
- * retry/compact editors in `LLMConfigFields`.
- */
 export default function HookPoliciesFields({ task, onChange }: HookPoliciesFieldsProps) {
   const { t } = useTranslation();
   const config: ExecuteConfig = task.execute_config || {};
@@ -28,10 +16,6 @@ export default function HookPoliciesFields({ task, onChange }: HookPoliciesField
     config.tools_policies || config.hook_policies || {};
 
   const writePolicies = (next: Record<string, Record<string, string>>) => {
-    // Drop provider entries that have NO fields at all — keeps JSON tidy and
-    // hides `tools_policies: {}` for tasks that don't need any. Transient
-    // partially-filled rows (empty key OR empty value) survive so editing
-    // doesn't fight the user.
     const cleaned: Record<string, Record<string, string>> = {};
     for (const [hook, fields] of Object.entries(next)) {
       if (Object.keys(fields).length === 0) continue;
@@ -49,8 +33,6 @@ export default function HookPoliciesFields({ task, onChange }: HookPoliciesField
   const updateHookField = (hook: string, key: string, value: string) => {
     const nextHook = { ...(policies[hook] || {}) };
     if (key === '' && value === '') {
-      // Empty-key, empty-value pair is the "Add field" placeholder — keep it
-      // visible so the user can type into it.
       nextHook[''] = '';
     } else {
       nextHook[key] = value;
@@ -82,8 +64,6 @@ export default function HookPoliciesFields({ task, onChange }: HookPoliciesField
     const trimmed = (name ?? '').trim();
     if (!trimmed) return;
     if (policies[trimmed]) return;
-    // Add a placeholder entry so the new section appears immediately; cleaned
-    // out on next write if user doesn't fill anything in.
     writePolicies({ ...policies, [trimmed]: { '': '' } });
   };
 
@@ -106,7 +86,7 @@ export default function HookPoliciesFields({ task, onChange }: HookPoliciesField
           )}
         </P>
 
-        {/* local_shell */}
+
         <Collapsible
           title={
             <span className="inline-flex items-center gap-1.5 text-xs">
@@ -160,7 +140,7 @@ export default function HookPoliciesFields({ task, onChange }: HookPoliciesField
           </div>
         </Collapsible>
 
-        {/* local_fs */}
+
         <Collapsible
           title={
             <span className="inline-flex items-center gap-1.5 text-xs">
@@ -266,7 +246,7 @@ export default function HookPoliciesFields({ task, onChange }: HookPoliciesField
           </div>
         </Collapsible>
 
-        {/* Other hooks — generic key-value editor per hook name. */}
+
         {otherHookNames.map((hookName) => {
           const entries = Object.entries(policies[hookName] || {});
           return (

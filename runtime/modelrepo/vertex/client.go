@@ -21,17 +21,12 @@ type vertexClient struct {
 	contextLength   int
 	maxOutputTokens int
 	credJSON        string
-	// apiKey is an Agent Platform express mode API key: the request carries it
-	// instead of an OAuth bearer token and needs no project or location.
-	apiKey     string
-	httpClient *http.Client
-	canThink   bool
-	tracker    libtracker.ActivityTracker
-	tokenFn    func(context.Context) (string, error)
-	// quotaProject is the billing project a user credential must name on every
-	// request; empty means the credential is not a user credential and the
-	// vendor documents no quota project header for it.
-	quotaProject string
+	apiKey          string
+	httpClient      *http.Client
+	canThink        bool
+	tracker         libtracker.ActivityTracker
+	tokenFn         func(context.Context) (string, error)
+	quotaProject    string
 }
 
 func (c *vertexClient) endpoint(method string) string {
@@ -77,7 +72,6 @@ func (c *vertexClient) postJSON(ctx context.Context, endpoint string, request an
 		payload = b
 	}
 
-	// Bounded end-to-end; retried on 429/5xx with Retry-After honored.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 	resp, err := modelrepo.DoWithRetry(ctx, c.httpClient, func() (*http.Request, error) {
@@ -142,7 +136,6 @@ func (c *vertexClient) sendRequest(ctx context.Context, endpoint string, request
 }
 
 func buildVertexRequest(modelName string, messages []modelrepo.Message, args []modelrepo.ChatArgument, canThink ...bool) (vertexRequest, error) {
-	// Raw-byte cap enforced under the generateContent 20 MB total-request limit before the wire.
 	if err := modelrepo.ValidateAudioParts("vertex", modelName, messages); err != nil {
 		return vertexRequest{}, err
 	}
@@ -223,10 +216,6 @@ func buildVertexRequest(modelName string, messages []modelrepo.Message, args []m
 	return req, nil
 }
 
-// applyVertexResponseFormat puts the neutral structured-output control on the
-// request: the vendor's responseMimeType selects JSON output and
-// responseJsonSchema carries the caller's schema whole. The text mode
-// constrains nothing and is left off the wire.
 func applyVertexResponseFormat(config *vertexGenerationConfig, format *modelrepo.ResponseFormat) {
 	if format == nil || format.Mode == modelrepo.ResponseFormatText {
 		return
@@ -237,9 +226,6 @@ func applyVertexResponseFormat(config *vertexGenerationConfig, format *modelrepo
 	}
 }
 
-// vertexParameterSchema renders a tool's declared parameters as the vendor's
-// documented JSON Schema member. A tool that declares none carries neither
-// member, which the vendor documents as optional.
 func vertexParameterSchema(parameters any) (json.RawMessage, error) {
 	if parameters == nil {
 		return nil, nil
@@ -254,10 +240,6 @@ func vertexParameterSchema(parameters any) (json.RawMessage, error) {
 func vertexThinkingAllowed(canThink []bool) bool {
 	return len(canThink) == 0 || canThink[0]
 }
-
-// vertexThinkingAllowed reports whether the model's declaration says it
-// thinks; a model whose declaration says it does not is never sent a thinking
-// control.
 
 func convertToVertexContents(messages []modelrepo.Message, modelName string) []vertexContent {
 	out := make([]vertexContent, 0, len(messages))
@@ -367,13 +349,6 @@ func convertToVertexContents(messages []modelrepo.Message, modelName string) []v
 	return out
 }
 
-// mergeVertexParts appends one message's parts to the parts of the turn of the
-// same role that precedes it, keeping every functionResponse after that turn's
-// prose and media. Vertex wants one user turn per function-call cycle — two
-// user-role contents in a row fail its alternation check — so a tool result and
-// the operator's next prompt share a turn; text placed after a functionResponse
-// is the shape Vertex answers with "Requests ending with a model turn are not
-// supported".
 func mergeVertexParts(existing, incoming []vertexPart) []vertexPart {
 	responses := make([]vertexPart, 0, len(incoming))
 	merged := make([]vertexPart, 0, len(existing)+len(incoming))
@@ -391,11 +366,6 @@ func mergeVertexParts(existing, incoming []vertexPart) []vertexPart {
 	return append(merged, responses...)
 }
 
-// trimTrailingModelTurn drops trailing model-role contents. Vertex rejects a
-// request whose last content is a model turn ("Requests ending with a model
-// turn are not supported"), and a model content that called a tool is no more
-// sendable when it trails: the functionResponse Vertex requires must follow its
-// functionCall, and nothing follows a trailing turn.
 func trimTrailingModelTurn(contents []vertexContent) []vertexContent {
 	last := len(contents) - 1
 	for last >= 0 && contents[last].Role == "model" {

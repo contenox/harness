@@ -123,14 +123,10 @@ func requireNoZeroFields(t *testing.T, name string, v reflect.Value) {
 	}
 }
 
-// TestUnit_Checkpoint_FixtureCoversEveryMessageField fails when a new Message
-// field is added without extending fullyPopulatedMessage.
 func TestUnit_Checkpoint_FixtureCoversEveryMessageField(t *testing.T) {
 	requireNoZeroFields(t, "Message", reflect.ValueOf(fullyPopulatedMessage()))
 }
 
-// TestUnit_Checkpoint_RoundTrip_EveryField marshals a fully populated
-// checkpoint and asserts the decoded result is field-for-field identical.
 func TestUnit_Checkpoint_RoundTrip_EveryField(t *testing.T) {
 	cp := fullyPopulatedCheckpoint(t)
 	raw, err := MarshalCheckpoint(cp)
@@ -167,15 +163,11 @@ func TestUnit_Checkpoint_RoundTrip_EveryField(t *testing.T) {
 	assert.Equal(t, cp.ChainRef, got.ChainRef)
 	assert.True(t, cp.CreatedAt.Equal(got.CreatedAt))
 
-	// Vars is nulled here: it was compared per-key above because JSON numbers
-	// in DataTypeJSON values legitimately decode as float64.
 	cpNoVars, gotNoVars := *cp, *got
 	cpNoVars.Vars, gotNoVars.Vars = nil, nil
 	require.Equal(t, cpNoVars, gotNoVars)
 }
 
-// TestUnit_Checkpoint_VersionGate asserts a missing, future, or unmigratable
-// version all refuse with ErrCheckpointVersion.
 func TestUnit_Checkpoint_VersionGate(t *testing.T) {
 	_, err := UnmarshalCheckpoint([]byte(`{"approval_id":"x"}`))
 	require.ErrorIs(t, err, ErrCheckpointVersion, "a payload without schema_version must refuse")
@@ -192,8 +184,6 @@ func TestUnit_Checkpoint_VersionGate(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestUnit_Checkpoint_MigrationHookApplies asserts migration steps apply
-// sequentially, a missing step refuses, and a failing step surfaces its error.
 func TestUnit_Checkpoint_MigrationHookApplies(t *testing.T) {
 	const from, target = 41, 43
 	for v := from; v < target; v++ {
@@ -231,8 +221,6 @@ func TestUnit_Checkpoint_MigrationHookApplies(t *testing.T) {
 	require.ErrorContains(t, err, "bad step")
 }
 
-// TestUnit_Checkpoint_VarTypeMismatchRefuses asserts a var whose payload
-// contradicts its declared type refuses to decode.
 func TestUnit_Checkpoint_VarTypeMismatchRefuses(t *testing.T) {
 	payload := fmt.Sprintf(`{"schema_version":%d,"vars":{"x":{"type":"int","value":"\"not an int\""}}}`, CheckpointSchemaVersion)
 	_, err := UnmarshalCheckpoint([]byte(payload))
@@ -240,8 +228,6 @@ func TestUnit_Checkpoint_VarTypeMismatchRefuses(t *testing.T) {
 	require.Contains(t, err.Error(), `var "x"`)
 }
 
-// TestUnit_Checkpoint_ApprovalVerdictContext pins the injected-verdict
-// plumbing the resume path and the HITL wrapper meet on.
 func TestUnit_Checkpoint_ApprovalVerdictContext(t *testing.T) {
 	ctx := WithApprovalVerdicts(t.Context(), map[string]bool{"call-1": true, "call-2": false})
 
@@ -263,8 +249,6 @@ func TestUnit_Checkpoint_ApprovalVerdictContext(t *testing.T) {
 	require.False(t, ok)
 }
 
-// TestUnit_Checkpoint_UnansweredToolCalls covers the pending-set derivation
-// over the partial-batch transcript shape a suspension records.
 func TestUnit_Checkpoint_UnansweredToolCalls(t *testing.T) {
 	msgs := []Message{
 		{Role: "user", Content: "do it"},
@@ -285,8 +269,6 @@ func TestUnit_Checkpoint_UnansweredToolCalls(t *testing.T) {
 	require.Nil(t, unansweredToolCalls(nil))
 }
 
-// TestUnit_ApprovalPendingErrors pins the typed-error surface other layers
-// branch on.
 func TestUnit_ApprovalPendingErrors(t *testing.T) {
 	pend := &ApprovalPendingError{ApprovalID: "a1", ToolName: "write_file"}
 	wrapped := fmt.Errorf("task exec: %w", pend)

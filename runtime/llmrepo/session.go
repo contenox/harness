@@ -14,7 +14,6 @@ type sessionKeyContextKeyType struct{}
 
 var sessionKeyContextKey sessionKeyContextKeyType
 
-// WithSessionKey stores an already-derived session cache key on the context; an explicit Request.SessionKey always wins over the context value.
 func WithSessionKey(ctx context.Context, key string) context.Context {
 	if key == "" {
 		return ctx
@@ -22,13 +21,11 @@ func WithSessionKey(ctx context.Context, key string) context.Context {
 	return context.WithValue(ctx, sessionKeyContextKey, key)
 }
 
-// SessionKeyFromContext returns the session cache key set by WithSessionKey, or "" when the request has no session identity.
 func SessionKeyFromContext(ctx context.Context) string {
 	key, _ := ctx.Value(sessionKeyContextKey).(string)
 	return key
 }
 
-// DeriveSessionKey turns an internal session identifier into the opaque cache-affinity key so the session ID never travels raw.
 func DeriveSessionKey(sessionID string) string {
 	if sessionID == "" {
 		return ""
@@ -44,16 +41,11 @@ func effectiveSessionKey(ctx context.Context, req Request) string {
 	return SessionKeyFromContext(ctx)
 }
 
-// CacheHints tells a provider where the stable/volatile boundary of a request lies so it can place cache breakpoints; a hint must never change what the model sees, only cache metadata.
 type CacheHints struct {
-	// StableSystem asserts the system instruction is byte-stable across the session, i.e. it is safe to place a cache breakpoint after it.
-	StableSystem bool
-	// StableTools asserts the tool list (order and encoding) is byte-stable across the session.
-	StableTools bool
-	// StableHistoryLen is the number of leading history messages asserted unchanged since the previous request (0 = no assertion).
+	StableSystem     bool
+	StableTools      bool
 	StableHistoryLen int
-	// TTL is an advisory cache lifetime (e.g. "5m") for providers with explicit TTLs; empty means the provider default.
-	TTL string
+	TTL              string
 }
 
 func providerCacheHints(hints *CacheHints, sessionKey string) libmodelprovider.CacheHints {
@@ -69,7 +61,6 @@ func providerCacheHints(hints *CacheHints, sessionKey string) libmodelprovider.C
 	out.StableTools = hints.StableTools
 	out.StableHistoryLen = hints.StableHistoryLen
 	if hints.TTL != "" {
-		// unparseable TTL degrades to the provider default rather than failing the request
 		if d, err := time.ParseDuration(hints.TTL); err == nil && d > 0 {
 			out.TTL = d
 		}
@@ -94,7 +85,6 @@ func toolSortKey(t libmodelprovider.Tool) string {
 	if t.Function != nil {
 		name = t.Function.Name
 	}
-	// NUL separator so ("a", "b.c") can never collide with ("a\x00b", ".c").
 	return t.Type + "\x00" + name
 }
 
@@ -108,13 +98,10 @@ func withCanonicalRequestShape(opts []libmodelprovider.ChatArgument, hints libmo
 
 type usageSessionKey struct{}
 
-// WithUsageSession associates model calls with the user's session for accounting.
-// It does not change the provider cache key or routing policy.
 func WithUsageSession(ctx context.Context, sessionID string) context.Context {
 	return context.WithValue(ctx, usageSessionKey{}, sessionID)
 }
 
-// UsageSessionFromContext returns the session associated with metered calls.
 func UsageSessionFromContext(ctx context.Context) string {
 	sessionID, _ := ctx.Value(usageSessionKey{}).(string)
 	return sessionID

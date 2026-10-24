@@ -112,7 +112,6 @@ func (s *store) ListAllAffinityGroups(ctx context.Context) ([]*AffinityGroup, er
 }
 
 func (s *store) ListAffinityGroups(ctx context.Context, createdAtCursor *time.Time, limit int) ([]*AffinityGroup, error) {
-	// The cursor is set to the current time if not provided.
 	cursor := time.Now().UTC()
 	if createdAtCursor != nil {
 		cursor = *createdAtCursor
@@ -150,10 +149,7 @@ func (s *store) ListAffinityGroups(ctx context.Context, createdAtCursor *time.Ti
 	return groups, nil
 }
 
-// ListAffinityGroupByPurpose retrieves a list of LLM affinity groups for a specific purpose,
-// created before the provided cursor, ordered from newest to oldest.
 func (s *store) ListAffinityGroupByPurpose(ctx context.Context, purposeType string, createdAtCursor *time.Time, limit int) ([]*AffinityGroup, error) {
-	// The cursor is set to the current time if not provided.
 	cursor := time.Now().UTC()
 	if createdAtCursor != nil {
 		cursor = *createdAtCursor

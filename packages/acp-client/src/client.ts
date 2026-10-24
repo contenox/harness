@@ -72,9 +72,6 @@ interface JsonRpcResponseFrame {
   error?: ErrorResponse;
 }
 
-/**
- * A JSON-RPC error surfaced back to a caller as a thrown `Error`.
- */
 export class AcpError extends Error {
   readonly code: number;
   readonly data?: unknown;
@@ -87,13 +84,7 @@ export class AcpError extends Error {
   }
 }
 
-/**
- * Normalized view of `tool_call` / `tool_call_update`, passed to `onToolCall`.
- */
 export interface ToolCallEvent {
-  /**
-   * Which update variant produced this event — a card is created on `tool_call`, advanced on `tool_call_update`.
-   */
   updateKind: 'tool_call' | 'tool_call_update';
   toolCallId: string;
   title?: string;
@@ -111,21 +102,12 @@ export interface UsageEvent {
   cost?: UsageCost;
 }
 
-/**
- * Normalized view of `session_info_update`, passed to `onSessionInfo`.
- */
 export interface SessionInfoEvent {
   title?: string;
   updatedAt?: string;
 }
 
-/**
- * Handlers for `session/update` notifications and `session/request_permission` requests.
- */
 export interface SessionEventHandlers {
-  /**
-   * `image`/`audio` are set when the chunk's content block is that kind instead of text (`text` is then `''`) — see `imagePartFromBlock`/`audioPartFromBlock`.
-   */
   onMessageChunk?: (
     text: string,
     messageId?: string,
@@ -134,9 +116,6 @@ export interface SessionEventHandlers {
     audio?: AudioPart,
   ) => void;
   onThoughtChunk?: (text: string, messageId?: string) => void;
-  /**
-   * `user_message_chunk` — mainly seen during `session/load` history replay.
-   */
   onUserMessageChunk?: (
     text: string,
     messageId?: string,
@@ -144,34 +123,16 @@ export interface SessionEventHandlers {
     audio?: AudioPart,
   ) => void;
   onToolCall?: (event: ToolCallEvent) => void;
-  /**
-   * The notification's session sequence (see notificationSeq); absent when unstamped.
-   */
   onEventSeq?: (seq: number) => void;
   onPlan?: (entries: PlanEntry[]) => void;
   onUsage?: (usage: UsageEvent) => void;
   onAvailableCommands?: (commands: AvailableCommand[]) => void;
-  /**
-   * `config_option_update` — sent after a slash command changes session config.
-   */
   onConfigOptions?: (configOptions: SessionConfigOption[]) => void;
-  /**
-   * `session_info_update` — sent after a prompt turn resolves.
-   */
   onSessionInfo?: (info: SessionInfoEvent) => void;
-  /**
-   * Live shell-session output (`_contenox.terminalOutput` extension update).
-   */
   onTerminalOutput?: (payload: TerminalOutputPayload) => void;
-  /**
-   * Answers the server's `session/request_permission`.
-   */
   onPermissionRequest?: (request: RequestPermissionRequest) => Promise<string>;
 }
 
-/**
- * @deprecated Renamed to {@link SessionEventHandlers}; kept as an alias for source compatibility.
- */
 export type PromptHandlers = SessionEventHandlers;
 
 interface PendingCall {
@@ -219,13 +180,7 @@ function encodeBase64Utf8(text: string): string {
   return btoa(bin);
 }
 
-/**
- * Options accepted by the `AcpClient` constructor (and `createAcpClient`, see clientFactory.ts).
- */
 export interface AcpClientOptions {
-  /**
-   * Supplies terminal/fs handling and extra `initialize()` capabilities.
-   */
   capabilities?: AcpCapabilityProvider;
 }
 
@@ -343,9 +298,6 @@ export class AcpClient {
           this.respondResult(req.id, result);
           return;
         } catch {
-          // The provider declined (or threw) — fall through to the same
-          // refusal a client with no provider would send, rather than
-          // leaking internal error detail or hanging the agent.
         }
       }
 
@@ -477,9 +429,6 @@ export class AcpClient {
 
 
 
-  /**
-   * `clientCapabilities` is merged with the registered capability provider's `capabilities()` (if any) before being sent — explicit values passed here take precedence over the provider's per top-level key (`fs`, `terminal`, `session`, `auth`).
-   */
   async initialize(
     clientCapabilities: ClientCapabilities = {},
     clientInfo?: Implementation,
@@ -492,9 +441,6 @@ export class AcpClient {
     });
   }
 
-  /**
-   * `meta`, when provided, is sent as the `session/new` request `_meta` — this is how a caller binds the session to a registered external agent (see `AGENT_META_KEY`/`agentMeta`).
-   */
   async newSession(
     cwd: string,
     mcpServers: McpServer[] = [],
@@ -561,9 +507,6 @@ export class AcpClient {
     });
   }
 
-  /**
-   * `!` passthrough: runs one user line in the session's persistent shell WITHOUT an LLM turn (a contenox extension request, `_contenox/terminal/run`).
-   */
   async runTerminal(
     sessionId: SessionId,
     command: string,
@@ -574,9 +517,6 @@ export class AcpClient {
     });
   }
 
-  /**
-   * Lists ONE level of the session's workspace (`_contenox/fs/read_dir`).
-   */
   async listWorkspace(path?: string): Promise<WorkspaceListing> {
 
 
@@ -596,9 +536,6 @@ export class AcpClient {
     };
   }
 
-  /**
-   * Reads ONE file of the session's workspace (`_contenox/fs/read_file`).
-   */
   async readFile(path: string): Promise<{ content: string; isDir: boolean }> {
     const result = await this.call<{ content: string; isDir: boolean }>('_contenox/fs/read_file', {
       path,
@@ -607,22 +544,13 @@ export class AcpClient {
     return { content: decodeBase64Utf8(result.content), isDir: false };
   }
 
-  /**
-   * Reads ONE file of the session's workspace, keeping the raw bytes the server returns (`_contenox/fs/read_file` base64).
-   */
   async readFileRaw(path: string): Promise<{ content: string; isDir: boolean }> {
     return this.call<{ content: string; isDir: boolean }>('_contenox/fs/read_file', { path });
   }
-  /**
-   * Lists the asset actions the machine advertises for the previewed asset (`_contenox/asset/actions`).
-   */
   async assetActions(): Promise<AssetAction[]> {
     return this.call<AssetAction[]>('_contenox/asset/actions', {});
   }
 
-  /**
-   * Runs one advertised asset action on the asset at path (`_contenox/asset/run`).
-   */
   async runAssetAction(
     action: string,
     path: string,
@@ -631,9 +559,6 @@ export class AcpClient {
     return this.call<AssetActionResult>('_contenox/asset/run', { action, path, ...params });
   }
 
-  /**
-   * Writes ONE file of the session's workspace (`_contenox/fs/write_file`), overwriting an existing file (the canvas editor path).
-   */
   async writeFile(path: string, content: string): Promise<void> {
     await this.call<{ ok: boolean }>('_contenox/fs/write_file', {
       path,
@@ -643,37 +568,22 @@ export class AcpClient {
     });
   }
 
-  /**
-   * Lists the machine's durable missions, newest first (`_contenox/missions/list`).
-   */
   async listMissions(opts?: { limit?: number; createdAtCursor?: string }): Promise<MissionRow[]> {
     return this.call<MissionRow[]>('_contenox/missions/list', opts ?? {});
   }
 
-  /**
-   * Reads one durable mission (`_contenox/missions/get`).
-   */
   async getMission(missionId: string): Promise<MissionRow> {
     return this.call<MissionRow>('_contenox/missions/get', { missionId });
   }
 
-  /**
-   * Lists one mission's reports, newest first (`_contenox/missions/reports`).
-   */
   async listMissionReports(missionId: string, opts?: { limit?: number }): Promise<ReportRow[]> {
     return this.call<ReportRow[]>('_contenox/missions/reports', { missionId, ...opts });
   }
 
-  /**
-   * Lists the machine's operator inbox, newest first (`_contenox/inbox/list`).
-   */
   async listInbox(opts?: { limit?: number }): Promise<OperatorItemRow[]> {
     return this.call<OperatorItemRow[]>('_contenox/inbox/list', opts ?? {});
   }
 
-  /**
-   * Runs one prompt turn.
-   */
   async prompt(
     sessionId: SessionId,
     blocks: ContentBlock[],
@@ -690,9 +600,6 @@ export class AcpClient {
     }
   }
 
-  /**
-   * Subscribes to `session/update` notifications and `session/request_permission` requests for `sessionId`, independent of any `prompt()` call.
-   */
   subscribe(sessionId: SessionId, handlers: SessionEventHandlers): () => void {
     this.subscriptions.set(sessionId, handlers);
     return () => {
@@ -702,16 +609,10 @@ export class AcpClient {
     };
   }
 
-  /**
-   * Sends `session/cancel` — a notification, not a request; fire-and-forget.
-   */
   cancel(sessionId: SessionId): void {
     this.notify('session/cancel', { sessionId });
   }
 
-  /**
-   * Closes the underlying transport.
-   */
   close(): void {
     this.transport.close();
   }

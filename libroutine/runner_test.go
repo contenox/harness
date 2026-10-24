@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/contenox/harness/libbus"
-	"github.com/contenox/harness/libtracker"
 	"github.com/contenox/harness/libroutine"
+	"github.com/contenox/harness/libtracker"
 )
 
 func TestUnit_Job_RunExecutesOperation(t *testing.T) {
@@ -78,7 +78,7 @@ func TestUnit_Job_ConditionErrorFailsWithoutRunningOperation(t *testing.T) {
 
 	res, err := r.Run(t.Context())
 	if err != nil {
-		t.Fatalf("unexpected Run error: %v", err) // Run itself succeeds; the *job* failed
+		t.Fatalf("unexpected Run error: %v", err)
 	}
 	if !errors.Is(res.Err, condErr) || !res.Failed() {
 		t.Fatalf("expected condition error in result, got %+v", res)
@@ -218,7 +218,6 @@ func TestUnit_Runner_TriggerDropsOverlappingRuns(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 
-	// These should all be dropped since the first trigger is still in flight.
 	r.Trigger(context.Background())
 	r.Trigger(context.Background())
 	time.Sleep(50 * time.Millisecond)
@@ -244,7 +243,7 @@ func TestUnit_Runner_CircuitOpensAfterRepeatedFailures(t *testing.T) {
 			return failErr
 		},
 	}
-	r := libroutine.NewRunner(job, 1, time.Minute) // trips open after a single failure
+	r := libroutine.NewRunner(job, 1, time.Minute)
 
 	res1, err := r.Run(t.Context())
 	if err != nil {
@@ -254,9 +253,6 @@ func TestUnit_Runner_CircuitOpensAfterRepeatedFailures(t *testing.T) {
 		t.Fatalf("expected first run to fail, got %+v", res1)
 	}
 
-	// The circuit is now open: a second Run must not invoke the operation
-	// again — this is exactly the "flaky job hammered forever" case a
-	// bare single-flight guard (with no circuit breaker) would not catch.
 	_, err = r.Run(t.Context())
 	if !errors.Is(err, libroutine.ErrCircuitOpen) {
 		t.Fatalf("expected ErrCircuitOpen, got %v", err)
@@ -291,7 +287,6 @@ func TestUnit_Runner_ResultHookReceivesEveryRun(t *testing.T) {
 	}
 }
 
-// fakeTracker records ActivityTracker calls for assertion.
 type fakeTracker struct {
 	mu       sync.Mutex
 	starts   []string

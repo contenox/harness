@@ -1,4 +1,3 @@
-// src/pages/admin/chains/components/ChainJsonEditor.tsx
 import Editor, { OnMount } from '@monaco-editor/react';
 import type { editor as MonacoEditor } from 'monaco-editor';
 import { useEffect, useRef, useState } from 'react';
@@ -8,7 +7,6 @@ import type { ChainDefinition } from '../../../../lib/types';
 interface Props {
   chain: ChainDefinition;
   className?: string;
-  /** Bubble the raw JSON string up so the page can parse/save it. */
   onChangeText?: (text: string) => void;
 }
 

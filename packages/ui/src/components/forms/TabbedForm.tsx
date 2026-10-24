@@ -88,7 +88,7 @@ export const TabbedForm: React.FC<TabbedFormProps> = ({
         </div>
       </Section>
 
-      {/* Active tab content */}
+
       <div className="flex-1 overflow-y-auto">
         {activeTabContent && (
           <div
@@ -102,7 +102,7 @@ export const TabbedForm: React.FC<TabbedFormProps> = ({
         )}
       </div>
 
-      {/* Footer actions */}
+
       <div className="mt-6 shrink-0 border-t border-surface-300 dark:border-dark-surface-400 pt-4">
         <div className="flex items-center justify-between">
           <div>

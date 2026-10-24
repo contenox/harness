@@ -16,9 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// captureServer records every request it receives and replies with the next
-// scripted response, so a test can assert both the wire request and the parsed
-// result.
 type captureServer struct {
 	*httptest.Server
 	requests []capturedRequest
@@ -96,8 +93,6 @@ func streamParcels(t *testing.T, provider modelrepo.Provider, args ...modelrepo.
 	return asm.Result()
 }
 
-// A chat-completions refusal is the vendor's own outcome and must surface as
-// ErrRefused carrying its text, never as empty content.
 func TestUnit_WireOpenAI_ChatRefusalIsErrRefused(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":null,"refusal":"I cannot help with that."}}]}`})
@@ -108,8 +103,6 @@ func TestUnit_WireOpenAI_ChatRefusalIsErrRefused(t *testing.T) {
 	require.Contains(t, err.Error(), "I cannot help with that.")
 }
 
-// A Responses refusal is one content part of type refusal and must surface the
-// same way.
 func TestUnit_WireOpenAI_ResponsesRefusalIsErrRefused(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: `{"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"refusal","refusal":"I cannot help with that."}]}]}`})
@@ -120,7 +113,6 @@ func TestUnit_WireOpenAI_ResponsesRefusalIsErrRefused(t *testing.T) {
 	require.Contains(t, err.Error(), "I cannot help with that.")
 }
 
-// A refusal streamed as response.refusal.delta ends the stream as a refusal.
 func TestUnit_WireOpenAI_ResponsesStreamRefusalIsErrRefused(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: "data: {\"type\":\"response.refusal.delta\",\"delta\":\"I cannot \"}\n\ndata: {\"type\":\"response.refusal.delta\",\"delta\":\"help with that.\"}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n\n"})
@@ -131,7 +123,6 @@ func TestUnit_WireOpenAI_ResponsesStreamRefusalIsErrRefused(t *testing.T) {
 	require.Contains(t, err.Error(), "I cannot help with that.")
 }
 
-// The chat request carries the caller's stop sequences.
 func TestUnit_WireOpenAI_ChatSendsStopSequences(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"ok"}}]}`})
@@ -142,8 +133,6 @@ func TestUnit_WireOpenAI_ChatSendsStopSequences(t *testing.T) {
 	require.Equal(t, []any{"END", "###"}, cs.lastRequest(t).Body["stop"])
 }
 
-// The chat request carries tool_choice in both documented spellings and the
-// parallel-call control.
 func TestUnit_WireOpenAI_ChatSendsToolChoiceAndParallelCalls(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: `{"choices":[{"index":0,"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"c1","type":"function","function":{"name":"get_weather","arguments":"{}"}}]}}]}`})
@@ -166,8 +155,6 @@ func TestUnit_WireOpenAI_ChatSendsToolChoiceAndParallelCalls(t *testing.T) {
 	require.Equal(t, "none", cs2.lastRequest(t).Body["tool_choice"])
 }
 
-// Structured output is response_format on chat/completions, where the schema
-// object is nested under json_schema.
 func TestUnit_WireOpenAI_ChatSendsResponseFormat(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"{}"}}]}`})
@@ -190,8 +177,6 @@ func TestUnit_WireOpenAI_ChatSendsResponseFormat(t *testing.T) {
 	}, cs.lastRequest(t).Body["response_format"])
 }
 
-// Structured output is text.format on /responses, where the schema members sit
-// beside the type instead of inside a json_schema object.
 func TestUnit_WireOpenAI_ResponsesSendsTextFormat(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: `{"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"{}"}]}]}`})
@@ -214,8 +199,6 @@ func TestUnit_WireOpenAI_ResponsesSendsTextFormat(t *testing.T) {
 	}, cs.lastRequest(t).Body["text"])
 }
 
-// /responses takes the same tool_choice union in its flat object spelling, and
-// the parallel-call control.
 func TestUnit_WireOpenAI_ResponsesSendsToolChoiceAndParallelCalls(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: `{"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}]}`})
@@ -233,8 +216,6 @@ func TestUnit_WireOpenAI_ResponsesSendsToolChoiceAndParallelCalls(t *testing.T) 
 	require.Equal(t, map[string]any{"type": "function", "name": "get_weather"}, body["tool_choice"])
 }
 
-// A generation the vendor truncates at the output ceiling is an incomplete
-// response carrying a length-class finish reason, not a failed stream.
 func TestUnit_WireOpenAI_ResponsesIncompleteIsATerminal(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: "data: {\"type\":\"response.output_text.delta\",\"delta\":\"partial\"}\n\ndata: {\"type\":\"response.incomplete\",\"response\":{\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"},\"usage\":{\"input_tokens\":10,\"output_tokens\":5,\"total_tokens\":15}}}\n\n"})
@@ -248,8 +229,6 @@ func TestUnit_WireOpenAI_ResponsesIncompleteIsATerminal(t *testing.T) {
 	require.Equal(t, 15, result.Usage.TotalTokens)
 }
 
-// A truncated chat-completions stream (no finish reason, no [DONE]) is reported
-// as truncation rather than assembled into a completed answer.
 func TestUnit_WireOpenAI_ChatStreamTruncationIsReported(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"half\"}}]}\n\n"})
@@ -259,8 +238,6 @@ func TestUnit_WireOpenAI_ChatStreamTruncationIsReported(t *testing.T) {
 	require.ErrorIs(t, err, modelrepo.ErrStreamTruncated)
 }
 
-// Cache writes are reported under prompt_tokens_details on chat/completions and
-// input_tokens_details on /responses.
 func TestUnit_WireOpenAI_UsageCarriesCacheWrites(t *testing.T) {
 	t.Parallel()
 	cs := createChatUsageServer(t, `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"ok"}}],"usage":{"prompt_tokens":1200,"completion_tokens":9,"total_tokens":1209,"prompt_tokens_details":{"cached_tokens":1024,"cache_write_tokens":64}}}`)
@@ -280,7 +257,6 @@ func TestUnit_WireOpenAI_UsageCarriesCacheWrites(t *testing.T) {
 	require.Equal(t, 64, result2.Usage.CacheWriteTokens)
 }
 
-// Streaming usage arrives on the same members through the shared chat codec.
 func TestUnit_WireOpenAI_StreamUsageCarriesCacheWrites(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"ok\"}}]}\n\ndata: {\"choices\":[],\"usage\":{\"prompt_tokens\":1200,\"completion_tokens\":9,\"total_tokens\":1209,\"prompt_tokens_details\":{\"cached_tokens\":1024,\"cache_write_tokens\":64}}}\n\ndata: [DONE]\n\n"})
@@ -292,9 +268,6 @@ func TestUnit_WireOpenAI_StreamUsageCarriesCacheWrites(t *testing.T) {
 	require.Equal(t, 64, result.Usage.CacheWriteTokens)
 }
 
-// A reasoning model's /responses request asks for the encrypted reasoning items
-// and replays them on the next turn, which is what keeps multi-turn tool calling
-// from restarting its reasoning.
 func TestUnit_WireOpenAI_ResponsesReplaysEncryptedReasoning(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t,
@@ -320,9 +293,6 @@ func TestUnit_WireOpenAI_ResponsesReplaysEncryptedReasoning(t *testing.T) {
 	require.Equal(t, map[string]any{"type": "reasoning", "id": "rs_1", "encrypted_content": "OPAQUE"}, replay[1])
 }
 
-// A model whose page documents tool calling from the Responses API alone is
-// never sent its tools over chat/completions, and one whose page does not list
-// the Responses endpoint is never sent there.
 func TestUnit_WireOpenAI_ToolCallingRoutesToResponses(t *testing.T) {
 	t.Parallel()
 	tool := modelrepo.Tool{Type: "function", Function: &modelrepo.FunctionTool{Name: "get_weather", Parameters: map[string]any{"type": "object"}}}
@@ -346,8 +316,6 @@ func TestUnit_WireOpenAI_ToolCallingRoutesToResponses(t *testing.T) {
 	require.Equal(t, "/responses", responsesOnly.lastRequest(t).Path)
 }
 
-// A failed streaming request surfaces the vendor's error envelope, not the raw
-// body, and keeps its classification.
 func TestUnit_WireOpenAI_StreamRequestErrorNamesTheVendorCode(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Status: http.StatusTooManyRequests, Body: `{"error":{"message":"Rate limit reached for gpt-4o","type":"requests","code":"rate_limit_exceeded"}}`})
@@ -362,8 +330,6 @@ func TestUnit_WireOpenAI_StreamRequestErrorNamesTheVendorCode(t *testing.T) {
 	require.NotContains(t, err.Error(), `"error"`)
 }
 
-// The catalogue declares vision and the output ceiling from the vendor's own
-// model pages, and the provider clamps an over-large request to that ceiling.
 func TestUnit_WireOpenAI_CatalogDeclaresDocumentedFacts(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -402,8 +368,6 @@ func TestUnit_WireOpenAI_CatalogDeclaresDocumentedFacts(t *testing.T) {
 	require.Equal(t, 1, calls)
 }
 
-// An effort outside the model's documented vocabulary is refused before the wire
-// rather than silently replaced by a different one.
 func TestUnit_WireOpenAI_UndocumentedReasoningEffortIsRefused(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: `{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"ok"}}]}`})
@@ -423,9 +387,6 @@ func createChatUsageServer(t *testing.T, body string) *captureServer {
 	return newCaptureServer(t, scriptedReply{Body: body})
 }
 
-// A model the vendor's pages document as reasoning is listed as able to think,
-// with the efforts its page names, so a provider built from the catalog sends
-// the effort the operator selected.
 func TestUnit_WireOpenAI_CatalogDeclaresDocumentedReasoning(t *testing.T) {
 	t.Parallel()
 	var responses []map[string]any
@@ -463,8 +424,6 @@ func TestUnit_WireOpenAI_CatalogDeclaresDocumentedReasoning(t *testing.T) {
 	require.Equal(t, "low", responses[0]["reasoning"].(map[string]any)["effort"])
 }
 
-// An error frame streamed after partial text, then the end sentinel, fails the
-// turn with the vendor's message; the partial text never reads as an answer.
 func TestUnit_WireOpenAI_StreamedErrorFrameFailsTheTurn(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: "data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"par\"}}]}\n\n" +

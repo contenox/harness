@@ -42,9 +42,6 @@ export interface CredentialsSignUpProps {
     },
     { verificationRequired: boolean }
   >;
-  /**
-   * The published documents this application is showing, every one of which a registration must accept.
-   */
   documents: PublishedDocument[];
   intro?: ReactNode;
   legalLinks?: { to: string; label: string }[];

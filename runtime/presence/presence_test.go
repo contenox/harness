@@ -11,10 +11,6 @@ import (
 	"github.com/contenox/harness/runtime/presence"
 )
 
-// openKV opens a fresh file-backed SQLite KV manager. A FILE (not :memory:) is
-// used so a second manager over the same path exercises the real cross-process
-// path — an editor writer and serve's reader are separate processes sharing
-// $HOME/.contenox-harness/local.db.
 func openKV(t *testing.T, dir string) libkvstore.KVManager {
 	t.Helper()
 	path := filepath.Join(dir, "local.db")
@@ -77,10 +73,6 @@ func TestUnit_Store_StaleDerivation(t *testing.T) {
 	ctx := context.Background()
 	kv := openKV(t, t.TempDir())
 
-	// Drive the store clock so staleness is deterministic. The KV row's own hard
-	// TTL is left at the default (90s) so the row stays ALIVE in real time while
-	// we advance the logical clock past the staleness threshold — this isolates
-	// staleness-derivation from aging-out.
 	base := time.Now().UTC()
 	clock := base
 	store := presence.NewStore(kv,
@@ -92,7 +84,6 @@ func TestUnit_Store_StaleDerivation(t *testing.T) {
 		t.Fatalf("Register: %v", err)
 	}
 
-	// Just after registration: fresh.
 	clock = base.Add(5 * time.Second)
 	entries, err := store.List(ctx)
 	if err != nil {
@@ -102,8 +93,6 @@ func TestUnit_Store_StaleDerivation(t *testing.T) {
 		t.Fatalf("within TTL the entry must be fresh: %+v", entries)
 	}
 
-	// Past the TTL since LastSeen: stale, but still listed (not yet aged out) so
-	// an operator can SEE it died.
 	clock = base.Add(31 * time.Second)
 	entries, err = store.List(ctx)
 	if err != nil {
@@ -121,9 +110,6 @@ func TestUnit_Store_AgesOutAfterHardTTL(t *testing.T) {
 	ctx := context.Background()
 	kv := openKV(t, t.TempDir())
 
-	// A short hard TTL drives real aging-out via the KV row's native expiry — the
-	// "filter-on-read" reap: a dead editor's row disappears from the listing with
-	// no reaper, because the store treats an expired row as absent.
 	store := presence.NewStore(kv,
 		presence.WithStaleTTL(10*time.Millisecond),
 		presence.WithHardTTL(40*time.Millisecond),
@@ -135,7 +121,7 @@ func TestUnit_Store_AgesOutAfterHardTTL(t *testing.T) {
 		t.Fatalf("registered entry must be listed: entries=%v err=%v", entries, err)
 	}
 
-	time.Sleep(80 * time.Millisecond) // past the hard TTL
+	time.Sleep(80 * time.Millisecond)
 
 	entries, err := store.List(ctx)
 	if err != nil {
@@ -164,7 +150,6 @@ func TestUnit_Store_Deregister(t *testing.T) {
 	if len(entries) != 0 {
 		t.Fatalf("deregistered entry must be gone, got %+v", entries)
 	}
-	// Deregistering an already-absent key is a no-op, not an error.
 	if err := store.Deregister(ctx, presence.KindServe, "serve-1"); err != nil {
 		t.Fatalf("idempotent Deregister: %v", err)
 	}
@@ -181,27 +166,19 @@ func TestUnit_Store_RegisterRejectsIncompleteRecord(t *testing.T) {
 	}
 }
 
-// TestUnit_Board_ComposedFleetView is the slice's composed case: two fresh
-// "editor" registrations plus one that has gone stale past its hard TTL. The
-// board reader (a SEPARATE KV manager over the same db file, the real
-// cross-process shape) must show the two fresh ones marked External, and the
-// stale one aged out of the listing.
 func TestUnit_Board_ComposedFleetView(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 
-	// Writers and the reader are distinct managers over the SAME db file.
 	writerKV := openKV(t, dir)
 	readerKV := openKV(t, dir)
 
-	// The dead editor writes with a short hard TTL so its row genuinely ages out.
 	deadWriter := presence.NewStore(writerKV, presence.WithHardTTL(40*time.Millisecond))
 	if err := deadWriter.Register(ctx, presence.Record{InstanceID: "dead-zed", Kind: presence.KindACP, ClientName: "zed"}); err != nil {
 		t.Fatalf("register dead editor: %v", err)
 	}
-	time.Sleep(80 * time.Millisecond) // let the dead editor age out
+	time.Sleep(80 * time.Millisecond)
 
-	// Two live editors register with the default (long) hard TTL.
 	liveWriter := presence.NewStore(writerKV)
 	if err := liveWriter.Register(ctx, presence.Record{InstanceID: "live-zed", Kind: presence.KindACP, ClientName: "zed"}); err != nil {
 		t.Fatalf("register live editor: %v", err)

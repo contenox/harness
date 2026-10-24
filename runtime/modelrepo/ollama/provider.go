@@ -27,13 +27,11 @@ type OllamaProvider struct {
 	SupportsAudio          bool
 	SupportsAudioExtension bool
 	SupportsSession        bool
-	// ThinkingTypes is the model's declared thinking controls, which decide
-	// which level a request may carry; nil means the endpoint declared none.
-	ThinkingTypes *modelrepo.ThinkingTypes
-	apiKey        string
-	httpClient    *http.Client
-	Backends      []string
-	tracker       libtracker.ActivityTracker
+	ThinkingTypes          *modelrepo.ThinkingTypes
+	apiKey                 string
+	httpClient             *http.Client
+	Backends               []string
+	tracker                libtracker.ActivityTracker
 }
 
 func NewOllamaProvider(name string, backends []string, httpClient *http.Client, caps modelrepo.CapabilityConfig, apiKey string, tracker libtracker.ActivityTracker) modelrepo.Provider {

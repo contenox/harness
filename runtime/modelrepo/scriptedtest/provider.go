@@ -61,7 +61,6 @@ func (p *Provider) CanVision() bool { return p.caps.CanVision }
 
 func (p *Provider) CanAudio() bool { return p.caps.CanAudio }
 
-// scriptFor prefers the backend id the resolver picked, which is the registered backend's script path.
 func (p *Provider) scriptFor(backendID string) (*Script, error) {
 	path := strings.TrimSpace(backendID)
 	if path == "" {
@@ -153,7 +152,6 @@ type streamClient struct {
 	tracker   libtracker.ActivityTracker
 }
 
-// Stream consumes its turn before the channel is handed back, so turn order follows call order rather than consumption order.
 func (c *streamClient) Stream(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (<-chan *modelrepo.StreamParcel, error) {
 	reportErr, _, end := c.tracker.Start(ctx, "stream", modelrepo.ScriptedTestBackendType, "model", c.modelName, "script", c.script.Path)
 	defer end()
@@ -249,10 +247,6 @@ type embedClient struct {
 	dimensions int
 }
 
-// Embed never consumes a turn: an embedding is not a model turn, and spending
-// one would desync the dialog. The vector is a deterministic bag of words, so a
-// passage sharing terms with a query outranks a passage sharing none, and a
-// retrieval probe over this backend reports what the terms say rather than noise.
 func (c *embedClient) Embed(ctx context.Context, prompt string) ([]float64, error) {
 	vector := make([]float64, c.dimensions)
 	if c.dimensions <= 0 {
@@ -313,10 +307,8 @@ var _ modelrepo.Provider = (*Provider)(nil)
 
 func (p *Provider) CanAutocomplete() bool { return false }
 
-// CanNextEdit reports that scripted tests do not implement independent edit prediction.
 func (p *Provider) CanNextEdit() bool { return false }
 
-// GetNextEditConnection refuses to fabricate an edit result.
 func (p *Provider) GetNextEditConnection(context.Context, string) (modelrepo.LLMNextEditClient, error) {
 	return nil, modelrepo.ErrNextEditUnsupported
 }

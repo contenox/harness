@@ -1,9 +1,6 @@
 import { H2 } from './Typography';
 import type { ReactNode } from 'react';
 
-/**
- * One labelled band of a supervision screen.
- */
 export function AskSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section aria-label={title} className="flex flex-col gap-3">

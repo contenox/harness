@@ -14,21 +14,16 @@ type FileSystemCapabilities struct {
 	Meta          json.RawMessage `json:"_meta,omitempty"`
 }
 
-// AuthCapabilities is the client-side auth capability object (unstable spec
-// surface): it gates which auth method types the client can handle.
 type AuthCapabilities struct {
 	Terminal bool `json:"terminal,omitempty"`
 }
 
-// ClientSessionCapabilities mirrors the spec's clientCapabilities.session.
 type ClientSessionCapabilities struct {
 	ConfigOptions *SessionConfigOptionsCapabilities `json:"configOptions,omitempty"`
 	Meta          json.RawMessage                   `json:"_meta,omitempty"`
 }
 
 type SessionConfigOptionsCapabilities struct {
-	// Boolean present ({}) means the client accepts type:"boolean" config
-	// options and may send boolean set_config_option values.
 	Boolean *struct{}       `json:"boolean,omitempty"`
 	Meta    json.RawMessage `json:"_meta,omitempty"`
 }
@@ -41,8 +36,6 @@ type ClientCapabilities struct {
 	Meta     json.RawMessage            `json:"_meta,omitempty"`
 }
 
-// SupportsBooleanConfigOptions reports whether the client advertised
-// clientCapabilities.session.configOptions.boolean.
 func (c ClientCapabilities) SupportsBooleanConfigOptions() bool {
 	return c.Session != nil && c.Session.ConfigOptions != nil && c.Session.ConfigOptions.Boolean != nil
 }
@@ -62,26 +55,19 @@ type McpCapabilities struct {
 }
 
 type SessionCapabilities struct {
-	List   *struct{} `json:"list,omitempty"`
-	Resume *struct{} `json:"resume,omitempty"`
-	Close  *struct{} `json:"close,omitempty"`
-	Delete *struct{} `json:"delete,omitempty"`
-	// AdditionalDirectories present ({}) means the agent honors
-	// additionalDirectories on session/new, session/load, and session/resume,
-	// and may report SessionInfo.AdditionalDirectories from session/list.
+	List                  *struct{}       `json:"list,omitempty"`
+	Resume                *struct{}       `json:"resume,omitempty"`
+	Close                 *struct{}       `json:"close,omitempty"`
+	Delete                *struct{}       `json:"delete,omitempty"`
 	AdditionalDirectories *struct{}       `json:"additionalDirectories,omitempty"`
 	Meta                  json.RawMessage `json:"_meta,omitempty"`
 }
 
-// AgentAuthCapabilities describes agent auth capabilities — currently just
-// whether it supports the `logout` method.
 type AgentAuthCapabilities struct {
 	Logout *LogoutCapabilities `json:"logout,omitempty"`
 	Meta   json.RawMessage     `json:"_meta,omitempty"`
 }
 
-// LogoutCapabilities is present ({}) when the agent supports the `logout`
-// method.
 type LogoutCapabilities struct {
 	Meta json.RawMessage `json:"_meta,omitempty"`
 }
@@ -95,9 +81,6 @@ type AgentCapabilities struct {
 	Meta                json.RawMessage       `json:"_meta,omitempty"`
 }
 
-// AuthMethod covers the spec's auth method union; Type discriminates on the
-// wire between "" (stable default), "terminal" (unstable; Args/Env launch the
-// agent binary for a TUI), and "env_var" (unstable; Vars lists env vars).
 type AuthMethod struct {
 	ID          string            `json:"id"`
 	Name        string            `json:"name"`
@@ -115,9 +98,6 @@ const (
 	AuthMethodTypeEnvVar   = "env_var"
 )
 
-// AuthEnvVar describes one variable of an env_var auth method; Secret is a
-// pointer because the spec default is true, so an explicit false must reach
-// the wire while nil emits nothing.
 type AuthEnvVar struct {
 	Name     string          `json:"name"`
 	Label    string          `json:"label,omitempty"`
@@ -150,8 +130,6 @@ type AuthenticateResponse struct {
 	Meta json.RawMessage `json:"_meta,omitempty"`
 }
 
-// LogoutRequest terminates the current authenticated session; only
-// meaningful when the agent advertises AgentCapabilities.Auth.Logout.
 type LogoutRequest struct {
 	Meta json.RawMessage `json:"_meta,omitempty"`
 }

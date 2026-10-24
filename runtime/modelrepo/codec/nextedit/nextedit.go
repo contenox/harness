@@ -6,7 +6,6 @@ import (
 	"github.com/contenox/harness/runtime/modelcontract"
 )
 
-// ValidateLimit rejects output limits above a declared edit profile's maximum.
 func ValidateLimit(format string, maxTokens int) error {
 	profile, err := modelcontract.ResolveNextEdit(format)
 	if err != nil {
@@ -18,7 +17,6 @@ func ValidateLimit(format string, maxTokens int) error {
 	return nil
 }
 
-// Prepare assembles an explicit edit profile for a raw completion endpoint.
 func Prepare(format string, input modelcontract.NextEditInput) (modelcontract.PreparedEdit, error) {
 	prepared, err := modelcontract.PrepareNextEdit(format, input)
 	if err != nil {

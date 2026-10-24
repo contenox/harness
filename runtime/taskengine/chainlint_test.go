@@ -15,7 +15,6 @@ func branchTo(op taskengine.OperatorTerm, when, goto_ string) taskengine.Transit
 	return taskengine.TransitionBranch{Operator: op, When: when, Goto: goto_}
 }
 
-// TestUnit_LintChain_GoodChainPasses exercises the shape every shipped agent chain uses; nothing here may error.
 func TestUnit_LintChain_GoodChainPasses(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -47,9 +46,6 @@ func TestUnit_LintChain_GoodChainPasses(t *testing.T) {
 	require.NoError(t, taskengine.LintChain(chain, taskengine.DataTypeString))
 }
 
-// TestUnit_LintChain_ImpossibleEdgeIsLoadError: a task that can only produce
-// a string feeding a handler that only accepts chat_history is provably
-// broken — the error must name both endpoints and both type sets.
 func TestUnit_LintChain_ImpossibleEdgeIsLoadError(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -69,7 +65,6 @@ func TestUnit_LintChain_ImpossibleEdgeIsLoadError(t *testing.T) {
 		"task[summarize] handler execute_tool_calls cannot accept input from task[extract] (produces string; accepts chat_history)")
 }
 
-// TestUnit_LintChain_AnyFlowsStayRuntimeChecked: a tools task's output type is unknowable at load, so an edge carrying it must pass the linter and stay the runtime backstop's problem.
 func TestUnit_LintChain_AnyFlowsStayRuntimeChecked(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -87,9 +82,6 @@ func TestUnit_LintChain_AnyFlowsStayRuntimeChecked(t *testing.T) {
 	require.NoError(t, taskengine.LintChain(chain2))
 }
 
-// TestUnit_LintChain_OutputTemplateNarrowsToolsToString: with an
-// output_template the tools task's output is a rendered string, which makes a
-// downstream execute_tool_calls provably impossible.
 func TestUnit_LintChain_OutputTemplateNarrowsToolsToString(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -108,9 +100,6 @@ func TestUnit_LintChain_OutputTemplateNarrowsToolsToString(t *testing.T) {
 		"task[digest] handler execute_tool_calls cannot accept input from task[fetch] (produces string; accepts chat_history)")
 }
 
-// TestUnit_LintChain_PromptTemplateIntoExecuteToolCalls: a prompt_template
-// replaces the input with a rendered string on every path, so declaring one on
-// an execute_tool_calls task can never work.
 func TestUnit_LintChain_PromptTemplateIntoExecuteToolCalls(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -123,9 +112,6 @@ func TestUnit_LintChain_PromptTemplateIntoExecuteToolCalls(t *testing.T) {
 	require.Contains(t, err.Error(), "cannot take a prompt_template")
 }
 
-// TestUnit_LintChain_InputVarNeverProduced: naming a variable no predecessor
-// writes fails at runtime with "input variable not found"; the linter teaches
-// it at load and lists what IS available.
 func TestUnit_LintChain_InputVarNeverProduced(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -144,8 +130,6 @@ func TestUnit_LintChain_InputVarNeverProduced(t *testing.T) {
 	require.Contains(t, err.Error(), "variables available here: chat, input, previous_output")
 }
 
-// TestUnit_LintChain_InputVarTypeMismatch: the variable exists but can only
-// ever hold a type the handler rejects.
 func TestUnit_LintChain_InputVarTypeMismatch(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -164,9 +148,6 @@ func TestUnit_LintChain_InputVarTypeMismatch(t *testing.T) {
 		`task[chat] handler chat_completion cannot accept input from input_var "input" (produces int; accepts string, chat_history)`)
 }
 
-// TestUnit_LintChain_DeadBranchOnClosedVocabulary: an equals branch against a
-// token the handler can never emit (here the retired hyphenated spelling of
-// tool_call) is a dead branch and a load error.
 func TestUnit_LintChain_DeadBranchOnClosedVocabulary(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -186,8 +167,6 @@ func TestUnit_LintChain_DeadBranchOnClosedVocabulary(t *testing.T) {
 	require.Contains(t, err.Error(), "tool_call, executed")
 }
 
-// TestUnit_LintChain_RouteNeedsEqualsBranches mirrors the runtime refusal
-// ("route task has no equals branches to route between") at load time.
 func TestUnit_LintChain_RouteNeedsEqualsBranches(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -202,8 +181,6 @@ func TestUnit_LintChain_RouteNeedsEqualsBranches(t *testing.T) {
 	require.Contains(t, err.Error(), "a route task needs at least one equals branch")
 }
 
-// TestUnit_LintChain_MacroChecks: edge_count macros must name real
-// task-to-task edges, and {{var:}} must name a variable.
 func TestUnit_LintChain_MacroChecks(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -225,8 +202,6 @@ func TestUnit_LintChain_MacroChecks(t *testing.T) {
 	require.Contains(t, err.Error(), "{{var:}} names no variable")
 }
 
-// TestUnit_LintChain_TemplateRefToUnknownVar: a {{.typo}} renders as the
-// literal "<no value>" at runtime; the linter names the typo.
 func TestUnit_LintChain_TemplateRefToUnknownVar(t *testing.T) {
 	chain := lintChain(
 		taskengine.TaskDefinition{
@@ -239,9 +214,6 @@ func TestUnit_LintChain_TemplateRefToUnknownVar(t *testing.T) {
 	require.Contains(t, err.Error(), "references {{.summry}}, but no task or engine variable with that name exists")
 }
 
-// TestUnit_LintChain_StructuralDefectsWrapErrChainLint: the linter delegates
-// structure (duplicate ids, unknown goto targets, unknown handlers) to the
-// runtime's validateChain and marks the result as a lint failure.
 func TestUnit_LintChain_StructuralDefectsWrapErrChainLint(t *testing.T) {
 	dup := lintChain(
 		taskengine.TaskDefinition{ID: "a", Handler: taskengine.HandleNoop},

@@ -6,7 +6,6 @@ import (
 	"fmt"
 )
 
-// MockProvider carries capability flags for resolver tests only; its clients refuse to answer, because a fabricated reply is what let a broken chain look green.
 type MockProvider struct {
 	ID                  string
 	Name                string
@@ -147,10 +146,8 @@ func (m *MockStreamClient) Close() error {
 	return nil
 }
 
-// ErrNotSupported is returned by a connection getter when the matching Can* flag is false.
 var ErrNotSupported = errors.New("operation not supported")
 
-// ErrNoDialog is returned by every MockProvider client: capability flags are all it has, and a model reply is not something it may invent.
 var ErrNoDialog = errors.New("no dialog behind this provider")
 
 var _ Provider = &MockProvider{}

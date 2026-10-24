@@ -143,10 +143,6 @@ func (c *ollamaHTTPClient) stream(ctx context.Context, method, endpoint string, 
 	return nil
 }
 
-// ollamaStreamError reports the error a response frame carries in band. A
-// generation that fails after the response headers is delivered as a 200 whose
-// JSON line is the vendor's error object, so a decoder that only knows the
-// success shape loses the diagnosis and reports the truncated stream instead.
 func ollamaStreamError(line []byte) error {
 	var frame struct {
 		Error json.RawMessage `json:"error"`
@@ -248,10 +244,6 @@ func ollamaAPIError(status int, raw []byte) error {
 	return modelrepo.ClassifyProviderError(fmt.Errorf("ollama API returned %d: %s", status, msg), status, "", msg)
 }
 
-// buildOllamaOptions renders the neutral generation settings as the vendor's
-// `options` object. contextLength is the window the model's own metadata
-// declares; a model that declared none is asked with the server default rather
-// than with a window nobody stated.
 func buildOllamaOptions(config *modelrepo.ChatConfig, maxOutputTokens, contextLength int) map[string]any {
 	opts := make(map[string]any)
 	if config.Temperature != nil {
@@ -273,14 +265,8 @@ func buildOllamaOptions(config *modelrepo.ChatConfig, maxOutputTokens, contextLe
 	return opts
 }
 
-// ollamaLegacyThinkLevels are the level names the vendor's own validator accepts
-// for a model that publishes no thinking descriptor.
 var ollamaLegacyThinkLevels = []string{reasoning.Low, reasoning.Medium, reasoning.High, reasoning.Max}
 
-// ollamaThinkLevel picks the level to send: the most effort the model declares
-// up to the level the caller asked for, the least it declares when the caller
-// asked for less than any of them, and empty when the declaration names no
-// level the runtime vocabulary knows.
 func ollamaThinkLevel(requested string, declared []string) string {
 	candidates := declared
 	if len(candidates) == 0 {
@@ -307,10 +293,6 @@ func ollamaThinkLevel(requested string, declared []string) string {
 	return lowest
 }
 
-// buildOllamaThink renders the caller's thinking level as the vendor's `think`
-// member: a boolean, or a level the model's own descriptor advertises. A level
-// the declaration cannot express is an error, because sending one the server
-// would resolve to its default leaves the caller's request silently ungranted.
 func buildOllamaThink(config *modelrepo.ChatConfig, declared *modelrepo.ThinkingTypes) (*ThinkValue, error) {
 	if config == nil || config.Think == nil {
 		return nil, nil
@@ -338,8 +320,6 @@ func buildOllamaThink(config *modelrepo.ChatConfig, declared *modelrepo.Thinking
 	return &ThinkValue{Value: chosen}, nil
 }
 
-// ollamaThinkingDeclaration names what a model declared, for a diagnostic that
-// has to say why a requested level could not be sent.
 func ollamaThinkingDeclaration(declared *modelrepo.ThinkingTypes) string {
 	if declared == nil {
 		return "no thinking declaration"
@@ -347,8 +327,6 @@ func ollamaThinkingDeclaration(declared *modelrepo.ThinkingTypes) string {
 	return fmt.Sprintf("levels %v, enabled %t, disabled %t", declared.EffortLevels, declared.Enabled, declared.Disabled)
 }
 
-// ollamaFormat renders the neutral structured-output control as the vendor's
-// `format` member: the literal "json", or a JSON schema document.
 func ollamaFormat(format *modelrepo.ResponseFormat) (json.RawMessage, error) {
 	if format == nil || format.Mode == modelrepo.ResponseFormatText {
 		return nil, nil

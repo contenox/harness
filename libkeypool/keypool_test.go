@@ -9,9 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A sticky pool pins an identity to one key, and it does so as the clock moves:
-// the selection reads the time it is handed and never a wall clock of its own,
-// which is what makes stickiness provable rather than observed.
 func TestUnit_KeyPoolStickyClientIsStableUnderAClockWeControl(t *testing.T) {
 	breaker, err := libkeypool.NewProviderCircuitBreaker(3, 2*time.Minute)
 	require.NoError(t, err)
@@ -66,8 +63,6 @@ func TestUnit_KeyPoolRoundRobin(t *testing.T) {
 	assert.Equal(t, first, pool.SelectKey("any", now), "and come back around")
 }
 
-// A pool that declares round_robin has no identity to pin, so an empty identity
-// is not a degraded selection: it rotates, which is what the policy states.
 func TestUnit_KeyPoolRoundRobinWithoutAnIdentity(t *testing.T) {
 	pool, err := libkeypool.NewKeyPool([]string{"sk-key-1", "sk-key-2"}, libkeypool.PolicyRoundRobin, nil)
 	require.NoError(t, err)
@@ -97,9 +92,6 @@ func TestUnit_KeyPoolWithoutABreakerStillSelects(t *testing.T) {
 	assert.Contains(t, []string{"sk-key-1", "sk-key-2"}, pool.SelectKey("user-bob", now))
 }
 
-// A pool whose every key is quarantined still names one: refusing here would
-// turn a provider-wide cooldown into an outage, and the provider-level breaker
-// is what decides whether the provider is skipped.
 func TestUnit_KeyPoolNamesAKeyWhenEveryKeyIsQuarantined(t *testing.T) {
 	breaker, err := libkeypool.NewProviderCircuitBreaker(3, time.Minute)
 	require.NoError(t, err)

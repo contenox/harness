@@ -8,7 +8,6 @@ import (
 	"net/http"
 )
 
-// HandleAPIError processes OpenAI-compatible API error responses.
 func HandleAPIError(resp *http.Response) error {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -22,15 +22,6 @@ import (
 	"github.com/contenox/harness/runtime/taskengine"
 )
 
-// allACPCommands is the full, capability-unfiltered admin command set — every
-// command this package knows how to dispatch, regardless of what the current
-// transport can actually run. It exists so parseCommand's recognition (via
-// acpCommandNames, below) is never narrower than what (*Transport).acpCommands
-// advertises: a command that got dropped from the advertised menu must still be
-// recognized as a command when a client sends it anyway (see handleMission's
-// teaching error for /mission), not silently forwarded as ordinary prompt text.
-// Use (*Transport).acpCommands for anything that reaches a client — the menu,
-// /help, session/new's available_commands — never this directly.
 func allACPCommands() []libacp.AvailableCommand {
 	return []libacp.AvailableCommand{
 		{Name: "help", Description: "List the available commands."},
@@ -47,15 +38,6 @@ func allACPCommands() []libacp.AvailableCommand {
 	}
 }
 
-// acpCommands is the admin command set actually advertised to THIS transport's
-// ACP clients — capability-filtered from allACPCommands. /mission is dropped
-// unless hasMissionCapability reports the fleet kernel and agent resolver it
-// needs are both wired (only true in a serve-hosted session): ACP is
-// advertise-what-works, so a standalone `contenox acp` process (what Zed
-// spawns, with no fleet kernel of its own) must never list a command that can
-// only error out. The protocol only uses this list as a client-side
-// autocomplete/menu hint — an invoked command arrives back as ordinary prompt
-// text, which Prompt intercepts.
 func (t *Transport) acpCommands() []libacp.AvailableCommand {
 	all := allACPCommands()
 	if t.hasMissionCapability() {
@@ -71,9 +53,6 @@ func (t *Transport) acpCommands() []libacp.AvailableCommand {
 	return out
 }
 
-// acpCommandNames is the set of recognized command names, used by parseCommand.
-// Built from allACPCommands (the unfiltered superset), not the per-transport
-// advertised list — see allACPCommands' doc comment for why.
 var acpCommandNames = func() map[string]struct{} {
 	m := make(map[string]struct{}, len(allACPCommands()))
 	for _, c := range allACPCommands() {
@@ -82,10 +61,6 @@ var acpCommandNames = func() map[string]struct{} {
 	return m
 }()
 
-// parseCommand recognizes a leading slash command whose first token is one of
-// the advertised admin commands. It matches the first token ONLY when it leads
-// the input, so a pasted path ("/home/user/x") or text that merely mentions a
-// slash ("what does /etc/passwd do") is left as a normal prompt.
 func parseCommand(input string) (name, args string, ok bool) {
 	s := strings.TrimSpace(input)
 	if !strings.HasPrefix(s, "/") {
@@ -103,9 +78,6 @@ func parseCommand(input string) (name, args string, ok bool) {
 	return first, args, true
 }
 
-// dispatchCommand runs an admin command and reports the outcome to the client
-// as an agent message. Command failures are surfaced inline (not as a protocol
-// error) and still end the turn, so the editor shows them in the conversation.
 func (t *Transport) dispatchCommand(ctx context.Context, sid libacp.SessionID, sess *sessionEntry, name, args string) (libacp.PromptResponse, error) {
 	reportErr, _, end := t.tracker().Start(ctx, "command", "acp_session", "session_id", string(sid), "command", name)
 	defer end()
@@ -166,22 +138,6 @@ func (t *Transport) dispatchCommand(ctx context.Context, sid libacp.SessionID, s
 	return libacp.PromptResponse{StopReason: libacp.StopReasonEndTurn}, nil
 }
 
-// persistCommandTurn records a slash-command exchange — the line the operator
-// typed and the answer they got — in the session's durable transcript, the same
-// store an ordinary turn writes to.
-//
-// Without this a command is a WIRE EVENT ONLY: it renders once and is gone on
-// reload. That was invisible for /help, and badly wrong for /mission, whose whole
-// point is a durable act — an operator who fired a mission as a session's FIRST
-// message came back to a session with no messages at all, which has no title (the
-// sidebar falls back to a short id), no last-activity timestamp (so beam's
-// freshest-first roster sorts it below every real chat), and an empty transcript.
-// The session looked deleted. It was merely never written to.
-//
-// The two history-rewriting commands are excluded, because for them the
-// transcript is the OUTPUT, not the record: /clear empties it (appending the
-// command that emptied it would leave the one line it just promised to remove)
-// and /compact replaces it with a summary.
 func (t *Transport) persistCommandTurn(ctx context.Context, sess *sessionEntry, name, args, out string) {
 	if t.deps.DB == nil || sess == nil || commandRewritesHistory(name) {
 		return
@@ -208,8 +164,6 @@ func (t *Transport) persistCommandTurn(ctx context.Context, sess *sessionEntry, 
 	}
 }
 
-// commandRewritesHistory reports whether a command owns the transcript itself, in
-// which case persistCommandTurn must not append to it. See there.
 func commandRewritesHistory(name string) bool {
 	switch name {
 	case "clear", "compact":
@@ -237,11 +191,6 @@ func commandUpdatesConfigOptions(name string) bool {
 	}
 }
 
-// sendAvailableCommands advertises the admin command set for a session. The
-// client uses it to populate its slash-command menu. It MUST run only after the
-// session's creation/load result has reached the client (callers schedule it via
-// libacp.AfterResponse): a client maps the update to a session it already knows,
-// and drops it otherwise — which silently disables the menu.
 func (t *Transport) sendAvailableCommands(ctx context.Context, sid libacp.SessionID) {
 	t.sendUpdate(ctx, libacp.SessionNotification{
 		SessionID: sid,
@@ -263,8 +212,6 @@ func (t *Transport) handleHelp() string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-// handleDoctor reports current provider/model/backend readiness. It recomputes
-// from live runtime state via the engine — read-only, never a model completion.
 func (t *Transport) handleDoctor(ctx context.Context) (string, error) {
 	if t.deps.Engine == nil || t.deps.Engine.SetupStatus == nil {
 		return "", fmt.Errorf("readiness check unavailable")
@@ -275,7 +222,6 @@ func (t *Transport) handleDoctor(ctx context.Context) (string, error) {
 	}
 	summary := res.Summary()
 
-	// Advisory: warn when default-max-tokens exceeds the active provider's ceiling.
 	ceiling := res.DefaultMaxOutputTokens
 	if ceiling > 0 {
 		maxTok := t.maxTokens()
@@ -503,10 +449,6 @@ func parseCapabilitySetArgs(fields []string) (string, string, bool, error) {
 	return provider, model, canThink, nil
 }
 
-// handlePolicy shows or switches the active HITL approval policy. Switching
-// writes the global cli.hitl-policy-name key — the key the engine reads live on
-// every gated tool call — so the change takes effect on the next gated call. It
-// just does what it's told: the operator owns the policy.
 func (t *Transport) handlePolicy(ctx context.Context, args string) (string, error) {
 	store := runtimetypes.New(t.deps.DB.WithoutTransaction())
 	value := strings.TrimSpace(args)
@@ -520,8 +462,6 @@ func (t *Transport) handlePolicy(ctx context.Context, args string) (string, erro
 	return fmt.Sprintf("HITL policy set to %s. Applies to the next gated tool call.", value), nil
 }
 
-// policyStatus renders the effective policy and the selectable presets. With no
-// override set, the effective policy is the engine's fallback default.
 func (t *Transport) policyStatus(active string) string {
 	effective := active
 	if effective == "" {
@@ -547,8 +487,6 @@ func (t *Transport) policyStatus(active string) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-// persistConfig writes a global CLI config value, mirroring `contenox config
-// set` so the change also applies to future sessions and CLI invocations.
 func (t *Transport) persistConfig(ctx context.Context, key, value string) error {
 	store := runtimetypes.New(t.deps.DB.WithoutTransaction())
 	cfgCtx := libtracker.WithNewRequestID(ctx)

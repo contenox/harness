@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-// RuntimeDefaults are the model/chain template defaults used when a request
-// does not pass an explicit override.
 type RuntimeDefaults struct {
 	ChainRef             string
 	FIMChainRef          string
@@ -20,8 +18,6 @@ type RuntimeDefaults struct {
 	Think                string
 }
 
-// ResolveRuntimeDefaults overlays the current CLI config onto startup
-// fallbacks. If state reads fail, callers keep the known-good startup values.
 func ResolveRuntimeDefaults(ctx context.Context, service Service, fallback RuntimeDefaults) RuntimeDefaults {
 	if service == nil {
 		return fallback.Trimmed()
@@ -82,9 +78,6 @@ func (d RuntimeDefaults) Trimmed() RuntimeDefaults {
 func (d RuntimeDefaults) TemplateVars() map[string]string {
 	d = d.Trimmed()
 	vars := map[string]string{}
-	// The seeded chains reference {{var:alt_model|var:default_model}} (and the
-	// provider equivalent), so default_model/default_provider must be set
-	// whenever a model is known, matching the CLI chat and ACP paths.
 	if d.Model != "" {
 		vars["model"] = d.Model
 		vars["default_model"] = d.Model

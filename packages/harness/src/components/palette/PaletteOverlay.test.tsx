@@ -5,13 +5,6 @@ import i18n from '../../i18n';
 import type { RankedItem } from '../../lib/palette/paletteState';
 import { Highlighted, PaletteOverlay, type PaletteOverlayProps } from './PaletteOverlay';
 
-/**
- * `@testing-library/react` is not a dependency of packages/beam (see
- * FleetPage.test.tsx / InboxPage.test.tsx), so the overlay is rendered to static
- * markup to pin its layout: rows, titles, highlighted spans, type badges, and
- * the empty state. Keyboard flow is pinned separately against the pure reducer
- * in lib/palette/paletteState.test.ts.
- */
 
 beforeAll(async () => {
   await i18n.changeLanguage('en');
@@ -44,7 +37,7 @@ describe('PaletteOverlay', () => {
       createElement(PaletteOverlay, baseProps([row({ id: 'mission:1', title: 'Deploy the thing', type: 'mission' })])),
     );
     expect(html).toContain('Deploy the thing');
-    expect(html).toContain('Mission'); // en type badge
+    expect(html).toContain('Mission');
     expect(html).toContain('role="option"');
   });
 
@@ -66,7 +59,6 @@ describe('PaletteOverlay', () => {
         baseProps([row({ id: 'a', title: 'Alpha' }), row({ id: 'b', title: 'Beta' })], 1),
       ),
     );
-    // The second option carries aria-selected="true".
     expect(html).toMatch(/id="palette-opt-1"[^>]*aria-selected="true"/);
   });
 });

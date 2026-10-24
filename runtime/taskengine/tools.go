@@ -17,7 +17,6 @@ func resolveToolsNames(ctx context.Context, allowlist []string, provider ToolsPr
 	if !runtimeAttached {
 		return taskSet, nil
 	}
-	// nil runtime allowlist means no restriction; an empty slice denies all — see WithRuntimeToolsAllowlist.
 	if runtime == nil {
 		return taskSet, nil
 	}
@@ -70,12 +69,10 @@ func applyAllowlist(allowlist []string, all []string) []string {
 	return result
 }
 
-// ExportedApplyAllowlist is a test-only export of applyAllowlist.
 func ExportedApplyAllowlist(allowlist []string, all []string) []string {
 	return applyAllowlist(allowlist, all)
 }
 
-// ExportedResolveToolsNames is a test-only export of resolveToolsNames.
 func ExportedResolveToolsNames(ctx context.Context, allowlist []string, provider ToolsProvider) ([]string, error) {
 	return resolveToolsNames(ctx, allowlist, provider)
 }

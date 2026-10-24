@@ -34,8 +34,6 @@ describe('selectPreview', () => {
   });
 
   it('only the highlighted path drives the display (out-of-order fetches are inert)', () => {
-    // A late fetch for a file the user already left writes its own key but does
-    // not change what is shown for the currently highlighted path.
     const withLate: FilePreviewCache = { ...cache, 'late.txt': { kind: 'text', text: 'late' } };
     expect(selectPreview('a.txt', withLate)).toEqual({ status: 'text', path: 'a.txt', text: 'aaa' });
   });

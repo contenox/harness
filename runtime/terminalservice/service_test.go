@@ -23,10 +23,10 @@ func setupTerminalService(t *testing.T, maxSessions int) (context.Context, Servi
 
 	root := t.TempDir()
 	cfg := Config{
-		Enabled:     true,
-		AllowedRoot: root,
+		Enabled:      true,
+		AllowedRoot:  root,
 		DefaultShell: "/bin/sh",
-		MaxSessions: maxSessions,
+		MaxSessions:  maxSessions,
 	}
 	svc, err := New(cfg, db, "node-test", "ws-test")
 	require.NoError(t, err)

@@ -8,10 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_DeliverToSession_UnknownSessionNotFound is the fast, subprocess-free
-// half: a Manager that hosts no instance owning the id reports ErrNotFound, and
-// an empty id is a plain argument error. ErrNotFound is the signal the report
-// router turns into an inbox fallback, so it must be a branchable sentinel.
 func TestUnit_DeliverToSession_UnknownSessionNotFound(t *testing.T) {
 	ctx, _, svc := setupRegistry(t)
 	mgr := New(svc)
@@ -27,14 +23,6 @@ func TestUnit_DeliverToSession_UnknownSessionNotFound(t *testing.T) {
 	require.NotErrorIs(t, err, ErrNotFound, "an empty id is an argument error, not a missing session")
 }
 
-// TestManager_DeliverToSession_InjectsIntoSessionStream proves the delivery
-// mechanism the supervision edge rides: an out-of-band update injected into a
-// live session's stream reaches every attached viewer AND is journaled, so a
-// viewer that attaches later replays it. This is what makes a sub-mission's
-// report land in its supervising session's transcript.
-//
-// Not a TestUnit_ (it spawns the stub ACP agent), so it is excluded from the
-// short fast-test run and covered by the full suite.
 func TestManager_DeliverToSession_InjectsIntoSessionStream(t *testing.T) {
 	ctx, _, svc := setupRegistry(t)
 	stub := buildStubAgent(t)
@@ -52,8 +40,6 @@ func TestManager_DeliverToSession_InjectsIntoSessionStream(t *testing.T) {
 	require.NoError(t, err)
 
 	const reportLine = "unit runner reported (result): shipped the board"
-	// SessionID left empty on purpose: the kernel forces it to the owning
-	// session, so a caller cannot misroute an injected update within the instance.
 	err = mgr.DeliverToSession(ctx, sid,
 		libacp.SessionNotification{Update: libacp.NewAgentMessageChunk(reportLine)})
 	require.NoError(t, err)
@@ -62,9 +48,6 @@ func TestManager_DeliverToSession_InjectsIntoSessionStream(t *testing.T) {
 		"the attached viewer receives the injected report update")
 	requireDeliveredWithSessionID(t, viewer, reportLine, sid)
 
-	// The injected update is journaled: a viewer attaching AFTER it replays it,
-	// so the report persists in the session transcript rather than only reaching
-	// whoever happened to be watching at the instant it arrived.
 	late := newMockViewer("late-supervisor")
 	_, err = mgr.Attach(ctx, id, sid, late)
 	require.NoError(t, err)
@@ -72,9 +55,6 @@ func TestManager_DeliverToSession_InjectsIntoSessionStream(t *testing.T) {
 		"a later viewer replays the journaled report update")
 }
 
-// requireDeliveredWithSessionID asserts an agent_message_chunk containing substr
-// was delivered to v carrying the owning session id — proof the kernel stamped
-// n.SessionID rather than forwarding a caller's (here empty) one.
 func requireDeliveredWithSessionID(t *testing.T, v *mockViewer, substr string, sid libacp.SessionID) {
 	t.Helper()
 	v.mu.Lock()

@@ -12,10 +12,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// filterCandidates keeps the providers that serve a requested model. A model
-// served under the exact requested name is the match; names that only agree
-// once normalised are candidates only when no provider carries the exact name,
-// so two models that differ by organisation prefix never alternate.
 func filterCandidates(
 	ctx context.Context,
 	req Request,
@@ -85,10 +81,6 @@ func filterCandidates(
 				}
 			}
 			if capable && largest > 0 && largest < req.ContextLength {
-				// A window the caller requested stays a requirement. An ask the
-				// executor marked as a preference carries an output reserve on
-				// top of an input that already fits, so it is fitted to the
-				// model's own window instead of refusing a call it can serve.
 				requested := modelrepo.RequestedContextLengthFromContext(ctx)
 				if !req.FitContextToModel || requested > largest {
 					return nil, fmt.Errorf("%w: requested context capacity is %d tokens but the largest matching model %q provides only %d; choose a larger-context model or lower the requested context window",
@@ -161,9 +153,6 @@ func validateProvider(p modelrepo.Provider, minContext int, capCheck func(modelr
 	return capCheck(p)
 }
 
-// NormalizeModelName standardizes model names for comparison: lowercased,
-// separators and organization prefix stripped, quantization suffixes and any
-// trailing ":version" removed.
 func NormalizeModelName(modelName string) string {
 	normalized := strings.ToLower(modelName)
 
@@ -199,7 +188,7 @@ func refusePinnedNonVision(
 	}
 	providers, err := getModels(ctx, req.ProviderTypes...)
 	if err != nil {
-		return nil // let filterCandidates surface the lookup failure
+		return nil
 	}
 	for _, name := range req.ModelNames {
 		matched := false
@@ -250,8 +239,6 @@ func classifyVisionFailure(
 	return fmt.Errorf("%w: matching models %v accept text only; use a vision-capable model for requests with images", ErrNoVisionCapableModel, names)
 }
 
-// Selection is one resolved (provider, backend) pair; the first in an ordered
-// set is the policy's pick, later ones are failover alternates.
 type Selection struct {
 	Provider modelrepo.Provider
 	Backend  string
@@ -263,8 +250,6 @@ func orderSelections(candidates []modelrepo.Provider, policy Policy) ([]Selectio
 		return nil, err
 	}
 	selections := []Selection{{Provider: provider, Backend: backend}}
-	// The pick is skipped once by identity (ID + backend); two entries with the
-	// same ID and backend are the same target, so dropping one is correct.
 	skippedPick := false
 	for _, p := range candidates {
 		if p == nil {
@@ -300,9 +285,6 @@ func chatCandidates(
 	return candidates, nil
 }
 
-// ChatSelections resolves the failover-ordered (provider, backend) pairs for a
-// chat request; the caller excludes a backend whose refusal is terminal for it
-// and moves to the next.
 func ChatSelections(
 	ctx context.Context,
 	req Request,
@@ -319,7 +301,6 @@ func ChatSelections(
 	return orderSelections(candidates, policy)
 }
 
-// Chat implements the chat resolution workflow using the provided dependencies.
 func Chat(
 	ctx context.Context,
 	req Request,
@@ -370,7 +351,6 @@ func Chat(
 	return client, provider, backend, nil
 }
 
-// Embed implements the embedding resolution workflow using the provided dependencies.
 func Embed(
 	ctx context.Context,
 	embedReq EmbedRequest,
@@ -441,8 +421,6 @@ func streamCandidates(
 	return candidates, nil
 }
 
-// StreamSelections resolves the failover-ordered (provider, backend) pairs for
-// a streaming request; see ChatSelections for the iteration contract.
 func StreamSelections(
 	ctx context.Context,
 	req Request,
@@ -456,7 +434,6 @@ func StreamSelections(
 	return orderSelections(candidates, policy)
 }
 
-// Stream implements the streaming resolution workflow using the provided dependencies.
 func Stream(
 	ctx context.Context,
 	req Request,
@@ -502,9 +479,6 @@ func Stream(
 	return client, provider, backend, nil
 }
 
-// PromptExecuteSelections resolves the failover-ordered (provider, backend)
-// pairs for a prompt-execution request; see ChatSelections for the iteration
-// contract.
 func PromptExecuteSelections(
 	ctx context.Context,
 	req Request,
@@ -521,7 +495,6 @@ func PromptExecuteSelections(
 	return orderSelections(candidates, policy)
 }
 
-// PromptExecute implements the prompt execution resolution workflow using the provided dependencies.
 func PromptExecute(
 	ctx context.Context,
 	req Request,
@@ -571,12 +544,8 @@ func PromptExecute(
 	return client, provider, backend, nil
 }
 
-// Policy selects one provider and one of its backends from the candidate set.
 type Policy = func(candidates []modelrepo.Provider) (modelrepo.Provider, string, error)
 
-// StickyOrRandom returns a Policy that pins a session to one provider+backend
-// via rendezvous hashing over the candidate set; an empty key behaves exactly
-// like Randomly.
 func StickyOrRandom(sessionKey string) Policy {
 	if sessionKey == "" {
 		return Randomly
@@ -619,7 +588,6 @@ func rendezvousScore(sessionKey, providerID, backendID string) uint64 {
 	return h.Sum64()
 }
 
-// Randomly is a Policy that selects a random provider and random backend.
 func Randomly(candidates []modelrepo.Provider) (modelrepo.Provider, string, error) {
 	provider, err := selectRandomProvider(candidates)
 	if err != nil {
@@ -634,18 +602,12 @@ func Randomly(candidates []modelrepo.Provider) (modelrepo.Provider, string, erro
 	return provider, backend, nil
 }
 
-// ErrNoAvailableModels is returned when no providers are available.
 var ErrNoAvailableModels = errors.New("no models found in runtime state")
 
-// ErrNoSatisfactoryModel is returned when providers exist but none match requirements.
 var ErrNoSatisfactoryModel = errors.New("no model matched the requirements")
 
-// ErrNoVisionCapableModel is returned when an image-bearing request has no
-// vision-capable candidate; it wraps ErrNoSatisfactoryModel.
 var ErrNoVisionCapableModel = fmt.Errorf("%w: no available model supports image input (vision)", ErrNoSatisfactoryModel)
 
-// ErrPinnedModelLacksVision is returned when an image-bearing request pins a
-// model that cannot accept images; it does not wrap ErrNoSatisfactoryModel.
 var ErrPinnedModelLacksVision = errors.New("explicitly requested model lacks vision capability")
 
 func selectRandomBackend(provider modelrepo.Provider) (string, error) {

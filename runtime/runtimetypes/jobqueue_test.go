@@ -22,11 +22,9 @@ func TestUnit_JobQueue_AppendJobAndPopAll(t *testing.T) {
 		RetryCount:   0,
 	}
 
-	// Append the job.
 	err := s.AppendJob(ctx, *job)
 	require.NoError(t, err)
 
-	// Pop all jobs.
 	jobs, err := s.PopAllJobs(ctx)
 	require.NoError(t, err)
 	require.Len(t, jobs, 1)
@@ -60,7 +58,6 @@ func TestUnit_JobQueue_PopAllForType(t *testing.T) {
 	require.NoError(t, s.AppendJob(ctx, *job1))
 	require.NoError(t, s.AppendJob(ctx, *job2))
 
-	// Pop jobs of type-A.
 	jobs, err := s.PopJobsForType(ctx, "type-A")
 	require.NoError(t, err)
 	require.Len(t, jobs, 1)
@@ -71,7 +68,6 @@ func TestUnit_JobQueue_PopAllForType(t *testing.T) {
 	require.Equal(t, job1.ScheduledFor, retrieved.ScheduledFor)
 	require.Equal(t, job1.ValidUntil, retrieved.ValidUntil)
 
-	// Ensure type-B job is still in the queue.
 	remainingJobs, err := s.PopAllJobs(ctx)
 	require.NoError(t, err)
 	require.Len(t, remainingJobs, 1)
@@ -97,12 +93,10 @@ func TestUnit_JobQueue_PopAllForTypeEmpty(t *testing.T) {
 func TestUnit_JobQueue_PopOneForType(t *testing.T) {
 	ctx, s := runtimetypes.SetupStore(t)
 
-	// Prepare valid JSON payloads.
 	job1Payload, _ := json.Marshal(map[string]string{"data": "job1"})
 	job2Payload, _ := json.Marshal(map[string]string{"data": "job2"})
 	job3Payload, _ := json.Marshal(map[string]string{"data": "job3"})
 
-	// Insert three jobs: two of type "task-A", one of type "task-B".
 	job1 := runtimetypes.Job{
 		ID:           uuid.New().String(),
 		TaskType:     "task-A",
@@ -129,7 +123,6 @@ func TestUnit_JobQueue_PopOneForType(t *testing.T) {
 	require.NoError(t, s.AppendJob(ctx, job2))
 	require.NoError(t, s.AppendJob(ctx, job3))
 
-	// Pop one job of type "task-A" (oldest should be returned).
 	poppedJob, err := s.PopJobForType(ctx, "task-A")
 	require.NoError(t, err)
 	require.NotNil(t, poppedJob)
@@ -138,7 +131,6 @@ func TestUnit_JobQueue_PopOneForType(t *testing.T) {
 	require.Equal(t, job1.ScheduledFor, poppedJob.ScheduledFor)
 	require.Equal(t, job1.ValidUntil, poppedJob.ValidUntil)
 
-	// Pop another job of type "task-A".
 	poppedJob2, err := s.PopJobForType(ctx, "task-A")
 	require.NoError(t, err)
 	require.NotNil(t, poppedJob2)
@@ -147,12 +139,10 @@ func TestUnit_JobQueue_PopOneForType(t *testing.T) {
 	require.Equal(t, job2.ScheduledFor, poppedJob2.ScheduledFor)
 	require.Equal(t, job2.ValidUntil, poppedJob2.ValidUntil)
 
-	// Try popping another "task-A" job (should return an error or no rows).
 	poppedJob3, err := s.PopJobForType(ctx, "task-A")
 	require.Error(t, err)
 	require.Nil(t, poppedJob3)
 
-	// Ensure "task-B" job is still available.
 	poppedJobB, err := s.PopJobForType(ctx, "task-B")
 	require.NoError(t, err)
 	require.NotNil(t, poppedJobB)
@@ -165,7 +155,6 @@ func TestUnit_JobQueue_PopOneForType(t *testing.T) {
 func TestUnit_JobQueue_GetAllForType(t *testing.T) {
 	ctx, s := runtimetypes.SetupStore(t)
 
-	// Prepare valid JSON payloads.
 	payloadA1, err := json.Marshal(map[string]string{"job": "A1"})
 	require.NoError(t, err)
 	payloadA2, err := json.Marshal(map[string]string{"job": "A2"})
@@ -173,7 +162,6 @@ func TestUnit_JobQueue_GetAllForType(t *testing.T) {
 	payloadB, err := json.Marshal(map[string]string{"job": "B"})
 	require.NoError(t, err)
 
-	// Insert two jobs of type "task-A" and one job of type "task-B".
 	jobA1 := runtimetypes.Job{
 		ID:           uuid.New().String(),
 		TaskType:     "task-A",
@@ -200,26 +188,21 @@ func TestUnit_JobQueue_GetAllForType(t *testing.T) {
 	require.NoError(t, s.AppendJob(ctx, jobA2))
 	require.NoError(t, s.AppendJob(ctx, jobB))
 
-	// Retrieve all jobs of type "task-A" without deletion.
 	jobsA, err := s.GetJobsForType(ctx, "task-A")
 	require.NoError(t, err)
 	require.Len(t, jobsA, 2)
 
-	// Ensure the jobs are returned in order of creation.
 	require.Equal(t, jobA1.ID, jobsA[0].ID)
 	require.Equal(t, jobA2.ID, jobsA[1].ID)
-	// Check that scheduledFor and validUntil are correct.
 	require.Equal(t, jobA1.ScheduledFor, jobsA[0].ScheduledFor)
 	require.Equal(t, jobA1.ValidUntil, jobsA[0].ValidUntil)
 	require.Equal(t, jobA2.ScheduledFor, jobsA[1].ScheduledFor)
 	require.Equal(t, jobA2.ValidUntil, jobsA[1].ValidUntil)
 
-	// Calling GetJobsForType again should return the same jobs.
 	jobsAAgain, err := s.GetJobsForType(ctx, "task-A")
 	require.NoError(t, err)
 	require.Len(t, jobsAAgain, 2)
 
-	// Retrieve jobs for "task-B".
 	jobsB, err := s.GetJobsForType(ctx, "task-B")
 	require.NoError(t, err)
 	require.Len(t, jobsB, 1)
@@ -262,9 +245,6 @@ func TestUnit_JobQueue_ListJobsPagination(t *testing.T) {
 		}
 	}
 
-	// Order of insertion (and expected increasing CreatedAt): jobs[0], jobs[1], jobs[2], jobs[3], jobs[4]
-	// Expected order from ListJobs (CreatedAt DESC): jobs[4], jobs[3], jobs[2], jobs[1], jobs[0]
-
 	limit := 2
 
 	t.Run("paginate_list_jobs_sequentially", func(t *testing.T) {
@@ -279,7 +259,7 @@ func TestUnit_JobQueue_ListJobsPagination(t *testing.T) {
 			currentPageJobs, err := s.ListJobs(ctx, nextCursor, limit)
 			require.NoError(t, err, "Failed to list jobs for page %d", pageCount)
 
-			if pageCount == 1 { // First page expectations
+			if pageCount == 1 {
 				require.NotEmpty(t, currentPageJobs, "First page should not be empty")
 				require.Equal(t, jobIDs[4], currentPageJobs[0].ID, "Page 1, Item 1 should be newest (jobs[4])")
 				if len(currentPageJobs) > 1 {
@@ -290,10 +270,9 @@ func TestUnit_JobQueue_ListJobsPagination(t *testing.T) {
 
 			if len(currentPageJobs) == 0 {
 				t.Logf("Finished fetching pages after page %d", pageCount-1)
-				break // No more items left
+				break
 			}
 
-			// Append fetched IDs
 			for _, job := range currentPageJobs {
 				if nextCursor != nil {
 					require.True(t, job.CreatedAt.Equal(*nextCursor) || job.CreatedAt.Before(*nextCursor),
@@ -307,20 +286,17 @@ func TestUnit_JobQueue_ListJobsPagination(t *testing.T) {
 				break
 			}
 
-			// Set cursor for the next iteration
 			nextCursor = &currentPageJobs[len(currentPageJobs)-1].CreatedAt
 
-			// Safety break to prevent infinite loops in case of test logic error
 			require.LessOrEqual(t, pageCount, totalJobs, "Pagination seems stuck in a loop")
 		}
 
-		// Verify all jobs were fetched in the correct order
 		expectedOrderIDs := []string{jobIDs[4], jobIDs[3], jobIDs[2], jobIDs[1], jobIDs[0]}
 		require.Equal(t, expectedOrderIDs, fetchedIDs, "All jobs fetched page-by-page should match expected descending order")
 	})
 
 	t.Run("list_with_past_cursor", func(t *testing.T) {
-		pastTime := jobs[0].CreatedAt.Add(-time.Hour) // Time definitely before the first job
+		pastTime := jobs[0].CreatedAt.Add(-time.Hour)
 		result, err := s.ListJobs(ctx, &pastTime, limit)
 		require.NoError(t, err)
 		require.Empty(t, result, "Should return no jobs for a cursor time before all jobs")

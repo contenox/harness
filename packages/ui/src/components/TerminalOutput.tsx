@@ -4,25 +4,10 @@ import { sanitizeTerminalText } from "../ansi";
 
 export interface TerminalOutputProps
   extends React.HTMLAttributes<HTMLDivElement> {
-  /**
-   * Lines to render.
-   */
   lines: string[];
-  /**
-   * Auto-scroll to bottom when new lines arrive.
-   */
   autoScroll?: boolean;
-  /**
-   * Optional title shown in the top bar (e.g. "Shell — build").
-   */
   title?: string;
-  /**
-   * Optional trailing element in the title bar (e.g. a stop button).
-   */
   actions?: React.ReactNode;
-  /**
-   * Max height CSS value.
-   */
   maxHeight?: string;
 }
 
@@ -60,7 +45,7 @@ export const TerminalOutput = forwardRef<HTMLDivElement, TerminalOutputProps>(
         style={{ maxHeight }}
         {...props}
       >
-        {/* Title bar */}
+
         {(title || actions) && (
           <div
             className={cn(
@@ -78,7 +63,7 @@ export const TerminalOutput = forwardRef<HTMLDivElement, TerminalOutputProps>(
           </div>
         )}
 
-        {/* Output area */}
+
         <div
           ref={scrollRef}
           className="flex-1 overflow-auto p-3"
@@ -103,14 +88,14 @@ export const TerminalOutput = forwardRef<HTMLDivElement, TerminalOutputProps>(
 
 const ANSI_CLASSES: Record<string, string> = {
 
-  "30": "text-surface-600 dark:text-dark-surface-900",       // black (dim)
-  "31": "text-error-400 dark:text-dark-error",               // red
-  "32": "text-success dark:text-dark-success",               // green
-  "33": "text-warning dark:text-dark-warning",               // yellow
-  "34": "text-primary-300 dark:text-dark-primary",           // blue
-  "35": "text-accent-400 dark:text-dark-accent",             // magenta → accent
-  "36": "text-info-300 dark:text-dark-info",                 // cyan → info
-  "37": "text-surface-100 dark:text-dark-text",              // white
+  "30": "text-surface-600 dark:text-dark-surface-900",
+  "31": "text-error-400 dark:text-dark-error",
+  "32": "text-success dark:text-dark-success",
+  "33": "text-warning dark:text-dark-warning",
+  "34": "text-primary-300 dark:text-dark-primary",
+  "35": "text-accent-400 dark:text-dark-accent",
+  "36": "text-info-300 dark:text-dark-info",
+  "37": "text-surface-100 dark:text-dark-text",
   "1": "font-bold",
   "2": "opacity-60",
   "3": "italic",

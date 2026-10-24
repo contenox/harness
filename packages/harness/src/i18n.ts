@@ -12,7 +12,6 @@ declare module 'i18next' {
   }
 }
 
-/** A valid key into the typed translation resources, for config objects that carry i18n keys. */
 export type TranslationKey = ParseKeys;
 
 const resources = {
@@ -86,9 +85,6 @@ const resources = {
           'Names must start with a letter or underscore and contain only letters, digits, and underscores.',
         shell_env_error_duplicate_name: 'Each variable name must be unique.',
       },
-      // New Settings-page coverage for the CLI config keys the UI previously
-      // omitted (see `contenox config --help`). Kept in its own namespace so
-      // concurrent edits to `settings` above don't collide with this slice.
       settingsAdvanced: {
         not_set: 'Not set',
         restart_notice:
@@ -752,8 +748,6 @@ const resources = {
         report_new_badge: 'New',
         report_detail_toggle: 'Show detail',
         report_refs_label: 'Refs',
-        // The operator inbox's louder case (runtime/operatorinbox): a report
-        // whose parent session had already ended by the time it arrived.
         operator_inbox_parent_gone_badge: 'Supervisor session ended',
         operator_inbox_parent_gone_title:
           'The session that would normally receive this report had already ended when it arrived, so it landed here instead.',
@@ -782,9 +776,6 @@ const resources = {
         liveness_never_title:
           'This unit has never sent a heartbeat — a neutral fact, not an alarm.',
       },
-      // The mission's living plan, shown as a compact step-progress fragment
-      // beside the composed status on every fleet row, and as a full checklist
-      // panel on the mission detail. Progress is neutral, never a health signal.
       plan: {
         panel_title: 'Plan',
         revision: 'Revision {{n}}',
@@ -1466,8 +1457,6 @@ const resources = {
         empty: 'No terminal output yet. Type ! followed by a command to run it here.',
         card_label: 'Terminal output',
       },
-      // The secondary working area beside the chat (terminal today; files/diffs
-      // later) — surfaces open as canvas tabs.
       canvas: {
         close_tab: 'Close {{name}}',
       },
@@ -1946,9 +1935,6 @@ const resources = {
         no_response: 'No response received',
       },
       acp_chat: {
-        // "beam" is the product name of this chat surface (identical in every
-        // language). The label now lives in the shell navbar (see Layout's
-        // headerTitle); this string is kept in sync for any remaining consumer.
         title: 'Beam',
         new_session: 'New session',
         tab_close_label: 'Close tab: {{name}}',
@@ -1976,8 +1962,6 @@ const resources = {
         composer_placeholder_connecting: 'Connecting…',
         composer_send: 'Send',
         composer_stop: 'Stop',
-        // Composer image attachments (paste/drop/attach; shown only when the
-        // agent advertises image prompt support — see canAttachImages).
         attach_image_label: 'Attach image',
         attach_image_tooltip: 'Attach an image — paste or drag & drop works too',
         attachment_remove_label: 'Remove attachment: {{name}}',
@@ -2043,13 +2027,9 @@ const resources = {
           'The selected model doesn\'t match any available backend — pick a different model above under "Model".',
         turn_failed_label: 'This request failed',
         scroll_to_latest: 'Scroll to latest',
-        // External-agent chat (registered agents driven over ACP): the empty
-        // chat's staged-agent picker + transcript/sidebar attribution.
         agent_native: 'Contenox (default)',
         agent_picker_aria: 'Choose an agent',
         agent_label: 'Agent: {{name}}',
-        // Adopted-session header (opened from the fleet board / mission detail to
-        // watch and steer a running dispatch — see lib/adoptMeta.ts).
         adopted_controller_label: 'Taken over',
         adopted_observer_label: 'Observing',
         adopted_controller_title: 'You control this session — its permission requests come to you.',
@@ -2059,11 +2039,6 @@ const resources = {
         adopted_durability_notice:
           'History is durable from take-over onward — earlier turns are only in the live journal and are lost if the unit stops.',
       },
-      // Deduplicated, component-named error recovery states shared between a
-      // live session/prompt failure and a `/setup-status` blocking issue for
-      // the same underlying problem (see lib/acpFailureKind.ts). Kept in its
-      // own namespace, separate from acp_chat, to avoid clashing with other
-      // in-flight edits to that namespace.
       acp_recovery: {
         backend_unreachable_title: 'Runtime backend unreachable',
         backend_unreachable_description:
@@ -2092,9 +2067,6 @@ const resources = {
           'This session is a fleet mission unit (mission {{id}}), not a chat you started.',
         workspace_label: 'Workspace: {{path}}',
       },
-      // Session workspace: the shared directory a chat session operates in — the
-      // file explorer panel, its file peek, and the composer's @-mention picker.
-      // User-facing only: never surface protocol/implementation terms here.
       workspace: {
         panel_title: 'Workspace',
         show_files: 'Files',
@@ -2137,9 +2109,6 @@ const resources = {
         filter_no_matches: 'No files match',
         filter_truncated: 'Showing first {{count}} — narrow your filter',
       },
-      // Workspace-root picker (source: GET /workspace/roots). The chip names the
-      // active root; the selector feeds DispatchRequest.cwd; the out-of-bounds
-      // copy replaces the raw 422 with a legible statement of the boundary.
       roots: {
         default_marker: 'default',
         chip_label: 'Workspace root',
@@ -2153,9 +2122,6 @@ const resources = {
         out_of_bounds_body_path: '“{{path}}” is outside the roots this runtime was started with.',
         out_of_bounds_allowed_label: 'Allowed roots',
       },
-      // The project-registry management page (/projects, Slice 4): add, name, and
-      // forget the managed workspace roots this runtime may open sessions in.
-      // Forgetting only removes the runtime's grant — the folder is left untouched.
       projects: {
         title: 'Projects',
         description:
@@ -2197,17 +2163,12 @@ const resources = {
           'Forget the project “{{name}}”? {{count}} open session(s) live under it and will lose their project label. The folder and its files are left untouched.',
         forget_error_fallback: 'Could not forget this project.',
       },
-      // Mission inspector tab bar (Arc 4). Flat tabs on the mission detail; more
-      // entries (Changes/Search) join as those slices land.
       inspector: {
         tab_overview: 'Overview',
         tab_changes: 'Changes',
         tab_search: 'Search',
         tab_terminal: 'Terminal',
       },
-      // Changed-files review (Arc 1 — the state-diff bet). The list is ordered by
-      // Degree-of-Interest (where the unit's attention concentrated), never
-      // alphabetically; the diff is Monaco, read-only.
       changes: {
         doi_hint: 'Sorted by attention',
         doi_hint_title:
@@ -2233,8 +2194,6 @@ const resources = {
         added_no_old: 'This file was added — there is no original version.',
         deleted_no_new: 'This file was deleted — there is no resulting version.',
       },
-      // The attention layer's scope surfacing (advice, not a verdict): a quiet
-      // count and a loud out-of-scope early-warning chip.
       scope: {
         count: '{{files}} files / {{dirs}} directories',
         count_title: 'How many files and directories this unit touched.',
@@ -2246,7 +2205,6 @@ const resources = {
           'A scope anomaly is an early-warning signal, not a failure — review the paths it touched outside the expected area.',
         outside_label: 'Paths outside the expected scope',
       },
-      // Workspace-wide streamed search (Arc 2): literal, smart-case, ripgrep-backed.
       workspaceSearch: {
         placeholder: 'Search the workspace…',
         root_label: 'Searching in',
@@ -2261,17 +2219,12 @@ const resources = {
         dependency_body:
           'Workspace search requires the ripgrep (rg) binary, which is not installed on the host that serves this runtime.',
       },
-      // The plan-revision history feed (the "+2/−1 — why" line), on the mission
-      // detail and, compactly, in the inbox groups.
       revisions: {
         title: 'Plan revisions',
         delta: '{{delta}}',
         no_explanation: '(no explanation given)',
         revision_label: 'Revision {{n}}',
       },
-      // The interactive host terminal (Arc 3): xterm over terminalapi's WS.
-      // Read-only by default (see TerminalView) — "Take over shell" flips the
-      // SAME view interactive behind an honest confirmation.
       hostTerminal: {
         unavailable_title: 'Terminal unavailable',
         unavailable_body: 'This runtime does not expose an interactive terminal.',
@@ -2291,9 +2244,6 @@ const resources = {
         page_title: 'Console',
         cwd_label: 'Shell working directory',
       },
-      // The goto-anything command palette (Cmd/Ctrl+K): fuzzy-select over
-      // missions, fleet instances, agents, sessions, workspace roots, pending
-      // asks, and page navigation. Type badges + row/footer chrome live here.
       palette: {
         aria_label: 'Command palette',
         placeholder: 'Search missions, agents, sessions, actions…',
@@ -3895,8 +3845,6 @@ const resources = {
         no_response: 'Keine Antwort erhalten',
       },
       acp_chat: {
-        // "beam" ist der Produktname dieser Chat-Oberfläche (in jeder Sprache
-        // identisch) — siehe englischen Kommentar.
         title: 'Beam',
         new_session: 'Neue Sitzung',
         tab_close_label: 'Tab schließen: {{name}}',
@@ -3924,8 +3872,6 @@ const resources = {
         composer_placeholder_connecting: 'Verbinde…',
         composer_send: 'Senden',
         composer_stop: 'Stopp',
-        // Bild-Anhänge im Eingabefeld (Einfügen/Ziehen/Anhängen; nur sichtbar,
-        // wenn der Agent Bild-Unterstützung meldet — siehe canAttachImages).
         attach_image_label: 'Bild anhängen',
         attach_image_tooltip: 'Bild anhängen — Einfügen oder Hineinziehen funktioniert auch',
         attachment_remove_label: 'Anhang entfernen: {{name}}',

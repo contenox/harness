@@ -18,30 +18,16 @@ import (
 
 var _ ModelRepo = (*modelManager)(nil)
 
-// Request is the unified request type for all operations.
 type Request struct {
-	WorkerRole    string
-	ProviderTypes []string // Optional: if empty, uses all default providers
-	ModelNames    []string // Optional: if empty, any model is considered
-	ContextLength int      // Minimum required context length
-	// FitContextToModel marks ContextLength as a preference the resolver may
-	// fit to the capacity of an otherwise capable model instead of refusing.
-	// The executor sets it when the number carries an output reserve it added
-	// on top of the input, because a model cannot be asked for a window larger
-	// than it has. A caller that names a context window as a requirement
-	// leaves it false, and a shortfall keeps its refusal.
+	WorkerRole        string
+	ProviderTypes     []string
+	ModelNames        []string
+	ContextLength     int
 	FitContextToModel bool
-	// SessionKey is an opaque per-session cache-affinity key (derive it with
-	// DeriveSessionKey); non-empty pins the session to one provider/backend.
-	SessionKey string
-	// CacheHints declares where the stable/volatile boundary of this request
-	// lies; nil changes nothing.
-	CacheHints *CacheHints
-	Tracker    libtracker.ActivityTracker
-	// BackendHealth is the caller's view of which backends may be asked; nil
-	// asks every candidate. It is consulted for each candidate in turn, so a
-	// backend the caller has taken out of service is skipped rather than tried.
-	BackendHealth BackendHealth
+	SessionKey        string
+	CacheHints        *CacheHints
+	Tracker           libtracker.ActivityTracker
+	BackendHealth     BackendHealth
 }
 
 func (e *modelManager) backendAllowedByHealth(ctx context.Context, req Request, endpoint string) bool {
@@ -65,9 +51,6 @@ func (e *modelManager) healthyResolver(ctx context.Context, health BackendHealth
 			if ids := p.GetBackendIDs(); len(ids) > 0 {
 				endpoint = ids[0]
 			}
-			// The resolver names a candidate by its endpoint; a caller tracks a
-			// backend by its id, so the id is resolved first — the same mapping
-			// the chat path's per-candidate check uses.
 			if allowed(endpoint) {
 				healthy = append(healthy, p)
 			}
@@ -102,17 +85,14 @@ type EmbedRequest struct {
 }
 
 type Meta struct {
-	ModelName    string `json:"model_name"`
-	ProviderType string `json:"provider_type"`
-	BackendID    string `json:"backend_id"`
-	// Usage is the provider-reported token accounting for the call, when the
-	// operation carries no other channel for it (PromptExecute); nil means unreported.
-	Usage *libmodelprovider.TokenUsage `json:"usage,omitempty"`
+	ModelName    string                       `json:"model_name"`
+	ProviderType string                       `json:"provider_type"`
+	BackendID    string                       `json:"backend_id"`
+	Usage        *libmodelprovider.TokenUsage `json:"usage,omitempty"`
 }
 
 type ModelRepo interface {
 	Autocomplete(context.Context, Request, libmodelprovider.AutocompleteRequest) (libmodelprovider.AutocompleteResult, Meta, error)
-	// NextEdit invokes the independent next-edit model operation.
 	NextEdit(context.Context, Request, libmodelprovider.NextEditRequest) (libmodelprovider.NextEditResult, Meta, error)
 	Tokenize(ctx context.Context, modelName string, prompt string) ([]int, error)
 	CountTokens(ctx context.Context, modelName string, prompt string) (int, error)
@@ -213,14 +193,11 @@ type ModelConfig struct {
 }
 
 type ModelManagerConfig struct {
-	// EmbeddingDefault resolves the current persistent embedding assignment.
 	EmbeddingDefault      func(context.Context) (ModelConfig, error)
 	DefaultPromptModel    ModelConfig
 	DefaultEmbeddingModel ModelConfig
 	DefaultChatModel      ModelConfig
-	// DefaultAudioModel is the model preferred for audio-bearing chat/stream
-	// requests that name no model themselves; unset falls back to DefaultChatModel.
-	DefaultAudioModel ModelConfig
+	DefaultAudioModel     ModelConfig
 }
 
 func (e *modelManager) applyAudioDefault(req *Request, messages []libmodelprovider.Message) {
@@ -314,8 +291,6 @@ func (e *modelManager) PromptExecute(
 	}
 
 	resolverReq := e.convertToResolverRequest(req, nil)
-	// Session-sticky resolution: a session key pins to one provider/backend so
-	// its prefix cache stays warm; empty key == Randomly.
 	policy := llmresolver.StickyOrRandom(effectiveSessionKey(ctx, req))
 	selections, err := llmresolver.PromptExecuteSelections(ctx,
 		resolverReq,
@@ -333,9 +308,6 @@ func (e *modelManager) PromptExecute(
 		return "", Meta{}, fmt.Errorf("prompt execute: client resolution failed: %w", err)
 	}
 
-	// Bounds enforcement and the provider call run per selection: a backend
-	// whose refusal is terminal for it alone is excluded and the next capable
-	// backend tried (see failover.go).
 	return e.runPromptSelections(ctx, req, selections, systemInstruction, temperature, prompt, args)
 }
 
@@ -356,8 +328,6 @@ func (e *modelManager) Chat(
 
 	runtimeStateResolution := e.GetRuntime(ctx)
 
-	// The audio role outranks the chat default for audio-bearing requests;
-	// explicit model names outrank both.
 	e.applyAudioDefault(&req, messages)
 	if len(req.ModelNames) == 0 {
 		req.ModelNames = []string{e.config.DefaultChatModel.Name}
@@ -367,7 +337,6 @@ func (e *modelManager) Chat(
 	}
 
 	resolverReq := e.convertToResolverRequest(req, messages)
-	// Session-sticky resolution; empty key == Randomly.
 	sessionKey := effectiveSessionKey(ctx, req)
 	policy := llmresolver.StickyOrRandom(sessionKey)
 	selections, err := llmresolver.ChatSelections(ctx,
@@ -386,9 +355,6 @@ func (e *modelManager) Chat(
 		return libmodelprovider.ChatResult{}, Meta{}, fmt.Errorf("chat: client resolution failed: %w", err)
 	}
 
-	// Bounds enforcement and the provider call run per selection: a backend
-	// whose refusal is terminal for it alone is excluded and the next capable
-	// backend tried (see failover.go).
 	return e.runChatSelections(ctx, req, selections, sessionKey, messages, opts)
 }
 
@@ -422,8 +388,6 @@ func (e *modelManager) Embed(
 	}
 
 	resolverReq := e.convertToResolverEmbedRequest(embedReq)
-	// Embedding stays on Randomly deliberately: EmbedRequest carries no
-	// session identity and embeddings gain nothing from prefix caches.
 	client, provider, backend, err := llmresolver.Embed(ctx,
 		resolverReq,
 		runtimeStateResolution,
@@ -476,8 +440,6 @@ func (e *modelManager) Stream(
 
 	runtimeStateResolution := e.GetRuntime(ctx)
 
-	// The audio role outranks the chat default for audio-bearing requests;
-	// explicit model names outrank both.
 	e.applyAudioDefault(&req, messages)
 	if len(req.ModelNames) == 0 && e.config.DefaultChatModel.Name != "" {
 		req.ModelNames = []string{e.config.DefaultChatModel.Name}
@@ -487,7 +449,6 @@ func (e *modelManager) Stream(
 	}
 
 	resolverReq := e.convertToResolverRequest(req, messages)
-	// Session-sticky resolution; empty key == Randomly.
 	sessionKey := effectiveSessionKey(ctx, req)
 	policy := llmresolver.StickyOrRandom(sessionKey)
 	selections, err := llmresolver.StreamSelections(ctx,
@@ -506,9 +467,6 @@ func (e *modelManager) Stream(
 		return nil, Meta{}, fmt.Errorf("stream: client resolution failed: %w", err)
 	}
 
-	// Bounds enforcement, stream setup, and the first-parcel failover peek run
-	// per selection: a backend whose refusal is terminal for it alone is
-	// excluded and the next capable backend tried (see failover.go).
 	return e.runStreamSelections(ctx, req, selections, sessionKey, messages, opts)
 }
 
@@ -524,7 +482,6 @@ func (e *modelManager) reportTokenUsage(ctx context.Context, req Request, meta M
 	if tracker == nil {
 		return
 	}
-	// The stream often ends on consumer cancellation; the usage record must still land.
 	ctx = context.WithoutCancel(ctx)
 	_, reportChange, end := tracker.Start(ctx, "report", "token_usage",
 		"model", meta.ModelName,
@@ -536,10 +493,8 @@ func (e *modelManager) reportTokenUsage(ctx context.Context, req Request, meta M
 		"prompt_tokens":     usage.PromptTokens,
 		"completion_tokens": usage.CompletionTokens,
 		"total_tokens":      usage.TotalTokens,
-		// Cache accounting: prompt_tokens is the TOTAL prompt count, so warm
-		// hit rate is cache_read / (prompt_tokens - cache_write).
-		"cache_read":  usage.CacheReadTokens,
-		"cache_write": usage.CacheWriteTokens,
+		"cache_read":        usage.CacheReadTokens,
+		"cache_write":       usage.CacheWriteTokens,
 	})
 }
 

@@ -12,11 +12,8 @@ export interface CanvasFileTab {
 }
 
 export interface CanvasState {
-  /** True when the workspace panel (tree) is showing. */
   panelOpen: boolean;
-  /** Open file tabs, in open order (the Chat tab is implicit, never listed). */
   tabs: CanvasFileTab[];
-  /** The active tab's path; '' means the Chat tab is active. */
   activePath: string;
 }
 
@@ -95,34 +92,26 @@ export function initialCanvasState(): CanvasState {
 }
 
 export interface UseFileCanvasOptions {
-  /** Reads one workspace file as UTF-8 text; must reject on failure. */
   readFile: (path: string) => Promise<{ content: string; isDir: boolean }>;
-  /** Reads one workspace file as the server's raw base64 bytes (binary kinds). */
   readFileRaw: (path: string) => Promise<{ content: string; isDir: boolean }>;
 }
 
 export interface UseFileCanvasResult {
   state: CanvasState;
   togglePanel: () => void;
-  /** Replaces a tab's canonical content (after a successful save). */
   updateFileContent: (path: string, content: string) => void;
-  /** Opens a file (fetching its content once) and activates it. */
   openFile: (path: string) => void;
-  /** Re-reads an open file without activating it; a file that is not open is left alone. */
   reloadFile: (path: string) => void;
-  /** Closes the tab of `path`, or every tab beneath it when it is a directory. */
   closePathsWithin: (path: string) => void;
   activate: (path: string) => void;
   closeFile: (path: string) => void;
 }
 
-/** Convenience selector: the tab for the active file path, or null on the Chat tab. */
 export function activeFileTab(state: CanvasState): CanvasFileTab | null {
   if (state.activePath === '') return null;
   return state.tabs.find(t => t.path === state.activePath) ?? null;
 }
 
-/** The session canvas state machine plus its content fetches. */
 export function useFileCanvas({
   readFile,
   readFileRaw,

@@ -12,20 +12,10 @@ vi.mock('../../../lib/api', () => ({
   api: {
     getMission: vi.fn(),
     listMissionReports: vi.fn(async () => []),
-    // The detail's composed status joins the fleet for the unit's live
-    // process state; absent here, it simply contributes no process chip.
     getFleet: vi.fn(async () => []),
   },
 }));
 
-/**
- * `@testing-library/react` is not a dependency of `packages/beam` (see
- * PermissionCard.test.tsx). The page reads its id via useParams, which only
- * resolves through an actual route match — MemoryRouter alone is not enough
- * (verified empirically: a bare child of MemoryRouter sees an undefined
- * param), so every render here goes through a real <Routes><Route
- * path="/missions/:id" .../></Routes>.
- */
 beforeAll(async () => {
   await i18n.changeLanguage('en');
 });
@@ -73,21 +63,6 @@ function renderDetail(
   );
 }
 
-/**
- * A disabled/never-fetched query (no data seeded) reads as `isLoading`, not
- * as `error` — a real 404 is an error status the query cache only carries
- * once a fetch has actually resolved, which this DOM-less harness cannot
- * await (see PermissionCard.test.tsx's doc comment on the harness's limits).
- * `setState` on a built-but-unfetched query is the closest faithful
- * reproduction: it puts the cache in exactly the shape a real 404 response
- * would leave it in, without needing a live fetch to get there.
- *
- * `retryOnMount: false` is required here (verified empirically): with the
- * default `true`, mounting an observer over an already-errored query
- * schedules an immediate retry and the FIRST synchronous render already
- * reflects that as `status: 'pending'` / `isLoading: true` — the seeded
- * error is real but invisible on the very first paint this harness can see.
- */
 function renderDetailWithError(id: string): string {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryOnMount: false } },
@@ -219,7 +194,6 @@ describe('MissionDetailPage — reports', () => {
     expect(html).toContain('Show detail');
     expect(html).toContain('The runner has been unreachable for 10 minutes.');
     expect(html).toContain('/var/log/ci-runner.log');
-    // Refs are plain references, never rendered as a clickable anchor.
     expect(html).not.toContain('href="/var/log/ci-runner.log"');
   });
 
@@ -274,7 +248,6 @@ describe('MissionDetailPage — plan', () => {
 
   it('shows NO plan panel for an unplanned mission (the zero Plan), not an empty shell', () => {
     const html = renderDetail('mission-1', baseMission({ plan: { entries: null, revision: 0 } }));
-    // The report section still renders; the plan's revision/why line does not.
     expect(html).not.toContain('Revision');
     expect(html).not.toContain('Why it changed');
   });
@@ -313,7 +286,6 @@ describe('MissionDetailPage — open session (adopt)', () => {
   });
 
   it('withholds "Open session" when the instance is not live to adopt', () => {
-    // No fleet join → no process state → nothing running to attach a viewer to.
     const html = renderDetail(
       'mission-1',
       baseMission({ sessionId: 'down-1', instanceId: 'inst-1' }),

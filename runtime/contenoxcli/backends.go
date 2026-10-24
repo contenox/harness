@@ -1,4 +1,3 @@
-// backends.go contains helpers for LLM backend and provider config KV storage.
 package contenoxcli
 
 import (
@@ -15,7 +14,7 @@ func setProviderConfigKV(ctx context.Context, store runtimetypes.Store, provider
 	pc := runtimestate.ProviderConfig{APIKey: apiKey, Type: providerType}
 	data, err := json.Marshal(pc)
 	if err != nil {
-		return nil // Non-fatal for backward compat.
+		return nil
 	}
 	return store.SetKV(ctx, key, json.RawMessage(data))
 }

@@ -10,12 +10,10 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// Print implements a simple tools that returns predefined messages
 type Print struct {
 	tracker libtracker.ActivityTracker
 }
 
-// NewPrint creates a new Print instance
 func NewPrint(tracker libtracker.ActivityTracker) taskengine.ToolsRepo {
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
@@ -63,13 +61,10 @@ func (h *Print) Supports(ctx context.Context) ([]string, error) {
 	return []string{"print"}, nil
 }
 
-// GetSchemasForSupportedTools returns OpenAPI schemas for supported tools.
 func (h *Print) GetSchemasForSupportedTools(ctx context.Context) (map[string]*openapi3.T, error) {
-	// Print tools doesn't have a schema
 	return map[string]*openapi3.T{}, nil
 }
 
-// GetToolsForToolsByName returns tools exposed by this tools.
 func (h *Print) GetToolsForToolsByName(ctx context.Context, name string) ([]taskengine.Tool, error) {
 	if name != "print" {
 		return nil, fmt.Errorf("unknown tools: %s", name)

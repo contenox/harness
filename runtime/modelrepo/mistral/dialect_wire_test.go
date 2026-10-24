@@ -198,9 +198,6 @@ func mistralStreamServer(t *testing.T, body *map[string]any, frames ...string) *
 	}))
 }
 
-// A model the catalog does not declare able to think is offered Off alone, so
-// its chat and stream requests carry no reasoning_effort whatever level the
-// session holds.
 func TestUnit_MistralUndeclaredThinkingSendsNoReasoningEffort(t *testing.T) {
 	for _, level := range []string{"high", "low", "off"} {
 		var chatBody map[string]any
@@ -226,8 +223,6 @@ func TestUnit_MistralUndeclaredThinkingSendsNoReasoningEffort(t *testing.T) {
 	}
 }
 
-// An error frame streamed after partial text fails the turn with the vendor's
-// message; the partial text never reads as an answer.
 func TestUnit_MistralStreamedErrorFrameFailsTheTurn(t *testing.T) {
 	var body map[string]any
 	server := mistralStreamServer(t, &body,

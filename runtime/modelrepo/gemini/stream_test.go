@@ -49,9 +49,6 @@ func TestUnit_GeminiStreamClient_StreamsThinkingDeltas(t *testing.T) {
 	assert.Equal(t, "hello", res.Content)
 }
 
-// Drives a recorded SSE transcript through the real adapter and assembler,
-// and pins that the stream request carries the hoisted systemInstruction
-// exactly like chat.
 func TestUnit_GeminiStreamClient_GoldenFixture_ToolCallsSystemAndUsage(t *testing.T) {
 	t.Parallel()
 

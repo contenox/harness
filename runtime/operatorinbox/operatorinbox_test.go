@@ -20,9 +20,6 @@ func setupInboxDB(t *testing.T) (context.Context, libdb.DBManager) {
 	return ctx, db
 }
 
-// TestUnit_Inbox_AddAndListRoundtrip stores an item and reads it back, asserting
-// the self-contained snapshot (mission attribution + embedded report + reason)
-// survives the roundtrip and that an id/timestamp are assigned when absent.
 func TestUnit_Inbox_AddAndListRoundtrip(t *testing.T) {
 	ctx, db := setupInboxDB(t)
 	svc := New(db)
@@ -50,7 +47,6 @@ func TestUnit_Inbox_AddAndListRoundtrip(t *testing.T) {
 	require.Equal(t, missionservice.ReportKindResult, got.Report.Kind)
 }
 
-// TestUnit_Inbox_ListNewestFirst asserts the list ordering an operator reads.
 func TestUnit_Inbox_ListNewestFirst(t *testing.T) {
 	ctx, db := setupInboxDB(t)
 	svc := New(db)
@@ -69,7 +65,6 @@ func TestUnit_Inbox_ListNewestFirst(t *testing.T) {
 	require.Equal(t, "gone", items[0].ParentSessionID)
 }
 
-// TestUnit_Inbox_EmptyIsNonNil proves an empty inbox renders as [], not null.
 func TestUnit_Inbox_EmptyIsNonNil(t *testing.T) {
 	ctx, db := setupInboxDB(t)
 	svc := New(db)
@@ -79,8 +74,6 @@ func TestUnit_Inbox_EmptyIsNonNil(t *testing.T) {
 	require.Empty(t, items)
 }
 
-// TestUnit_Inbox_AddValidates rejects the two ways an item is unusable: no
-// mission to attribute it to, and an unknown reason.
 func TestUnit_Inbox_AddValidates(t *testing.T) {
 	ctx, db := setupInboxDB(t)
 	svc := New(db)

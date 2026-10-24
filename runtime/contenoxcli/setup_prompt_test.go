@@ -9,11 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_PromptChoiceOrQuit_EOFAborts pins the gating provider choice: an input
-// stream that ends without an answer (`contenox setup </dev/null`, a closed or
-// piped-dry stdin) returns promptEOF so runSetup aborts WITHOUT committing a
-// guessed default — while a real answer and an intentional "q" still resolve
-// normally, so the piped-answers flow is unaffected.
 func TestUnit_PromptChoiceOrQuit_EOFAborts(t *testing.T) {
 	var out bytes.Buffer
 

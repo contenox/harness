@@ -31,8 +31,6 @@ func (a *lingeringAgent) NewSession(ctx context.Context, _ libacp.NewSessionRequ
 	return libacp.NewSessionResponse{SessionID: "sess-1"}, nil
 }
 
-// Invariant: Run must not return while an inbound request handler is still
-// executing, since the caller tears down live session state the instant it does.
 func TestUnit_AgentSideRun_JoinsInFlightRequestHandlerBeforeReturning(t *testing.T) {
 	agent := &lingeringAgent{entered: make(chan struct{})}
 
@@ -81,8 +79,6 @@ func (c *lingeringClient) ReadTextFile(ctx context.Context, _ libacp.ReadTextFil
 	return libacp.ReadTextFileResponse{}, ctx.Err()
 }
 
-// Same invariant on the editor side: ClientSideConnection.Run joins its
-// inbound (agent->client) request handlers before returning.
 func TestUnit_ClientSideRun_JoinsInFlightRequestHandlerBeforeReturning(t *testing.T) {
 	client := &lingeringClient{entered: make(chan struct{})}
 

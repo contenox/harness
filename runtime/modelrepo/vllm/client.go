@@ -36,39 +36,24 @@ type vLLMClient struct {
 }
 
 type chatRequest struct {
-	Model string `json:"model"`
-	// Messages is []any: text/tool turns serialize as vllmWireMessage,
-	// media-bearing turns as the OpenAI content-parts form (see
-	// toVLLMRequestMessages).
-	Messages    []any    `json:"messages"`
-	Temperature *float64 `json:"temperature,omitempty"`
-	MaxTokens   *int     `json:"max_tokens,omitempty"`
-	TopP        *float64 `json:"top_p,omitempty"`
-	Seed        *int     `json:"seed,omitempty"`
-	Stream      bool     `json:"stream,omitempty"`
-	// StreamOptions requests the trailing usage chunk on streamed responses
-	// (stream_options.include_usage); only set when Stream is true.
-	StreamOptions *streamOptions   `json:"stream_options,omitempty"`
-	Tools         []modelrepo.Tool `json:"tools,omitempty"`
-	ToolChoice    any              `json:"tool_choice,omitempty"`
-	// ParallelToolCalls controls whether one turn may carry several tool calls.
-	ParallelToolCalls *bool `json:"parallel_tool_calls,omitempty"`
-	// Stop bounds generation at the server; the vendor takes the string or
-	// array form of the member.
-	Stop []string `json:"stop,omitempty"`
-	// ResponseFormat constrains the response to a JSON shape.
-	ResponseFormat *responseFormat `json:"response_format,omitempty"`
-	// SessionID is the request's cache affinity: vLLM's prefix cache keys on
-	// the token prefix server-side and takes no request member for it, while
-	// the stable session identity it does take is what a deployment fronting
-	// several replicas routes on — the same affinity the caller declared.
-	SessionID          string         `json:"session_id,omitempty"`
-	ReasoningEffort    string         `json:"reasoning_effort,omitempty"`
-	ChatTemplateKwargs map[string]any `json:"chat_template_kwargs,omitempty"`
+	Model              string           `json:"model"`
+	Messages           []any            `json:"messages"`
+	Temperature        *float64         `json:"temperature,omitempty"`
+	MaxTokens          *int             `json:"max_tokens,omitempty"`
+	TopP               *float64         `json:"top_p,omitempty"`
+	Seed               *int             `json:"seed,omitempty"`
+	Stream             bool             `json:"stream,omitempty"`
+	StreamOptions      *streamOptions   `json:"stream_options,omitempty"`
+	Tools              []modelrepo.Tool `json:"tools,omitempty"`
+	ToolChoice         any              `json:"tool_choice,omitempty"`
+	ParallelToolCalls  *bool            `json:"parallel_tool_calls,omitempty"`
+	Stop               []string         `json:"stop,omitempty"`
+	ResponseFormat     *responseFormat  `json:"response_format,omitempty"`
+	SessionID          string           `json:"session_id,omitempty"`
+	ReasoningEffort    string           `json:"reasoning_effort,omitempty"`
+	ChatTemplateKwargs map[string]any   `json:"chat_template_kwargs,omitempty"`
 }
 
-// responseFormat is the structured-output control of a request: any JSON
-// object, or one conforming to a JSON schema.
 type responseFormat struct {
 	Type       string                  `json:"type"`
 	JSONSchema *responseFormatJSONName `json:"json_schema,omitempty"`
@@ -80,8 +65,6 @@ type responseFormatJSONName struct {
 	Strict bool   `json:"strict,omitempty"`
 }
 
-// wireResponseFormat renders the neutral structured-output control; the text
-// mode constrains nothing and is left off the wire.
 func wireResponseFormat(format *modelrepo.ResponseFormat) *responseFormat {
 	if format == nil || format.Mode == modelrepo.ResponseFormatText {
 		return nil
@@ -105,9 +88,6 @@ type chatResponse struct {
 	Usage   chatUsage    `json:"usage"`
 }
 
-// chatUsage is the vendor's UsageInfo: the prompt, completion and total counts,
-// the reasoning subset of the completion count, and the prompt-cache dimensions
-// a deployment that enables prompt-token details reports.
 type chatUsage struct {
 	PromptTokens        int `json:"prompt_tokens"`
 	CompletionTokens    int `json:"completion_tokens"`
@@ -121,9 +101,6 @@ type chatUsage struct {
 	} `json:"completion_tokens_details"`
 }
 
-// Usage converts the vendor's counters into the neutral accounting. A cache
-// dimension the deployment did not report stays zero, which is the same value
-// the vendor sends for a request that read nothing from its cache.
 func (u chatUsage) Usage() *modelrepo.TokenUsage {
 	return &modelrepo.TokenUsage{
 		PromptTokens:     u.PromptTokens,
@@ -206,7 +183,6 @@ func (c *vLLMClient) sendRequest(ctx context.Context, endpoint string, request i
 	)
 	defer end()
 
-	// Non-streaming: bounded end-to-end, retried on 429/5xx honoring Retry-After.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 	resp, err := modelrepo.DoWithRetry(ctx, c.httpClient, func() (*http.Request, error) {
@@ -235,7 +211,6 @@ func (c *vLLMClient) sendRequest(ctx context.Context, endpoint string, request i
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		err = fmt.Errorf("vLLM API returned non-200 status: %d, body: %s for model %s", resp.StatusCode, string(bodyBytes), c.modelName)
-		// vLLM reports context overflow as a 400 with OpenAI-style phrasing.
 		err = modelrepo.ClassifyProviderError(err, resp.StatusCode, "", string(bodyBytes))
 		reportErr(err)
 		return err
@@ -251,8 +226,6 @@ func (c *vLLMClient) sendRequest(ctx context.Context, endpoint string, request i
 	return nil
 }
 
-// Explicit wire form: modelrepo.Message carries provenance fields (thinking, provider_meta) that
-// must not reach the wire — they perturb the token-prefix cache and expose content to the model.
 type vllmWireMessage struct {
 	Role       string             `json:"role"`
 	Content    string             `json:"content"`
@@ -287,15 +260,11 @@ type vllmImageURL struct {
 	URL string `json:"url"`
 }
 
-// vllmInputAudio is the vendor's inline audio part, which carries the raw bytes
-// and the short format name the same part uses upstream.
 type vllmInputAudio struct {
 	Data   string `json:"data"`
 	Format string `json:"format"`
 }
 
-// audioFormats maps the accepted inline media types onto the short names the
-// audio part carries.
 var audioFormats = map[string]string{
 	"audio/wav":  "wav",
 	"audio/mpeg": "mp3",
@@ -335,8 +304,6 @@ func toVLLMRequestMessages(messages []modelrepo.Message, origToSanitized map[str
 			Content:    m.Content,
 			ToolCallID: m.ToolCallID,
 		}
-		// Prior-turn assistant tool calls must carry the sanitized names too,
-		// or the follow-up request references tools that do not exist.
 		for _, tc := range m.ToolCalls {
 			name := tc.Function.Name
 			if san, ok := origToSanitized[name]; ok && san != "" {
@@ -404,9 +371,6 @@ func buildChatRequestFromConfig(modelName string, messages []modelrepo.Message, 
 	return req, nameMap
 }
 
-// wireToolChoice renders the neutral tool-selection policy in the vendor's own
-// form: the bare mode, or the object naming one function under the sanitized
-// name the tool list carries.
 func wireToolChoice(choice *modelrepo.ToolChoice, sanitized map[string]string) any {
 	if choice == nil {
 		return nil
@@ -493,10 +457,6 @@ func vllmThinkingAllowed(canThink []bool) bool {
 	return len(canThink) == 0 || canThink[0]
 }
 
-// vllmReasoningEffort maps the runtime's level onto the vendor's own
-// vocabulary, which carries one literal per level: collapsing two levels onto
-// one literal would ask the server for effort the caller did not request. The
-// vendor's literal for "do not reason" is none, not the runtime's off.
 func vllmReasoningEffort(think *string) (string, bool) {
 	level, ok, err := reasoning.NormalizeOptional(valueOfStringPtr(think))
 	if err != nil || !ok || level == reasoning.Auto {
@@ -512,9 +472,6 @@ func vllmReasoningEffort(think *string) (string, bool) {
 	}
 }
 
-// checkAudio enforces the deployment's own audio declaration: a deployment that
-// declared audio input has its parts validated before the wire, and one that
-// declared none refuses the request rather than dropping the attachment.
 func (c *vLLMClient) checkAudio(messages []modelrepo.Message) error {
 	if !c.canAudio {
 		return modelrepo.RefuseAudioInput("vllm", c.modelName, messages)
@@ -522,8 +479,6 @@ func (c *vLLMClient) checkAudio(messages []modelrepo.Message) error {
 	return modelrepo.ValidateAudioParts("vllm", c.modelName, messages)
 }
 
-// normalizeBaseURL makes a base URL one the adapter can append a path to, so a
-// caller that wrote a trailing slash does not produce a doubled segment.
 func normalizeBaseURL(baseURL string) string {
 	return strings.TrimRight(strings.TrimSpace(baseURL), "/")
 }

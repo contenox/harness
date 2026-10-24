@@ -14,8 +14,6 @@ import (
 	"github.com/contenox/harness/runtime/vfs"
 )
 
-// workspaceRootsGatingMux builds the product mux the way serve does, with or
-// without a WorkspaceRoots allowlist configured.
 func workspaceRootsGatingMux(t *testing.T, withFactory bool) *http.ServeMux {
 	t.Helper()
 	ctx := context.Background()
@@ -45,11 +43,6 @@ func workspaceRootsGatingMux(t *testing.T, withFactory bool) *http.ServeMux {
 	return mux
 }
 
-// TestServe_WorkspaceRootsRouteGatedOnFactory proves GET /workspace/roots is
-// registered only when serve has a workspace-root allowlist configured,
-// mirroring the other nil-gated route groups (see fleet_gating_test.go). With
-// no allowlist there is nothing to report — and, more importantly, no
-// allowlist to accidentally leak the shape of.
 func TestServe_WorkspaceRootsRouteGatedOnFactory(t *testing.T) {
 	withFactory := workspaceRootsGatingMux(t, true)
 	rr := httptest.NewRecorder()

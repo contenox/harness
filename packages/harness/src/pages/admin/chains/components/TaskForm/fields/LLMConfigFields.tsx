@@ -49,9 +49,6 @@ export default function LLMConfigFields({
     updateConfig({ pass_clients_tools: e.target.value === 'true' });
   };
 
-  // Retry policy edits only the nested retry_policy object. A missing
-  // retry_policy disables retry on the backend (zero value), so we omit the
-  // whole sub-object when every field is cleared.
   const retry: RetryPolicy = config.retry_policy || {};
   const updateRetry = (updates: Partial<RetryPolicy>) => {
     const merged: RetryPolicy = { ...retry, ...updates };

@@ -67,13 +67,10 @@ Examples:
 	},
 }
 
-// printLiveModels runs one backend reconciliation cycle and prints what each
-// backend is actually serving right now.
 func printLiveModels(ctx context.Context, db libdb.DBManager, out, errW io.Writer) error {
 	bus := libbus.NewSQLite(db.WithoutTransaction())
 	defer bus.Close()
 
-	// Read the preferred model from config so we can mark it.
 	store := runtimetypes.New(db.WithoutTransaction())
 	preferredModel, err := getConfigKV(ctx, store, "default-model")
 	if err != nil {
@@ -85,9 +82,7 @@ func printLiveModels(ctx context.Context, db libdb.DBManager, out, errW io.Write
 		return fmt.Errorf("failed to initialize runtime state: %w", err)
 	}
 
-	// A single cycle contacts every backend and populates PulledModels.
 	if err := state.RunBackendCycle(ctx); err != nil {
-		// Non-fatal: partial results are still useful.
 		fmt.Fprintf(errW, "warning: backend cycle error: %v\n", err)
 	}
 
@@ -97,7 +92,6 @@ func printLiveModels(ctx context.Context, db libdb.DBManager, out, errW io.Write
 		return nil
 	}
 
-	// Stable sort by backend name.
 	type entry struct {
 		backendName string
 		backendType string
@@ -132,8 +126,6 @@ func printLiveModels(ctx context.Context, db libdb.DBManager, out, errW io.Write
 			e.canVision[pm.Model] = pm.CanVision
 			e.ctx[pm.Model] = pm.ContextLength
 		}
-		// Some providers only report model names; when the backend is healthy,
-		// keep those visible even if no detailed PulledModels entries were built.
 		if len(e.pulled) == 0 && bs.Error == "" && len(bs.Models) > 0 {
 			e.pulled = append(e.pulled, bs.Models...)
 		}
@@ -187,18 +179,13 @@ func printLiveModels(ctx context.Context, db libdb.DBManager, out, errW io.Write
 	return nil
 }
 
-// resolveModeldAddr turns a backend's BaseURL (which may be the LocalSentinel)
-// into a concrete dialable address using the lease if necessary. Cheap for local.
-
 type localModelInventoryEntry struct {
 	BackendName string
 	Type        string
 	Model       string
 	Path        string
 	Status      string
-	// Detail is a human-readable annotation shown after the model name, used to
-	// surface a variant's base model and adapters (empty for plain base models).
-	Detail string
+	Detail      string
 }
 
 type localModelScanRoot struct {
@@ -206,18 +193,6 @@ type localModelScanRoot struct {
 	typ         string
 	root        string
 }
-
-// localLlamaVariant recognizes a llama variant directory and returns the reused
-// base model.gguf path plus a "base X + adapters …" annotation. It is a
-// best-effort offline inventory read (unlike the catalog scan it does not fail
-// hard on a malformed marker); an unreadable marker or a missing base model
-// yields ok=false so the directory is simply skipped.
-
-// localOpenVINOVariant recognizes an OpenVINO variant directory and returns the
-// reused base IR directory plus a "variant of X + adapters …" annotation. Like
-// localLlamaVariant it is a best-effort offline inventory read: an unreadable
-// marker, a marker targeting a different backend, or a missing base model yields
-// ok=false so the directory is simply skipped (never a scan-breaking error).
 
 func boolMark(b bool) string {
 	if b {
@@ -230,15 +205,6 @@ func displayModelName(model string) string {
 	return strings.TrimPrefix(strings.TrimSpace(model), "models/")
 }
 
-// parseContextSize converts a human-friendly token-count string to an int.
-// Accepted suffixes (case-insensitive): k (×1 000), m (×1 000 000).
-// A bare integer is returned as-is.  Examples:
-//
-//	"12k" → 12000
-//	"128K" → 128000
-//	"1m"  → 1000000
-//	"8192" → 8192
-//	"0"   → 0  (API-authoritative)
 func parseContextSize(s string) (int, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {

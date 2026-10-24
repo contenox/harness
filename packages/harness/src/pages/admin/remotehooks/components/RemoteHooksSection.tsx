@@ -84,7 +84,7 @@ export default function RemoteHooksSection() {
 
   return (
     <GridLayout variant="body" columns={2} responsive={{ base: 1, lg: 2 }} className="gap-6">
-      {/* Left Column - Hooks List */}
+
       <Section title={t('remote_hooks.manage_title')} className="space-y-4">
         <Span variant="muted" className="text-sm">
           {t('remote_hooks.count', { count: hooks?.length || 0 })}
@@ -110,7 +110,7 @@ export default function RemoteHooksSection() {
         </div>
       </Section>
 
-      {/* Right Column - Form */}
+
       <Section>
         <RemoteHookForm
           editingHook={editingHook}

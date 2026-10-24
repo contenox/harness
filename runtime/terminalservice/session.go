@@ -25,9 +25,6 @@ type session struct {
 	lastActivityNanos     atomic.Int64
 }
 
-// acquireAttach marks the session busy and returns a context for this attachment.
-// If another client is already attached, the prior attachment is cancelled so the
-// new connection can take over (handles React Strict Mode remounts and tab refresh).
 func (s *session) acquireAttach(parent context.Context) (context.Context, context.CancelFunc, func()) {
 	s.attachMu.Lock()
 	if s.attachCancel != nil {

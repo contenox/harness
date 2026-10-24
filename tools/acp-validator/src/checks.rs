@@ -1,9 +1,3 @@
-//! Conformance checks exercised against an ACP Agent.
-//!
-//! Each check is an independent probe against the Agent under test: it never
-//! aborts the overall run on failure, reports PASS/FAIL/SKIP with a short
-//! detail string, and is bounded by a timeout so a hung or misbehaving Agent
-//! can never make the validator hang.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -28,7 +22,6 @@ use agent_client_protocol::{
 
 use crate::report::CheckResult;
 
-/// CLI-derived configuration threaded through the check functions.
 #[derive(Debug, Clone)]
 pub struct Config {
     pub agent_command: String,
@@ -49,25 +42,16 @@ impl Config {
     }
 }
 
-/// How the shared `RequestPermissionRequest` handler should respond.
 #[derive(Debug, Clone, Copy, Default)]
 enum PermissionMode {
-    /// Auto-select the first offered permission option (the "happy path").
     #[default]
     AutoSelectFirst,
-    /// Auto-respond with the `Cancelled` outcome (robustness probe).
     AutoCancelled,
-    /// Stash the responder for the driving check to answer later.
     Defer,
 }
 
-/// State shared between the background message handlers (registered once on
-/// the `Builder`) and the sequential check driver running inside
-/// `connect_with`.
 #[derive(Default)]
 struct Shared {
-    /// All `session/update` notifications observed, tagged with a
-    /// monotonically increasing sequence number assigned at receipt time.
     updates: Mutex<Vec<(u64, SessionNotification)>>,
     seq: AtomicU64,
 
@@ -110,8 +94,6 @@ impl Shared {
     }
 }
 
-/// Runs a future with a timeout, translating both outcomes into a single
-/// `Result<T, String>` describing what went wrong.
 async fn with_timeout<T, F>(dur: Duration, label: &str, fut: F) -> Result<T, String>
 where
     F: std::future::Future<Output = Result<T, agent_client_protocol::Error>>,
@@ -123,8 +105,6 @@ where
     }
 }
 
-/// Polls `predicate` every 20ms until it returns `true` or `dur` elapses.
-/// Returns whether the predicate became true.
 async fn wait_until(dur: Duration, mut predicate: impl FnMut() -> bool) -> bool {
     let deadline = tokio::time::Instant::now() + dur;
     loop {
@@ -138,8 +118,6 @@ async fn wait_until(dur: Duration, mut predicate: impl FnMut() -> bool) -> bool 
     }
 }
 
-/// Error returned for any `terminal/*` request, since acp-validator never
-/// advertises the `terminal` client capability.
 fn terminal_not_supported() -> agent_client_protocol::Error {
     agent_client_protocol::util::internal_error(
         "acp-validator does not advertise the terminal client capability",
@@ -154,14 +132,6 @@ fn client_capabilities() -> ClientCapabilities {
     )
 }
 
-/// Runs every enabled check and returns the full set of results.
-///
-/// Two ACP connections (i.e. two Agent subprocesses) are used:
-/// - A "primary" connection that runs all checks except version negotiation,
-///   sharing a single session where that's meaningful.
-/// - A throwaway connection dedicated to the version-negotiation edge case,
-///   because it must send its own `initialize` with a bogus protocol version
-///   as the very first message on a fresh connection.
 pub async fn run_all(config: &Config) -> Vec<CheckResult> {
     let mut results = Vec::new();
 
@@ -182,8 +152,6 @@ pub async fn run_all(config: &Config) -> Vec<CheckResult> {
     results
 }
 
-/// Spawns a fresh Agent subprocess and drives the full primary check
-/// sequence over a single connection/session.
 async fn run_primary_checks(config: &Config) -> anyhow::Result<Vec<CheckResult>> {
     let agent = AcpAgent::from_str(&config.agent_command)?;
     let shared = std::sync::Arc::new(Shared::default());
@@ -266,11 +234,6 @@ async fn run_primary_checks(config: &Config) -> anyhow::Result<Vec<CheckResult>>
             },
             agent_client_protocol::on_receive_request!(),
         )
-        // acp-validator never advertises the `terminal` client capability, but some agents
-        // (deliberately, in the case of `testy`'s `callbacks` scenario) still attempt
-        // `terminal/*` calls unconditionally. We must still answer promptly with an error
-        // instead of leaving the request unhandled, or a well-behaved agent that awaits the
-        // response inline would hang the whole prompt turn.
         .on_receive_request(
             async move |_request: CreateTerminalRequest, responder, _cx| {
                 responder.respond_with_error(terminal_not_supported())
@@ -301,18 +264,6 @@ async fn run_primary_checks(config: &Config) -> anyhow::Result<Vec<CheckResult>>
             },
             agent_client_protocol::on_receive_request!(),
         )
-        // Catch-all fallback, tried only after every specific handler above has declined.
-        //
-        // Without this, an agent-to-client request/notification carrying a `sessionId` that
-        // we don't have a specific handler for (e.g. an unstable/experimental method like
-        // `elicitation/create`) gets queued by the SDK's role-default handler with
-        // `retry: true`, on the assumption that a per-session dynamic handler (as registered
-        // by the higher-level session-builder API, which this validator intentionally
-        // bypasses in favor of raw requests) will eventually claim it. Since we never install
-        // one, that message would otherwise sit in the retry queue forever and hang whatever
-        // agent-side call is awaiting our response. Answering immediately with "method not
-        // found" here keeps every prompt turn responsive regardless of which extra callbacks
-        // an agent decides to make.
         .on_receive_request(
             async move |request: UntypedMessage, responder, _cx| {
                 responder.respond_with_error(
@@ -335,11 +286,6 @@ async fn run_primary_checks(config: &Config) -> anyhow::Result<Vec<CheckResult>>
     Ok(results)
 }
 
-/// The actual sequential check driver, run as the `main_fn` of a single
-/// `connect_with` call. Each step is independent: a failure only skips
-/// steps that strictly require its output (e.g. everything requires
-/// `initialize` to have produced a response; session-scoped checks require
-/// a session id).
 async fn drive_primary_checks(
     cx: ConnectionTo<Agent>,
     config: &Config,
@@ -348,11 +294,6 @@ async fn drive_primary_checks(
     let mut results = Vec::new();
     let timeout = config.timeout;
 
-    // --- 1. initialize -------------------------------------------------------
-    // `initialize` and `session/new` are prerequisites for almost every other
-    // check, so they always run even if `--checks` didn't name them
-    // explicitly; `--checks` only controls whether their own result row is
-    // reported.
     let init_outcome = with_timeout(
         timeout,
         "initialize",
@@ -380,7 +321,6 @@ async fn drive_primary_checks(
         return results;
     };
 
-    // --- 3. session/new ----------------------------------------------------
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/"));
     let session_outcome = with_timeout(
         timeout,
@@ -406,7 +346,6 @@ async fn drive_primary_checks(
         .ok()
         .map(|response| (response.session_id, response.modes));
 
-    // --- 4. session/new with additionalDirectories -------------------------
     if config.enabled("session_new_additional_directories") {
         results.push(
             check_additional_directories(&cx, &init_response, &cwd, timeout).await,
@@ -433,7 +372,6 @@ async fn drive_primary_checks(
         return results;
     };
 
-    // --- 5. session/prompt streaming ---------------------------------------
     if config.enabled("prompt_streaming") {
         results.push(
             check_prompt_streaming(&cx, shared, &session_id, &config.streaming_trigger, timeout)
@@ -441,7 +379,6 @@ async fn drive_primary_checks(
         );
     }
 
-    // --- 6. permission round-trip -------------------------------------------
     if config.enabled("permission_roundtrip") {
         results.push(
             check_permission_roundtrip(
@@ -455,19 +392,16 @@ async fn drive_primary_checks(
         );
     }
 
-    // --- 7. fs callbacks -----------------------------------------------------
     if config.enabled("fs_callbacks") {
         results.push(
             check_fs_callbacks(&cx, shared, &session_id, &config.fs_trigger, timeout).await,
         );
     }
 
-    // --- 9. session/set_mode ---------------------------------------------
     if config.enabled("set_mode") {
         results.push(check_set_mode(&cx, shared, &session_id, session_modes, timeout).await);
     }
 
-    // --- 11. session/update ordering --------------------------------------
     if config.enabled("update_ordering") {
         results.push(
             check_update_ordering(&cx, shared, &session_id, &config.streaming_trigger, timeout)
@@ -475,19 +409,16 @@ async fn drive_primary_checks(
         );
     }
 
-    // --- 8. session/cancel during prompt ------------------------------------
     if config.enabled("cancel") {
         results.push(
             check_cancel(&cx, shared, &session_id, &config.cancel_trigger, timeout).await,
         );
     }
 
-    // --- 10. authenticate/logout --------------------------------------------
     if config.enabled("auth") {
         results.push(check_auth(&cx, &init_response, timeout).await);
     }
 
-    // --- 12. unknown-method tolerance ----------------------------------------
     if config.enabled("unknown_method") {
         results.push(check_unknown_method(&cx, &session_id, timeout).await);
     }
@@ -534,10 +465,6 @@ fn check_initialize_response(response: &InitializeResponse) -> CheckResult {
     )
 }
 
-/// Check 2: a second, independent connection sends `initialize` with an
-/// absurd protocol version (999). Per the spec, the Agent MUST NOT error and
-/// MUST NOT echo back the unsupported version; it must respond with the
-/// latest version it actually supports.
 async fn run_version_negotiation_check(config: &Config) -> CheckResult {
     const NAME: &str = "version_negotiation";
     let agent = match AcpAgent::from_str(&config.agent_command) {
@@ -635,11 +562,6 @@ fn text_prompt(text: impl Into<String>) -> Vec<ContentBlock> {
     vec![ContentBlock::Text(TextContent::new(text.into()))]
 }
 
-/// Check 5: at least one `session/update` must arrive before the
-/// `session/prompt` response resolves, and the response's `stopReason` must
-/// be a value the typed schema recognizes (validated implicitly: if the
-/// agent sent something outside the `StopReason` enum, deserialization of
-/// the response itself would fail and surface as an error here).
 async fn check_prompt_streaming(
     cx: &ConnectionTo<Agent>,
     shared: &Shared,
@@ -701,10 +623,6 @@ async fn check_prompt_streaming(
     }
 }
 
-/// Check 11: rerun a streaming prompt and additionally assert that no
-/// `session/update` for this session arrives *after* the `session/prompt`
-/// response has already resolved (the spec requires the Agent to flush all
-/// updates before responding, except in the cancellation flow).
 async fn check_update_ordering(
     cx: &ConnectionTo<Agent>,
     shared: &Shared,
@@ -728,8 +646,6 @@ async fn check_update_ordering(
         Err(e) => return CheckResult::fail(NAME, e),
     };
 
-    // Give any straggler notifications a brief window to arrive so we don't
-    // race the transport.
     tokio::time::sleep(Duration::from_millis(200)).await;
     let during = shared.drain_updates();
 
@@ -770,18 +686,6 @@ async fn check_update_ordering(
     )
 }
 
-/// Check 6: exercise both permission-response variants: selecting the first
-/// offered option, and responding with `Cancelled` (without an accompanying
-/// `session/cancel`) to make sure the Agent handles a declined/cancelled
-/// permission gracefully rather than hanging.
-///
-/// The verdict is based on the permission round-trip itself (was it seen,
-/// and did the request shape look right) rather than on the prompt turn's
-/// final outcome: an agent may legitimately do other things later in the
-/// same turn (e.g. exercise unrelated capabilities we didn't advertise) that
-/// fail for reasons that have nothing to do with permission handling. A
-/// timeout, however, always fails the check: it means the agent never came
-/// back to us at all, which permission handling could plausibly be blocking.
 async fn check_permission_roundtrip(
     cx: &ConnectionTo<Agent>,
     shared: &Shared,
@@ -791,7 +695,6 @@ async fn check_permission_roundtrip(
 ) -> CheckResult {
     const NAME: &str = "permission_roundtrip";
 
-    // Sub-case A: select the first option.
     *shared.permission_mode.lock().unwrap() = PermissionMode::AutoSelectFirst;
     shared.permission_seen.store(false, Ordering::SeqCst);
     let select_prompt = cx
@@ -855,7 +758,6 @@ async fn check_permission_roundtrip(
         .iter()
         .all(|n| !n.contains("did not match") && !n.contains("was empty"));
 
-    // Sub-case B: respond with Cancelled (no session/cancel involved).
     *shared.permission_mode.lock().unwrap() = PermissionMode::AutoCancelled;
     shared.permission_seen.store(false, Ordering::SeqCst);
     let cancelled_prompt = cx
@@ -906,10 +808,6 @@ async fn check_permission_roundtrip(
     }
 }
 
-/// Check 7: declare fs read/write client capability (done once at
-/// `initialize`) and, during a trigger prompt, serve any `fs/read_text_file`
-/// / `fs/write_text_file` calls from an in-memory map, asserting the
-/// request shapes (absolute path, matching sessionId).
 async fn check_fs_callbacks(
     cx: &ConnectionTo<Agent>,
     shared: &Shared,
@@ -949,10 +847,6 @@ async fn check_fs_callbacks(
         };
     }
 
-    // The fs callback(s) happened, which is what this check validates. What the prompt turn
-    // does afterward is out of scope: an agent may legitimately go on to do unrelated things
-    // that fail for reasons that have nothing to do with fs handling. A timeout is the
-    // exception, since it means the agent never came back to us at all.
     let turn_note = match outcome {
         Ok(Ok(response)) => format!("prompt completed with stopReason={:?}", response.stop_reason),
         Ok(Err(e)) => format!("fs callback(s) handled correctly, but the turn later errored for an unrelated reason: {e}"),
@@ -995,11 +889,6 @@ async fn check_fs_callbacks(
     )
 }
 
-/// Check 8: send a (typically multi-step) prompt, wait for it to start
-/// producing activity, send `session/cancel`, and — if a permission request
-/// happens to be pending — resolve it with the `Cancelled` outcome per the
-/// client's spec obligation. Assert the prompt resolves with
-/// `stopReason: cancelled`.
 async fn check_cancel(
     cx: &ConnectionTo<Agent>,
     shared: &Shared,
@@ -1017,10 +906,6 @@ async fn check_cancel(
         .block_task();
     tokio::pin!(prompt_future);
 
-    // Give the agent a moment to start processing (either a permission
-    // request appears, or at least one session/update is emitted) before we
-    // cancel, so we're actually exercising mid-flight cancellation rather
-    // than cancelling before anything happened.
     let started = wait_until(timeout.min(Duration::from_secs(3)), || {
         shared.permission_pending.lock().unwrap().is_some() || {
             let updates = shared.updates.lock().unwrap();
@@ -1080,9 +965,6 @@ async fn check_cancel(
     }
 }
 
-/// Check 9: if the session advertised modes, set a different one and assert
-/// the request succeeds; a `current_mode_update` notification is a bonus
-/// (reported, not required).
 async fn check_set_mode(
     cx: &ConnectionTo<Agent>,
     shared: &Shared,
@@ -1134,8 +1016,6 @@ async fn check_set_mode(
     )
 }
 
-/// Check 10: if the agent advertised auth methods, authenticate with the
-/// first one; if a logout capability is also advertised, log out too.
 async fn check_auth(
     cx: &ConnectionTo<Agent>,
     init_response: &InitializeResponse,
@@ -1180,10 +1060,6 @@ async fn check_auth(
     }
 }
 
-/// Check 12: an unrecognized method must be rejected with `-32601` (method
-/// not found) rather than crashing the agent or being silently accepted; an
-/// unrecognized notification must be ignored without killing the
-/// connection, verified by a follow-up prompt.
 async fn check_unknown_method(
     cx: &ConnectionTo<Agent>,
     session_id: &SessionId,
@@ -1236,7 +1112,6 @@ async fn check_unknown_method(
         return CheckResult::fail(NAME, format!("failed to send unknown notification: {e}"));
     }
 
-    // Verify liveness with a normal prompt.
     match with_timeout(
         timeout,
         "session/prompt (liveness check)",

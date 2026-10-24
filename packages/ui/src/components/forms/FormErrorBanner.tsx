@@ -1,9 +1,6 @@
 import { Button } from '../Button';
 import { InlineNotice } from '../InlineNotice';
 
-/**
- * The one place a submission failure is announced.
- */
 export function FormErrorBanner({
   message,
   onRetry,

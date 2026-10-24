@@ -1,10 +1,5 @@
 package serverapi
 
-// End-to-end gate tests that mirror how `contenox serve` wires the HTTP surface
-// (see runtime/contenoxcli/serve_cmd.go): a rootMux with open /health and /ui/*
-// routes plus an /api/ subtree wrapped by ProtectAPI over a StripPrefix'd apiMux.
-// These are the exact regression tests for the same-origin-read vulnerability:
-// with a TOKEN set, an uncredentialed GET to any /api/* route must 401.
 import (
 	"net/http"
 	"net/http/httptest"
@@ -15,8 +10,6 @@ import (
 	"github.com/contenox/harness/libauth"
 )
 
-// expiredSessionJWT mints a session JWT for token that is already expired, to
-// prove the gate rejects expired cookies.
 func expiredSessionJWT(t *testing.T, token string) string {
 	t.Helper()
 	cfg := libauth.CreateTokenArgs{JWTSecret: deriveSessionSecret(token), JWTExpiry: -time.Hour}
@@ -27,10 +20,6 @@ func expiredSessionJWT(t *testing.T, token string) string {
 	return s
 }
 
-// serveLikeMux builds a router shaped like serve's rootMux for the given token.
-// The apiMux registers a few representative GET routes (/state, /backends,
-// /mcp-servers) that echo 200 so the test observes whether the gate let the
-// request reach them.
 func serveLikeMux(token string) http.Handler {
 	apiMux := http.NewServeMux()
 	ok := func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }
@@ -45,8 +34,6 @@ func serveLikeMux(token string) http.Handler {
 	return rootMux
 }
 
-// cookieJWTFor logs in through the real /ui/login handler and returns the
-// session-cookie JWT, exactly as a browser would obtain it.
 func cookieJWTFor(t *testing.T, token string) *http.Cookie {
 	t.Helper()
 	return sessionCookieFromLogin(t, token)
@@ -54,8 +41,6 @@ func cookieJWTFor(t *testing.T, token string) *http.Cookie {
 
 var protectedGETs = []string{"/api/state", "/api/backends", "/api/mcp-servers"}
 
-// TestServe_TokenSet_UncredentialedGETsAre401 is THE regression test for the
-// reported hole: every /api/* GET with no credential must be rejected 401.
 func TestServe_TokenSet_UncredentialedGETsAre401(t *testing.T) {
 	srv := httptest.NewServer(serveLikeMux(testToken))
 	t.Cleanup(srv.Close)
@@ -73,8 +58,6 @@ func TestServe_TokenSet_UncredentialedGETsAre401(t *testing.T) {
 	}
 }
 
-// TestServe_TokenSet_CookieJWTGetsThrough proves a logged-in browser's session
-// cookie authorizes the same reads.
 func TestServe_TokenSet_CookieJWTGetsThrough(t *testing.T) {
 	srv := httptest.NewServer(serveLikeMux(testToken))
 	t.Cleanup(srv.Close)
@@ -94,8 +77,6 @@ func TestServe_TokenSet_CookieJWTGetsThrough(t *testing.T) {
 	}
 }
 
-// TestServe_TokenSet_RawBearerGetsThrough proves programmatic clients keep
-// working with the raw token as a bearer.
 func TestServe_TokenSet_RawBearerGetsThrough(t *testing.T) {
 	srv := httptest.NewServer(serveLikeMux(testToken))
 	t.Cleanup(srv.Close)
@@ -114,17 +95,11 @@ func TestServe_TokenSet_RawBearerGetsThrough(t *testing.T) {
 	}
 }
 
-// TestServe_TokenSet_TamperedCookieIs401 proves a forged/tampered session cookie
-// is rejected — only a JWT signed with the TOKEN-derived secret passes.
 func TestServe_TokenSet_TamperedCookieIs401(t *testing.T) {
 	srv := httptest.NewServer(serveLikeMux(testToken))
 	t.Cleanup(srv.Close)
 	good := cookieJWTFor(t, testToken)
 
-	// Flip a SIGNIFICANT bit of the (base64url) signature's final character. In
-	// the final quantum only the top 4 of its 6 bits are signature bits and the
-	// encoder emits zero padding bits, so 'A'→'B' would change padding bits only
-	// and still verify; 'A'↔'Q' always flips a real signature bit.
 	tampered := good.Value
 	if len(tampered) == 0 {
 		t.Fatal("empty cookie JWT")
@@ -151,8 +126,6 @@ func TestServe_TokenSet_TamperedCookieIs401(t *testing.T) {
 	}
 }
 
-// TestServe_TokenSet_WrongSecretJWTIs401 proves a JWT minted with a DIFFERENT
-// token (well-formed but signed with the wrong derived secret) is rejected.
 func TestServe_TokenSet_WrongSecretJWTIs401(t *testing.T) {
 	srv := httptest.NewServer(serveLikeMux(testToken))
 	t.Cleanup(srv.Close)
@@ -173,7 +146,6 @@ func TestServe_TokenSet_WrongSecretJWTIs401(t *testing.T) {
 	}
 }
 
-// TestServe_TokenSet_ExpiredJWTIs401 proves an expired session JWT is rejected.
 func TestServe_TokenSet_ExpiredJWTIs401(t *testing.T) {
 	srv := httptest.NewServer(serveLikeMux(testToken))
 	t.Cleanup(srv.Close)
@@ -191,8 +163,6 @@ func TestServe_TokenSet_ExpiredJWTIs401(t *testing.T) {
 	}
 }
 
-// TestServe_TokenSet_OpenRoutesNeedNoCredential proves health and the auth
-// endpoints stay reachable without any credential so the login page can work.
 func TestServe_TokenSet_OpenRoutesNeedNoCredential(t *testing.T) {
 	srv := httptest.NewServer(serveLikeMux(testToken))
 	t.Cleanup(srv.Close)
@@ -203,9 +173,6 @@ func TestServe_TokenSet_OpenRoutesNeedNoCredential(t *testing.T) {
 	}{
 		{http.MethodGet, "/health", ""},
 		{http.MethodGet, "/ui/auth-status", ""},
-		// Correct token so login returns 200, proving the route is reachable with
-		// no pre-existing credential (a wrong token would 401 from login itself,
-		// which is the endpoint's own response, not the API gate).
 		{http.MethodPost, "/ui/login", `{"token":"` + testToken + `"}`},
 	}
 	for _, c := range cases {
@@ -226,8 +193,6 @@ func TestServe_TokenSet_OpenRoutesNeedNoCredential(t *testing.T) {
 	}
 }
 
-// TestServe_NoToken_LoopbackGETsPassWithoutCredential proves the zero-friction
-// local-dev path is not regressed: with no TOKEN, reads pass with no credential.
 func TestServe_NoToken_LoopbackGETsPassWithoutCredential(t *testing.T) {
 	srv := httptest.NewServer(serveLikeMux(""))
 	t.Cleanup(srv.Close)

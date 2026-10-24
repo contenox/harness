@@ -9,9 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// msgcodec.DecodeResponse persists the turn's signed thinking blocks into the first
-// tool call's ProviderMeta, and msgcodec.Build replays them at the head of the
-// assistant turn — the shape Anthropic requires or the follow-up request 400s.
 func TestUnit_ThinkingRoundTrip_NonStreaming(t *testing.T) {
 	raw := []byte(`{
 		"role": "assistant",
@@ -40,8 +37,6 @@ func TestUnit_ThinkingRoundTrip_NonStreaming(t *testing.T) {
 	require.Equal(t, "redacted_thinking", blocks[1]["type"])
 	require.Equal(t, "opaque-blob", blocks[1]["data"])
 
-	// Next turn: the assistant message re-enters the history. msgcodec.Build must
-	// replay the thinking blocks first.
 	next := []modelrepo.Message{
 		{Role: "user", Content: "list my files"},
 		{Role: "assistant", Content: "Let me check.", ToolCalls: res.ToolCalls},
@@ -61,15 +56,11 @@ func TestUnit_ThinkingRoundTrip_NonStreaming(t *testing.T) {
 	require.Equal(t, "text", assistant.Content[2].Type)
 	require.Equal(t, "tool_use", assistant.Content[3].Type)
 
-	// The wire form of a replayed thinking block must carry type/thinking/
-	// signature only (no stray fields Anthropic would reject).
 	wire, err := json.Marshal(assistant.Content[0])
 	require.NoError(t, err)
 	require.JSONEq(t, `{"type":"thinking","thinking":"I should list the files.","signature":"sig-abc"}`, string(wire))
 }
 
-// Same round-trip through the stream decoder: thinking_delta + signature_delta
-// accumulate into blocks that ride the first tool_use ToolCallDelta's ProviderMeta.
 func TestUnit_ThinkingRoundTrip_Streaming(t *testing.T) {
 	d := msgcodec.NewStreamDecoder(nil)
 
@@ -111,8 +102,6 @@ func TestUnit_ThinkingRoundTrip_Streaming(t *testing.T) {
 	require.Equal(t, "sig-xyz", blocks[0]["signature"])
 }
 
-// Replayed blocks are removed when the outgoing request does not enable
-// thinking, and emptied messages disappear.
 func TestUnit_StripThinkingBlocks(t *testing.T) {
 	var req msgcodec.Request
 	require.NoError(t, json.Unmarshal([]byte(`{

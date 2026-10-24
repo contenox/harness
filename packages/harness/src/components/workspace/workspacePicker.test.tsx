@@ -34,7 +34,6 @@ describe('RootSelector', () => {
       createElement(RootSelector, { value: '', onChange: () => {}, roots: [], isAbsent: true }),
     );
     expect(html).toContain('Absolute path inside a permitted root');
-    // No <select> when there is nothing to pick from.
     expect(html).not.toContain('<select');
   });
 
@@ -74,7 +73,6 @@ describe('WorkspaceBoundaryNotice', () => {
     expect(html).toContain('/etc');
     expect(html).toContain('Allowed roots');
     expect(html).toContain('project');
-    // The raw wire prefix is not shown.
     expect(html).not.toContain('unprocessable entity');
   });
 

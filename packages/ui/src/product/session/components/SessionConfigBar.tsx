@@ -30,16 +30,10 @@ function isBoolean(option: SessionConfigOption): boolean {
 
 export interface SessionConfigBarProps {
   options: SessionConfigOption[];
-  /**
-   * Persists one option through `session/set_config_option`.
-   */
   onSet: (configId: string, value: SessionConfigOptionValue) => void;
   disabled?: boolean;
 }
 
-/**
- * The per-session `_meta` config bar: one control per option the agent advertised at initialize — model, provider, think, HITL policy, token limit.
- */
 export function SessionConfigBar({ options, onSet, disabled }: SessionConfigBarProps) {
   if (options.length === 0) return null;
   return (

@@ -1,8 +1,6 @@
-//! Result types and human/machine-readable reporting for conformance checks.
 
 use serde::Serialize;
 
-/// Outcome of a single conformance check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Status {
@@ -21,7 +19,6 @@ impl Status {
     }
 }
 
-/// The result of running a single named conformance check.
 #[derive(Debug, Clone, Serialize)]
 pub struct CheckResult {
     pub name: String,
@@ -55,7 +52,6 @@ impl CheckResult {
     }
 }
 
-/// Prints results as a human-readable, column-aligned table.
 pub fn print_table(results: &[CheckResult]) {
     let name_width = results
         .iter()
@@ -67,7 +63,6 @@ pub fn print_table(results: &[CheckResult]) {
     println!("{:<name_width$}  STATUS  DETAIL", "CHECK", name_width = name_width);
     println!("{}", "-".repeat(name_width + 8 + 6));
     for result in results {
-        // Keep the detail on one line for table output; replace newlines with " | ".
         let detail = result.detail.replace('\n', " | ");
         println!(
             "{:<name_width$}  {:<6}  {}",
@@ -85,7 +80,6 @@ pub fn print_table(results: &[CheckResult]) {
     println!("{pass} passed, {fail} failed, {skip} skipped ({} total)", results.len());
 }
 
-/// Prints results as a JSON array of `{name, status, detail}` objects.
 pub fn print_json(results: &[CheckResult]) {
     match serde_json::to_string_pretty(results) {
         Ok(json) => println!("{json}"),
@@ -93,7 +87,6 @@ pub fn print_json(results: &[CheckResult]) {
     }
 }
 
-/// Exit code: 0 iff no check has status `Fail` (skips are OK).
 pub fn exit_code(results: &[CheckResult]) -> i32 {
     if results.iter().any(|r| r.status == Status::Fail) {
         1

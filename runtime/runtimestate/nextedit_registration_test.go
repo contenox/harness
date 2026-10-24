@@ -8,10 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A connection's own capability list is what the adapter executes unaided; the
-// operations that depend on a model's declared format are answered per
-// declaration, so no adapter claims an editor operation it was not given a
-// format for.
 func TestUnit_RegistrationCapabilitiesClaimNoEditorOperationWithoutADeclaration(t *testing.T) {
 	for _, backendType := range []string{"openai", "ollama", "vllm", "mistral", "deepseek", "anthropic", "gemini"} {
 		capabilities, err := runtimestate.RegistrationCapabilities(runtimetypes.Backend{Type: backendType})
@@ -21,10 +17,6 @@ func TestUnit_RegistrationCapabilitiesClaimNoEditorOperationWithoutADeclaration(
 	}
 }
 
-// A declared edit format is honoured exactly where the adapter speaks it: our
-// own edit prompt runs over any adapter that carries an edit client, and is
-// refused where the adapter has none, while a native fill-in-the-middle contract
-// is the vendor's own.
 func TestUnit_DeclaredModelCapabilitiesHonourTheDeclaredFormats(t *testing.T) {
 	for _, backendType := range []string{"openai", "ollama", "vllm"} {
 		capabilities, err := runtimestate.DeclaredModelCapabilities(runtimetypes.Backend{Type: backendType}, runtimetypes.ModelFacts{

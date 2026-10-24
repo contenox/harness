@@ -53,7 +53,6 @@ describe('AdoptedSessionBanner', () => {
     expect(html).toContain('Taken over');
     expect(html).not.toContain('Observing');
     expect(html).toContain('Researcher');
-    // The durability caveat is always present — the transcript begins at adoption.
     expect(html).toContain('durable from take-over onward');
   });
 

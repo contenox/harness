@@ -20,26 +20,21 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// ProviderType identifies native ChatGPT subscription inference.
 const ProviderType = "openai-codex"
 
-// BaseURL is the subscription inference endpoint; credentials must not leave this origin.
 const BaseURL = "https://chatgpt.com/backend-api/codex"
 
 const clientID = "app_EMoamEEZ73f0CkXaXp7hrann"
 const authURL = "https://auth.openai.com"
 
-// ErrLoginRequired indicates absent, revoked, or ambiguous credentials.
 var ErrLoginRequired = errors.New("ChatGPT login required; run contenox-cli backend login <name>")
 
-// DeviceCode contains the one-time instructions for device authorization.
 type DeviceCode struct {
 	URL       string
 	Code      string
 	ExpiresAt time.Time
 }
 
-// Status is a secret-free view of locally stored authentication, not inference readiness.
 type Status struct {
 	State      string    `json:"state"`
 	ExpiresAt  time.Time `json:"expiresAt,omitempty"`
@@ -52,14 +47,12 @@ type credential struct {
 	Generation string        `json:"generation"`
 }
 
-// Service owns backend-scoped subscription credentials and device authorization.
 type Service struct {
 	db      libdb.DBManager
 	client  *http.Client
 	authURL string
 }
 
-// New constructs a credential service without reading another client's credentials.
 func New(db libdb.DBManager) *Service {
 	return &Service{db: db, client: &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, authURL: authURL}
 }
@@ -75,7 +68,6 @@ func read(ctx context.Context, store runtimetypes.Store, id string) (credential,
 	return c, err
 }
 
-// mutate locks the backend before reading credentials; refresh, logout, and replacement serialize across processes.
 func (s *Service) mutate(ctx context.Context, id string, fn func(*credential) error) error {
 	exec, commit, release, err := s.db.WithTransaction(ctx)
 	if err != nil {
@@ -120,7 +112,6 @@ func (s *Service) mutate(ctx context.Context, id string, fn func(*credential) er
 	return commit(ctx)
 }
 
-// Status reads authentication metadata without refreshing or exposing tokens.
 func (s *Service) Status(ctx context.Context, id string) (Status, error) {
 	c, err := read(ctx, runtimetypes.New(s.db.WithoutTransaction()), id)
 	if err != nil {
@@ -137,7 +128,6 @@ func (s *Service) Status(ctx context.Context, id string) (Status, error) {
 	return status, nil
 }
 
-// CredentialGeneration reads the login revision inside the caller's transaction without exposing tokens.
 func CredentialGeneration(ctx context.Context, store runtimetypes.Store, id string) (string, error) {
 	if store == nil || id == "" {
 		return "", errors.New("credential generation requires a store and connection ID")
@@ -150,12 +140,10 @@ func CredentialGeneration(ctx context.Context, store runtimetypes.Store, id stri
 	return revision, err
 }
 
-// Logout clears credentials without removing the backend or changing inference defaults.
 func (s *Service) Logout(ctx context.Context, id string) error {
 	return s.mutate(ctx, id, func(c *credential) error { *c = credential{Generation: uuid.NewString()}; return nil })
 }
 
-// DeleteCredentials removes the credential record inside the backend deletion transaction.
 func DeleteCredentials(ctx context.Context, exec libdb.Exec, id string) error {
 	store := runtimetypes.New(exec)
 	for _, credentialKey := range []string{key(id), "model-oauth-revision:" + id} {
@@ -166,7 +154,6 @@ func DeleteCredentials(ctx context.Context, exec libdb.Exec, id string) error {
 	return nil
 }
 
-// Headers obtains current credentials, refreshing under the cross-process backend lock when necessary.
 func (s *Service) Headers(ctx context.Context, id string) (http.Header, error) {
 	c, err := read(ctx, runtimetypes.New(s.db.WithoutTransaction()), id)
 	if err != nil {
@@ -230,7 +217,6 @@ func (s *Service) Headers(ctx context.Context, id string) (http.Header, error) {
 	return http.Header{"Authorization": {"Bearer " + c.Token.AccessToken}, "Chatgpt-Account-Id": {c.Account}}, nil
 }
 
-// Login runs device authorization; a cancelled or failed attempt leaves the previous login intact.
 func (s *Service) Login(ctx context.Context, id string, show func(DeviceCode) error) error {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()

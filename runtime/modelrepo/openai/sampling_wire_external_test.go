@@ -8,10 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The setup probe's own request shape: a tool, temperature zero and reasoning
-// off. A reasoning model whose page names no effort literal is sent to
-// /responses with neither sampling member nor a reasoning member, because the
-// vendor answers temperature on it with a 400 even when no effort is requested.
 func TestUnit_WireOpenAI_ResponsesOmitsSamplingForEffortlessReasoningModel(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: `{"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":75,"output_tokens":26,"total_tokens":101}}`})
@@ -26,8 +22,6 @@ func TestUnit_WireOpenAI_ResponsesOmitsSamplingForEffortlessReasoningModel(t *te
 	require.NotContains(t, req.Body, "reasoning")
 }
 
-// A reasoning model whose page names none keeps sampling when no effort is
-// requested: the vendor accepts temperature on it without a reasoning member.
 func TestUnit_WireOpenAI_ResponsesKeepsSamplingWhenNoneIsTheDefault(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Body: `{"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}]}`})
@@ -41,8 +35,6 @@ func TestUnit_WireOpenAI_ResponsesKeepsSamplingWhenNoneIsTheDefault(t *testing.T
 	require.NotContains(t, req.Body, "reasoning")
 }
 
-// The vendor's refusal of a sampling member carries a null code beside its
-// type; the typed error names that type and the vendor's own message.
 func TestUnit_WireOpenAI_ResponsesUnsupportedParameterNamesTheVendorMessage(t *testing.T) {
 	t.Parallel()
 	cs := newCaptureServer(t, scriptedReply{Status: 400, Body: `{"error":{"message":"Unsupported parameter: 'temperature' is not supported with this model.","type":"invalid_request_error","param":"temperature","code":null}}`})

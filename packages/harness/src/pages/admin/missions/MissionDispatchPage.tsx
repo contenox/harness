@@ -19,15 +19,6 @@ import {
 
 const EMPTY_FORM: DispatchFormValues = { agentName: '', intent: '', hitlPolicyName: '', cwd: '' };
 
-/**
- * Fire-a-mission (docs/development/blueprints/acp/fleet-consolidation.md,
- * "Mission mode", slice M2): agent, intent, and envelope are required — a
- * mission with no envelope has no bounds, and the intent IS the prompt (see
- * DispatchRequest), so there is deliberately no separate prompt field. On
- * success the operator lands on the new mission's own detail page rather
- * than back on the list, since firing one is usually followed by wanting to
- * watch it.
- */
 export default function MissionDispatchPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -36,10 +27,6 @@ export default function MissionDispatchPage() {
   const { roots, defaultRoot, isAbsent: rootsAbsent } = useWorkspaceRoots();
   const dispatch = useDispatchMission();
 
-  // A dispatch can be refused because the chosen cwd is outside the workspace
-  // roots (the server does the real bounds check). Surface THAT legibly on the
-  // working-directory field instead of the raw wire string, and suppress the
-  // generic form-level error so the reason shows exactly once, where it belongs.
   const dispatchError = dispatch.error;
   const rootRefused =
     dispatch.isError &&
@@ -47,27 +34,16 @@ export default function MissionDispatchPage() {
     dispatchError.status === 422 &&
     isWorkspaceRootRefusal(dispatchError.message);
 
-  // The command palette's agent action lands here with `?agent=<name>` so the
-  // form opens with that agent already chosen — the "dispatch prefill" the
-  // palette promises. Read once as the initial value; the Select stays freely
-  // editable afterwards.
   const [searchParams] = useSearchParams();
   const [values, setValues] = useState<DispatchFormValues>(() => {
     const agent = searchParams.get('agent');
     return agent ? { ...EMPTY_FORM, agentName: agent } : EMPTY_FORM;
   });
-  // Errors stay computed but hidden until a first submit attempt — a field
-  // required error the instant the page loads (before anyone has typed
-  // anything) would just be noise.
   const [touched, setTouched] = useState(false);
 
   const errors = validateDispatchForm(values);
   const fieldError = (key?: TranslationKey) => (touched && key ? t(key) : undefined);
 
-  // Only-enabled filter mirrors AgentPicker.tsx's own judgment (see its doc
-  // comment) — the server-side refusal (agentregistryservice.ResolveForSpawn)
-  // is the real gate; this is belt-and-braces UX so a disabled agent is never
-  // even offered.
   const enabledAgents = (agents ?? []).filter(a => a.enabled);
   const agentOptions = enabledAgents.map(a => ({ value: a.name, label: a.name }));
   const policyOptions = (policies ?? [])

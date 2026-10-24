@@ -80,11 +80,9 @@ func TestUnit_FilterSessionUpdates_ForwardsInnerError(t *testing.T) {
 	inner := &recordingClient{retErr: sentinel}
 	filtered := libacp.FilterSessionUpdates("live", inner)
 
-	// A live update reaches inner, so its error propagates.
 	err := filtered.SessionUpdate(context.Background(), libacp.SessionNotification{SessionID: "live"})
 	assert.ErrorIs(t, err, sentinel)
 
-	// A stale update never reaches inner, so it is a silent no-op (nil).
 	err = filtered.SessionUpdate(context.Background(), libacp.SessionNotification{SessionID: "stale"})
 	assert.NoError(t, err)
 }

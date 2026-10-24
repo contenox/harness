@@ -8,7 +8,6 @@ import type { ProviderChoice } from './StepChooseProvider';
 type Props = {
   provider: ProviderChoice;
   onRefreshStatus: () => void;
-  /** Advances the wizard after cloud credentials are saved. */
   onSaved?: () => void;
 };
 

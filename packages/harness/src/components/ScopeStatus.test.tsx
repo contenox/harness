@@ -22,7 +22,6 @@ describe('ScopeAnomalyChip', () => {
     const anomalous: MissionChangeScope = { files: 5, dirs: 4, anomaly: true };
     const html = renderToStaticMarkup(createElement(ScopeAnomalyChip, { scope: anomalous }));
     expect(html).toContain('Out of scope');
-    // Advice, not a verdict — the tooltip says so.
     expect(html).toContain('Advice, not a verdict');
   });
 

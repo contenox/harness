@@ -35,7 +35,6 @@ type QueueItem struct {
 }
 
 type Backend struct {
-	// Revision advances on every persisted connection edit.
 	Revision int64  `json:"revision"`
 	ID       string `json:"id" example:"b7d9e1a3-8f0c-4a7d-9b1e-2f3a4b5c6d7e"`
 	Name     string `json:"name" example:"ollama-production"`
@@ -58,19 +57,6 @@ type Model struct {
 	UpdatedAt     time.Time `json:"updatedAt" example:"2023-11-15T14:30:45Z"`
 }
 
-// AffinityGroup represents a logical grouping that defines preferred relationships
-// between models and backends. Entities can
-// belong to multiple affinity groups simultaneously.
-//
-// Affinity groups enable:
-//   - Selective model-backend relationships (not all backends serve all models)
-//   - Performance tiering (assigning models to appropriate backend tiers)
-//   - Custom routing strategies based on application requirements
-//
-// Example use cases:
-//   - "embedding-affinity": Contains embedding models and their dedicated backends
-//   - "low-latency-affinity": Contains critical models that need fastest response
-//   - "high-throughput-affinity": Contains models that benefit from batch processing
 type AffinityGroup struct {
 	ID          string `json:"id" example:"p9a8b7c6-d5e4-f3a2-b1c0-d9e8f7a6b5c4"`
 	Name        string `json:"name" example:"production-chat"`
@@ -90,7 +76,6 @@ type Job struct {
 	CreatedAt    time.Time       `json:"createdAt" example:"2023-11-15T14:30:45Z"`
 }
 
-// KV represents a key-value pair in the database
 type KV struct {
 	Key       string          `json:"key" example:"config:default-model"`
 	Value     json.RawMessage `json:"value" example:"\"mistral:instruct\""`
@@ -110,7 +95,6 @@ type InjectionArg struct {
 	In    string `json:"in" example:"body"`
 }
 
-// RemoteTools represents a remote tools configuration
 type AuthFlow struct {
 	Type            string `json:"type" example:"http_handshake"`
 	LoginMethod     string `json:"loginMethod" example:"POST"`
@@ -122,16 +106,15 @@ type AuthFlow struct {
 	InjectFormat    string `json:"injectFormat,omitempty" example:"sid=%s"`
 }
 
-// RemoteTools represents a remote tools configuration
 type RemoteTools struct {
 	ID                 string            `json:"id" example:"h1a2b3c4-d5e6-f7g8-h9i0-j1k2l3m4n5o6"`
 	Name               string            `json:"name" example:"mailing-tools"`
 	EndpointURL        string            `json:"endpointUrl" example:"http://tools-endpoint:port"`
-	SpecURL            string            `json:"specUrl,omitempty"` // optional; file:///abs/path or https://... — when set, spec is loaded from here instead of EndpointURL+/openapi.json
+	SpecURL            string            `json:"specUrl,omitempty"`
 	TimeoutMs          int               `json:"timeoutMs" example:"5000"`
 	Headers            map[string]string `json:"headers,omitempty" example:"Authorization:Bearer token,Content-Type:application/json"`
 	Properties         InjectionArg      `json:"properties"`
-	InjectParams       map[string]string `json:"injectParams,omitempty"` // injected as tool call args, hidden from model schema
+	InjectParams       map[string]string `json:"injectParams,omitempty"`
 	AuthFlow           *AuthFlow         `json:"authFlow,omitempty"`
 	InsecureSkipVerify bool              `json:"insecureSkipVerify"`
 	CreatedAt          time.Time         `json:"createdAt" example:"2023-11-15T14:30:45Z"`
@@ -225,9 +208,6 @@ type Store interface {
 	DeleteMCPServer(ctx context.Context, id string) error
 	ListMCPServers(ctx context.Context, createdAtCursor *time.Time, limit int) ([]*MCPServer, error)
 	EstimateMCPServerCount(ctx context.Context) (int64, error)
-	// UpsertMCPServerByName inserts or updates an MCP server record keyed by name.
-	// If a server with the same name already exists it is updated in place (same ID).
-	// Used by the CLI to register config-file MCP servers into SQLite at startup.
 	UpsertMCPServerByName(ctx context.Context, srv *MCPServer) error
 
 	CreateAgent(ctx context.Context, agent *Agent) error
@@ -238,11 +218,6 @@ type Store interface {
 	ListAgents(ctx context.Context, createdAtCursor *time.Time, limit int) ([]*Agent, error)
 	EstimateAgentCount(ctx context.Context) (int64, error)
 
-	// CreateHITLApproval, GetHITLApproval, ResolveHITLApproval,
-	// ListExpiredHITLApprovals, ListHITLApprovals, and
-	// EstimateHITLApprovalCount back runtime/hitlservice's durable pending-ask
-	// table (see runtime/runtimetypes/hitl_approvals.go and
-	// docs/development/blueprints/acp/fleet-consolidation.md slice C1).
 	CreateHITLApproval(ctx context.Context, a *HITLApproval) error
 	GetHITLApproval(ctx context.Context, id string) (*HITLApproval, error)
 	ResolveHITLApproval(ctx context.Context, id string, state HITLApprovalState, resolution json.RawMessage, resolvedAt time.Time) error
@@ -273,7 +248,6 @@ func New(exec libdb.Exec) Store {
 
 const MaxRowsCount = 100000
 
-// sqliteCountableTables is the whitelist for SELECT COUNT(*) fallback when estimate_row_count is not available (e.g. SQLite).
 var sqliteCountableTables = map[string]bool{
 	"job_queue_v2": true, "kv": true, "remote_tools": true,
 	"ollama_models": true, "llm_affinity_group": true, "llm_backends": true,
@@ -289,7 +263,6 @@ func (s *store) estimateCount(ctx context.Context, table string) (int64, error) 
 	if err == nil {
 		return count, nil
 	}
-	// SQLite has no estimate_row_count; fall back to COUNT(*) for whitelisted tables only.
 	if !strings.Contains(err.Error(), "no such function") {
 		return 0, err
 	}
@@ -322,11 +295,9 @@ func quiet() func() {
 	}
 }
 
-// setupStore initializes a test Postgres instance and returns the store.
 func SetupStore(t *testing.T) (context.Context, Store) {
 	t.Helper()
 
-	// Silence logs
 	unquiet := quiet()
 	t.Cleanup(unquiet)
 
@@ -337,7 +308,6 @@ func SetupStore(t *testing.T) (context.Context, Store) {
 	dbManager, err := libdb.NewPostgresDBManager(ctx, connStr, Schema)
 	require.NoError(t, err)
 
-	// Cleanup DB and container
 	t.Cleanup(func() {
 		require.NoError(t, dbManager.Close())
 		cleanup()

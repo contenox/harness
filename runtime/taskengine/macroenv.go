@@ -13,13 +13,11 @@ import (
 	"time"
 )
 
-// MacroEnv is a transparent decorator around EnvExecutor that expands macros (toolservice, var, date, now, chain) in task templates before execution.
 type MacroEnv struct {
 	inner         EnvExecutor
 	toolsProvider ToolsRepo
 }
 
-// NewMacroEnv wraps an existing EnvExecutor with macro expansion.
 func NewMacroEnv(inner EnvExecutor, toolsProvider ToolsRepo) (EnvExecutor, error) {
 	if inner == nil {
 		return nil, fmt.Errorf("NewMacroEnv: inner EnvExecutor is nil")
@@ -40,7 +38,6 @@ func (m *MacroEnv) ExecEnv(
 		return nil, DataTypeAny, nil, fmt.Errorf("chain is nil")
 	}
 
-	// Deep-copy tasks and pointer fields so macro expansion never mutates the chain definition, which may be shared across goroutines.
 	clone := *chain
 	clone.Tasks = make([]TaskDefinition, len(chain.Tasks))
 	copy(clone.Tasks, chain.Tasks)
@@ -84,7 +81,6 @@ func (m *MacroEnv) ExecEnv(
 			}
 		}
 		if t.SystemInstruction != "" {
-			// SystemInstruction is the provider cache's stable prefix, so it expands with stablePrefix=true (wall-clock macros degrade to day granularity).
 			t.SystemInstruction, err = m.expandSpecialTemplates(ctx, &clone, allowlist, t.SystemInstruction, true)
 			if err != nil {
 				return nil, DataTypeAny, nil, fmt.Errorf("task %s: system_instruction macro error: %w", t.ID, err)
@@ -242,10 +238,8 @@ func (m *MacroEnv) expandOne(ctx context.Context, chain *TaskChainDefinition, al
 		layout := time.RFC3339
 		switch {
 		case payload != "":
-			// An explicit layout is always respected, even in the stable prefix — a deliberate trade of cache reuse for precision.
 			layout = payload
 		case stablePrefix:
-			// Provider prefix caches key on exact system-instruction bytes; the default layout degrades to day granularity here to avoid cold-starting the cache every request.
 			layout = "2006-01-02"
 		}
 		return time.Now().Format(layout), nil
@@ -346,7 +340,6 @@ func (m *MacroEnv) renderToolsAndToolsJSON(ctx context.Context, names []string) 
 		for _, t := range tools {
 			fnNames = append(fnNames, t.Function.Name)
 		}
-		// Pin inner arrays too: map keys sort automatically but per-tools lists don't, and must stay stable across requests.
 		sort.Strings(fnNames)
 		result[name] = fnNames
 	}
@@ -378,7 +371,6 @@ func (m *MacroEnv) renderToolsForToolsJSON(ctx context.Context, allowed []string
 	for _, t := range tools {
 		names = append(names, t.Function.Name)
 	}
-	// Stable prompt bytes regardless of registry enumeration order.
 	sort.Strings(names)
 	b, err := json.Marshal(names)
 	if err != nil {

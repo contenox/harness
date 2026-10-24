@@ -368,9 +368,3 @@ func TestSystem_Evaluate_defaultModelNotAvailable(t *testing.T) {
 		t.Fatalf("expected available model in message, got %#v", found)
 	}
 }
-
-// A modeld backend row must classify like every other backend type: a real
-// gRPC dial error surfaces as "unreachable" (not silently dropped, not
-// misclassified as unsupported), and the hint distinguishes the local
-// (lease-resolved) case from a remote host:port so the user knows which
-// daemon to go check.

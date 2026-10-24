@@ -20,8 +20,6 @@ import (
 	"github.com/contenox/harness/runtime/vfs"
 )
 
-// nopKV forces the hitlservice under test to use its constructor fallback
-// policy rather than any active-policy KV key.
 type nopKV struct{}
 
 func (nopKV) GetKV(context.Context, string, interface{}) error { return os.ErrNotExist }

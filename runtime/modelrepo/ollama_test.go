@@ -20,7 +20,6 @@ import (
 
 var chatModel = "smollm2:135m"
 
-// TestSystem_Ollama exercises the Ollama provider against a live container.
 func TestSystem_Ollama(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping ollama system test: starts a container and pulls multi-GB models")
@@ -37,7 +36,6 @@ func TestSystem_Ollama(t *testing.T) {
 	err = waitForModelReady(t, uri, chatModel)
 	require.NoError(t, err)
 
-	// Pull embedding model
 	embedModel := "nomic-embed-text:latest"
 	t.Logf("Pulling embedding model: %s", embedModel)
 	err = pullModel(t, uri, embedModel)
@@ -141,7 +139,7 @@ func TestSystem_Ollama(t *testing.T) {
 		embedding, err := embedClient.Embed(ctx, text)
 		require.NoError(t, err)
 		assert.NotEmpty(t, embedding)
-		assert.Equal(t, 768, len(embedding)) // nomic-embed-text uses 768 dimensions
+		assert.Equal(t, 768, len(embedding))
 	})
 
 	t.Run("BasicPrompt", func(t *testing.T) {
@@ -177,10 +175,6 @@ func TestSystem_Ollama(t *testing.T) {
 		assert.Contains(t, resp, "4")
 	})
 
-	// Streaming is the only path that decodes NDJSON frame by frame, so it is
-	// the only one that proves the per-chunk ChatResponse shape — including
-	// the untagged embedded Metrics, which surface as zero usage if the
-	// struct stops inlining them.
 	t.Run("Streaming", func(t *testing.T) {
 		caps := modelrepo.CapabilityConfig{
 			ContextLength: 2048,
@@ -227,9 +221,6 @@ func TestSystem_Ollama(t *testing.T) {
 		assert.Contains(t, strings.ToLower(content.String()), "rome")
 	})
 
-	// Duration marshals keep_alive as an ollama duration string ("10m0s").
-	// Only a real server proves it parsed: residency past the server's own 5m
-	// default is the observable difference.
 	t.Run("KeepAliveApplied", func(t *testing.T) {
 		caps := modelrepo.CapabilityConfig{
 			ContextLength: 2048,
@@ -255,9 +246,6 @@ func TestSystem_Ollama(t *testing.T) {
 			"residency %s exceeds the 10m window the client asks for", residency)
 	})
 
-	// The five capability strings are declared locally now that the ollama SDK
-	// is gone. Only a real /api/show response proves they still match, and a
-	// mismatch silently misclassifies every model.
 	t.Run("CatalogCapabilityDerivation", func(t *testing.T) {
 		catalog, err := modelrepo.NewCatalogProvider(
 			modelrepo.BackendSpec{Type: "ollama", BaseURL: uri},
@@ -291,8 +279,6 @@ func TestSystem_Ollama(t *testing.T) {
 	})
 }
 
-// runningModelExpiry reads the residency deadline the server recorded for a
-// loaded model from /api/ps.
 func runningModelExpiry(t *testing.T, baseURL, model string) (time.Time, bool) {
 	t.Helper()
 
@@ -320,8 +306,6 @@ func runningModelExpiry(t *testing.T, baseURL, model string) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-// pullModel streams POST /api/pull, logging progress. baseURL is the container
-// root, e.g. "http://127.0.0.1:32768".
 func pullModel(t *testing.T, baseURL, model string) error {
 	t.Helper()
 
@@ -378,7 +362,6 @@ func pullModel(t *testing.T, baseURL, model string) error {
 	return scanner.Err()
 }
 
-// waitForModelReady polls POST /api/show until the model resolves.
 func waitForModelReady(t *testing.T, baseURL, model string) error {
 	t.Helper()
 	const maxRetries = 10

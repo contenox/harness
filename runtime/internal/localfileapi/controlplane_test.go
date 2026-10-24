@@ -18,33 +18,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_WorkspaceRoutes_ControlPlaneShownButUnenterable is the composed proof
-// of the control-plane carveout on the /files explorer surface — the live hole
-// containment opened today (a granted root whose CHILD is ~/.contenox-harness).
-//
-// Show-vs-hide decision (documented, and enforced here): the control-plane entry
-// is SHOWN in its parent's listing but is UNENTERABLE. Hiding it would lie about
-// the filesystem — the directory is really there, and a listing that omits it is
-// a listing the operator cannot trust. The refusal happens on ENTER (and on any
-// read of a path inside it), returned as a 403 Forbidden carrying the plain
-// teaching text, because the carveout lives in the vfs containment primitive
-// (vfs.Contain / View.Resolve) that localfileservice funnels every path through —
-// so nothing special is done to the listing, and the SAME guard protects the
-// local_fs agent tool and a session cwd. Beam enters a subdirectory by keeping
-// `root` fixed and passing the child as a relative `path`, which is exactly the
-// traversal this guards; the Factory's root-selection check alone would not have
-// covered it.
 func TestUnit_WorkspaceRoutes_ControlPlaneShownButUnenterable(t *testing.T) {
-	root := t.TempDir() // the granted workspace root (stands in for a real home dir)
+	root := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(root, "project.txt"), []byte("x"), 0o644))
 
-	// The runtime's control plane, a DIRECT CHILD of the granted root — the shape
-	// serve produces (workspaceRoot = filepath.Dir(contenoxDir)).
 	controlPlane := filepath.Join(root, ".contenox")
 	require.NoError(t, os.MkdirAll(controlPlane, 0o700))
 	require.NoError(t, os.WriteFile(filepath.Join(controlPlane, "local.db"), []byte("secret"), 0o600))
 
-	// A sibling whose name merely shares the prefix must remain fully browsable.
 	lookalike := filepath.Join(root, ".contenox2")
 	require.NoError(t, os.MkdirAll(lookalike, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(lookalike, "ok.txt"), []byte("ok"), 0o644))

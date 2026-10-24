@@ -1,9 +1,3 @@
-/**
- * i18n keys referenced in this file (namespace `workspace`):
- *   workspace.mention_preview_label = "File preview"
- *   workspace.mention_loading, workspace.binary_file, workspace.peek_error
- *   workspace.line, workspace.lines
- */
 import { CodeBlock, InlineNotice } from '@contenox/ui';
 import { FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -13,16 +7,6 @@ export interface MentionFilePreviewProps {
   state: FilePreviewState;
 }
 
-/**
- * Live content preview shown as the TOP section INSIDE the `@`-mention browser
- * popover while it is open and a FILE is highlighted (see `useFilePreview` /
- * `mentionPreviewPath`). Rendered inside the absolutely-positioned popover
- * overlay (`MentionMenu`), NOT in the composer's normal flow — so navigating
- * files changes its content without ever reflowing the transcript/composer.
- * Reuses the shared `CodeBlock` file-view renderer for a real monospace,
- * scrollable body; the box is bounded (`max-h`) with its own `overflow-auto`
- * and a bottom-border separator to the file list below. Pure presentation.
- */
 export function MentionFilePreview({ state }: MentionFilePreviewProps) {
   const { t } = useTranslation();
   if (state.status === 'hidden') return null;

@@ -17,8 +17,6 @@ import (
 
 const visionModel = "qwen3.5:0.8b"
 
-// redCirclePNG renders a solid red circle on white — an image whose one
-// unambiguous property a small vision model can be asked about.
 func redCirclePNG(t *testing.T) []byte {
 	t.Helper()
 	const size = 256

@@ -18,12 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ─── test scaffolding ───────────────────────────────────────────────────────
-
-// setupHITLDB opens a fresh SQLite-backed runtimetypes.Store at a temp file
-// path, returning the store and the path — the path lets a test reopen the
-// same on-disk file (a brand-new DBManager, no in-memory state carried over)
-// to simulate a `contenox serve` restart via reopenHITLDB.
 func setupHITLDB(t *testing.T) (context.Context, runtimetypes.Store, string) {
 	t.Helper()
 	ctx := context.Background()
@@ -34,10 +28,6 @@ func setupHITLDB(t *testing.T) (context.Context, runtimetypes.Store, string) {
 	return ctx, runtimetypes.New(db.WithoutTransaction()), dbPath
 }
 
-// reopenHITLDB opens a brand-new DBManager/Store over the same on-disk file
-// setupHITLDB created. No in-memory state survives this — in particular, a
-// hitlservice built over the returned store has an empty `pending` channel
-// map, exactly as a freshly started `contenox serve` process would.
 func reopenHITLDB(t *testing.T, dbPath string) (context.Context, runtimetypes.Store) {
 	t.Helper()
 	ctx := context.Background()
@@ -47,21 +37,11 @@ func reopenHITLDB(t *testing.T, dbPath string) (context.Context, runtimetypes.St
 	return ctx, runtimetypes.New(db.WithoutTransaction())
 }
 
-// newDurableService builds a hitlservice.Service over a real
-// runtimetypes.Store, so it satisfies hitlservice's internal approval-store
-// capability and RequestApproval/Respond/SweepExpired are durable — unlike
-// the bare-KVReader-backed services most of this package's other tests use
-// for Evaluate()-only coverage (policy_test.go and friends).
 func newDurableService(t *testing.T, store runtimetypes.Store) hitlservice.Service {
 	t.Helper()
 	return hitlservice.NewWithDefaultPolicy(hitlservice.NewFSPolicySource(t.TempDir()), testTenant, store, libtracker.NoopTracker{}, "")
 }
 
-// signalSink is a taskengine.TaskEventSink that forwards each event's
-// ApprovalID to a channel. RequestApproval durably creates its pending row
-// BEFORE publishing, so receiving on this channel is a synchronization point
-// a test can rely on instead of sleeping: by the time a value arrives, the
-// row is already committed.
 type signalSink struct {
 	ids chan<- string
 }
@@ -98,15 +78,6 @@ func seedPendingRow(t *testing.T, ctx context.Context, store runtimetypes.Store,
 	return row
 }
 
-// ─── D3 / restart durability ────────────────────────────────────────────────
-
-// TestUnit_RequestApproval_SurvivesRestartAndIsAnswerableAfterward is the
-// central acceptance scenario for slice C1: an approval requested with no
-// bound ACP session survives a `contenox serve` restart and is answerable
-// afterwards. It also doubles as the most realistic form of the D2
-// (drop-on-Respond) regression: svc2 below never had this id in an in-process
-// `pending` map, because it is a distinct instance built after the
-// "restart".
 func TestUnit_RequestApproval_SurvivesRestartAndIsAnswerableAfterward(t *testing.T) {
 	ctx1, store1, dbPath := setupHITLDB(t)
 	svc1 := newDurableService(t, store1)
@@ -135,8 +106,6 @@ func TestUnit_RequestApproval_SurvivesRestartAndIsAnswerableAfterward(t *testing
 	require.NoError(t, err)
 	require.Equal(t, runtimetypes.HITLApprovalPending, pending.State)
 
-	// Simulate the old process exiting mid-ask: the caller's context ends
-	// (e.g. `contenox serve` shutting down) before anyone answers.
 	cancel()
 	select {
 	case err := <-result:
@@ -145,9 +114,6 @@ func TestUnit_RequestApproval_SurvivesRestartAndIsAnswerableAfterward(t *testing
 		t.Fatal("RequestApproval did not return after its context was cancelled")
 	}
 
-	// "Restart": a brand-new DBManager/Store/Service over the same on-disk
-	// file. No in-memory state — including svc1's `pending` channel map —
-	// carries over to svc2.
 	ctx2, store2 := reopenHITLDB(t, dbPath)
 	svc2 := newDurableService(t, store2)
 
@@ -166,17 +132,6 @@ func TestUnit_RequestApproval_SurvivesRestartAndIsAnswerableAfterward(t *testing
 	require.NotNil(t, resolved.ResolvedAt)
 }
 
-// ─── D2 / the drop bug ──────────────────────────────────────────────────────
-
-// TestUnit_Respond_RecordsAnswerWhenNoRequesterIsParked is the direct
-// regression test for defect D2: the old Respond did
-// `select { case ch <- approved: default: return false }` against a channel
-// that only existed while a RequestApproval call was actively parked on it —
-// any Respond arriving when nobody was parked (including this row, which was
-// never requested through RequestApproval on svc at all, so its in-process
-// `pending` map was never populated for this id) took the `default:` branch
-// and silently discarded the answer. This test would fail against that
-// implementation: it asserts the answer is durably recorded regardless.
 func TestUnit_Respond_RecordsAnswerWhenNoRequesterIsParked(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
@@ -215,7 +170,6 @@ func TestUnit_Respond_AlreadyAnsweredReturnsErrApprovalAlreadyResolved(t *testin
 	err := svc.Respond(ctx, row.ID, false)
 	require.ErrorIs(t, err, hitlservice.ErrApprovalAlreadyResolved)
 
-	// The first answer must stand; a second Respond must not overwrite it.
 	got, getErr := store.GetHITLApproval(ctx, row.ID)
 	require.NoError(t, getErr)
 	require.True(t, decodeApproved(t, got.Resolution))
@@ -237,12 +191,6 @@ func TestUnit_Respond_ExpiredReturnsErrApprovalExpired(t *testing.T) {
 	require.ErrorIs(t, err, hitlservice.ErrApprovalExpired)
 }
 
-// ─── expiry / OnTimeout ─────────────────────────────────────────────────────
-
-// TestUnit_SweepExpired_AppliesOnTimeout covers the sweeper's core contract:
-// a pending row past its deadline is resolved "expired" with a denial
-// (default, and explicit "deny"), and a row not yet past its deadline is
-// left untouched.
 func TestUnit_SweepExpired_AppliesOnTimeout(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
@@ -269,16 +217,11 @@ func TestUnit_SweepExpired_AppliesOnTimeout(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, runtimetypes.HITLApprovalPending, untouched.State, "a row before its deadline must be left alone")
 
-	// Idempotent: a second sweep with nothing new to expire does nothing.
 	n2, err := svc.SweepExpired(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 0, n2)
 }
 
-// TestUnit_SweepExpired_DoesNotOverwriteAnAnswerRespondAlreadyRecorded proves
-// the compare-and-swap guard: once a human's Respond has resolved a row, a
-// sweep that later notices the same row is past its deadline must not
-// re-resolve it — the human's answer stands.
 func TestUnit_SweepExpired_DoesNotOverwriteAnAnswerRespondAlreadyRecorded(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
@@ -299,14 +242,6 @@ func TestUnit_SweepExpired_DoesNotOverwriteAnAnswerRespondAlreadyRecorded(t *tes
 	require.True(t, decodeApproved(t, got.Resolution))
 }
 
-// ─── bounded waits ──────────────────────────────────────────────────────────
-
-// TestUnit_RequestApproval_BoundedWaitTerminatesWithoutARuleTimeout is the
-// direct regression test for defect D1: a policy rule with TimeoutS == 0
-// means "the matched rule set no timeout of its own", which the old
-// implementation blocked on indefinitely (ctx.Done() only, with no serve-side
-// bound). RequestApproval must instead terminate via the serve-level
-// ceiling.
 func TestUnit_RequestApproval_BoundedWaitTerminatesWithoutARuleTimeout(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
@@ -323,7 +258,7 @@ func TestUnit_RequestApproval_BoundedWaitTerminatesWithoutARuleTimeout(t *testin
 		approved, err := svc.RequestApproval(ctx, hitlservice.ApprovalRequest{
 			ToolsName: "local_shell",
 			ToolName:  "local_shell",
-			TimeoutS:  0, // no rule timeout
+			TimeoutS:  0,
 		}, taskengine.NoopTaskEventSink{})
 		done <- outcome{approved, err}
 	}()
@@ -338,17 +273,11 @@ func TestUnit_RequestApproval_BoundedWaitTerminatesWithoutARuleTimeout(t *testin
 	require.Less(t, time.Since(start), 2*time.Second)
 }
 
-// TestUnit_RequestApproval_RuleTimeoutWinsOverCeiling proves the ceiling only
-// fills in when a rule sets no timeout of its own: with a huge ceiling and a
-// short rule-provided deadline (mirroring what localtools.HITLWrapper.Exec
-// applies to askCtx before calling AskApproval when TimeoutS > 0),
-// RequestApproval must still return promptly via ctx.Err() — its pre-existing
-// behavior for this branch, left unchanged by this slice.
 func TestUnit_RequestApproval_RuleTimeoutWinsOverCeiling(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
 	svc := newDurableService(t, store)
-	hitlservice.SetApprovalCeiling(svc, time.Hour) // must not be what fires below
+	hitlservice.SetApprovalCeiling(svc, time.Hour)
 
 	ruleCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
@@ -357,7 +286,7 @@ func TestUnit_RequestApproval_RuleTimeoutWinsOverCeiling(t *testing.T) {
 	approved, err := svc.RequestApproval(ruleCtx, hitlservice.ApprovalRequest{
 		ToolsName: "local_shell",
 		ToolName:  "local_shell",
-		TimeoutS:  1, // a rule timeout is set; ruleCtx above is what actually bounds this test
+		TimeoutS:  1,
 	}, taskengine.NoopTaskEventSink{})
 	elapsed := time.Since(start)
 
@@ -366,9 +295,6 @@ func TestUnit_RequestApproval_RuleTimeoutWinsOverCeiling(t *testing.T) {
 	require.Less(t, elapsed, 2*time.Second)
 }
 
-// TestUnit_RequestApproval_ExpiresAtReflectsCeilingWhenNoRuleTimeout checks
-// the persisted row's expires_at is set from the serve-level ceiling (not
-// left at some default/zero value) when the matched rule set no timeout.
 func TestUnit_RequestApproval_ExpiresAtReflectsCeilingWhenNoRuleTimeout(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
@@ -397,13 +323,6 @@ func TestUnit_RequestApproval_ExpiresAtReflectsCeilingWhenNoRuleTimeout(t *testi
 	require.InDelta(t, time.Minute.Seconds(), gotWindow.Seconds(), 5, "expires_at must be created_at + the serve ceiling")
 }
 
-// ─── concurrency (-race) ────────────────────────────────────────────────────
-
-// TestUnit_RequestApproval_Respond_ConcurrentRoundTrips exercises many
-// simultaneous RequestApproval/Respond round-trips against one shared
-// service, each waking exactly its own buffered channel with the answer its
-// own Respond call sent — the property `go test -race` is meant to catch a
-// regression of.
 func TestUnit_RequestApproval_Respond_ConcurrentRoundTrips(t *testing.T) {
 	ctx, store, _ := setupHITLDB(t)
 	svc := newDurableService(t, store)
@@ -465,13 +384,6 @@ func TestUnit_RequestApproval_Respond_ConcurrentRoundTrips(t *testing.T) {
 	}
 }
 
-// ─── attribution (slice M5 / C2's report) ───────────────────────────────────
-
-// RequestApproval persists the attribution the caller supplies onto the durable
-// row, so the inbox can name WHICH unit is asking — not just which tool it
-// called. The mission id is nullable on purpose: an unattended session that is
-// not on a mission must be distinguishable from one whose mission is unknown,
-// which an empty string could not express.
 func TestUnit_RequestApproval_PersistsAttribution(t *testing.T) {
 	ctx, store, _ := setupHITLDB(t)
 	svc := newDurableService(t, store)
@@ -536,9 +448,6 @@ func TestUnit_RequestApproval_NoMissionStoresNull(t *testing.T) {
 	require.Empty(t, row.AgentName)
 }
 
-// PolicyNameFromContext is the exported reader half of WithPolicyName: a caller
-// that pins an envelope onto a request context can read back which one is in
-// force without reaching into this package.
 func TestUnit_PolicyNameFromContext_RoundTrips(t *testing.T) {
 	require.Empty(t, hitlservice.PolicyNameFromContext(context.Background()))
 

@@ -7,8 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestUnit_NegotiateProtocolVersion pins min-of-both negotiation, and that it
-// does not require exact echo equality.
 func TestUnit_NegotiateProtocolVersion(t *testing.T) {
 	cases := []struct {
 		name         string
@@ -30,8 +28,6 @@ func TestUnit_NegotiateProtocolVersion(t *testing.T) {
 	}
 }
 
-// TestUnit_NegotiateProtocolVersion_AcceptsSupportedNonEqual pins that a
-// peer answering a supported but non-equal version is accepted, not rejected.
 func TestUnit_NegotiateProtocolVersion_AcceptsSupportedNonEqual(t *testing.T) {
 	const ours = 2
 	got := libacp.NegotiateProtocolVersion(1, ours)

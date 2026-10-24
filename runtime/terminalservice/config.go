@@ -7,22 +7,13 @@ import (
 	"time"
 )
 
-// Config holds terminal service settings.
 type Config struct {
 	Enabled      bool
 	AllowedRoot  string
 	DefaultShell string
-	// IdleTimeout is the maximum time a detached session is kept alive.
-	// Zero disables idle reaping.
-	IdleTimeout time.Duration
-	// MaxSessions is the maximum number of concurrent live PTY sessions.
-	// Zero means unlimited.
-	MaxSessions int
-	// ScrubEnv, when set, maps the parent process environment to the one a spawned
-	// terminal inherits — the credential-leak fix. Nil (the default) inherits the
-	// full environment: the terminal is the operator's own trusted shell, so it is
-	// scrubbed only when the operator opts in (SANDBOX_TERMINAL_SCRUB).
-	ScrubEnv func([]string) []string
+	IdleTimeout  time.Duration
+	MaxSessions  int
+	ScrubEnv     func([]string) []string
 }
 
 const (
@@ -30,7 +21,6 @@ const (
 	DefaultMaxSessions = 8
 )
 
-// IsEnabled returns true for accepted truthy terminal feature flag values.
 func IsEnabled(v string) bool {
 	switch strings.ToLower(strings.TrimSpace(v)) {
 	case "true", "1", "yes", "on":
@@ -40,7 +30,6 @@ func IsEnabled(v string) bool {
 	}
 }
 
-// ParseEnv builds a Config from raw env-backed string fields.
 func ParseEnv(terminalEnabled, terminalAllowedRoot, terminalShell, terminalIdleTimeout, terminalMaxSessions string) (Config, error) {
 	cfg := Config{Enabled: IsEnabled(terminalEnabled)}
 	if !cfg.Enabled {

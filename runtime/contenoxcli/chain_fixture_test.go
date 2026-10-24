@@ -296,14 +296,6 @@ func TestUnit_BuiltinChains_LLMTasksIncludeDateMacro(t *testing.T) {
 	}
 }
 
-// TestUnit_PlannerChain_ProfileShape pins the resident-planner profile
-// (agent-planner.json, mission-plans.md slice 4): it parses, it is named by the
-// agent-* convention so discovery declares it, EVERY tool-bearing task grants
-// ONLY the mission tools and NO execution tools (the envelope the blueprint's
-// capability profile requires — grant plan/report/finish, withhold execution),
-// and its system prompt carries the Codex-derived discipline the planner must
-// keep. The discipline is prompt text, not host enforcement, so its PRESENCE in
-// the shipped prompt is exactly what this guards against a silent edit dropping.
 func TestUnit_PlannerChain_ProfileShape(t *testing.T) {
 	var chain taskengine.TaskChainDefinition
 	require.NoError(t, json.Unmarshal([]byte(initPlannerChain), &chain))
@@ -311,7 +303,6 @@ func TestUnit_PlannerChain_ProfileShape(t *testing.T) {
 	require.Equal(t, "agent-planner", chain.ID, "the chain id is the discovered agent name")
 	require.NotEmpty(t, chain.Tasks)
 
-	// The envelope: only the mission tools, and nothing that executes.
 	forbidden := map[string]bool{"*": true, "local_shell": true, "local_fs": true, "webtools": true}
 	sawMissionGrant := false
 	for _, task := range chain.Tasks {
@@ -326,9 +317,6 @@ func TestUnit_PlannerChain_ProfileShape(t *testing.T) {
 	}
 	require.True(t, sawMissionGrant, "the planner must grant the mission tools somewhere")
 
-	// The discipline lives in the prompt (blueprint pattern 3). These markers are
-	// the Codex-derived rules adapted to the mission tools — their presence is the
-	// contract, since the runtime does not enforce them.
 	var prompt string
 	for _, task := range chain.Tasks {
 		if task.ID == "plan_loop" {
@@ -338,16 +326,16 @@ func TestUnit_PlannerChain_ProfileShape(t *testing.T) {
 	require.NotEmpty(t, prompt, "the main planner loop carries the discipline prompt")
 	for _, marker := range []string{
 		"{{date}}",
-		"FULL SNAPSHOT",           // maintain the plan via full snapshots
-		"echoing the `id`",        // id carry-forward
-		"in_progress at any time", // exactly one in_progress
-		"pending to completed",    // no pending->completed jumps
-		"explanation",             // explanation on every scope pivot
-		"NEVER RESTATE THE PLAN",  // anti-echo
-		"mission_report",          // report via the report tool
-		"handover",                // typed handover
-		"mission_finish",          // end with finish
-		"not yet yours",           // sub-mission firing is a future slice
+		"FULL SNAPSHOT",
+		"echoing the `id`",
+		"in_progress at any time",
+		"pending to completed",
+		"explanation",
+		"NEVER RESTATE THE PLAN",
+		"mission_report",
+		"handover",
+		"mission_finish",
+		"not yet yours",
 	} {
 		require.Containsf(t, prompt, marker, "planner prompt is missing the %q discipline", marker)
 	}
@@ -364,11 +352,6 @@ func branchGoto(t *testing.T, task taskengine.TaskDefinition, operator taskengin
 	return taskengine.TransitionBranch{}
 }
 
-// Every model macro in the seeded chains must bottom out in a var that both
-// execution paths (CLI buildTemplateVars, ACP chainTemplateVars) always seed
-// when a model is known. A final fallback outside this set fails at runtime
-// with "template fallback var not set" (BUG-014: ACP did not seed
-// default_model, so every recovery task died before model resolution).
 func TestUnit_BuiltinChains_ModelMacroFallbacksAlwaysSeeded(t *testing.T) {
 	alwaysSeeded := map[string]bool{
 		"model": true, "provider": true,
@@ -393,7 +376,7 @@ func TestUnit_BuiltinChains_ModelMacroFallbacksAlwaysSeeded(t *testing.T) {
 			require.NotNil(t, m, "%s/%s: unexpected model macro shape %q", name, task.ID, task.ExecuteConfig.Model)
 			final := m[1]
 			if m[3] != "" {
-				final = m[3] // fallback var is the floor
+				final = m[3]
 			}
 			require.True(t, alwaysSeeded[final],
 				"%s/%s: model macro %q bottoms out in %q, which is not always seeded",

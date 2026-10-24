@@ -14,9 +14,6 @@ import (
 
 const cloudPlatformScope = "https://www.googleapis.com/auth/cloud-platform"
 
-// NewTokenSource returns a caching oauth2.TokenSource. Call it once per provider
-// and reuse it: the BearerToken* helpers mint a source per call and add auth
-// latency to every call. credJSON is the service account key JSON; empty uses ADC.
 func NewTokenSource(ctx context.Context, credJSON string) (oauth2.TokenSource, error) {
 	if credJSON != "" {
 		creds, err := credentialDocument(ctx, credJSON)
@@ -32,7 +29,6 @@ func NewTokenSource(ctx context.Context, credJSON string) (oauth2.TokenSource, e
 	return ts, nil
 }
 
-// ValidateCredentialJSON validates a supported Google credential document without minting a token.
 func ValidateCredentialJSON(ctx context.Context, document string) error {
 	_, err := credentialDocument(ctx, document)
 	return err
@@ -67,13 +63,10 @@ func extractProjectFromVertexURL(rawURL string) string {
 	return ""
 }
 
-// BearerToken returns a fresh ADC access token for Vertex AI.
 func BearerToken(ctx context.Context) (string, error) {
 	return BearerTokenWithCreds(ctx, "")
 }
 
-// BearerTokenWithCreds returns an access token using the provided service account
-// JSON when non-empty, or ADC when empty.
 func BearerTokenWithCreds(ctx context.Context, credJSON string) (string, error) {
 	ts, err := NewTokenSource(ctx, credJSON)
 	if err != nil {
@@ -86,10 +79,6 @@ func BearerTokenWithCreds(ctx context.Context, credJSON string) (string, error) 
 	return tok.AccessToken, nil
 }
 
-// IsExpressAPIKey reports whether a stored vertex-google secret is an Agent
-// Platform express mode API key rather than a Google credential document. The
-// two are told apart by shape: a credential document is a JSON object whose
-// type names a supported credential kind, and express mode's key is opaque.
 func IsExpressAPIKey(secret string) bool {
 	trimmed := strings.TrimSpace(secret)
 	if trimmed == "" {
@@ -104,9 +93,6 @@ func IsExpressAPIKey(secret string) bool {
 	return len(document.Type) == 0
 }
 
-// UsesUserCredential reports whether a stored credential document is a Google
-// user credential, which is the one credential kind the vendor documents a
-// quota project for.
 func UsesUserCredential(ctx context.Context, credJSON string) (bool, error) {
 	if strings.TrimSpace(credJSON) == "" {
 		return false, nil
@@ -118,11 +104,6 @@ func UsesUserCredential(ctx context.Context, credJSON string) (bool, error) {
 	return isUserCredentialDocument(creds.JSON), nil
 }
 
-// QuotaProjectFor returns the project a request must name in
-// x-goog-user-project, or an empty string when the vendor documents no such
-// header for the backend's credential: a service account is billed to its own
-// project, and an ambient ADC user credential names its quota project in the
-// ADC setup itself, which an endpoint's project segment must not override.
 func QuotaProjectFor(ctx context.Context, credJSON, baseURL string) (string, error) {
 	if IsExpressAPIKey(credJSON) {
 		return "", nil
@@ -151,9 +132,6 @@ func isUserCredentialDocument(raw []byte) bool {
 	return document.Type == string(google.AuthorizedUser)
 }
 
-// ApplyVertexAuth sets the documented authentication headers for one request:
-// the express mode API key when the backend stores one, otherwise a bearer
-// token, and the quota project only for the user credential that must name one.
 func ApplyVertexAuth(ctx context.Context, req *http.Request, apiKey, quotaProject string, bearer func(context.Context) (string, error)) error {
 	if apiKey != "" {
 		req.Header.Set("X-Goog-Api-Key", apiKey)

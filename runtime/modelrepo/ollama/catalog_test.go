@@ -77,7 +77,6 @@ func TestUnit_CatalogProvider_ListModels(t *testing.T) {
 	require.False(t, model.CanVision, "non-vision model must not claim vision")
 }
 
-// CanVision is read from /api/show capabilities, not inferred from the name.
 func TestUnit_CatalogProvider_DetectsVisionFromShowCapabilities(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -104,7 +103,6 @@ func TestUnit_CatalogProvider_DetectsVisionFromShowCapabilities(t *testing.T) {
 	require.True(t, catalog.ProviderFor(models[0]).CanVision())
 }
 
-// CanThink is read from /api/show capabilities, not inferred from the name.
 func TestUnit_CatalogProvider_DetectsThinkingFromShowCapabilities(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -131,8 +129,6 @@ func TestUnit_CatalogProvider_DetectsThinkingFromShowCapabilities(t *testing.T) 
 	require.True(t, catalog.ProviderFor(models[0]).CanThink())
 }
 
-// MaxOutputTokens is read from the Modelfile-style parameters /api/show
-// reports, which is where an Ollama server states num_predict.
 func TestUnit_CatalogProvider_DetectsOutputCeilingFromShowParameters(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -159,9 +155,6 @@ func TestUnit_CatalogProvider_DetectsOutputCeilingFromShowParameters(t *testing.
 	require.Equal(t, 8192, catalog.ProviderFor(models[0]).GetMaxOutputTokens())
 }
 
-// A parameter string that states no positive num_predict leaves the ceiling
-// unknown, because Ollama spells "unlimited" as -1 and a clamp to zero would be
-// a ceiling nobody stated.
 func TestUnit_CatalogProvider_IgnoresNonPositiveNumPredict(t *testing.T) {
 	require.Equal(t, 0, parameterInt("num_predict -1", "num_predict"))
 	require.Equal(t, 0, parameterInt("num_predict 0", "num_predict"))
@@ -219,9 +212,6 @@ func TestUnit_ListModels_GatesAudioOnTheVersionHandshake(t *testing.T) {
 	}
 }
 
-// A conversation may only be named to a peer that said it understands the field,
-// and the decision has to survive the trip from the handshake to the provider
-// that writes the request body.
 func TestUnit_ListModels_GatesTheSessionOnTheVersionHandshake(t *testing.T) {
 	for name, tc := range map[string]struct {
 		handshake   string

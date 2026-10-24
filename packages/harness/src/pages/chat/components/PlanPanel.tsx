@@ -9,12 +9,6 @@ function statusVariant(status: PlanEntryStatus): 'success' | 'primary' | 'second
   return 'secondary';
 }
 
-/**
- * The agent's plan, rendered as a collapsible section above the transcript —
- * on every breakpoint, not just mobile. A dedicated side rail would need its
- * own responsive scaffolding for little benefit at this scale (see Stage 3
- * blueprint: "a collapsible section is fine").
- */
 export function PlanPanel({ entries }: { entries: PlanEntry[] }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(true);
@@ -39,11 +33,6 @@ export function PlanPanel({ entries }: { entries: PlanEntry[] }) {
       >
         <ol className="mt-2 space-y-1.5 text-sm">
           {entries.map((entry, i) => (
-            // Keyed by content + arrival index (not just `i`): `plan` replaces
-            // the whole entries array wholesale on every update, and content
-            // is the one stable identity a step has (no server-issued id) —
-            // keying by it alone would collide on duplicate step text, so the
-            // index is a tiebreaker, not the primary identity.
             <li key={`${entry.content}-${i}`} className="flex items-start gap-2">
               <Badge size="sm" variant={statusVariant(entry.status)} className="mt-0.5 shrink-0">
                 {t(`acp_chat.plan_status_${entry.status}`)}

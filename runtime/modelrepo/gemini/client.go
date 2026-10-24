@@ -32,26 +32,22 @@ type geminiGenerateContentRequest struct {
 }
 
 type geminiGenerationConfig struct {
-	Temperature     *float64 `json:"temperature,omitempty"`
-	TopP            *float64 `json:"topP,omitempty"`
-	TopK            *int     `json:"topK,omitempty"`
-	CandidateCount  *int     `json:"candidateCount,omitempty"`
-	MaxOutputTokens *int     `json:"maxOutputTokens,omitempty"`
-	StopSequences   []string `json:"stopSequences,omitempty"`
-	Seed            *int     `json:"seed,omitempty"`
-	// ResponseMimeType is application/json for a schema-constrained request; empty leaves the default text output.
-	ResponseMimeType string `json:"responseMimeType,omitempty"`
-	// ResponseJsonSchema is the caller's JSON Schema the response must satisfy, sent whole.
-	ResponseJsonSchema any `json:"responseJsonSchema,omitempty"`
-	// ThinkingConfig carries the thinking control the model's published facts accept; nil omits it.
-	ThinkingConfig *geminiThinkingConfig `json:"thinkingConfig,omitempty"`
+	Temperature        *float64              `json:"temperature,omitempty"`
+	TopP               *float64              `json:"topP,omitempty"`
+	TopK               *int                  `json:"topK,omitempty"`
+	CandidateCount     *int                  `json:"candidateCount,omitempty"`
+	MaxOutputTokens    *int                  `json:"maxOutputTokens,omitempty"`
+	StopSequences      []string              `json:"stopSequences,omitempty"`
+	Seed               *int                  `json:"seed,omitempty"`
+	ResponseMimeType   string                `json:"responseMimeType,omitempty"`
+	ResponseJsonSchema any                   `json:"responseJsonSchema,omitempty"`
+	ThinkingConfig     *geminiThinkingConfig `json:"thinkingConfig,omitempty"`
 }
 
 type geminiThinkingConfig struct {
-	ThinkingBudget *int   `json:"thinkingBudget,omitempty"`
-	ThinkingLevel  string `json:"thinkingLevel,omitempty"`
-	// IncludeThoughts asks the model to return its thoughts beside its answer.
-	IncludeThoughts bool `json:"includeThoughts,omitempty"`
+	ThinkingBudget  *int   `json:"thinkingBudget,omitempty"`
+	ThinkingLevel   string `json:"thinkingLevel,omitempty"`
+	IncludeThoughts bool   `json:"includeThoughts,omitempty"`
 }
 
 func (c *geminiClient) sendRequest(ctx context.Context, endpoint string, request interface{}, response interface{}) error {
@@ -79,7 +75,6 @@ func (c *geminiClient) sendRequest(ctx context.Context, endpoint string, request
 		body = b
 	}
 
-	// Bounded end-to-end; retried on 429/5xx with Retry-After honored.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 	resp, err := modelrepo.DoWithRetry(ctx, c.httpClient, func() (*http.Request, error) {
@@ -142,7 +137,6 @@ func (c *geminiClient) sendRequest(ctx context.Context, endpoint string, request
 }
 
 func buildGeminiRequest(modelName string, messages []modelrepo.Message, args []modelrepo.ChatArgument, canThink ...bool) (geminiGenerateContentRequest, error) {
-	// Raw-byte cap enforced under Gemini's 20 MB total-request limit before the wire.
 	if err := modelrepo.ValidateAudioParts("gemini", modelName, messages); err != nil {
 		return geminiGenerateContentRequest{}, err
 	}
@@ -228,16 +222,10 @@ func buildGeminiRequest(modelName string, messages []modelrepo.Message, args []m
 	return req, nil
 }
 
-// thinkingAllowed reports whether the model's declaration says it thinks; a
-// model whose declaration says it does not is never sent a thinking control.
 func thinkingAllowed(canThink []bool) bool {
 	return len(canThink) == 0 || canThink[0]
 }
 
-// applyGeminiResponseFormat puts the neutral structured-output control on the
-// request: the vendor's responseMimeType selects JSON output and
-// responseJsonSchema carries the caller's schema whole. The text mode
-// constrains nothing and is left off the wire.
 func applyGeminiResponseFormat(config *geminiGenerationConfig, format *modelrepo.ResponseFormat) {
 	if format == nil || format.Mode == modelrepo.ResponseFormatText {
 		return
@@ -248,9 +236,6 @@ func applyGeminiResponseFormat(config *geminiGenerationConfig, format *modelrepo
 	}
 }
 
-// geminiParameterSchema renders a tool's declared parameters as the vendor's
-// documented JSON Schema member. A tool that declares none carries neither
-// member, which the vendor documents as optional.
 func geminiParameterSchema(parameters any) (json.RawMessage, error) {
 	if parameters == nil {
 		return nil, nil
@@ -272,7 +257,6 @@ func convertToGeminiMessages(messages []modelrepo.Message, modelName string) []g
 			continue
 		}
 
-		// Gemini has no "tool" role; tool responses go out as "user".
 		var role string
 		switch m.Role {
 		case "assistant", "model":
@@ -299,7 +283,6 @@ func convertToGeminiMessages(messages []modelrepo.Message, modelName string) []g
 
 		parts := make([]geminiPart, 0)
 
-		// Text goes first, so it's present even if tool calls/responses follow.
 		if m.Content != "" && m.Role != "tool" {
 			parts = append(parts, geminiPart{Text: m.Content})
 		}
@@ -388,13 +371,6 @@ func convertToGeminiMessages(messages []modelrepo.Message, modelName string) []g
 	return out
 }
 
-// mergeGeminiParts appends one message's parts to the parts of the turn of the
-// same role that precedes it, keeping every functionResponse after that turn's
-// prose and media. Gemini wants one user turn per function-call cycle — two
-// user-role contents in a row fail its alternation check — so a tool result and
-// the operator's next prompt share a turn; text placed after a functionResponse
-// is the shape the provider answers with "Requests ending with a model turn are
-// not supported".
 func mergeGeminiParts(existing, incoming []geminiPart) []geminiPart {
 	responses := make([]geminiPart, 0, len(incoming))
 	merged := make([]geminiPart, 0, len(existing)+len(incoming))
@@ -412,12 +388,6 @@ func mergeGeminiParts(existing, incoming []geminiPart) []geminiPart {
 	return append(merged, responses...)
 }
 
-// trimTrailingModelTurn drops trailing model-role contents. Gemini rejects a
-// request whose last content is a model turn ("Requests ending with a model turn
-// are not supported") — a recovery, summarise, or handoff history arrives with
-// the previous task's reply last — and a model content that called a tool is no
-// more sendable when it trails, because the functionResponse Gemini requires must
-// follow its functionCall and nothing follows a trailing turn.
 func trimTrailingModelTurn(contents []geminiContent) []geminiContent {
 	last := len(contents) - 1
 	for last >= 0 && contents[last].Role == "model" {

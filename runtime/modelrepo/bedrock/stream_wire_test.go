@@ -15,8 +15,6 @@ func streamTextProvider(t *testing.T, frames [][]byte, capabilities modelrepo.Ca
 	return newWireProvider(claudeSonnet45, capabilities, &wireTransport{handler: streamResponse(frames...)})
 }
 
-// The recorded event sequence of one streamed turn: reasoning, text, a tool call
-// assembled from fragments, the vendor's terminal event and its usage report.
 func TestUnit_BedrockConverseStream_RelaysEventsInOrder(t *testing.T) {
 	provider := streamTextProvider(t, [][]byte{
 		eventFrame("messageStart", map[string]any{"role": "assistant"}),
@@ -55,8 +53,6 @@ func TestUnit_BedrockConverseStream_RelaysEventsInOrder(t *testing.T) {
 	require.Equal(t, 44, result.Usage.TotalTokens)
 }
 
-// A stream the vendor never terminated is a truncated turn, not a successful
-// short one.
 func TestUnit_BedrockConverseStream_TruncatedStreamIsNotATurn(t *testing.T) {
 	provider := streamTextProvider(t, [][]byte{
 		eventFrame("contentBlockDelta", map[string]any{"contentBlockIndex": 0, "delta": map[string]any{"text": "partial"}}),
@@ -65,8 +61,6 @@ func TestUnit_BedrockConverseStream_TruncatedStreamIsNotATurn(t *testing.T) {
 	require.ErrorIs(t, err, modelrepo.ErrStreamTruncated)
 }
 
-// The vendor reports the caller's matched stop sequence in the terminal event's
-// model-native fields.
 func TestUnit_BedrockConverseStream_ReportsTheMatchedStopSequence(t *testing.T) {
 	provider := streamTextProvider(t, [][]byte{
 		eventFrame("contentBlockDelta", map[string]any{"contentBlockIndex": 0, "delta": map[string]any{"text": "SUCCESS"}}),
@@ -82,8 +76,6 @@ func TestUnit_BedrockConverseStream_ReportsTheMatchedStopSequence(t *testing.T) 
 	require.Equal(t, "SUCCESS", result.StopSequence)
 }
 
-// A guardrail or content-filter terminal is a refusal: the caller is told the
-// turn was refused rather than handed the partial content it produced.
 func TestUnit_BedrockConverseStream_RefusalIsAnOutcomeNotAnAnswer(t *testing.T) {
 	for _, reason := range []string{"guardrail_intervened", "content_filtered"} {
 		t.Run(reason, func(t *testing.T) {
@@ -102,8 +94,6 @@ func TestUnit_BedrockConverseStream_RefusalIsAnOutcomeNotAnAnswer(t *testing.T) 
 	}
 }
 
-// A model context window terminal is an overflow the caller retries with a
-// smaller request, not a completed turn.
 func TestUnit_BedrockConverseStream_ContextWindowTerminalIsAnOverflow(t *testing.T) {
 	provider := streamTextProvider(t, [][]byte{
 		eventFrame("messageStop", map[string]any{"stopReason": "model_context_window_exceeded"}),
@@ -113,9 +103,6 @@ func TestUnit_BedrockConverseStream_ContextWindowTerminalIsAnOverflow(t *testing
 	require.Equal(t, "model_context_window_exceeded", result.FinishReason)
 }
 
-// The signed reasoning a stream reports must round-trip on the next turn: the
-// signature arrives as its own delta and is replayed with the reasoning it
-// signs rather than shown to the caller.
 func TestUnit_BedrockConverseStream_ReplaysTheStreamedReasoningSignature(t *testing.T) {
 	provider := streamTextProvider(t, [][]byte{
 		eventFrame("contentBlockDelta", map[string]any{"contentBlockIndex": 0, "delta": map[string]any{
@@ -147,8 +134,6 @@ func TestUnit_BedrockConverseStream_ReplaysTheStreamedReasoningSignature(t *test
 	require.Equal(t, "sig-stream", reasoning["signature"])
 }
 
-// The vendor delivers a streaming failure as an exception event inside the 200
-// response, so the adapter must classify it like any other error.
 func TestUnit_BedrockConverseStream_ClassifiesExceptionEvents(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -177,8 +162,6 @@ func TestUnit_BedrockConverseStream_ClassifiesExceptionEvents(t *testing.T) {
 	}
 }
 
-// An empty stream that still reports the vendor's terminal event is a turn with
-// no content; a connection that stops before it is a truncation.
 func TestUnit_BedrockConverseStream_EmptyTerminalIsATurn(t *testing.T) {
 	provider := streamTextProvider(t, [][]byte{
 		eventFrame("messageStop", map[string]any{"stopReason": "end_turn"}),
@@ -189,7 +172,6 @@ func TestUnit_BedrockConverseStream_EmptyTerminalIsATurn(t *testing.T) {
 	require.Equal(t, "end_turn", result.FinishReason)
 }
 
-// A request the vendor rejects at the transport level never opens a stream.
 func TestUnit_BedrockConverseStream_RefusedRequestIsClassified(t *testing.T) {
 	transport := &wireTransport{handler: func(request *http.Request, _ []byte) *http.Response {
 		return errorResponse(request, http.StatusTooManyRequests, "ThrottlingException", "Too many requests")

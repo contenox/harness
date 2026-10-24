@@ -1,21 +1,3 @@
-// mission_cmd.go is the `contenox mission` command tree — mission mode from the
-// shell (fleet-consolidation.md slice M4). Mission mode is the second way to
-// work with an agent: instead of prompting turn by turn (chat mode), you FIRE a
-// one-line intent at a declared agent under an envelope — a HITL policy that
-// bounds it while it runs unattended — and detach. These verbs act on WORK:
-// fire it, list what is running and why, and read what a unit reported back.
-//
-// The M4 noun-split puts firing HERE, at `mission fire`, even though it is
-// served by POST /fleet/dispatch: the route is an implementation detail; the
-// verb reads as what the operator is doing. `contenox fleet` owns the UNIT
-// verbs (list/show/stop/cancel); this owns the WORK verbs. There is deliberately
-// no `fleet dispatch` — one act, one name.
-//
-// Access is over serve's REST API, on the same serveClient the fleet verbs use
-// (see fleet_cmd.go / serveclient.go): the fleet and its missions live in the
-// serve process, not a place the CLI can open directly. `mission fire` also
-// reads the local config DB for the default agent/envelope — but only to fill a
-// flag the operator omitted, never as the source of truth for what runs.
 package contenoxcli
 
 import (
@@ -176,12 +158,6 @@ func init() {
 	missionCmd.AddCommand(missionShowCmd)
 }
 
-// ─── serveClient wrappers (mission-shaped) ─────────────────────────────────
-
-// dispatchMission posts POST /fleet/dispatch — the route that backs `mission
-// fire`. The request/result are fleetservice's own types (the single source of
-// truth for the shape; fleetapi aliases them), so this client encodes exactly
-// what the server decodes without a parallel DTO.
 func (c *serveClient) dispatchMission(ctx context.Context, req fleetservice.DispatchRequest) (fleetservice.DispatchResult, error) {
 	var out fleetservice.DispatchResult
 	if err := c.post(ctx, "/fleet/dispatch", req, &out); err != nil {
@@ -190,9 +166,6 @@ func (c *serveClient) dispatchMission(ctx context.Context, req fleetservice.Disp
 	return out, nil
 }
 
-// listMissions fetches GET /missions newest-first. limit<=0 omits the query
-// param so serve applies its own default cap. The result is always a non-nil
-// slice.
 func (c *serveClient) listMissions(ctx context.Context, limit int) ([]*missionservice.Mission, error) {
 	path := "/missions"
 	if limit > 0 {
@@ -208,7 +181,6 @@ func (c *serveClient) listMissions(ctx context.Context, limit int) ([]*missionse
 	return out, nil
 }
 
-// getMission fetches GET /missions/{id}. A 404 surfaces as a *ServeError.
 func (c *serveClient) getMission(ctx context.Context, id string) (*missionservice.Mission, error) {
 	var out missionservice.Mission
 	if err := c.get(ctx, "/missions/"+url.PathEscape(id), &out); err != nil {
@@ -217,8 +189,6 @@ func (c *serveClient) getMission(ctx context.Context, id string) (*missionservic
 	return &out, nil
 }
 
-// listMissionReports fetches GET /missions/{id}/reports newest-first. The
-// result is always a non-nil slice so a mission with no reports renders empty.
 func (c *serveClient) listMissionReports(ctx context.Context, id string, limit int) ([]*missionservice.Report, error) {
 	path := "/missions/" + url.PathEscape(id) + "/reports"
 	if limit > 0 {
@@ -234,8 +204,6 @@ func (c *serveClient) listMissionReports(ctx context.Context, id string, limit i
 	return out, nil
 }
 
-// ─── fire ─────────────────────────────────────────────────────────────────
-
 func runMissionFire(cmd *cobra.Command, args []string) error {
 	ctx := libtracker.WithNewRequestID(context.Background())
 
@@ -248,12 +216,6 @@ func runMissionFire(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--intent is required: a mission must name what the unit is sent to do")
 	}
 
-	// Fill an omitted --agent/--policy from config, so a configured operator can
-	// fire with intent alone (mirroring the `/mission <intent>` slash command).
-	// Best-effort: a config-DB read failure is not fatal — the empty value flows
-	// on to the server, whose Dispatch validation names precisely what is
-	// missing. Only reached when a flag is actually empty, so the common
-	// all-flags-given call never opens the DB.
 	agent, policy = resolveMissionFireDefaults(cmd, agent, policy)
 
 	client, err := newServeClient(cmd)
@@ -261,10 +223,6 @@ func runMissionFire(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// ParentSessionID is deliberately empty: an operator firing from the shell
-	// supervises the mission directly (reports route to the operator inbox). The
-	// supervision edge is set only when a mission is fired FROM a chat session by
-	// the /mission slash command.
 	result, err := client.dispatchMission(ctx, fleetservice.DispatchRequest{
 		AgentName:      strings.TrimSpace(agent),
 		Intent:         intent,
@@ -275,10 +233,6 @@ func runMissionFire(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("fire mission: %w", err)
 	}
 
-	// Emit the fire result to STDOUT first — the mission id is the machine-readable
-	// fact a script correlates on, and it must be printed BEFORE any --wait blocks,
-	// so `mid=$(contenox mission fire -q --wait ...)` captures it regardless of the
-	// wait's eventual exit code.
 	wait, _ := cmd.Flags().GetBool("wait")
 	asJSON, _ := cmd.Flags().GetBool("json")
 	quiet, _ := cmd.Flags().GetBool("quiet")
@@ -290,7 +244,6 @@ func runMissionFire(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	case quiet:
-		// Bare id, nothing else — the clean `$(...)` capture form.
 		fmt.Fprintln(cmd.OutOrStdout(), result.MissionID)
 	default:
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
@@ -310,10 +263,6 @@ func runMissionFire(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Block until the fired unit reaches an observable terminal condition. Ctrl-C
-	// aborts the wait cleanly (exit 130) — the mission keeps running server-side,
-	// only the local watch stops. Wait progress and the terminal verdict go to
-	// STDERR (diagnostics); stdout already carries the machine-readable id above.
 	timeout, _ := cmd.Flags().GetDuration("wait-timeout")
 	interval, _ := cmd.Flags().GetDuration("wait-interval")
 	waitCtx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
@@ -327,50 +276,14 @@ func runMissionFire(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// Terminal exit codes for `mission fire --wait`. They are a small, documented
-// vocabulary a shell script can branch on — 0 composes with `&&`, and each
-// non-zero code names WHY the wait stopped rather than collapsing every outcome
-// into a bare failure. See missionFireCmd's Long for the operator-facing table.
 const (
-	missionWaitReported = 0   // the mission LANDED, or filed a RESULT report — a completed mission
-	missionWaitStopped  = 1   // the unit stopped/vanished/errored without a result
-	missionWaitBlocked  = 2   // the unit filed a blocker — needs attention
-	missionWaitTimeout  = 3   // still running, no result, deadline hit
-	missionWaitAborted  = 130 // interrupted (SIGINT), by shell convention
+	missionWaitReported = 0
+	missionWaitStopped  = 1
+	missionWaitBlocked  = 2
+	missionWaitTimeout  = 3
+	missionWaitAborted  = 130
 )
 
-// waitForMissionOutcome blocks until the fired unit reaches a terminal condition
-// that is HONESTLY observable over the fleet/mission REST API, returning a
-// documented exit code (see the mission* constants above) and a one-line message
-// for stderr.
-//
-// # What it waits on
-//
-// It polls three signals, in priority order, and the first to resolve wins:
-//
-//   - Mission.Status (getMission) — the AUTHORITATIVE terminal signal, now that
-//     a mission can reach an agent-reportable terminal state (landed | derailed
-//     | stuck | abandoned; see missionservice.Finish). This is checked first
-//     because the other two only proxy for it: a landed mission is a success
-//     even if the report tooling never ran, a derailed one a failure even while
-//     its instance lingers. verdictFromStatus does the mapping. A status still
-//     "open", or a getMission blip, simply falls through to the fallbacks.
-//   - A mission report (ListReports) — the FALLBACK outcome signal for a mission
-//     that communicates without setting a status, read KIND-AWARE. The newest
-//     report decides, but only the two DECISIVE kinds resolve the wait: a `result`
-//     is a completed mission (exit 0), a `blocker` needs attention (exit 2).
-//     `progress` and `finding` are intermediate — the unit is alive and still
-//     working — so they keep the wait open rather than being read as an outcome.
-//   - Instance lifecycle state (fleetservice.Get) — the last fallback. error /
-//     warning is a failed unit; stopped or a 404 (gone) is a unit no longer
-//     running. Neither is a confirmed success — the unit left no status and no
-//     report — so both resolve to missionWaitStopped rather than claim a success
-//     this layer cannot observe.
-//
-// The report and instance checks are retained (not replaced) precisely because a
-// mission can still end WITHOUT a status — an external ACP unit that is torn down
-// or crashes never calls Finish — and honest "it stopped, outcome unknown" beats
-// hanging until the deadline.
 func waitForMissionOutcome(
 	ctx context.Context,
 	client *serveClient,
@@ -385,15 +298,6 @@ func waitForMissionOutcome(
 	fmt.Fprintf(progress, "Waiting for mission %s (unit %s), up to %s…\n", result.MissionID, result.InstanceID, timeout)
 
 	for {
-		// 0. Mission terminal Status — the AUTHORITATIVE outcome, now that a
-		// mission can reach an agent-reportable terminal state. It is checked
-		// FIRST because it is the hard fact the other two signals only proxy for:
-		// a landed mission is a success even if the report tooling never filed
-		// anything, a derailed/stuck one is a failure even if the instance is
-		// still up. A getMission error (including a 404, or a status still
-		// "open") is not terminal — it means "no verdict from Status yet", so we
-		// fall through to the report/instance fallbacks for missions that end
-		// without ever setting a status.
 		if result.MissionID != "" {
 			if m, err := client.getMission(ctx, result.MissionID); err == nil {
 				if code, msg, done := verdictFromStatus(m); done {
@@ -402,19 +306,9 @@ func waitForMissionOutcome(
 			}
 		}
 
-		// 1. Reports — the FALLBACK outcome signal, KIND-AWARE. The newest report
-		// decides, but only the two DECISIVE kinds resolve the wait: a `result` is a
-		// completed mission (exit 0), a `blocker` needs attention (exit 2).
-		// `progress` and `finding` are INTERMEDIATE — a unit filing them is alive and
-		// still working, so the wait keeps going rather than declaring an outcome the
-		// report does not actually carry. (Before, ANY non-blocker report exited 0,
-		// which called a mid-flight progress note a completed mission.) A mission that
-		// only ever files progress/finding and never a result or a terminal status
-		// therefore rides out to the deadline (exit 3), which is the honest verdict:
-		// it was working, outcome unknown.
 		if result.MissionID != "" {
 			if reports, err := client.listMissionReports(ctx, result.MissionID, 100); err == nil && len(reports) > 0 {
-				latest := reports[0] // newest-first
+				latest := reports[0]
 				switch latest.Kind {
 				case missionservice.ReportKindBlocker:
 					return missionWaitBlocked, fmt.Sprintf("mission %s is BLOCKED: %s — needs attention (see 'contenox mission show %s').",
@@ -422,11 +316,9 @@ func waitForMissionOutcome(
 				case missionservice.ReportKindResult:
 					return missionWaitReported, fmt.Sprintf("mission %s produced a result: %s", result.MissionID, latest.Summary)
 				}
-				// progress / finding: still working — fall through and keep waiting.
 			}
 		}
 
-		// 2. Instance lifecycle — a unit that is no longer running, without a report.
 		if result.InstanceID != "" {
 			status, err := client.getInstance(ctx, result.InstanceID)
 			if err != nil {
@@ -434,8 +326,6 @@ func waitForMissionOutcome(
 				if errors.As(err, &se) && se.StatusCode == http.StatusNotFound {
 					return missionWaitStopped, fmt.Sprintf("unit %s is gone (torn down) and filed no report.", result.InstanceID)
 				}
-				// A transient client/serve error is not terminal: keep polling
-				// until the deadline rather than declaring an outcome on one blip.
 			} else {
 				switch status.State {
 				case agentinstance.StateError, agentinstance.StateWarning:
@@ -458,22 +348,6 @@ func waitForMissionOutcome(
 	}
 }
 
-// verdictFromStatus maps a mission's terminal Status onto a --wait exit code,
-// returning done=false when the mission has not reached a terminal state yet (so
-// the caller keeps polling the report/instance fallbacks). The mapping keeps the
-// documented exit-code vocabulary stable rather than inventing new codes:
-//
-//   - landed → 0. The only DEFINITIVE success signal the API has now — better
-//     than "a report exists", which is only a proxy for completion.
-//   - derailed | stuck | abandoned → 1. A terminal non-success. stuck maps to 1
-//     (not the blocker code 2): 2 is specifically "a BLOCKER report is waiting",
-//     an attention signal that outlives the wait; a stuck mission is over, so it
-//     shares the "ended without success" code. That stuck and derailed carry
-//     different STATUS but the same EXIT code is deliberate — the distinction is
-//     preserved where it is read (Status, the inbox), not flattened into the
-//     coarse shell vocabulary a script branches on.
-//
-// A running/open mission returns done=false.
 func verdictFromStatus(m *missionservice.Mission) (int, string, bool) {
 	reason := ""
 	if strings.TrimSpace(m.StatusReason) != "" {
@@ -493,11 +367,6 @@ func verdictFromStatus(m *missionservice.Mission) (int, string, bool) {
 	}
 }
 
-// resolveMissionFireDefaults fills an omitted agent/policy from the local config
-// DB (keys default-mission-agent / default-mission-policy). It returns the
-// inputs unchanged when both are already set — so the hot path never opens a
-// database — and on any DB error, leaving the empties to be reported by the
-// server's own required-parameter validation.
 func resolveMissionFireDefaults(cmd *cobra.Command, agent, policy string) (string, string) {
 	if strings.TrimSpace(agent) != "" && strings.TrimSpace(policy) != "" {
 		return agent, policy
@@ -516,8 +385,6 @@ func resolveMissionFireDefaults(cmd *cobra.Command, agent, policy string) (strin
 	}
 	return agent, policy
 }
-
-// ─── list ─────────────────────────────────────────────────────────────────
 
 func runMissionList(cmd *cobra.Command, args []string) error {
 	ctx := libtracker.WithNewRequestID(context.Background())
@@ -545,8 +412,6 @@ func runMissionList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// INTENT is last: it is the variable-width column, and it is the mission's
-	// primary fact — what the unit was sent to do.
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tSTATUS\tAGENT\tENVELOPE\tUPDATED\tINTENT")
 	for _, m := range missions {
@@ -562,11 +427,6 @@ func runMissionList(cmd *cobra.Command, args []string) error {
 	return w.Flush()
 }
 
-// ─── show ─────────────────────────────────────────────────────────────────
-
-// missionShowPayload is the --json shape for `mission show`: the mission and its
-// reports as one object, so a script gets both in a single read the way the
-// human summary presents them together.
 type missionShowPayload struct {
 	Mission *missionservice.Mission  `json:"mission"`
 	Reports []*missionservice.Report `json:"reports"`

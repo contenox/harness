@@ -10,8 +10,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// cacheMessages is a request whose system prompt is a separate field and whose
-// conversation is two messages, which is what a stable-history assertion counts.
 func cacheMessages() []modelrepo.Message {
 	return []modelrepo.Message{
 		{Role: "system", Content: "be terse"},
@@ -37,8 +35,6 @@ func checkpointIndex(content []any) int {
 	return -1
 }
 
-// A checkpoint is placed only in a field the model's declared contract names,
-// and only after the content it caches.
 func TestUnit_BedrockCachePoints_FollowTheDeclaredContract(t *testing.T) {
 	claude := cacheContract(
 		[]string{modelrepo.PromptCacheFieldTools, modelrepo.PromptCacheFieldSystem, modelrepo.PromptCacheFieldMessages},
@@ -69,8 +65,6 @@ func TestUnit_BedrockCachePoints_FollowTheDeclaredContract(t *testing.T) {
 		"the declared stable history ends at the second message")
 }
 
-// Amazon Nova documents checkpoints in the system prompt and the messages and
-// not in the tool list, so a stability assertion on the tool list places none.
 func TestUnit_BedrockCachePoints_FollowTheModelFamilyConstraints(t *testing.T) {
 	nova := cacheContract(
 		[]string{modelrepo.PromptCacheFieldSystem, modelrepo.PromptCacheFieldMessages},
@@ -102,9 +96,6 @@ func TestUnit_BedrockCachePoints_AnUndeclaredModelGetsNone(t *testing.T) {
 	require.Len(t, body["toolConfig"].(map[string]any)["tools"].([]any), 1)
 }
 
-// A lifetime longer than the vendor's default is stated only where the model's
-// declaration names it; otherwise the request is refused rather than sent with a
-// lifetime the vendor may answer with a ValidationException.
 func TestUnit_BedrockCachePoints_LongLifetimeNeedsItsDeclaration(t *testing.T) {
 	t.Run("declared", func(t *testing.T) {
 		claude := cacheContract([]string{modelrepo.PromptCacheFieldSystem}, []string{modelrepo.PromptCacheTTLFiveMinutes, modelrepo.PromptCacheTTLOneHour})
@@ -138,8 +129,6 @@ func TestUnit_BedrockCachePoints_StableHistoryBeyondTheRequestIsRefused(t *testi
 	require.Zero(t, transport.requests)
 }
 
-// A checkpoint is cache metadata: stripping it must leave the request the
-// unhinted caller would have sent.
 func TestUnit_BedrockCachePoints_NeverChangeModelVisibleContent(t *testing.T) {
 	claude := cacheContract(
 		[]string{modelrepo.PromptCacheFieldTools, modelrepo.PromptCacheFieldSystem, modelrepo.PromptCacheFieldMessages},

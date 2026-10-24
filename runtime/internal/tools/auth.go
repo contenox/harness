@@ -14,7 +14,6 @@ import (
 	"github.com/yalp/jsonpath"
 )
 
-// AuthError indicates a 401 or 403 status was returned.
 type AuthError struct {
 	StatusCode int
 	Body       string

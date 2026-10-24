@@ -169,7 +169,7 @@ export default function TransitionEditor({
               </FormField>
             </div>
 
-            {/* Compose Configuration Section */}
+
             <div className="mt-4 border-t pt-4">
               <div className="mb-3 flex items-center gap-2">
                 <Span className="text-sm font-medium">Compose Configuration</Span>
@@ -194,7 +194,7 @@ export default function TransitionEditor({
                     options={[
                       { value: '', label: 'Select variable...' },
                       ...availableVariables
-                        .filter(v => v !== b.goto) // Filter out the current task
+                        .filter(v => v !== b.goto)
                         .map(v => ({ value: v, label: v })),
                     ]}
                     placeholder="Select variable to compose with"

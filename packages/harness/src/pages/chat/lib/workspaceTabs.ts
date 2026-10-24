@@ -1,22 +1,6 @@
-/**
- * Pure, framework-free tab-model for the chat workspace's in-app tabs
- * (workspace-tabs Slice 2). This owns ONLY the UI concern — which chat
- * surfaces have an open tab, their left-to-right order, and which one is
- * active — and knows nothing about subscriptions or the wire. `useWorkspaceTabs.ts`
- * pairs this reducer with the multi-session controller (`openSessionTab` /
- * `closeSessionTab` / `focusSession`): the reducer is the tab-model, the
- * controller is the subscription-model, kept cleanly separated so this logic
- * is unit-testable without React or a transport (see `workspaceTabs.test.ts`).
- *
- * `activeId === null` means the empty/new-chat surface is active — the
- * lazy-creation surface shown before any session exists on this tab (see D5 /
- * `AcpChatPage`). It is NOT a session id and never appears in `tabs`.
- */
 
 export interface WorkspaceTabsState {
-  /** Open session ids, in stable left-to-right tab order (never contains the empty-surface sentinel). */
   tabs: string[];
-  /** The active tab's session id, or `null` for the empty/new-chat surface. */
   activeId: string | null;
 }
 
@@ -26,24 +10,12 @@ export const initialWorkspaceTabsState: WorkspaceTabsState = {
 };
 
 export type WorkspaceTabsAction =
-  /** Open `id` as a tab (append if absent — dedup by identity) and make it active. */
   | { type: 'open'; id: string }
-  /** Close `id`'s tab; if it was active, focus moves to a neighbor (left, else right, else the empty surface). */
   | { type: 'close'; id: string }
-  /** Make `id`'s already-open tab active (no-op if it has no tab). */
   | { type: 'focus'; id: string }
-  /** Make the empty/new-chat surface active without touching the open tab list. */
   | { type: 'focus_empty' }
-  /**
-   * Reconcile the open-tab list with an authoritative set of open session ids
-   * (e.g. after an external `session/delete` from the sidebar drops a slice):
-   * keep existing tabs still present (preserving their order), append newly-open
-   * ids, drop vanished ones. If the active tab vanished, focus falls back to a
-   * neighbor (or the empty surface).
-   */
   | { type: 'sync'; openIds: readonly string[] };
 
-/** The neighbor to focus after `id` (at `index` in `tabs`) leaves: the tab to its left, else the new tab to its right, else the empty surface. */
 function neighborAfterRemoval(tabs: string[], index: number): string | null {
   if (tabs.length === 0) return null;
   if (index > 0) return tabs[index - 1];
@@ -79,8 +51,6 @@ export function workspaceTabsReducer(state: WorkspaceTabsState, action: Workspac
       const kept = state.tabs.filter(id => openSet.has(id));
       const appended = action.openIds.filter(id => !state.tabs.includes(id));
       const tabs = [...kept, ...appended];
-      // Preserve the active tab unless it vanished; a null active (empty
-      // surface) is always still valid.
       let activeId = state.activeId;
       if (activeId !== null && !openSet.has(activeId)) {
         const oldIndex = state.tabs.indexOf(activeId);
@@ -98,28 +68,6 @@ export function workspaceTabsReducer(state: WorkspaceTabsState, action: Workspac
   }
 }
 
-/**
- * The URL the tab→route sync should target for a given active tab, or `null`
- * when it must NOT navigate at all.
- *
- * This is the authoritative half of `WorkspaceTabs`'s route↔tab sync — the
- * "who navigates to `/chat/:focusedId`, and when" decision — pulled out as a
- * pure function so it is unit-testable (the effect that applies it lives in a
- * DOM-only component). The rules:
- *
- *  - A real active tab always reflects its OWN `/chat/:id`.
- *  - The empty/new-chat surface pushes bare `/chat` ONLY when the move there was
- *    intentional (a "new session" action, or closing the last tab). During
- *    deep-link adoption `activeId` is briefly `null` before the URL's tab opens;
- *    returning `null` there leaves the deep-link URL untouched rather than
- *    clobbering it with `/chat`.
- *
- * Returning `null` (rather than pushing `/chat/:id`) for the non-intentional
- * empty case is also what stops the regression where a sidebar "new session"
- * — a bare `navigate('/chat')` — was reverted back to `/chat/:id`: once the tab
- * model has actually reached the empty surface (`activeId === null`), the sync
- * never targets the outgoing session id.
- */
 export function routeForActiveTab(activeId: string | null, intentionalEmpty: boolean): string | null {
   if (activeId !== null) return `/chat/${activeId}`;
   return intentionalEmpty ? '/chat' : null;

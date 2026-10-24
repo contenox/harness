@@ -10,25 +10,11 @@ import (
 	"github.com/contenox/harness/libacp"
 )
 
-// ErrClosed is returned by Start once the Registry has been Closed. It is a
-// sentinel so callers can branch on errors.Is(err, ErrClosed) if they ever need to.
 var ErrClosed = errors.New("nativeturn: registry is closed")
 
-// Registry owns every native session's in-flight turn, OFF any single connection.
-// It is created once at serve boot on a serve-rooted context, shared across all
-// per-connection Transports, and keyed by ACP session id. It is the native-turn
-// analogue of agentinstance.Manager: the turn survives a viewer detach, a
-// reconnecting viewer reattaches and replays the journal, and the four anti-zombie
-// belts guarantee no turn runs forever unwatched.
-//
-// Every method is safe for concurrent use.
 type Registry struct {
 	cfg Config
 
-	// rootCtx is the long-lived context every turn descends from (via WithDeadline),
-	// so a turn outlives the caller ctx that started it. Close cancels it, relocating
-	// ownership off any client connection onto the runtime — exactly the move
-	// agentinstance.Manager makes with its own rootCtx.
 	rootCtx    context.Context
 	rootCancel context.CancelFunc
 
@@ -37,10 +23,6 @@ type Registry struct {
 	closed   bool
 }
 
-// New returns a Registry rooted on a fresh serve context. Call Close at shutdown to
-// tear every in-flight turn down. A non-positive JournalSize is floored to
-// DefaultJournalSize; TurnDeadline / GraceWindow are taken as given (ParseEnv already
-// validated them for the serve path).
 func New(cfg Config) *Registry {
 	if cfg.JournalSize <= 0 {
 		cfg.JournalSize = DefaultJournalSize
@@ -60,28 +42,20 @@ func New(cfg Config) *Registry {
 	}
 }
 
-// Turn is a caller's handle to one session's turn. It is how a connected viewer
-// awaits completion, detaches on connection drop, and (for session/cancel) cancels.
 type Turn struct {
 	ts *turnSession
 }
 
-// SessionID is the ACP session this turn serves.
 func (t *Turn) SessionID() libacp.SessionID { return t.ts.sessionID }
 
-// Done is closed when the turn's chain ends; Result is then readable.
 func (t *Turn) Done() <-chan struct{} { return t.ts.done }
 
-// Result returns the turn's outcome. Only meaningful after Done is closed.
 func (t *Turn) Result() Result {
 	t.ts.mu.Lock()
 	defer t.ts.mu.Unlock()
 	return t.ts.result
 }
 
-// Await blocks until the turn completes (returning its Result and true) or ctx is
-// done first (returning the zero Result and false, without disturbing the turn). It
-// is a convenience over selecting on Done yourself.
 func (t *Turn) Await(ctx context.Context) (Result, bool) {
 	select {
 	case <-t.ts.done:
@@ -91,22 +65,10 @@ func (t *Turn) Await(ctx context.Context) (Result, bool) {
 	}
 }
 
-// Detach removes viewerID from this turn's fan-out. It NEVER cancels the turn while
-// another viewer remains; detaching the last viewer of an in-flight turn starts the
-// grace window (Belt 1). Idempotent.
 func (t *Turn) Detach(viewerID string) { t.ts.detach(viewerID) }
 
-// Cancel ends this turn now and tears it down — the explicit user cancel
-// (session/cancel). Any viewer awaiting completion unblocks with the turn's
-// (cancelled) result. Idempotent.
 func (t *Turn) Cancel() { t.ts.teardown() }
 
-// Start ensures a turn is running for sid and attaches viewer to it. If a turn is
-// already in-flight for sid, viewer joins it (journal replay + live fan-out) and
-// started is false — the reconnect / spec-discouraged-second-prompt case. Otherwise
-// a fresh turn is started, running fn on a serve-rooted, hard-deadline-bounded
-// context (Belt 2), with viewer as its first attached viewer; started is true.
-// Returns ErrClosed once the Registry is Closed.
 func (r *Registry) Start(sid libacp.SessionID, fn TurnFunc, viewer Viewer) (*Turn, bool, error) {
 	r.mu.Lock()
 	if r.closed {
@@ -124,19 +86,11 @@ func (r *Registry) Start(sid libacp.SessionID, fn TurnFunc, viewer Viewer) (*Tur
 	r.sessions[sid] = ts
 	r.mu.Unlock()
 
-	// Attach the starting viewer BEFORE launching the goroutine so the turn's first
-	// emit already reaches it; the journal is empty, so this replays nothing.
 	_ = ts.attach(context.Background(), viewer)
 	go ts.run(fn)
 	return &Turn{ts: ts}, true, nil
 }
 
-// AttachIfRunning attaches viewer to sid's IN-FLIGHT turn if one exists, replaying
-// the journal and joining the live fan-out. It returns (handle, true, nil) on a
-// successful attach, and (nil, false, nil) when no in-flight turn exists — a
-// FINISHED turn is deliberately not attachable here, because a reconnecting client's
-// durable transcript already carries a completed turn (only the live, not-yet-
-// persisted turn needs the journal). It is the reconnect hook a session/load uses.
 func (r *Registry) AttachIfRunning(ctx context.Context, sid libacp.SessionID, viewer Viewer) (*Turn, bool, error) {
 	r.mu.Lock()
 	ts, ok := r.sessions[sid]
@@ -150,10 +104,6 @@ func (r *Registry) AttachIfRunning(ctx context.Context, sid libacp.SessionID, vi
 	return &Turn{ts: ts}, true, nil
 }
 
-// Cancel cancels sid's in-flight turn and tears it down — the ONLY real user
-// cancel (session/cancel). It reports whether a turn was present to cancel; a cancel
-// with no turn in flight is a clean no-op returning false. Any viewer awaiting the
-// turn unblocks with its (cancelled) result.
 func (r *Registry) Cancel(sid libacp.SessionID) bool {
 	r.mu.Lock()
 	ts, ok := r.sessions[sid]
@@ -165,15 +115,8 @@ func (r *Registry) Cancel(sid libacp.SessionID) bool {
 	return true
 }
 
-// Stop is the operator-surface twin of Cancel: it ends sid's turn and tears it down,
-// reporting whether one was present. It exists as the fleet-board verb (mirroring
-// agentinstance.Manager.Stop) distinct from the protocol-level session/cancel, so an
-// operator killing a zombie and a client cancelling its own prompt read as different
-// intents even though both reduce to the same teardown. Idempotent.
 func (r *Registry) Stop(sid libacp.SessionID) bool { return r.Cancel(sid) }
 
-// Get returns the status of sid's active turn, or ok=false when none is active
-// (never started, or already reaped). Mirrors agentinstance.Manager.Get.
 func (r *Registry) Get(sid libacp.SessionID) (TurnStatus, bool) {
 	r.mu.Lock()
 	ts, ok := r.sessions[sid]
@@ -184,12 +127,6 @@ func (r *Registry) Get(sid libacp.SessionID) (TurnStatus, bool) {
 	return ts.status(), true
 }
 
-// List returns a snapshot of every active turn — the operator board's substrate
-// (session id, started-at, hard deadline, viewer count, state), sorted by session id
-// for a deterministic view. Mirrors agentinstance.Manager.List in intent. The live
-// side is snapshotted under mu and each status read outside it, so a turn attaching
-// or finishing concurrently lands on either side of the boundary — a List is a
-// point-in-time report, not a transaction.
 func (r *Registry) List() []TurnStatus {
 	r.mu.Lock()
 	live := make([]*turnSession, 0, len(r.sessions))
@@ -206,21 +143,6 @@ func (r *Registry) List() []TurnStatus {
 	return out
 }
 
-// ReapIdle sweeps every session and tears down the ones that must not linger — the
-// periodic backstop (Belt 4) behind the timer-driven grace path, mirroring
-// terminalservice.ReapIdle's shape. A session is reaped when:
-//
-//   - it is FINISHED with no viewers (cleanup of a turn nobody detached from), or
-//   - it is in-flight, unwatched, and its grace deadline has passed (backstop for a
-//     grace timer that did not fire), or
-//   - wall-clock has passed its hard deadline plus one grace window (the absolute
-//     ceiling: bounds even a finished turn a viewer never left, and a chain that
-//     somehow ignored its context deadline).
-//
-// A running, watched turn inside its deadline matches none of these and is NEVER
-// reaped — the busy guarantee. teardown's reaping CAS makes a reap that races the
-// grace timer or a concurrent finish harmless. Always returns nil (the signature
-// matches terminalservice.Service.ReapIdle so the serve reaper ticker is identical).
 func (r *Registry) ReapIdle(_ context.Context) error {
 	r.mu.Lock()
 	live := make([]*turnSession, 0, len(r.sessions))
@@ -254,8 +176,6 @@ func (r *Registry) ReapIdle(_ context.Context) error {
 	return nil
 }
 
-// Close tears every in-flight turn down and cancels the Registry's root context. It
-// is the runtime-shutdown hook; after Close, Start returns ErrClosed. Idempotent.
 func (r *Registry) Close() error {
 	r.mu.Lock()
 	if r.closed {
@@ -273,15 +193,10 @@ func (r *Registry) Close() error {
 	for _, ts := range live {
 		ts.teardown()
 	}
-	// Backstop: cancel the root so any turn whose teardown raced a fresh registration
-	// still unwinds. Derived turn contexts observe it immediately.
 	r.rootCancel()
 	return nil
 }
 
-// newTurnSession builds an in-flight turn bound to the registry root with a hard
-// deadline (Belt 2). Callers hold r.mu (or are New-adjacent); it neither registers
-// the session nor starts the goroutine — Start does both.
 func (r *Registry) newTurnSession(sid libacp.SessionID) *turnSession {
 	started := time.Now()
 	turnCtx, cancel := context.WithDeadline(r.rootCtx, started.Add(r.cfg.TurnDeadline))
@@ -298,9 +213,6 @@ func (r *Registry) newTurnSession(sid libacp.SessionID) *turnSession {
 	}
 }
 
-// removeSession deletes sid from the map iff it still points at ts, so a superseded
-// or already-replaced turn's teardown never evicts its successor. It is the single
-// place the map shrinks; teardown is its only caller.
 func (r *Registry) removeSession(sid libacp.SessionID, ts *turnSession) {
 	r.mu.Lock()
 	if cur, ok := r.sessions[sid]; ok && cur == ts {

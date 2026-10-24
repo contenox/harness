@@ -106,7 +106,7 @@ describe('prepareAudioAttachment — fits byte-identical, or refused; never a th
 
   it('passes an allowlisted file through byte-identical under the canonical mime type', async () => {
     const attachment = await prepareAudioAttachment(
-      fakeFile('audio/x-wav', 'note.wav', 6), // "voice!" is 6 bytes -> 8 base64 chars
+      fakeFile('audio/x-wav', 'note.wav', 6),
       { readAsDataUrl: reader('data:audio/wav;base64,dm9pY2Uh') },
     );
     expect(attachment).toMatchObject({ name: 'note.wav', mimeType: 'audio/wav', data: 'dm9pY2Uh' });

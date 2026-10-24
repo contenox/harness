@@ -43,9 +43,6 @@ func NewVLLMStreamClient(ctx context.Context, baseURL, modelName string, context
 	return client, nil
 }
 
-// streamErrorFrame is the body of a streamed error frame. The vendor emits the
-// OpenAI error envelope: the diagnosis is an object under "error", and a frame
-// whose diagnosis is dropped leaves a failed turn looking like a short one.
 type streamErrorFrame struct {
 	Error *struct {
 		Message string `json:"message"`
@@ -59,9 +56,6 @@ type streamErrorFrame struct {
 	Code    int    `json:"code"`
 }
 
-// streamError reports the failure a streamed frame carries, empty when the
-// frame is an ordinary chunk. It reads the vendor's error reference body as
-// well, which publishes the same envelope without the outer member.
 func streamError(jsonData string) (message, code string, status int, failed bool) {
 	var frame streamErrorFrame
 	if err := json.Unmarshal([]byte(jsonData), &frame); err != nil {
@@ -76,10 +70,8 @@ func streamError(jsonData string) (message, code string, status int, failed bool
 	return "", "", 0, false
 }
 
-// Stream emits raw StreamParcel deltas as they arrive, ending in exactly one terminal parcel.
 func (c *VLLMStreamClient) Stream(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (<-chan *modelrepo.StreamParcel, error) {
 	reportErr, reportChange, end := c.tracker.Start(ctx, "stream", "vllm", "model", c.modelName)
-	// end() is not deferred here; ownership passes to the goroutine below since the stream is asynchronous.
 
 	if err := c.checkAudio(messages); err != nil {
 		reportErr(err)
@@ -144,7 +136,6 @@ func (c *VLLMStreamClient) Stream(ctx context.Context, messages []modelrepo.Mess
 			}
 		}
 
-		// Tool names are sanitized on the way out; the decoder translates them back to the caller's originals.
 		dec := chatcompletions.NewStreamDecoder(nameMap)
 		scanner := bufio.NewScanner(resp.Body)
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)

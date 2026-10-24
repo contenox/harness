@@ -33,15 +33,13 @@ type ConfigureRequest struct {
 	SetDefault   *bool  `json:"setDefault"`
 }
 
-// configure stores (or updates) a cloud provider's API key configuration and
-// returns the resulting provider status.
 func (p *providerManager) configure(w http.ResponseWriter, r *http.Request) {
 	providerType := apiframework.GetPathParam(r, "providerType", "Provider type to configure.")
 	if providerType == "" {
 		_ = apiframework.Error(w, r, errors.New("providerType is required in path"), apiframework.CreateOperation)
 		return
 	}
-	req, err := apiframework.Decode[ConfigureRequest](r) // @request providerapi.ConfigureRequest
+	req, err := apiframework.Decode[ConfigureRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -62,10 +60,9 @@ func (p *providerManager) configure(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, status) // @response providerservice.ProviderStatus
+	_ = apiframework.Encode(w, r, http.StatusOK, status)
 }
 
-// status reports whether a provider type is configured and ready.
 func (p *providerManager) status(w http.ResponseWriter, r *http.Request) {
 	providerType := apiframework.GetPathParam(r, "providerType", "Provider type to inspect.")
 	if providerType == "" {
@@ -78,17 +75,16 @@ func (p *providerManager) status(w http.ResponseWriter, r *http.Request) {
 			Provider:     providerType,
 			Configured:   false,
 			SecretSource: "none",
-		}) // @response providerservice.ProviderStatus
+		})
 		return
 	}
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.GetOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, status) // @response providerservice.ProviderStatus
+	_ = apiframework.Encode(w, r, http.StatusOK, status)
 }
 
-// deleteConfig removes a provider type's stored configuration.
 func (p *providerManager) deleteConfig(w http.ResponseWriter, r *http.Request) {
 	providerType := apiframework.GetPathParam(r, "providerType", "Provider type to delete.")
 	if providerType == "" {
@@ -99,10 +95,9 @@ func (p *providerManager) deleteConfig(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.DeleteOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, "provider config deleted") // @response string
+	_ = apiframework.Encode(w, r, http.StatusOK, "provider config deleted")
 }
 
-// listConfigs returns the status of every configured provider.
 func (p *providerManager) listConfigs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -118,21 +113,18 @@ func (p *providerManager) listConfigs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = apiframework.Encode(w, r, http.StatusOK, configs) // @response []providerservice.ProviderStatus
+	_ = apiframework.Encode(w, r, http.StatusOK, configs)
 }
 
-// supported lists the provider types this runtime can be configured with and
-// their capabilities.
 func (p *providerManager) supported(w http.ResponseWriter, r *http.Request) {
 	providers, err := p.providerService.ListSupportedProviders(r.Context())
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, providers) // @response []providerservice.ProviderCapability
+	_ = apiframework.Encode(w, r, http.StatusOK, providers)
 }
 
-// get returns the stored configuration status for one provider type.
 func (p *providerManager) get(w http.ResponseWriter, r *http.Request) {
 	providerType := apiframework.GetPathParam(r, "providerType", "Provider type to retrieve.")
 	if providerType == "" {
@@ -146,5 +138,5 @@ func (p *providerManager) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = apiframework.Encode(w, r, http.StatusOK, config) // @response providerservice.ProviderStatus
+	_ = apiframework.Encode(w, r, http.StatusOK, config)
 }

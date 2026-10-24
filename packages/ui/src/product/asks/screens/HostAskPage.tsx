@@ -20,9 +20,6 @@ import {
 } from '../../saas/account/lib/consumers';
 import { relativeTime } from '../../lib/relativeTime';
 
-/**
- * One machine, from the ask that led here: what is stopped on it, what is configured to run on it, and the way into what is running on it now.
- */
 export default function HostAskPage({
   instanceId,
   onTitleChange,
@@ -69,10 +66,7 @@ export default function HostAskPage({
             retrying={hosts.isFetching}
           />
         )}
-        {/* The fleet listing does not carry it, yet an ask on the board named
-            it. The two reads can disagree for a moment — a machine paired since
-            the fleet was last read is the ordinary case — so this is a fact,
-            not an error. */}
+
         {!hosts.isPending && instance === undefined && (
           <InlineNotice variant="info">
             This machine is not in the current fleet listing. What is below is what its asks and

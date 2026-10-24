@@ -9,8 +9,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// TokenStore is the persistence layer for OAuth tokens.
-// Implemented by the KV store adapter in localtools/kvtokenstore.go.
 type TokenStore interface {
 	GetOAuthToken(ctx context.Context, serverName string) (*oauth2.Token, error)
 	SetOAuthToken(ctx context.Context, serverName string, t *oauth2.Token) error
@@ -20,24 +18,19 @@ type TokenStore interface {
 	SetClientRegistration(ctx context.Context, serverName string, reg *ClientRegistration) error
 }
 
-// storedToken is the on-disk representation. We use RFC3339 for Expiry so
-// that it survives JSON round-trips without timezone loss.
 type storedToken struct {
 	AccessToken  string `json:"access_token"`
 	TokenType    string `json:"token_type,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
-	Expiry       string `json:"expiry,omitempty"` // RFC3339 or empty
+	Expiry       string `json:"expiry,omitempty"`
 }
 
-// KVStore is the minimal interface needed from runtimetypes.Store.
-// Using a narrow interface avoids importing runtimetypes in this package.
 type KVStore interface {
 	GetKV(ctx context.Context, key string, out interface{}) error
 	SetKV(ctx context.Context, key string, value json.RawMessage) error
 	DeleteKV(ctx context.Context, key string) error
 }
 
-// NewKVTokenStore returns a TokenStore backed by the provided KVStore.
 func NewKVTokenStore(kv KVStore) TokenStore {
 	return &kvTokenStore{kv: kv}
 }

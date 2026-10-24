@@ -1,13 +1,3 @@
-// Package approvalapi exposes pending human-in-the-loop approvals
-// (runtime/hitlservice) over REST: the durable ask slice C1
-// (docs/development/blueprints/acp/fleet-consolidation.md) introduced now has
-// a surface an operator can read and answer without attaching to the session
-// that raised it — the inbox slice C2 closes with.
-//
-// The route/handler shape mirrors runtime/internal/missionapi and
-// runtime/internal/fleetapi (thin handlers over apiframework.Encode/Decode/
-// Error), and the `// @request` / `// @response` annotations are what the
-// OpenAPI generator (tools/openapi-gen) scans for.
 package approvalapi
 
 import (
@@ -19,20 +9,11 @@ import (
 	"github.com/contenox/harness/runtime/hitlservice"
 )
 
-// AnswerRequest is the POST /approvals/{id} body: the human's yes/no answer
-// to a pending ask.
 type AnswerRequest struct {
-	Approved bool `json:"approved"`
-	// Answer is the operator's reply to an ATTENTION ask — a unit's question
-	// ("which project did you mean?"), which is answered with data rather than
-	// yes/no. When it is set, the ask is resolved with this text and the waiting
-	// unit receives it as its tool result; Approved is then irrelevant. Setting
-	// it on a permission ask is refused (see hitlservice.Answer), because prose
-	// is not a verdict.
-	Answer string `json:"answer,omitempty"`
+	Approved bool   `json:"approved"`
+	Answer   string `json:"answer,omitempty"`
 }
 
-// AddRoutes registers the approval-inbox routes on mux.
 func AddRoutes(mux *http.ServeMux, svc hitlservice.Service) {
 	h := &approvalHandler{svc: svc}
 
@@ -44,9 +25,6 @@ type approvalHandler struct {
 	svc hitlservice.Service
 }
 
-// list returns pending approvals, newest first — the inbox itself. A fleet
-// with nothing pending renders an empty JSON array, not an error (see
-// hitlservice.Service.ListPending's own non-nil guarantee).
 func (h *approvalHandler) list(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -61,36 +39,25 @@ func (h *approvalHandler) list(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, items) // @response []*runtimetypes.HITLApproval
+	_ = apiframework.Encode(w, r, http.StatusOK, items)
 }
 
-// answer resolves a pending approval. The three ways this can fail are
-// mapped honestly rather than collapsed into one status: an unknown id is
-// 404 (there is nothing to answer), while an already-resolved ask and an
-// expired one are both 409 — the ask existed but can no longer be answered —
-// distinguished from each other by message text, since hitlservice.Respond's
-// own sentinel errors already say which.
 func (h *approvalHandler) answer(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique ID of the approval.")
 
-	req, err := apiframework.Decode[AnswerRequest](r) // @request approvalapi.AnswerRequest
+	req, err := apiframework.Decode[AnswerRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
 	}
 
-	// An answer with TEXT is a reply to a unit's question; without it, an
-	// approve/deny verdict on a gated tool call. One route serves both because
-	// they are one queue to the operator — "something is waiting on you" — and
-	// splitting them would make a client discover which endpoint to call from a
-	// row it already has.
 	if strings.TrimSpace(req.Answer) != "" {
 		if err := h.svc.Answer(ctx, id, req.Answer); err != nil {
 			_ = apiframework.Error(w, r, mapRespondError(err), apiframework.UpdateOperation)
 			return
 		}
-		_ = apiframework.Encode(w, r, http.StatusOK, "answered") // @response string
+		_ = apiframework.Encode(w, r, http.StatusOK, "answered")
 		return
 	}
 
@@ -103,15 +70,9 @@ func (h *approvalHandler) answer(w http.ResponseWriter, r *http.Request) {
 	if req.Approved {
 		result = "approved"
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, result) // @response string
+	_ = apiframework.Encode(w, r, http.StatusOK, result)
 }
 
-// mapRespondError maps hitlservice.Respond's typed errors onto HTTP status
-// codes without collapsing the two 409 causes into one message: an
-// already-resolved ask and an expired one both mean "this can no longer be
-// answered", but an operator needs to know which happened, so the message
-// (sourced from the distinct sentinel error) says so even though the status
-// code is the same.
 func mapRespondError(err error) error {
 	switch {
 	case errors.Is(err, hitlservice.ErrApprovalNotFound):

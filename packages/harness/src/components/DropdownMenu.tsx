@@ -15,7 +15,6 @@ type NavDropdownProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   items: MenuItem[];
-  /** When set, replaces the default chevron menu trigger. */
   trigger?: ReactElement;
   contentClassName?: string;
 };

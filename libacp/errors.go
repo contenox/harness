@@ -15,15 +15,11 @@ const (
 	ErrInvalidParams  = -32602
 	ErrInternalError  = -32603
 
-	ErrAuthRequired = -32000
-	// ErrRequestTimeout is the wire signal that a peer's handler ran out of
-	// time, matching the code MCP implementations use for the same condition.
+	ErrAuthRequired     = -32000
 	ErrRequestTimeout   = -32001
 	ErrResourceNotFound = -32002
 )
 
-// Error is a JSON-RPC error object; the exported fields are the entire wire
-// contract, and cause is process-local and never serialized.
 type Error struct {
 	Code    int             `json:"code"`
 	Message string          `json:"message"`
@@ -32,8 +28,6 @@ type Error struct {
 	cause error
 }
 
-// Unwrap exposes the originating handler error; an Error decoded from the
-// wire has no cause and returns nil.
 func (e *Error) Unwrap() error {
 	if e == nil {
 		return nil
@@ -64,8 +58,6 @@ func MethodNotFound(method string) *Error {
 func InvalidParams(msg string) *Error { return NewError(ErrInvalidParams, msg) }
 func InternalError(msg string) *Error { return NewError(ErrInternalError, msg) }
 
-// AsError converts a handler error into the JSON-RPC error that goes on the
-// wire, retaining err as cause and promoting a deadline to ErrRequestTimeout.
 func AsError(err error) *Error {
 	if err == nil {
 		return nil
@@ -80,10 +72,6 @@ func AsError(err error) *Error {
 	return &Error{Code: code, Message: err.Error(), cause: err}
 }
 
-// HandlerDrainTimeout bounds how long Run waits, after shutdown, for in-flight
-// handler goroutines to return.
 const HandlerDrainTimeout = 10 * time.Second
 
-// ErrHandlerDrainTimeout reports that Run gave up waiting for handler goroutines
-// to return, so tearing down shared state may be unsafe.
 var ErrHandlerDrainTimeout = errors.New("libacp: timed out waiting for handler goroutines to return")

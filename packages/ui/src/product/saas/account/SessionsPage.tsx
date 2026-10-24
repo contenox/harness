@@ -18,9 +18,6 @@ import {
 } from './lib/browserSessions';
 import { relativeTime } from '../../lib/relativeTime';
 
-/**
- * Where this person is signed in.
- */
 export default function SessionsPage() {
   const { routes, useBrowserSessions, useRevokeOtherSessions } = useProductPorts();
   const { data, isPending, error, refetch, isFetching } = useBrowserSessions();

@@ -1,4 +1,3 @@
-// DesktopSidebar.tsx
 import { cn } from '../../lib/utils';
 import { SidebarProps } from './Sidebar';
 import { SidebarNav } from './SidebarNav';

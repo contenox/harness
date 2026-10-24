@@ -48,7 +48,6 @@ func TestSetCLIConfig_DefaultThinkNormalizesLikeCLI(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "low", snap.DefaultThink)
 
-	// Empty clears the override so the runtime's own "high" fallback applies.
 	snap, err = svc.SetCLIConfig(ctx, CLIConfigPatch{DefaultThink: strPtr("  ")})
 	require.NoError(t, err)
 	require.Equal(t, "", snap.DefaultThink)
@@ -57,11 +56,6 @@ func TestSetCLIConfig_DefaultThinkNormalizesLikeCLI(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestSetCLIConfig_MissionDefaultsRoundTrip pins the pair that makes `/mission
-// <intent>` fireable without naming an agent: both keys are GLOBAL (no workspace
-// scope — a mission is fired at the fleet, not at a project), both round-trip
-// through the snapshot, and an empty value clears the setting rather than being
-// ignored, so the UI can unset a default it once wrote.
 func TestSetCLIConfig_MissionDefaultsRoundTrip(t *testing.T) {
 	svc := newTestService(t)
 	ctx := context.Background()

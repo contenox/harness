@@ -8,8 +8,6 @@ import (
 	"github.com/contenox/harness/libtracker"
 )
 
-// checkpointSaveGrace bounds the detached checkpoint write below, so a
-// shutdown cannot hang on an unreachable store.
 const checkpointSaveGrace = 15 * time.Second
 
 func (env SimpleEnv) suspendRun(
@@ -62,9 +60,6 @@ func (env SimpleEnv) suspendRun(
 		cp.RequestID = reqID
 	}
 
-	// A suspension is often triggered by this process leaving (ctx cancelled,
-	// shutdown): the write that makes the run resumable elsewhere must outlive
-	// the cancellation that caused it, or nothing is left behind to resume.
 	saveCtx, cancelSave := context.WithTimeout(context.WithoutCancel(ctx), checkpointSaveGrace)
 	defer cancelSave()
 	if err := saver.SaveCheckpoint(saveCtx, cp); err != nil {

@@ -18,11 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestE2E_Wire_TerminalPassthrough drives the `!` passthrough entrypoint over
-// the real ACP transport: session/new, then the _contenox/terminal/run extension
-// request, and asserts the command's output is streamed back as a
-// contenox.terminalOutput _meta session/update — the same transport a foreign
-// client would simply ignore.
 func TestE2E_Wire_TerminalPassthrough(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
@@ -75,9 +70,6 @@ func TestE2E_Wire_TerminalPassthrough(t *testing.T) {
 	require.NoError(t, json.Unmarshal(resp.Result, &newResp))
 	sid := newResp.SessionID
 
-	// The passthrough runs one line without an LLM turn; output streams as a
-	// contenox.terminalOutput _meta update (written before the run response, since
-	// the flush interval is well under the run capture window).
 	runResp, notes := client.call(extMethodTerminalRun, terminalRunParams{
 		SessionID: string(sid),
 		Command:   "echo hallo-welt",
@@ -88,15 +80,6 @@ func TestE2E_Wire_TerminalPassthrough(t *testing.T) {
 	assert.Contains(t, got, "hallo-welt", "streamed terminal output must contain the command result")
 }
 
-// TestE2E_Wire_ExternalAgent_TerminalPassthrough proves the `!` passthrough is
-// agent-agnostic: it runs on the RUNTIME's own shell (contenox's ShellSessions,
-// rooted at the session cwd), NOT the downstream agent's terminal, so it works
-// identically on a session bound to an external agent. Driven over the real ACP
-// transport: session/new carrying contenox.agent spawns the hermetic stub agent,
-// then _contenox/terminal/run streams the runtime shell's output back as a
-// contenox.terminalOutput _meta update — the downstream agent is never involved
-// (and note NewSession's external branch never subscribes the terminal; the run
-// entrypoint self-subscribes, which is exactly what this exercises).
 func TestE2E_Wire_ExternalAgent_TerminalPassthrough(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -165,9 +148,6 @@ func TestE2E_Wire_ExternalAgent_TerminalPassthrough(t *testing.T) {
 		"the runtime's own shell output must stream even when the session is bound to an external agent")
 }
 
-// collectTerminalOutput accumulates contenox.terminalOutput chunks for sid from
-// the already-received notes and any further notifications until want is seen or
-// the deadline elapses.
 func collectTerminalOutput(t *testing.T, c *wireClient, sid libacp.SessionID, seed []libacp.Notification, want string, timeout time.Duration) string {
 	t.Helper()
 	var acc strings.Builder

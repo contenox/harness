@@ -5,9 +5,6 @@ import type { AvailableCommand } from '@contenox/acp-client';
 import { commandArgumentHint } from '../lib/slashMenu';
 import type { SlashCommandMenuState } from '../hooks/useSlashCommandMenu';
 
-/**
- * The commands the attached machine advertises, offered while a `/` is being typed — and then, once one of them is being argued, the values that command accepts.
- */
 export function SlashCommandMenu({ menu }: { menu: SlashCommandMenuState }) {
   if (!menu.open) return null;
 

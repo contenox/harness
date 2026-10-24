@@ -17,9 +17,6 @@ import (
 	"github.com/contenox/harness/runtime/reasoning"
 )
 
-// converseModel is the model surface one Converse request is built and decoded
-// against: the vendor's own model list does not report thinking controls or the
-// prompt-cache checkpoint contract, so both arrive as capability declarations.
 type converseModel struct {
 	name            string
 	maxOutputTokens int
@@ -27,12 +24,8 @@ type converseModel struct {
 	promptCache     *modelrepo.PromptCacheContract
 }
 
-// bedrockMinimumThinkingBudget is the vendor's documented floor for a
-// caller-set thinking budget.
 const bedrockMinimumThinkingBudget = 1024
 
-// reasoningContinuationProvider identifies reasoning blocks this adapter
-// produced, so only its own opaque items are replayed.
 const reasoningContinuationProvider = "bedrock"
 
 type bedrockReasoningItem struct {
@@ -45,10 +38,6 @@ type bedrockReasoningContinuation struct {
 	Reasoning []bedrockReasoningItem `json:"reasoning,omitempty"`
 }
 
-// bedrockThinkingPlan is the reasoning control one request carries: the vendor's
-// own fields, the budget a caller-set control carries, whether the request
-// reasons at all, and whether it names a budget the vendor documents as
-// incompatible with a forced tool choice.
 type bedrockThinkingPlan struct {
 	fields  map[string]any
 	budget  int
@@ -56,18 +45,12 @@ type bedrockThinkingPlan struct {
 	manual  bool
 }
 
-// bedrockToolPlan is the tool configuration one request carries. Catalog is the
-// tool list as declared, and the message history is rendered against it: a
-// request that declares no callable tool — because the caller declared none, or
-// because it forbade tool calls — carries no toolUse or toolResult blocks,
-// which the vendor rejects without a tool configuration.
 type bedrockToolPlan struct {
 	catalog []types.Tool
 	choice  *modelrepo.ToolChoice
 }
 
 func buildConverseInput(m converseModel, messages []modelrepo.Message, cfg *modelrepo.ChatConfig) (*bedrockruntime.ConverseInput, map[string]string, error) {
-	// No audio encoding on this wire format; refuse instead of dropping silently.
 	if err := modelrepo.RefuseAudioInput("bedrock", m.name, messages); err != nil {
 		return nil, nil, err
 	}
@@ -86,8 +69,6 @@ func buildConverseInput(m converseModel, messages []modelrepo.Message, cfg *mode
 	if err != nil {
 		return nil, nil, err
 	}
-	// A caller-set thinking budget must sit below the request's output ceiling,
-	// so the plan is resolved against the ceiling before either is written.
 	ceiling := bedrockOutputCeiling(m, cfg)
 	plan, err := planBedrockThinking(m, cfg, ceiling)
 	if err != nil {
@@ -158,12 +139,11 @@ func buildConverseInput(m converseModel, messages []modelrepo.Message, cfg *mode
 				}})
 			}
 			appendBlocks(types.ConversationRoleAssistant, blocks)
-		default: // "user"
+		default:
 			var blocks []types.ContentBlock
 			if msg.Content != "" {
 				blocks = append(blocks, &types.ContentBlockMemberText{Value: msg.Content})
 			}
-			// Unrecognised MIME types are skipped rather than sent with an invalid Format.
 			for _, img := range msg.Images {
 				format, ok := imageFormatFromMime(img.MimeType)
 				if !ok {
@@ -206,8 +186,6 @@ func buildConverseInput(m converseModel, messages []modelrepo.Message, cfg *mode
 			in.AdditionalModelRequestFields = document.NewLazyDocument(plan.fields)
 		}
 		if len(cfg.StopSequences) > 0 {
-			// The vendor reports which configured sequence matched in a
-			// model-native field that Converse drops unless it is requested.
 			in.AdditionalModelResponseFieldPaths = []string{"/stop_sequence"}
 		}
 
@@ -219,11 +197,6 @@ func buildConverseInput(m converseModel, messages []modelrepo.Message, cfg *mode
 	return in, names.reverse(), nil
 }
 
-// planBedrockTools restates the request's declared tools in the vendor's tool
-// configuration, and decides which of them the model may call. The Converse API
-// defines auto, any and tool choices and no way to forbid tool use, so a caller
-// that forbids it is served by sending no tool configuration at all: the model
-// cannot call a tool it was never given, which is what the caller asked for.
 func planBedrockTools(m converseModel, cfg *modelrepo.ChatConfig, names *toolNameTable) (bedrockToolPlan, error) {
 	if cfg == nil {
 		return bedrockToolPlan{}, nil
@@ -240,8 +213,6 @@ func planBedrockTools(m converseModel, cfg *modelrepo.ChatConfig, names *toolNam
 			Name:        aws.String(names.wire(t.Function.Name)),
 			InputSchema: &types.ToolInputSchemaMemberJson{Value: document.NewLazyDocument(t.Function.Parameters)},
 		}
-		// The vendor's description member has a minimum length of one, so an
-		// undeclared description is omitted rather than sent empty.
 		if desc := strings.TrimSpace(t.Function.Description); desc != "" {
 			spec.Description = aws.String(desc)
 		}
@@ -258,9 +229,6 @@ func planBedrockTools(m converseModel, cfg *modelrepo.ChatConfig, names *toolNam
 	return plan, nil
 }
 
-// bedrockOutputCeiling is the output ceiling this request's maxTokens member
-// carries: the caller's own limit clamped by the model's declared maximum, or
-// the model's declared maximum when the caller stated none.
 func bedrockOutputCeiling(m converseModel, cfg *modelrepo.ChatConfig) int {
 	if cfg != nil && cfg.MaxTokens != nil && *cfg.MaxTokens > 0 {
 		effective, _ := modelrepo.ClampMaxOutputTokens(*cfg.MaxTokens, m.maxOutputTokens)
@@ -272,8 +240,6 @@ func bedrockOutputCeiling(m converseModel, cfg *modelrepo.ChatConfig) int {
 func bedrockInferenceConfig(m converseModel, cfg *modelrepo.ChatConfig, plan bedrockThinkingPlan, ceiling int) (*types.InferenceConfiguration, error) {
 	ic := &types.InferenceConfiguration{}
 	set := false
-	// A caller-set budget has to sit below maxTokens, so a reasoning request
-	// states the ceiling even when the caller left it to the vendor's default.
 	if ceiling > 0 && (plan.manual || (cfg.MaxTokens != nil && *cfg.MaxTokens > 0)) {
 		const maxInt32 = int64(1<<31 - 1)
 		effective := int64(ceiling)
@@ -300,17 +266,8 @@ func bedrockInferenceConfig(m converseModel, cfg *modelrepo.ChatConfig, plan bed
 	return ic, nil
 }
 
-// bedrockSamplingTopPFloor is the lowest top_p the vendor accepts while a
-// request reasons.
 const bedrockSamplingTopPFloor = 0.95
 
-// applyBedrockSampling writes the sampling parameters the vendor accepts for
-// this request. The vendor documents two rules: a model that accepts only the
-// adaptive thinking control rejects non-default temperature and top_p on every
-// request, and otherwise temperature is incompatible with thinking while top_p
-// stays valid inside its documented band. A parameter the rules exclude is not
-// sent, which is what keeps the model's own default in place instead of a
-// request the vendor answers with a 400.
 func applyBedrockSampling(m converseModel, cfg *modelrepo.ChatConfig, ic *types.InferenceConfiguration, plan bedrockThinkingPlan) error {
 	if bedrockStripsSamplingParams(m.thinking) {
 		return nil
@@ -336,10 +293,6 @@ func applyBedrockSampling(m converseModel, cfg *modelrepo.ChatConfig, ic *types.
 	return nil
 }
 
-// bedrockStripsSamplingParams reports whether a declared thinking capability
-// places the model among those the vendor documents as rejecting non-default
-// temperature and top_p on every request: a model that accepts only the
-// adaptive thinking control is one of them.
 func bedrockStripsSamplingParams(declared *modelrepo.ThinkingTypes) bool {
 	return declared != nil && declared.Adaptive && !declared.Enabled
 }
@@ -419,8 +372,6 @@ func planBedrockThinking(m converseModel, cfg *modelrepo.ChatConfig, ceiling int
 		if !m.thinking.SupportsEffort(effort) {
 			return bedrockThinkingPlan{}, fmt.Errorf("bedrock model %s does not declare the %s effort level (declared: %s); %s", m.name, effort, strings.Join(m.thinking.EffortLevels, ", "), reasoningEffortRemedy(true))
 		}
-		// The vendor's default effort differs by model generation, so the level
-		// the caller named is always stated rather than left to that default.
 		return bedrockThinkingPlan{
 			fields: map[string]any{
 				"thinking":      map[string]any{"type": "adaptive"},
@@ -456,9 +407,6 @@ func thinkDeclarationRefusal() string {
 	return "a Bedrock request carries a thinking control only from thinking types the model declares, and a reasoning declaration declares none; " + reasoningEffortRemedy(false)
 }
 
-// bedrockThinkingBudgetFor places the level's budget below the request's output
-// ceiling, which the vendor requires and which the request states so the model
-// cannot apply a default below the budget.
 func bedrockThinkingBudgetFor(m converseModel, level string, ceiling int) (int, error) {
 	if ceiling <= 0 {
 		return 0, fmt.Errorf("bedrock model %s needs an output ceiling to place a %s thinking budget below: its connection facts declare no maximum output tokens, so a think=%s request cannot state max tokens", m.name, level, level)
@@ -500,7 +448,7 @@ func bedrockThinkingBudget(level string) int {
 		return 8192
 	case reasoning.Max:
 		return 16384
-	default: // minimal, low
+	default:
 		return bedrockMinimumThinkingBudget
 	}
 }
@@ -582,10 +530,6 @@ func applyBedrockCachePoints(m converseModel, in *bedrockruntime.ConverseInput, 
 	return nil
 }
 
-// bedrockCacheTTL is the checkpoint lifetime the request states. The vendor's
-// default lifetime is selected by omitting the member, and a model that
-// documents only that default can answer an explicit member with a
-// ValidationException, so only a longer lifetime is stated.
 func bedrockCacheTTL(m converseModel, lifetime time.Duration) (types.CacheTTL, error) {
 	if lifetime < time.Hour {
 		return "", nil
@@ -639,8 +583,6 @@ func decodeConverse(m converseModel, out *bedrockruntime.ConverseOutput, toOrigi
 
 	switch types.StopReason(stopReason) {
 	case types.StopReasonGuardrailIntervened, types.StopReasonContentFiltered:
-		// The vendor returns its own blocked-content message in the output; it
-		// accompanies ErrRefused rather than reading as an answer.
 		return modelrepo.ChatResult{}, &modelrepo.RefusalError{Provider: "bedrock", Code: stopReason, Text: strings.TrimSpace(text.String())}
 	case types.StopReasonModelContextWindowExceeded:
 		return modelrepo.ChatResult{}, fmt.Errorf("%w: bedrock model %s reported %s", modelrepo.ErrContextLengthExceeded, m.name, stopReason)
@@ -649,8 +591,6 @@ func decodeConverse(m converseModel, out *bedrockruntime.ConverseOutput, toOrigi
 	}
 
 	if text.Len() == 0 && len(toolCalls) == 0 && thinking.Len() == 0 {
-		// A turn that reported why it stopped is a completed turn with nothing
-		// in it; only an unreported reason leaves the outcome unknown.
 		if stopReason == "" {
 			return modelrepo.ChatResult{}, errors.New("bedrock: converse output carried no stop reason")
 		}
@@ -707,11 +647,6 @@ func imageFormatFromMime(mime string) (types.ImageFormat, bool) {
 	}
 }
 
-// toolNameTable maps caller tool names to the vendor's 64-character
-// [a-zA-Z0-9_-]+ namespace and back. Two caller names that sanitize to the same
-// wire name are given distinct wire names, because the vendor treats the wire
-// name as the tool's identity and a collision would make one of them
-// unreachable and misattribute the call it returns.
 type toolNameTable struct {
 	byWire     map[string]string
 	byOriginal map[string]string
@@ -746,7 +681,6 @@ func (t *toolNameTable) wire(original string) string {
 	return name
 }
 
-// declared reports the wire name already assigned to a caller's tool name.
 func (t *toolNameTable) declared(original string) (string, bool) {
 	name, ok := t.byOriginal[original]
 	return name, ok

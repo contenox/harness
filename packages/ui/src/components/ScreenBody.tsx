@@ -1,9 +1,6 @@
 import { cn } from '../utils';
 import type { ReactNode } from 'react';
 
-/**
- * The column every full screen's body is laid out in: one vertical stack on the shared page gutter.
- */
 export function ScreenBody({
   children,
   width = 'full',

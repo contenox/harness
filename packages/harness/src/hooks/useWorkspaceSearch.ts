@@ -7,16 +7,6 @@ import {
 } from '../lib/workspaceSearch';
 import type { WorkspaceSearchMatch } from '../lib/types';
 
-/**
- * The Search tab's state machine over `GET /api/workspace/search` (Arc 2). It
- * owns the 300ms debounce, per-keystroke cancellation (each new query aborts the
- * previous stream), match accumulation grouped by file, and the terminal states
- * the tab renders honestly: `refusal` (422 out-of-bounds root → the boundary
- * notice), `dependency` (501 ripgrep absent → the teaching state), `done` (with
- * `truncated` → the "refine your search" affordance), and `error`. The component
- * owns the input value; this hook owns the search — so the input stays instant
- * (the instant-feel law) while the stream is the async layer behind it.
- */
 
 export type SearchStatus = 'idle' | 'searching' | 'done' | 'refusal' | 'dependency' | 'error';
 
@@ -25,9 +15,7 @@ export interface WorkspaceSearchState {
   groups: SearchFileGroup[];
   matchCount: number;
   truncated: boolean;
-  /** The 422 refusal message, handed to WorkspaceBoundaryNotice (which decides the boundary vs plain copy). */
   refusalMessage?: string;
-  /** A generic (or 501 dependency) failure message. */
   errorMessage?: string;
 }
 
@@ -45,9 +33,7 @@ export interface UseWorkspaceSearchOptions {
   query: string;
   root?: string;
   limit?: number;
-  /** Bump to re-issue the current query (e.g. a retry after a transient error). */
   nonce?: number;
-  /** Injected for tests; forwarded to runWorkspaceSearch. */
   fetchImpl?: SearchFetch;
 }
 
@@ -61,7 +47,6 @@ export function useWorkspaceSearch({
   const [debounced, setDebounced] = useState('');
   const [state, setState] = useState<WorkspaceSearchState>(IDLE);
 
-  // Debounce the raw query into the value the stream keys on.
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed === '') {

@@ -1,16 +1,3 @@
-/**
- * Locale-aware "x ago" for an ISO timestamp: "just now" below 45s, otherwise
- * `Intl.RelativeTimeFormat` rounded to the coarsest sensible unit (minutes,
- * hours, days, months, years). Falls back to the raw string if the timestamp
- * is unparseable. The single shared implementation for every relative-time
- * label in the app — FleetPage (`startedAt`), the mission pages
- * (`lastHeartbeat`, report `createdAt`), and the ACP session sidebar
- * (`updatedAt`) — so they all round the same way. Takes a non-optional ISO
- * string and always returns a string; a caller with an optional timestamp
- * (e.g. the sidebar, which renders nothing for a session with none) checks
- * for absence itself before calling in, rather than this function guessing
- * what "absent" should mean for every caller.
- */
 export function relativeTime(iso: string, locale: string, justNow: string): string {
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return iso;

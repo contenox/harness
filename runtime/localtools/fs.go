@@ -21,25 +21,8 @@ import (
 
 const LocalFSToolsName = "local_fs"
 
-// readBeforeWriteDenial is the LLM-facing message returned when the model tries
-// to mutate an existing file it has not read in this session. The model treats
-// it as a normal tool result and is expected to call read_file then retry. It
-// carries the Rec 5 recoverable-by-correction severity marker like every other
-// correctable local-tools condition.
-//
-// The path substituted here is the project-relative path, not the host
-// absolute path: the schema tells the model paths are relative to the project
-// root, so instructing it to call read_file("/abs/host/path") is an
-// instruction it may not be able to follow.
 const readBeforeWriteDenial = "local_fs: cannot modify existing file %s without reading it first. Call local_fs.read_file(%q) to confirm the current contents, then retry. " + severityRecoverable
 
-// fileUnchangedStub is the tool-result text returned when the model re-reads a
-// file whose content hash is already recorded in this session. The earlier
-// read_file result is still in the conversation context, so re-sending the full
-// content wastes tokens without providing new information.
-//
-// This holds only while that earlier result is still in context. Call
-// InvalidateSessionReads after compaction, or pass force=true.
 const fileUnchangedStub = "File unchanged since last read — the content from your earlier read_file call in this conversation is still current. Pass force=true if you need the content re-sent."
 
 const readBeforeWriteFullReadDenial = "local_fs: cannot overwrite existing file %s after only reading a line range. Call local_fs.read_file(%q) to read the full current contents, then retry. " + severityRecoverable
@@ -49,28 +32,14 @@ const readBeforeWriteStaleReadDenial = "local_fs: cannot modify existing file %s
 type readRequirement int
 
 const (
-	// requireAnyFileRead is enough for targeted mutators such as sed.
 	requireAnyFileRead readRequirement = iota
-	// requireFullFileRead is required for full-file overwrite via write_file.
 	requireFullFileRead
 )
 
-// StatFileIO is an optional interface a FileIO implementation may satisfy to
-// serve metadata lookups. Without it, this package falls back to os.Stat.
-//
-// Previously every stat went straight to os.Stat while reads went through
-// FileIO, so a test injecting a mock FileIO still hit the real filesystem for
-// metadata — the abstraction was only half applied.
 type StatFileIO interface {
 	Stat(ctx context.Context, path string) (os.FileInfo, error)
 }
 
-// LocalFSTools provides direct filesystem access tools.
-//
-// The tool tracks its own per-session read history in the local_fs_reads table
-// so that write_file / sed against an existing file can be blocked unless that
-// file has been read first this session. State ownership lives entirely with
-// this tool — the engine never sees the rule.
 type LocalFSTools struct {
 	allowedDir  string
 	db          libdb.DBManager
@@ -81,18 +50,12 @@ type LocalFSTools struct {
 	fileIOIsOS  bool
 }
 
-// Option customises a LocalFSTools instance.
 type FSOption func(*LocalFSTools)
 
-// WithSQLDialect selects the placeholder style for the read-tracking table.
-// Defaults to DialectSQLite.
 func WithSQLDialect(d SQLDialect) FSOption {
 	return func(h *LocalFSTools) { h.dialect = d }
 }
 
-// NewLocalFSTools creates a new instance of LocalFSTools. db may be nil; when
-// nil, the read-before-write guard degrades to a no-op (used by tests and
-// callers without a DB).
 func NewLocalFSTools(allowedDir string, db libdb.DBManager) taskengine.ToolsRepo {
 	return NewLocalFSToolsWith(allowedDir, db, nil, LocalFSToolsName, nil)
 }
@@ -124,13 +87,6 @@ func NewLocalFSToolsWith(allowedDir string, db libdb.DBManager, io FileIO, name 
 	return h
 }
 
-// Exec handles filesystem tool execution. It is a thin wrapper over
-// execDispatch that stamps every returned error with a fatal-vs-recoverable
-// severity marker (Rec 5, tool-hardening.md): callers can key on
-// "(recoverable: ...)" vs "(fatal: ...)" to decide whether a corrected retry is
-// worthwhile. Soft tool-result strings (read-before-write denials, sed no-match
-// suggestions) carry their own recoverable marker inline and flow through the
-// nil-error path untouched here.
 func (h *LocalFSTools) Exec(ctx context.Context, startTime time.Time, input any, debug bool, toolsCall *taskengine.ToolsCall) (any, taskengine.DataType, error) {
 	res, dt, err := h.execDispatch(ctx, startTime, input, debug, toolsCall)
 	return res, dt, markSeverity(err)
@@ -143,9 +99,6 @@ func (h *LocalFSTools) execDispatch(ctx context.Context, startTime time.Time, in
 
 	args, ok := input.(map[string]any)
 	if !ok {
-		// Declarative `tools` tasks carry their arguments on the ToolsCall
-		// (like local_shell); fall back to them when the chain input isn't an
-		// args map (e.g. chat history flowing through a gated tool task).
 		if len(toolsCall.Args) > 0 {
 			args = make(map[string]any, len(toolsCall.Args))
 			for k, v := range toolsCall.Args {
@@ -212,10 +165,6 @@ func (h *LocalFSTools) execDispatch(ctx context.Context, startTime time.Time, in
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Path handling
-// ---------------------------------------------------------------------------
-
 func (h *LocalFSTools) baseDir(ctx context.Context) (string, error) {
 	if args := h.policyArgs(ctx); len(args) > 0 {
 		if policyDir := strings.TrimSpace(args["_allowed_dir"]); policyDir != "" {
@@ -243,9 +192,6 @@ func (h *LocalFSTools) baseDir(ctx context.Context) (string, error) {
 	return base, nil
 }
 
-// absAllowedDir returns the symlink-resolved base directory for the current
-// call context. Base resolution lives in the vfs package (the single home for
-// workspace-root handling).
 func (h *LocalFSTools) absAllowedDir(ctx context.Context) (string, error) {
 	base, err := h.baseDir(ctx)
 	if err != nil {
@@ -258,11 +204,6 @@ func (h *LocalFSTools) absAllowedDir(ctx context.Context) (string, error) {
 	return resolved, nil
 }
 
-// checkPath verifies that a path is within the allowed directory. Containment —
-// path normalization plus symlink-escape guarding — is delegated to the vfs
-// package so there is a single implementation shared with the /files browse
-// API. A symlink inside the sandbox pointing outside it (e.g. ln -s /etc
-// /allowed/link) is caught before any I/O is performed.
 func (h *LocalFSTools) checkPath(ctx context.Context, path string) (string, error) {
 	base, err := h.baseDir(ctx)
 	if err != nil {
@@ -278,10 +219,6 @@ func (h *LocalFSTools) checkPath(ctx context.Context, path string) (string, erro
 	return resolved, nil
 }
 
-// displayPath renders an absolute path the way the model is expected to
-// address it: relative to the workspace root, forward-slashed. Every
-// model-facing message uses this so the paths in errors are paths the model can
-// paste straight back into the next call.
 func (h *LocalFSTools) displayPath(ctx context.Context, absPath string) string {
 	base, err := h.absAllowedDir(ctx)
 	if err != nil {
@@ -294,8 +231,6 @@ func (h *LocalFSTools) displayPath(ctx context.Context, absPath string) string {
 	return filepath.ToSlash(rel)
 }
 
-// stat routes metadata lookups through the FileIO abstraction when it supports
-// them, and to the OS otherwise.
 func (h *LocalFSTools) stat(ctx context.Context, absPath string) (os.FileInfo, error) {
 	if s, ok := h.fileIO.(StatFileIO); ok {
 		return s.Stat(ctx, absPath)
@@ -342,9 +277,6 @@ func (h *LocalFSTools) precheckFullRead(ctx context.Context, absPath string) err
 	return h.checkFileSizeLimit(ctx, absPath)
 }
 
-// refuseBinary rejects a content-consuming call against a file that sniffs as
-// binary. Called before the file is loaded, so a 50 MB executable costs 512
-// bytes of I/O rather than a full read that is then discarded.
 func (h *LocalFSTools) refuseBinary(ctx context.Context, tool, displayPath, absPath string) error {
 	binary, err := sniffBinaryFile(absPath)
 	if err != nil || !binary {
@@ -373,9 +305,6 @@ func (h *LocalFSTools) checkToolOutputLimit(ctx context.Context, tool string, pa
 	return nil
 }
 
-// notFound builds a recoverable not-found error with a fuzzy "Did you mean:"
-// clause over the parent directory's entries (Rec 7). Suggestion only — the tool
-// never acts on a fuzzy match (the fuzzy law).
 func (h *LocalFSTools) notFound(tool, userPath, absPath string) error {
 	msg := fmt.Sprintf("local_fs: %s: %s does not exist", tool, userPath)
 	if hint := didYouMean(filepath.Dir(absPath), filepath.Base(absPath)); hint != "" {
@@ -384,8 +313,6 @@ func (h *LocalFSTools) notFound(tool, userPath, absPath string) error {
 	return recoverablef("%s", msg)
 }
 
-// resolveTarget performs the containment check, the denied-substring check, and
-// the stat that nearly every tool needs, in one place.
 func (h *LocalFSTools) resolveTarget(ctx context.Context, tool, path string) (absPath, display string, info os.FileInfo, err error) {
 	absPath, err = h.checkPath(ctx, path)
 	if err != nil {
@@ -405,10 +332,6 @@ func (h *LocalFSTools) resolveTarget(ctx context.Context, tool, path string) (ab
 	return absPath, display, info, nil
 }
 
-// ---------------------------------------------------------------------------
-// read_file / read_file_range
-// ---------------------------------------------------------------------------
-
 func (h *LocalFSTools) readFile(ctx context.Context, args map[string]any) (any, taskengine.DataType, error) {
 	path, ok := argString(args, "path")
 	if !ok {
@@ -424,9 +347,6 @@ func (h *LocalFSTools) readFile(ctx context.Context, args map[string]any) (any, 
 			"local_fs: read_file: %s is a directory (%s); use list_dir", display, describePathForError(absPath, info))
 	}
 
-	// Rec 4: read_file gained optional start_line/end_line, so a truncated read
-	// can name "use start_line: N" actionable on the SAME tool. When either is
-	// present this is a ranged (paging) read, delegated to the shared reader.
 	if _, hasStart := argFloat(args, "start_line"); hasStart {
 		return h.readFileRange(ctx, args)
 	}
@@ -434,8 +354,6 @@ func (h *LocalFSTools) readFile(ctx context.Context, args map[string]any) (any, 
 		return h.readFileRange(ctx, args)
 	}
 
-	// Sniff before loading: a 512-byte read settles this, whereas sniffing the
-	// already-loaded buffer saves the context but not the I/O.
 	if err := h.refuseBinary(ctx, "read_file", display, absPath); err != nil {
 		return nil, taskengine.DataTypeAny, err
 	}
@@ -443,8 +361,6 @@ func (h *LocalFSTools) readFile(ctx context.Context, args map[string]any) (any, 
 	outLimit, unlimitedOut := h.maxOutputBytesFromPolicy(ctx)
 	readLimit, unlimitedRead := h.maxReadBytesFromPolicy(ctx)
 
-	// A file larger than the read cap cannot be loaded whole. Rec 4: don't dump
-	// a partial; name the exact next step.
 	if !unlimitedRead && info.Size() > readLimit {
 		return nil, taskengine.DataTypeAny, recoverablef(
 			"local_fs: read_file: %s is %s (%d bytes), over the %d-byte read cap; read a portion with read_file start_line/end_line (e.g. start_line: 1), or raise _max_read_bytes in tools_policies.local_fs to load the whole file",
@@ -455,16 +371,12 @@ func (h *LocalFSTools) readFile(ctx context.Context, args map[string]any) (any, 
 	if err != nil {
 		return nil, taskengine.DataTypeAny, fmt.Errorf("local_fs: failed to read file: %w", err)
 	}
-	// Belt and braces: a file whose first 512 bytes are ASCII but whose body is
-	// not still should not reach the transcript.
 	if isBinarySample(sniffPrefix(content)) {
 		return nil, taskengine.DataTypeAny, recoverablef(
 			"local_fs: read_file: refusing to read %s: binary file (%s). Use stat_file or shell tools for binaries.",
 			display, fileSizeAndExecFlag(info))
 	}
 
-	// Dedup: if this session has already read this exact file version, return a
-	// stub instead of re-sending the full content.
 	force, _ := argBool(args, "force")
 	hash := contentHash(content)
 	if !force && !h.readTrackingDisabled(ctx) && h.hasCurrentFullRead(ctx, absPath, hash) {
@@ -473,11 +385,6 @@ func (h *LocalFSTools) readFile(ctx context.Context, args map[string]any) (any, 
 
 	out := string(content)
 	if !unlimitedOut && int64(len(out)) > outLimit {
-		// Rec 4: never truncate silently. Return a line-based head that fits the
-		// output cap and name the exact next step. The file on disk is its own
-		// durable copy, so read_file does not spool — the model pages forward
-		// with start_line. Records a RANGE read only: a truncated read has not
-		// seen the whole file, so it must not authorize a blind overwrite.
 		head, lastLine, nextLine, _ := streamRange(bytes.NewReader(content), 1, math.MaxInt, outLimit)
 		total := countTextLines(out)
 		h.recordRangeRead(ctx, absPath, content)
@@ -528,24 +435,16 @@ func (h *LocalFSTools) readFileRange(ctx context.Context, args map[string]any) (
 		budget = outLimit
 	}
 
-	// Over the read cap: stream the requested range without loading the whole
-	// file (Rec 4). No read marker recorded — an over-cap file cannot be loaded
-	// for mutation, so the read-before-write gate is moot for it.
 	if !unlimitedRead && info.Size() > readLimit {
 		f, err := os.Open(absPath)
 		if err != nil {
 			return nil, taskengine.DataTypeAny, fmt.Errorf("local_fs: read_file_range open: %w", err)
 		}
 		defer f.Close()
-		// streamRange reports lastLine/nextLine as ABSOLUTE file line numbers
-		// when fed the file from its start with a start offset.
 		out, lastLine, nextLine, sErr := streamRange(f, start, end, budget)
 		if sErr != nil {
 			return nil, taskengine.DataTypeAny, fmt.Errorf("local_fs: read_file_range stream: %w", sErr)
 		}
-		// Only a BUDGET-driven early stop is a truncation: reaching the
-		// requested end_line returned exactly what was asked for, even though
-		// the file continues past it.
 		if nextLine != 0 && lastLine < end {
 			out += fmt.Sprintf(
 				"\n\nlocal_fs: read_file_range truncated — showed lines %d-%d; output capped at %d bytes. To read the next page call read_file with start_line: %d. %s",
@@ -572,10 +471,7 @@ func (h *LocalFSTools) readFileRange(ctx context.Context, args map[string]any) (
 	out := strings.Join(lines[start-1:e], "\n")
 	h.recordRangeRead(ctx, absPath, content)
 
-	// Rec 4: truncate-and-continue on the output cap rather than erroring.
 	if budget > 0 && int64(len(out)) > budget {
-		// Here streamRange is fed the extracted range starting at line 1, so
-		// its line numbers are RELATIVE to `start` and must be rebased.
 		head, lastLine, nextLine, _ := streamRange(bytes.NewReader([]byte(out)), 1, math.MaxInt, budget)
 		absNext := start + nextLine - 1
 		notice := fmt.Sprintf(
@@ -585,10 +481,6 @@ func (h *LocalFSTools) readFileRange(ctx context.Context, args map[string]any) (
 	}
 	return out, taskengine.DataTypeString, nil
 }
-
-// ---------------------------------------------------------------------------
-// write_file / sed
-// ---------------------------------------------------------------------------
 
 type FsWriteResult struct {
 	Path      string `json:"path"`
@@ -651,8 +543,6 @@ func (h *LocalFSTools) writeFile(ctx context.Context, args map[string]any) (any,
 	if gate.denied {
 		return gate.denial, taskengine.DataTypeString, nil
 	}
-	// gate already read the file to validate its hash; reuse those bytes
-	// instead of reading a second time.
 	oldBytes := gate.content
 
 	if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
@@ -662,11 +552,6 @@ func (h *LocalFSTools) writeFile(ctx context.Context, args map[string]any) (any,
 		return nil, taskengine.DataTypeAny, fmt.Errorf("local_fs: failed to create directories: %w", err)
 	}
 
-	// Close the validate-then-overwrite window as far as a single process can:
-	// re-hash immediately before replacing the bytes. Skipped when read
-	// tracking is off (no DB or no session, e.g. one-shot `contenox run`),
-	// where there is no read-before-write contract to enforce and a blind
-	// write is the expected behaviour.
 	if gate.exists && gate.verified && !h.readTrackingDisabled(ctx) {
 		if unchanged, _ := h.confirmUnchanged(ctx, absPath, gate.hash); !unchanged {
 			h.invalidateReads(ctx, absPath)
@@ -694,10 +579,6 @@ func (h *LocalFSTools) writeFile(ctx context.Context, args map[string]any) (any,
 	}, taskengine.DataTypeJSON, nil
 }
 
-// occurrenceLines reports the 1-based line numbers on which pattern occurs,
-// capped at max entries. lineOffset rebases the numbers onto the whole file
-// when text is a scoped window rather than the full contents — reporting
-// window-relative line numbers would send the model looking in the wrong place.
 func occurrenceLines(text, pattern string, lineOffset, max int) []int {
 	var out []int
 	for i, line := range strings.Split(text, "\n") {
@@ -754,8 +635,6 @@ func (h *LocalFSTools) sed(ctx context.Context, args map[string]any) (any, taske
 	content := gate.content
 	oldText := string(content)
 
-	// Optional line-range scoping, so an edit located with grep can be applied
-	// exactly where it was found.
 	lines := strings.Split(oldText, "\n")
 	scopeStart, scopeEnd := 1, len(lines)
 	if v, ok := argInt(args, "start_line"); ok && v > 1 {
@@ -777,9 +656,6 @@ func (h *LocalFSTools) sed(ctx context.Context, args map[string]any) (any, taske
 	count := strings.Count(window, pattern)
 
 	if count == 0 {
-		// Rec 7 + the fuzzy law: the pattern was not found. SUGGEST the nearest
-		// actual lines and DO NOT mutate — a fuzzy match must never be applied
-		// silently, because a misplaced edit is corruption.
 		msg := fmt.Sprintf(
 			"local_fs: sed: pattern %q not found in %s — file left unchanged; correct the pattern and retry. %s",
 			pattern, display, severityRecoverable)
@@ -789,14 +665,6 @@ func (h *LocalFSTools) sed(ctx context.Context, args map[string]any) (any, taske
 		return msg, taskengine.DataTypeString, nil
 	}
 
-	// Ambiguity is refused rather than resolved.
-	//
-	// Unconditional ReplaceAll is the single most dangerous behaviour a
-	// string-replace edit tool can have: replacing a common identifier silently
-	// rewrites every call site and reports the damage only afterwards, in a
-	// count the model has no baseline to judge. Requiring an explicit
-	// all=true or expect_replacements=N makes a wide edit a decision rather
-	// than an accident.
 	switch {
 	case hasExpected && count != expected:
 		at := occurrenceLines(window, pattern, scopeStart-1, 5)
@@ -852,10 +720,6 @@ func (h *LocalFSTools) sed(ctx context.Context, args map[string]any) (any, taske
 	}, taskengine.DataTypeJSON, nil
 }
 
-// ---------------------------------------------------------------------------
-// list_dir
-// ---------------------------------------------------------------------------
-
 func (h *LocalFSTools) entryFilterFor(ctx context.Context, absRoot string) entryFilter {
 	f := entryFilter{
 		skipDirs:   h.skipDirNamesFromPolicy(ctx),
@@ -910,15 +774,11 @@ func (h *LocalFSTools) listDir(ctx context.Context, args map[string]any) (any, t
 	if unlimited {
 		budget = 0
 	}
-	// Leave headroom for the truncation notice itself, so appending it cannot
-	// push the result back over the cap.
 	if budget > 1024 {
 		budget -= 512
 	}
 
 	filter := h.entryFilterFor(ctx, absRoot)
-	// The base for relative paths used by gitignore matching is the workspace
-	// root, not the listed subdirectory.
 	baseRoot, baseErr := h.absAllowedDir(ctx)
 	if baseErr != nil {
 		baseRoot = absRoot
@@ -935,9 +795,6 @@ func (h *LocalFSTools) listDir(ctx context.Context, args map[string]any) (any, t
 			return nil, taskengine.DataTypeAny, err
 		}
 	} else {
-		// The non-recursive listing returns bare entry names rather than paths
-		// relative to the project root — same as it always has, so existing
-		// callers and fixtures are unaffected.
 		if err := h.listOneLevel(ctx, absRoot, baseRoot, filter, c); err != nil {
 			return nil, taskengine.DataTypeAny, err
 		}
@@ -958,8 +815,6 @@ func (h *LocalFSTools) listDir(ctx context.Context, args map[string]any) (any, t
 	return out, taskengine.DataTypeString, nil
 }
 
-// listOneLevel renders a single directory level as bare entry names, applying
-// the same filters and byte budget as the recursive walk.
 func (h *LocalFSTools) listOneLevel(ctx context.Context, absRoot, baseRoot string, filter entryFilter, c *listCollector) error {
 	entries, err := os.ReadDir(absRoot)
 	if err != nil {
@@ -996,14 +851,6 @@ func (h *LocalFSTools) listOneLevel(ctx context.Context, absRoot, baseRoot strin
 	return nil
 }
 
-// walkListDir appends entries to the collector, one per line, directories
-// ending in '/'. Paths are rendered relative to the argument the caller passed
-// to list_dir, so they can be fed straight back into another call.
-//
-// Symlinks are never followed: os.ReadDir reports a symlinked directory with
-// IsDir() == false, so the walk cannot leave the tree it started in and no
-// per-entry containment re-check is needed. Hoisting that check out of the loop
-// removes several syscalls per file from every listing.
 func (h *LocalFSTools) walkListDir(
 	ctx context.Context,
 	listRootArg, curAbs, baseRoot, relFromListRoot string,
@@ -1013,8 +860,6 @@ func (h *LocalFSTools) walkListDir(
 ) error {
 	entries, err := os.ReadDir(curAbs)
 	if err != nil {
-		// An unreadable subdirectory should not abort a listing that is
-		// otherwise useful; the top-level call already verified the root.
 		if depth > 1 {
 			return nil
 		}
@@ -1074,12 +919,6 @@ func (h *LocalFSTools) walkListDir(
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// grep / find_files / count_stats / stat_file
-// ---------------------------------------------------------------------------
-
-// grepLineRange returns 1-based inclusive [start, end] line numbers to search
-// within numLines total lines.
 func grepLineRange(args map[string]any, numLines int) (start, end int) {
 	start = 1
 	end = numLines
@@ -1165,7 +1004,7 @@ func (h *LocalFSTools) grep(ctx context.Context, args map[string]any) (any, task
 		matches   []string
 		size      int64
 		truncated bool
-		hitCap    bool // stopped on _max_grep_matches rather than the byte budget
+		hitCap    bool
 		lastLine  = end
 	)
 	for lineNo := start; lineNo <= end; lineNo++ {
@@ -1183,11 +1022,6 @@ func (h *LocalFSTools) grep(ctx context.Context, args map[string]any) (any, task
 			continue
 		}
 		entry := fmt.Sprintf("%d: %s", lineNo, line)
-		// Truncate rather than discard.
-		//
-		// Hitting the cap used to return an error, throwing away every match
-		// already found — the model paid for the search and got nothing back,
-		// not even the knowledge of where the matches started.
 		if budget > 0 && size+int64(len(entry)+1) > budget {
 			truncated = true
 			lastLine = lineNo - 1
@@ -1212,9 +1046,6 @@ func (h *LocalFSTools) grep(ctx context.Context, args map[string]any) (any, task
 		if len(matches) == 1 {
 			noun = "match"
 		}
-		// Name the policy key that caused the stop, not just the resume line:
-		// an operator reading this needs to know which knob to turn, and that
-		// pointer is the one thing the previous hard-error version got right.
 		reason := fmt.Sprintf("output capped at %d bytes (raise _max_output_bytes or _model_context_tokens in tools_policies.local_fs)", budget)
 		if hitCap {
 			reason = fmt.Sprintf("hit the %d-match cap (raise _max_grep_matches in tools_policies.local_fs)", maxMatches)
@@ -1226,10 +1057,6 @@ func (h *LocalFSTools) grep(ctx context.Context, args map[string]any) (any, task
 	return out, taskengine.DataTypeString, nil
 }
 
-// findFiles implements find_files: glob-pattern path discovery under the
-// project root. The pattern is matched against the file basename (e.g. "*.go")
-// or, when it contains a path separator, against the path relative to the
-// search root.
 func (h *LocalFSTools) findFiles(ctx context.Context, args map[string]any) (any, taskengine.DataType, error) {
 	pattern, ok := argString(args, "pattern")
 	if !ok || pattern == "" {
@@ -1262,7 +1089,7 @@ func (h *LocalFSTools) findFiles(ctx context.Context, args map[string]any) (any,
 
 	walkErr := filepath.WalkDir(absRoot, func(walkPath string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil // skip unreadable entries
+			return nil
 		}
 		if truncated {
 			return filepath.SkipAll
@@ -1283,9 +1110,6 @@ func (h *LocalFSTools) findFiles(ctx context.Context, args map[string]any) (any,
 		}
 
 		if d.IsDir() {
-			// find_files previously ignored _denied_path_substrings entirely
-			// and had no depth bound, so it could enumerate paths that
-			// read_file would refuse to open.
 			if filter.skip(relFromBase, d.Name(), true) {
 				return filepath.SkipDir
 			}
@@ -1388,9 +1212,6 @@ func (h *LocalFSTools) statFile(ctx context.Context, args map[string]any) (any, 
 		return nil, taskengine.DataTypeAny, err
 	}
 
-	// binary is only meaningful (and only sniffed) for regular files; a
-	// directory or other special file is never "binary" in the sense a model
-	// asking whether it is safe to read_file cares about.
 	binary := false
 	if info.Mode().IsRegular() {
 		if b, sniffErr := sniffBinaryFile(absPath); sniffErr == nil {

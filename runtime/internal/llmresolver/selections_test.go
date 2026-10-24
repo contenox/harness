@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Two backends serving the same model must both survive candidate filtering
-// so resolution can fail over between them.
 func TestUnit_ChatSelections_KeepsSameModelOnDistinctBackends(t *testing.T) {
 	providers := []modelrepo.Provider{
 		&modelrepo.MockProvider{
@@ -47,8 +45,6 @@ func TestUnit_ChatSelections_KeepsSameModelOnDistinctBackends(t *testing.T) {
 	require.True(t, backends["https://global.example/v1"])
 }
 
-// The ordered selections must start with the policy's pick and cover every
-// remaining (provider, backend) pair exactly once.
 func TestUnit_StreamSelections_PolicyPickFirstThenAlternates(t *testing.T) {
 	pinned := &modelrepo.MockProvider{
 		ID:            "vertex-google:gemini-test",

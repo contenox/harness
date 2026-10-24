@@ -22,12 +22,8 @@ type PromptRequest struct {
 	AgentsMD       string
 	AgentsMDSource string
 
-	// Per-turn context artifacts from Beam ({artifacts: []ChatContextArtifact-like}),
-	// injected into the model-visible user message by ComposeUserInput.
 	Context map[string]any
 
-	// ChainRef is the chain path used for this turn (e.g. "default-chain.json").
-	// Stamped onto persisted messages as turn provenance; not used for execution.
 	ChainRef string
 }
 

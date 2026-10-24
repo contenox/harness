@@ -28,11 +28,6 @@ type mistralInvokeResponse struct {
 	} `json:"outputs"`
 }
 
-// mistralTextCompletionModels are the Mistral model ids whose own vendor page
-// documents the text-completion body this client sends; every other Mistral
-// model on Bedrock documents the chat-completion body or the Converse API, and
-// mistral.mistral-large-2407-v1:0 in particular documents both chat completion
-// and the Converse API and not the body below.
 var mistralTextCompletionModels = map[string]bool{
 	"mistral.mistral-7b-instruct-v0:2":   true,
 	"mistral.mixtral-8x7b-instruct-v0:1": true,

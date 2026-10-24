@@ -4,9 +4,6 @@ import './monacoBootstrap';
 import { languageForPath } from './fileLanguage';
 import { defineCanvasMonacoThemes, useCanvasMonacoTheme } from './monacoTheme';
 
-/**
- * MonacoView renders an editable or read-only source document with local workers and themes.
- */
 export default function MonacoView({
   value,
   path,

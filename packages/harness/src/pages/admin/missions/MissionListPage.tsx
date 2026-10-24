@@ -19,23 +19,10 @@ import { useMissions } from '../../../hooks/useMissions';
 import type { InstanceStatus } from '../../../lib/types';
 import { blockedMissionIds } from '../../../lib/unitStatus';
 
-/**
- * Mission mode's list surface (docs/development/blueprints/acp/
- * fleet-consolidation.md, "Mission mode", slice M2): every fired mission,
- * intent first — what a unit was sent to do matters more than its process
- * state. Each mission renders as a generous single-column row rather than a
- * table crushed into a column, and its status is the ONE composed truth
- * (`UnitStatus`) — process state (joined from the fleet), verdict, liveness,
- * and blocker — so the same unit no longer reads one way here and another way
- * on the board.
- */
 export default function MissionListPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data, isLoading, error, refetch } = useMissions();
-  // Joined only to show the unit's live process state next to its mission
-  // verdict — the reconciliation the composed status exists for. A missing
-  // fleet feed degrades to "no process chip", never breaks the list.
   const fleetQuery = useFleet();
   const inboxReports = useInboxReports();
 

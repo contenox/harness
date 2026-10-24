@@ -1,15 +1,4 @@
 #!/usr/bin/env python3
-"""Publish the reviewed product capture to the content-addressed website media bucket.
-
-Media never enters the repository. The bucket is immutable: every object name
-carries the SHA-256 of its bytes, so a reference can never point at different
-content. This writes src/data/showcase.json only after the public object has
-been read back and verified byte-for-byte.
-
-    python3 tools/publish-showcase.py \
-        --poster /tmp/contenox-harness-workbench-poster.webp \
-        [--webm ... --mp4 ...]
-"""
 
 import argparse
 import hashlib

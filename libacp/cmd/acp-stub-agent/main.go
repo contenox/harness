@@ -1,7 +1,3 @@
-// Command acp-stub-agent is a hermetic ACP Agent used to validate libacp's
-// agent-side wire dispatch against ACP conformance clients, without any LLM
-// backend. It speaks ACP v1 over stdio like the production `contenox
-// acp`/`acpx` commands, but every response is deterministic and in-memory.
 package main
 
 import (
@@ -215,9 +211,6 @@ func (a *stubAgent) NewSession(ctx context.Context, req libacp.NewSessionRequest
 	}
 	a.mu.Unlock()
 
-	// Deferred via AfterResponse so the update reaches the client strictly
-	// after session/new — a conformant client would otherwise drop it as
-	// referencing an unknown session id.
 	if a.advertiseCommands {
 		libacp.AfterResponse(ctx, func() {
 			_ = a.conn.SessionUpdate(libacp.SessionNotification{
@@ -230,8 +223,6 @@ func (a *stubAgent) NewSession(ctx context.Context, req libacp.NewSessionRequest
 		})
 	}
 
-	// Emitted as a deferred config_option_update after session/new (options
-	// absent from the response itself) to exercise the pre-bind caching path.
 	if a.advertiseConfigOptionsAfterNew {
 		libacp.AfterResponse(ctx, func() {
 			_ = a.conn.SessionUpdate(libacp.SessionNotification{
@@ -245,7 +236,6 @@ func (a *stubAgent) NewSession(ctx context.Context, req libacp.NewSessionRequest
 	}
 
 	resp := libacp.NewSessionResponse{SessionID: id}
-	// Carried IN the session/new response (opt-in, default off).
 	if a.advertiseModes {
 		resp.Modes = stubModeState()
 	}
@@ -258,8 +248,6 @@ func (a *stubAgent) NewSession(ctx context.Context, req libacp.NewSessionRequest
 	return resp, nil
 }
 
-// SetSessionConfigOption honors the deterministic "verbosity" option when
-// advertised, reporting MethodNotFound otherwise.
 func (a *stubAgent) SetSessionConfigOption(ctx context.Context, req libacp.SetSessionConfigOptionRequest) (libacp.SetSessionConfigOptionResponse, error) {
 	if !a.advertiseConfigOptions {
 		return libacp.SetSessionConfigOptionResponse{}, libacp.MethodNotFound(libacp.MethodSessionSetConfigOption)
@@ -282,7 +270,6 @@ func (a *stubAgent) SetSessionConfigOption(ctx context.Context, req libacp.SetSe
 		return libacp.SetSessionConfigOptionResponse{}, libacp.InvalidParams("unknown sessionId: " + string(req.SessionID))
 	}
 
-	// Deferred so the confirming notification reaches the wire after this response.
 	libacp.AfterResponse(ctx, func() {
 		_ = a.conn.SessionUpdate(libacp.SessionNotification{
 			SessionID: req.SessionID,
@@ -307,7 +294,6 @@ func (a *stubAgent) SetSessionMode(ctx context.Context, req libacp.SetSessionMod
 		return libacp.SetSessionModeResponse{}, libacp.InvalidParams("unknown sessionId: " + string(req.SessionID))
 	}
 
-	// Deferred so the confirming notification reaches the wire after this response.
 	libacp.AfterResponse(ctx, func() {
 		_ = a.conn.SessionUpdate(libacp.SessionNotification{
 			SessionID: req.SessionID,
@@ -321,8 +307,6 @@ func (a *stubAgent) SetSessionMode(ctx context.Context, req libacp.SetSessionMod
 	return libacp.SetSessionModeResponse{}, nil
 }
 
-// SetSessionModel honors the deterministic model picker when advertised,
-// reporting MethodNotFound otherwise.
 func (a *stubAgent) SetSessionModel(_ context.Context, req libacp.SetSessionModelRequest) (libacp.SetSessionModelResponse, error) {
 	if !a.advertiseModels {
 		return libacp.SetSessionModelResponse{}, libacp.MethodNotFound(libacp.MethodSessionSetModel)
@@ -455,9 +439,7 @@ func (a *stubAgent) promptTerminal(ctx context.Context, req libacp.PromptRequest
 
 	createResp, err := a.conn.CreateTerminal(ctx, libacp.CreateTerminalRequest{
 		SessionID: req.SessionID,
-		// Full command line in `command` with no args, piped, so the round
-		// trip proves word-splitting and pipes survive the bridge's shell wrap.
-		Command: "echo stub-terminal-$((6*7)) | cat",
+		Command:   "echo stub-terminal-$((6*7)) | cat",
 	})
 	if err != nil {
 		return a.terminalReport(req, "termcap=true create-error="+err.Error())
@@ -678,8 +660,6 @@ func (a *stubAgent) promptCallbacks(ctx context.Context, req libacp.PromptReques
 		},
 	})
 	if err != nil {
-		// A session/cancel mid-call surfaces as ctx cancellation; propagate it
-		// so the turn resolves with stopReason "cancelled" instead of an error.
 		if ctx.Err() != nil {
 			return libacp.PromptResponse{}, ctx.Err()
 		}

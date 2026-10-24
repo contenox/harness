@@ -18,9 +18,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo/ollama"
 )
 
-// ollamaStub serves the vendor's endpoints from a scripted transcript and keeps
-// every request body it received, so a test asserts the bytes a real Ollama
-// server would have seen.
 type ollamaStub struct {
 	show      string
 	responses map[string][]string
@@ -82,9 +79,6 @@ func ollamaProvider(t *testing.T, srv *httptest.Server, model string, caps model
 	return ollama.NewOllamaProvider(model, []string{srv.URL}, srv.Client(), caps, "", nil)
 }
 
-// A generation that fails after the response headers arrives as a 200 whose
-// NDJSON line is the vendor's error object; a decoder that only knows the
-// success shape reports the truncated turn instead of the failure.
 func TestSystem_OllamaChat_SurfacesAnInBandStreamError(t *testing.T) {
 	stub := &ollamaStub{responses: map[string][]string{
 		"/api/chat": {
@@ -107,9 +101,6 @@ func TestSystem_OllamaChat_SurfacesAnInBandStreamError(t *testing.T) {
 	}
 }
 
-// The empty answer and the failed answer stay different answers: the vendor's
-// own overflow wording inside a stream reaches the typed sentinel a caller
-// retries on.
 func TestSystem_OllamaChat_ClassifiesAnInBandStreamError(t *testing.T) {
 	stub := &ollamaStub{responses: map[string][]string{
 		"/api/chat": {`{"error":"the input length exceeds the context length"}`},
@@ -126,8 +117,6 @@ func TestSystem_OllamaChat_ClassifiesAnInBandStreamError(t *testing.T) {
 	}
 }
 
-// The vendor reports the prompt tokens served from its cache beside the total,
-// and the accounting that reaches the caller carries both.
 func TestUnit_OllamaChat_ReportsPromptCacheReads(t *testing.T) {
 	stub := &ollamaStub{responses: map[string][]string{
 		"/api/chat": {`{"model":"m","message":{"role":"assistant","content":"ok"},"done":true,"done_reason":"stop","prompt_eval_count":100,"prompt_eval_cached_count":64,"eval_count":7}`},
@@ -153,7 +142,6 @@ func TestUnit_OllamaChat_ReportsPromptCacheReads(t *testing.T) {
 	}
 }
 
-// The same accounting must reach the streamed terminal.
 func TestUnit_OllamaStream_ReportsPromptCacheReads(t *testing.T) {
 	stub := &ollamaStub{responses: map[string][]string{
 		"/api/chat": {
@@ -188,9 +176,6 @@ func TestUnit_OllamaStream_ReportsPromptCacheReads(t *testing.T) {
 	}
 }
 
-// A model whose own capability list carries `insert` is filled in by the
-// server: the request carries the source and its suffix, and raw mode stays off
-// so the template that renders the fill-in-the-middle tokens still applies.
 func TestSystem_OllamaAutocomplete_SendsTheSuffixToAnInsertModel(t *testing.T) {
 	stub := &ollamaStub{
 		show: `{"capabilities":["completion","insert"],"model_info":{"llama.context_length":8192}}`,
@@ -232,8 +217,6 @@ func TestSystem_OllamaAutocomplete_SendsTheSuffixToAnInsertModel(t *testing.T) {
 	}
 }
 
-// Without the vendor's insert capability the caller's declared token contract
-// is rendered locally, exactly as before.
 func TestSystem_OllamaAutocomplete_RendersTheDeclaredTokenContract(t *testing.T) {
 	stub := &ollamaStub{
 		show: `{"capabilities":["completion"]}`,
@@ -274,8 +257,6 @@ func TestSystem_OllamaAutocomplete_RendersTheDeclaredTokenContract(t *testing.T)
 	}
 }
 
-// The catalogue derives the fill-in-the-middle capability from the model's own
-// declaration rather than from a name or an operator guess.
 func TestSystem_OllamaCatalog_DerivesTheInsertCapability(t *testing.T) {
 	stub := &ollamaStub{
 		show: `{"capabilities":["completion","insert"],"model_info":{"llama.context_length":4096}}`,
@@ -298,9 +279,6 @@ func TestSystem_OllamaCatalog_DerivesTheInsertCapability(t *testing.T) {
 	}
 }
 
-// A server that reports `insert` is observed with a resolvable completion
-// contract, and the provider built from that observation serves the role's
-// verification as a non-raw, non-streamed prompt-and-suffix generate.
 func TestSystem_OllamaCatalog_InsertModelCarriesACompletionContractAndServesIt(t *testing.T) {
 	stub := &ollamaStub{
 		show: `{"capabilities":["completion","insert","tools"],"model_info":{"llama.context_length":8192}}`,
@@ -355,8 +333,6 @@ func TestSystem_OllamaCatalog_InsertModelCarriesACompletionContractAndServesIt(t
 	}
 }
 
-// The window /api/show reports is requested on every turn, so a generation runs
-// in the window the catalogue measured instead of the Modelfile default.
 func TestSystem_OllamaChat_RequestsTheDeclaredContextWindow(t *testing.T) {
 	stub := &ollamaStub{responses: map[string][]string{
 		"/api/chat": {`{"model":"m","message":{"role":"assistant","content":"ok"},"done":true,"done_reason":"stop"}`},
@@ -379,9 +355,6 @@ func TestSystem_OllamaChat_RequestsTheDeclaredContextWindow(t *testing.T) {
 	}
 }
 
-// A nested JSON Schema `required` is part of the tool contract the model
-// receives; dropping it changes which arguments the model believes are
-// mandatory.
 func TestSystem_OllamaChat_KeepsNestedToolRequired(t *testing.T) {
 	stub := &ollamaStub{responses: map[string][]string{
 		"/api/chat": {`{"model":"m","message":{"role":"assistant","content":"ok"},"done":true,"done_reason":"stop"}`},
@@ -433,8 +406,6 @@ func TestSystem_OllamaChat_KeepsNestedToolRequired(t *testing.T) {
 	}
 }
 
-// Which level may be sent is the model's own declaration, and `max` is one of
-// the vendor's levels.
 func TestSystem_OllamaChat_SendsTheDeclaredThinkingLevel(t *testing.T) {
 	stub := &ollamaStub{responses: map[string][]string{
 		"/api/chat": {`{"model":"m","message":{"role":"assistant","content":"ok"},"done":true,"done_reason":"stop"}`},
@@ -458,8 +429,6 @@ func TestSystem_OllamaChat_SendsTheDeclaredThinkingLevel(t *testing.T) {
 	}
 }
 
-// The vendor documents `format` as the literal "json" or a JSON schema, and the
-// neutral structured-output control now reaches it.
 func TestSystem_OllamaChat_SendsStructuredOutputFormat(t *testing.T) {
 	stub := &ollamaStub{responses: map[string][]string{
 		"/api/chat": {`{"model":"m","message":{"role":"assistant","content":"{}"},"done":true,"done_reason":"stop"}`},
@@ -489,8 +458,6 @@ func TestSystem_OllamaChat_SendsStructuredOutputFormat(t *testing.T) {
 	}
 }
 
-// The vendor omits done_reason on documented successful streams; reading its
-// absence as a failure turns a good turn into an error.
 func TestSystem_OllamaChat_AcceptsAnAbsentDoneReason(t *testing.T) {
 	stub := &ollamaStub{responses: map[string][]string{
 		"/api/chat": {`{"model":"m","message":{"role":"assistant","content":"ok"},"done":true}`},
@@ -510,8 +477,6 @@ func TestSystem_OllamaChat_AcceptsAnAbsentDoneReason(t *testing.T) {
 	}
 }
 
-// A manifest list resolves to one entry per child manifest under one tag; the
-// server's own `selected` manifest is the one the tag names.
 func TestSystem_OllamaCatalog_KeepsTheSelectedManifestOfAManifestList(t *testing.T) {
 	stub := &ollamaStub{
 		show: `{"capabilities":["completion"],"model_info":{"llama.context_length":4096},"manifests":[{"runner":"cpu","selected":false},{"runner":"cuda","selected":true}]}`,
@@ -537,8 +502,6 @@ func TestSystem_OllamaCatalog_KeepsTheSelectedManifestOfAManifestList(t *testing
 	}
 }
 
-// A model the backend just listed and can no longer describe is a backend
-// fault, not a model without capabilities.
 func TestSystem_OllamaCatalog_ReportsAFailedModelDescription(t *testing.T) {
 	stub := &ollamaStub{
 		status: map[string]int{"/api/show": http.StatusInternalServerError},
@@ -561,9 +524,6 @@ func TestSystem_OllamaCatalog_ReportsAFailedModelDescription(t *testing.T) {
 	}
 }
 
-// An ordinary turn carries only members the vendor defines: the extension
-// members this repository adds stay off the wire unless their extension is in
-// use.
 func TestUnit_OllamaChat_CarriesNoExtensionMembersByDefault(t *testing.T) {
 	stub := &ollamaStub{responses: map[string][]string{
 		"/api/chat": {`{"model":"m","message":{"role":"assistant","content":"ok"},"done":true,"done_reason":"stop"}`},

@@ -29,7 +29,7 @@ func setupServiceDB(t *testing.T) (context.Context, libdb.DBManager) {
 }
 
 func TestUnit_ModelRegistryService_CreateValidatesEmptyName(t *testing.T) {
-	svc := modelregistryservice.New(nil) // nil db is safe: validation runs before DB access
+	svc := modelregistryservice.New(nil)
 	err := svc.Create(context.Background(), &runtimetypes.ModelRegistryEntry{
 		Name:      "",
 		SourceURL: "https://example.com/model.gguf",

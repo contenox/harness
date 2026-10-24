@@ -24,8 +24,6 @@ func (c *OpenAIPromptClient) Prompt(ctx context.Context, systemInstruction strin
 		{Role: "user", Content: prompt},
 	}
 
-	// Legacy GPT-5 chat completions reject sampling params; newer GPT-5.x
-	// snapshots may allow them under reasoning=none.
 	var args []modelrepo.ChatArgument
 	if !openAIShouldOmitSamplingParams(c.modelName, "") {
 		args = append(args, modelrepo.WithTemperature(float64(temperature)))

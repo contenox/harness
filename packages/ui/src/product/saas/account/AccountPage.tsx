@@ -11,9 +11,6 @@ import { useProductPorts } from '../../ports';
 import { formatDate } from '../../lib/relativeTime';
 import type { Account, BillingStatus, Usage, UsageRow } from '../../lib/api/types';
 
-/**
- * What is being paid for, how much of it is spent, and the way to everything else about this account.
- */
 export default function AccountPage() {
   const { routes, useAccount, useAuth, useBillingStatus, useSignOut, useUsage } = useProductPorts();
   const accountID = useAuth().accountID ?? '';
@@ -53,8 +50,7 @@ export default function AccountPage() {
 
         {usage.data && <AllowanceCard usage={usage.data} paired={data?.active_instances} />}
 
-        {/* Which team is being paid for above, and the way to another —
-            an account-level fact, which is what this screen is for. */}
+
         <TeamsCard />
 
         <nav aria-label="Account settings" className="flex flex-col gap-2">
@@ -78,11 +74,7 @@ export default function AccountPage() {
           </SettingLink>
         </nav>
 
-        {/* The legal documents, as content at the foot of this screen rather
-            than a standing row under every screen: the shell's bar is
-            navigation, not a footer. The imprint stays reachable from every
-            signed-in page through this destination, and the signed-out
-            screens carry their own row (auth/AuthScreen). */}
+
         <LegalLinks />
       </ScreenBody>
     </Page>
@@ -241,10 +233,7 @@ function PlanCard({ account, billing }: { account: Account; billing?: BillingSta
 
       {canSubscribe && (
         <>
-          {/* The model and the price, before Stripe's domain is the first place
-              a number appears (finding 12): free is the owner plus up to three
-              invited members, machines pooled one per active member; Pro is
-              the flat price for 25 of each. */}
+
           <P className="text-sm">
             Free includes you and up to three invited teammates, with one paired machine per active
             member. Pro is {proPriceLabel}: 25 machines and 25 invited seats.
@@ -281,10 +270,7 @@ function PlanCard({ account, billing }: { account: Account; billing?: BillingSta
 
       {billedDirectly && <Small>This account is billed directly. Talk to us to change it.</Small>}
 
-      {/* The managed tier, one quiet line for EVERY role: a member cannot
-          upgrade or open the portal, and this is the one commercial thing they
-          can act on. No price — the tier is priced per engagement, and nothing
-          here may invent a number. */}
+
       <Small>
         Want us to run the machines for you? We take on a few design partners —{' '}
         <a

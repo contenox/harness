@@ -39,8 +39,6 @@ func TestUnit_Build_ToolChoiceModesReachTheRequest(t *testing.T) {
 	}
 }
 
-// A named selection follows the tool list's sanitized name, so the request
-// points at a function the same request declares.
 func TestUnit_Build_NamedToolChoiceUsesTheDeclaredName(t *testing.T) {
 	req, _, err := msgcodec.Build(
 		[]modelrepo.Message{{Role: "user", Content: "hi"}},
@@ -68,8 +66,6 @@ func TestUnit_Build_DisablingParallelCallsReachesTheRequest(t *testing.T) {
 	assert.Nil(t, on.ToolChoice, "enabling parallel calls is the dialect default and says nothing")
 }
 
-// A tool declared without a parameter schema is legal for the caller, and the
-// request still has to carry a schema member.
 func TestUnit_Build_ParameterlessToolCarriesAnEmptyObjectSchema(t *testing.T) {
 	req, _, err := msgcodec.Build(
 		[]modelrepo.Message{{Role: "user", Content: "hi"}},
@@ -108,8 +104,6 @@ func decodeAll(t *testing.T, lines ...string) (*msgcodec.StreamDecoder, *modelre
 	return dec, asm
 }
 
-// message_stop is the dialect's terminal marker: a stream that carried it is a
-// completed turn.
 func TestUnit_StreamDecoder_MessageStopTerminatesTheStream(t *testing.T) {
 	_, asm := decodeAll(t,
 		`{"type":"message_start","message":{"usage":{"input_tokens":9}}}`,
@@ -123,7 +117,6 @@ func TestUnit_StreamDecoder_MessageStopTerminatesTheStream(t *testing.T) {
 	assert.Equal(t, "end_turn", res.FinishReason)
 }
 
-// A connection that ended mid-turn, before any stop reason, is truncated.
 func TestUnit_StreamDecoder_MissingMessageStopAndStopReasonIsTruncated(t *testing.T) {
 	_, asm := decodeAll(t,
 		`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"half"}}`,
@@ -132,8 +125,6 @@ func TestUnit_StreamDecoder_MissingMessageStopAndStopReasonIsTruncated(t *testin
 	assert.ErrorIs(t, err, modelrepo.ErrStreamTruncated)
 }
 
-// A stop reason is the vendor saying why generation ended; a transport that
-// then ended before message_stop delivered a shorter turn, not a truncated one.
 func TestUnit_StreamDecoder_StopReasonWithoutMessageStopCompletes(t *testing.T) {
 	_, asm := decodeAll(t,
 		`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"done"}}`,
@@ -145,8 +136,6 @@ func TestUnit_StreamDecoder_StopReasonWithoutMessageStopCompletes(t *testing.T) 
 	assert.Equal(t, "done", res.Content)
 }
 
-// The request-side bound pairs with the response-side report: the vendor echoes
-// the sequence it stopped on, and the decoder must not discard it.
 func TestUnit_Decode_MatchedStopSequenceIsReported(t *testing.T) {
 	raw := []byte(`{
 		"role": "assistant",

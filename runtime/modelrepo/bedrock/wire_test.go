@@ -249,9 +249,6 @@ func cacheContract(fields []string, ttls []string) modelrepo.CapabilityConfig {
 	}
 }
 
-// The Converse request is the wire contract: one system list, one message list
-// with the vendor's role vocabulary, and the tool exchange as toolUse and
-// toolResult blocks under a tool configuration.
 func TestUnit_BedrockConverseRequest_RolesSystemToolsAndInference(t *testing.T) {
 	transport := &wireTransport{handler: replyJSON(textOut("on it", "end_turn"))}
 	provider := newWireProvider(claudeSonnet45, modelrepo.CapabilityConfig{CanChat: true, CanStream: true}, transport)
@@ -295,8 +292,6 @@ func TestUnit_BedrockConverseRequest_RolesSystemToolsAndInference(t *testing.T) 
 	require.Equal(t, `{"files":["a"]}`, toolResult["content"].([]any)[0].(map[string]any)["text"])
 }
 
-// The response carries the vendor's own tool name; the adapter must return the
-// name the caller declared.
 func TestUnit_BedrockConverseResponse_DecodesTextToolUseAndReverseMapsNames(t *testing.T) {
 	response := converseResponse(map[string]any{"toolUse": map[string]any{
 		"toolUseId": "t9",
@@ -388,9 +383,6 @@ func TestUnit_BedrockConverseRequest_ClampsMaxTokensToDeclaredCeiling(t *testing
 	require.Equal(t, float64(4096), inferenceConfig(t, body)["maxTokens"])
 }
 
-// The vendor rejects toolUse and toolResult blocks without a tool
-// configuration, so a request that declares no tool renders the exchange as
-// text instead of sending blocks the vendor refuses.
 func TestUnit_BedrockConverseRequest_ToolHistoryDegradesWithoutTools(t *testing.T) {
 	transport := &wireTransport{handler: replyJSON(textOut("ok", "end_turn"))}
 	provider := newWireProvider("deepseek.v3.2", modelrepo.CapabilityConfig{CanChat: true}, transport)
@@ -424,9 +416,6 @@ func tc(id, name, args string) modelrepo.ToolCall {
 	return call
 }
 
-// Two caller names that sanitise to the same wire name must stay
-// distinguishable: the vendor treats the wire name as the tool's identity, so a
-// collision makes one of them unreachable and misattributes the call it returns.
 func TestUnit_BedrockConverseRequest_ToolNamesAreInjective(t *testing.T) {
 	transport := &wireTransport{handler: replyJSON(textOut("ok", "end_turn"))}
 	provider := newWireProvider(claudeSonnet45, modelrepo.CapabilityConfig{CanChat: true}, transport)
@@ -462,9 +451,6 @@ func TestUnit_BedrockConverseRequest_ToolNamesAreInjective(t *testing.T) {
 	}
 }
 
-// The vendor's description member has a minimum length of one, so a tool the
-// caller declared without one omits the member rather than sending an empty
-// string the vendor rejects.
 func TestUnit_BedrockConverseRequest_ToolWithoutDescriptionOmitsDescription(t *testing.T) {
 	transport := &wireTransport{handler: replyJSON(textOut("ok", "end_turn"))}
 	provider := newWireProvider(claudeSonnet45, modelrepo.CapabilityConfig{CanChat: true}, transport)
@@ -483,10 +469,6 @@ func TestUnit_BedrockConverseRequest_ToolWithoutDescriptionOmitsDescription(t *t
 	require.NotContains(t, specs[2].(map[string]any)["toolSpec"], "description")
 }
 
-// The Converse API documents auto, any and tool choices and no way to forbid
-// tool use, so a caller that forbids it is served by declaring no tool at all —
-// the model cannot call a tool it was never given, and the history's tool blocks
-// degrade to text rather than to blocks the vendor rejects.
 func TestUnit_BedrockConverseRequest_ToolChoiceUnion(t *testing.T) {
 	history := []modelrepo.Message{
 		{Role: "user", Content: "list /tmp"},
@@ -566,8 +548,6 @@ func TestUnit_BedrockConverseRequest_RefusesToolControlsTheVendorDoesNotDefine(t
 	}
 }
 
-// The vendor reports which configured stop sequence matched in a model-native
-// field, and returns it only for the paths a request asks for.
 func TestUnit_BedrockConverseRequest_StopSequences(t *testing.T) {
 	transport := &wireTransport{handler: replyJSON(textOut("partial", "stop_sequence"))}
 	provider := newWireProvider(claudeSonnet45, modelrepo.CapabilityConfig{CanChat: true}, transport)
@@ -618,9 +598,6 @@ func TestUnit_BedrockConverseRequest_ResponseFormat(t *testing.T) {
 	})
 }
 
-// The Converse API defines no overflow control, so a caller asking the provider
-// to shift or truncate its context window is told so rather than silently
-// getting the vendor's plain overflow error.
 func TestUnit_BedrockConverseRequest_RefusesContextOverflowControls(t *testing.T) {
 	for _, c := range []struct {
 		name string
@@ -648,9 +625,6 @@ func (truncateArgument) Apply(config *modelrepo.ChatConfig) {
 
 func withTruncate() modelrepo.ChatArgument { return truncateArgument{} }
 
-// adaptiveOnlyCapabilities declares a model whose vendor page documents adaptive
-// and disabled thinking and no caller-set budget, which is the generation the
-// vendor documents as rejecting non-default sampling parameters on every request.
 func adaptiveOnlyCapabilities(efforts ...string) modelrepo.CapabilityConfig {
 	return modelrepo.CapabilityConfig{
 		CanChat:       true,
@@ -660,8 +634,6 @@ func adaptiveOnlyCapabilities(efforts ...string) modelrepo.CapabilityConfig {
 	}
 }
 
-// adaptiveBudgetCapabilities declares a model that accepts adaptive thinking and
-// the deprecated caller-set budget beside it.
 func adaptiveBudgetCapabilities(efforts ...string) modelrepo.CapabilityConfig {
 	return modelrepo.CapabilityConfig{
 		CanChat:       true,
@@ -675,9 +647,6 @@ func adaptiveCapabilities(efforts ...string) modelrepo.CapabilityConfig {
 	return adaptiveOnlyCapabilities(efforts...)
 }
 
-// Adaptive thinking is expressed in additionalModelRequestFields, and the level
-// the caller named is stated as the effort rather than left to a default that
-// differs by model generation.
 func TestUnit_BedrockConverseRequest_AdaptiveThinkingEffort(t *testing.T) {
 	transport := &wireTransport{handler: replyJSON(textOut("ok", "end_turn"))}
 	provider := newWireProvider(claudeOpus46, adaptiveCapabilities("low", "medium", "high", "xhigh", "max"), transport)
@@ -745,8 +714,6 @@ func TestUnit_BedrockConverseRequest_ThinkingDisabledAndUnsupportedLevels(t *tes
 	})
 }
 
-// A caller-set budget must sit below the request's output ceiling, which the
-// request therefore states, and the caller's own ceiling is never raised.
 func TestUnit_BedrockConverseRequest_ThinkingBudgetSitsUnderTheOutputCeiling(t *testing.T) {
 	t.Run("the model's declared ceiling carries the budget", func(t *testing.T) {
 		transport := &wireTransport{handler: replyJSON(textOut("ok", "end_turn"))}
@@ -789,8 +756,6 @@ func TestUnit_BedrockConverseRequest_ThinkingBudgetSitsUnderTheOutputCeiling(t *
 	})
 }
 
-// A forced tool choice is refused only with a caller-set budget, which the
-// vendor documents as incompatible; adaptive thinking accepts it.
 func TestUnit_BedrockConverseRequest_ForcedToolUseOnlyRefusedWithManualThinking(t *testing.T) {
 	t.Run("manual budget refuses", func(t *testing.T) {
 		transport := &wireTransport{handler: replyJSON(textOut("ok", "end_turn"))}
@@ -819,9 +784,6 @@ func TestUnit_BedrockConverseRequest_ForcedToolUseOnlyRefusedWithManualThinking(
 	})
 }
 
-// The vendor documents which sampling parameters a reasoning request may carry,
-// and differs by model generation: temperature never, top_p only inside its
-// band, and nothing at all on a model that accepts only adaptive thinking.
 func TestUnit_BedrockConverseRequest_SamplingParametersFollowTheThinkingMode(t *testing.T) {
 	t.Run("thinking drops temperature and keeps top_p in its band", func(t *testing.T) {
 		transport := &wireTransport{handler: replyJSON(textOut("ok", "end_turn"))}
@@ -968,9 +930,6 @@ func TestUnit_BedrockConverseResponse_ReasoningIsReplayedOnlyToItsOwnModel(t *te
 	})
 }
 
-// Every documented stop reason is an outcome the caller acts on: a refusal is
-// the vendor's outcome rather than an empty answer, an overflow names the
-// context limit, and a malformed output names itself.
 func TestUnit_BedrockConverseResponse_StopReasonHandling(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -1031,8 +990,6 @@ func TestUnit_BedrockConverseResponse_StopReasonHandling(t *testing.T) {
 	})
 }
 
-// The vendor's inputTokens excludes the tokens it served from and wrote to its
-// cache, so the reported prompt count is their sum.
 func TestUnit_BedrockConverseResponse_UsageNormalization(t *testing.T) {
 	transport := &wireTransport{handler: replyJSON(converseResponse(textBlock("hi"), "end_turn",
 		`{"inputTokens":7,"outputTokens":11,"totalTokens":18,"cacheReadInputTokens":100,"cacheWriteInputTokens":30}`))}
@@ -1055,8 +1012,6 @@ func TestUnit_BedrockConverseResponse_UsageNormalization(t *testing.T) {
 	})
 }
 
-// Each error in the vendor's documented Converse list reaches the shared
-// sentinel a caller classifies on, and keeps the vendor's own code and message.
 func TestUnit_BedrockConverseError_ClassifiesTheDocumentedErrorList(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -1107,8 +1062,6 @@ func TestUnit_BedrockConverseError_ClassifiesTheDocumentedErrorList(t *testing.T
 	})
 }
 
-// The region is read from the backend URL, so the runtime reaches the endpoint
-// the operator configured rather than a default one.
 func TestUnit_BedrockProvider_UsesTheRegionItsBackendNames(t *testing.T) {
 	catalog, err := modelrepo.NewCatalogProvider(modelrepo.BackendSpec{
 		Type:    "bedrock",
@@ -1151,8 +1104,6 @@ func TestUnit_BedrockProvider_CapabilitiesComeFromTheDeclaration(t *testing.T) {
 	require.ErrorIs(t, err, modelrepo.ErrNextEditUnsupported)
 }
 
-// This wire format has no audio encoding, so an audio attachment is refused
-// rather than dropped.
 func TestUnit_BedrockConverseRequest_RefusesAudioInput(t *testing.T) {
 	transport := &wireTransport{handler: replyJSON(textOut("ok", "end_turn"))}
 	provider := newWireProvider(claudeSonnet45, modelrepo.CapabilityConfig{CanChat: true}, transport)
@@ -1168,8 +1119,6 @@ func bedrockRegionProvider(region, model string, capabilities modelrepo.Capabili
 	return bedrock.NewBedrockProvider(region, staticCredentials, model, capabilities, &http.Client{Transport: transport}, nil)
 }
 
-// The vendor's tool-name namespace is [a-zA-Z0-9_-]+ capped at 64 characters,
-// so every caller name is restated in it rather than sent as declared.
 func TestUnit_BedrockConverseRequest_SanitizedToolNames(t *testing.T) {
 	longest := strings.Repeat("a", 64)
 	transport := &wireTransport{handler: replyJSON(textOut("ok", "end_turn"))}
@@ -1193,8 +1142,6 @@ func TestUnit_BedrockConverseRequest_SanitizedToolNames(t *testing.T) {
 	require.Equal(t, []string{"tool", "abc", "abc_2", "tool_2", "tool_3", longest}, names)
 }
 
-// The vendor's usage report carries the cache dimensions the terminal event
-// reports, and the prompt count is their sum with the uncached input.
 func TestUnit_BedrockConverseStream_MetadataCarriesCacheUsage(t *testing.T) {
 	provider := streamTextProvider(t, [][]byte{
 		eventFrame("contentBlockDelta", map[string]any{"contentBlockIndex": 0, "delta": map[string]any{"text": "hi"}}),

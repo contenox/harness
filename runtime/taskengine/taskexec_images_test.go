@@ -16,9 +16,6 @@ func TestUnit_ProviderMessagesFromEngine_Continuation(t *testing.T) {
 	require.Nil(t, stripped[0].Continuation)
 }
 
-// TestUnit_ProviderMessagesFromEngine_ThreadsImages covers the engine->provider
-// message conversion: image attachments must travel with their message, beside
-// text and tool calls, and never leak into prelude messages.
 func TestUnit_ProviderMessagesFromEngine_ThreadsImages(t *testing.T) {
 	t.Parallel()
 
@@ -72,9 +69,6 @@ func TestUnit_ProviderMessagesFromEngine_ThreadsImages(t *testing.T) {
 	require.True(t, libmodelprovider.MessagesHaveImages(got))
 }
 
-// TestUnit_ProviderMessagesFromEngine_TextOnlyStaysImageFree guards the common
-// path: without attachments no message reports images, so resolution never
-// demands a vision-capable model.
 func TestUnit_ProviderMessagesFromEngine_TextOnlyStaysImageFree(t *testing.T) {
 	t.Parallel()
 

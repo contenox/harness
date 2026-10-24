@@ -126,8 +126,6 @@ func testMessages() []libmodelprovider.Message {
 	return []libmodelprovider.Message{{Role: "user", Content: "hello"}}
 }
 
-// A model-not-found refusal from the first backend must fail over to the
-// second, calling the refused backend exactly once.
 func TestUnit_ChatFailover_SecondBackendServes(t *testing.T) {
 	refusing := newFailoverProvider("https://us-central1.example/v1")
 	refusing.chat.err = notFound404(refusing.Backends[0])
@@ -146,8 +144,6 @@ func TestUnit_ChatFailover_SecondBackendServes(t *testing.T) {
 	require.True(t, tracker.has("failover/chat"), "the failover must be recorded")
 }
 
-// When every backend refuses, the error aggregates each backend's refusal
-// and keeps the typed class reachable.
 func TestUnit_ChatFailover_AllBackendsExhausted(t *testing.T) {
 	first := newFailoverProvider("https://us-central1.example/v1")
 	first.chat.err = notFound404(first.Backends[0])
@@ -166,8 +162,6 @@ func TestUnit_ChatFailover_AllBackendsExhausted(t *testing.T) {
 	require.Equal(t, 1, second.chat.calls)
 }
 
-// A failure that is not terminal-for-the-backend keeps its original
-// semantics: the request fails immediately and no other backend is tried.
 func TestUnit_ChatFailover_NonTerminalErrorFailsImmediately(t *testing.T) {
 	failing := newFailoverProvider("https://us-central1.example/v1")
 	failing.chat.err = errors.New("vertex API error: 500 - internal")
@@ -182,8 +176,6 @@ func TestUnit_ChatFailover_NonTerminalErrorFailsImmediately(t *testing.T) {
 	require.Zero(t, standby.chat.calls, "a non-terminal failure must not trigger failover")
 }
 
-// An access-denied refusal (HTTP 403) carries the same failover semantics as
-// model-not-found.
 func TestUnit_ChatFailover_AccessDeniedAlsoFailsOver(t *testing.T) {
 	denied := newFailoverProvider("https://us-central1.example/v1")
 	denied.chat.err = libmodelprovider.ClassifyProviderError(errors.New("vertex API error: 403 PERMISSION_DENIED"), http.StatusForbidden, "PERMISSION_DENIED", "")
@@ -199,9 +191,6 @@ func TestUnit_ChatFailover_AccessDeniedAlsoFailsOver(t *testing.T) {
 	require.Equal(t, 1, denied.chat.calls)
 }
 
-// A stream whose FIRST parcel is a backend-terminal error fails over before
-// the consumer sees anything; the second backend's parcels arrive as the one
-// visible result.
 func TestUnit_StreamFailover_FirstParcelRefusalFailsOver(t *testing.T) {
 	refusing := newFailoverProvider("https://us-central1.example/v1")
 	refusing.stream.parcels = []*libmodelprovider.StreamParcel{{Error: notFound404(refusing.Backends[0])}}
@@ -235,8 +224,6 @@ func TestUnit_StreamFailover_FirstParcelRefusalFailsOver(t *testing.T) {
 	require.True(t, tracker.has("failover/stream"), "the failover must be recorded")
 }
 
-// When every backend's stream refuses, the aggregated error lists each
-// backend's refusal.
 func TestUnit_StreamFailover_AllBackendsExhausted(t *testing.T) {
 	first := newFailoverProvider("https://us-central1.example/v1")
 	first.stream.parcels = []*libmodelprovider.StreamParcel{{Error: notFound404(first.Backends[0])}}
@@ -254,8 +241,6 @@ func TestUnit_StreamFailover_AllBackendsExhausted(t *testing.T) {
 	require.Equal(t, 1, second.stream.calls)
 }
 
-// Once content has flowed, a terminal-classified error later in the stream is
-// final: no failover, the consumer sees the content and then the error.
 func TestUnit_StreamFailover_MidStreamErrorStaysFinal(t *testing.T) {
 	failing := newFailoverProvider("https://us-central1.example/v1")
 	failing.stream.parcels = []*libmodelprovider.StreamParcel{
@@ -279,7 +264,6 @@ func TestUnit_StreamFailover_MidStreamErrorStaysFinal(t *testing.T) {
 	require.Zero(t, standby.stream.calls, "content already flowed; a mid-stream failure must stay final")
 }
 
-// The prompt path shares the failover semantics.
 func TestUnit_PromptFailover_SecondBackendServes(t *testing.T) {
 	refusing := newFailoverProvider("https://us-central1.example/v1")
 	refusing.prompt.err = notFound404(refusing.Backends[0])

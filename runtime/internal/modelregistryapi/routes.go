@@ -1,9 +1,9 @@
 package modelregistryapi
 
 import (
-	"github.com/contenox/harness/runtime/homedir"
 	"context"
 	"fmt"
+	"github.com/contenox/harness/runtime/homedir"
 	"io"
 	"log/slog"
 	"net/http"
@@ -47,10 +47,9 @@ type downloadRequest struct {
 	Name string `json:"name"`
 }
 
-// create adds a model registry entry and returns it with its assigned ID.
 func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	e, err := apiframework.Decode[runtimetypes.ModelRegistryEntry](r) // @request runtimetypes.ModelRegistryEntry
+	e, err := apiframework.Decode[runtimetypes.ModelRegistryEntry](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -60,10 +59,9 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusCreated, e) // @response runtimetypes.ModelRegistryEntry
+	_ = apiframework.Encode(w, r, http.StatusCreated, e)
 }
 
-// list returns the registered models as descriptors, paginated by cursor.
 func (h *handler) list(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	entries, err := h.reg.List(ctx)
@@ -71,10 +69,9 @@ func (h *handler) list(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, entries) // @response []modelregistry.ModelDescriptor
+	_ = apiframework.Encode(w, r, http.StatusOK, entries)
 }
 
-// get returns one model registry entry by ID.
 func (h *handler) get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique identifier for the model registry entry.")
@@ -87,11 +84,9 @@ func (h *handler) get(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.GetOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, e) // @response runtimetypes.ModelRegistryEntry
+	_ = apiframework.Encode(w, r, http.StatusOK, e)
 }
 
-// update replaces a model registry entry by ID and returns the stored
-// result.
 func (h *handler) update(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique identifier for the model registry entry.")
@@ -99,7 +94,7 @@ func (h *handler) update(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, fmt.Errorf("missing id parameter %w", apiframework.ErrBadPathValue), apiframework.UpdateOperation)
 		return
 	}
-	e, err := apiframework.Decode[runtimetypes.ModelRegistryEntry](r) // @request runtimetypes.ModelRegistryEntry
+	e, err := apiframework.Decode[runtimetypes.ModelRegistryEntry](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
@@ -109,10 +104,9 @@ func (h *handler) update(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, e) // @response runtimetypes.ModelRegistryEntry
+	_ = apiframework.Encode(w, r, http.StatusOK, e)
 }
 
-// delete removes a model registry entry by ID.
 func (h *handler) delete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique identifier for the model registry entry.")
@@ -124,15 +118,13 @@ func (h *handler) delete(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.DeleteOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, "model registry entry removed") // @response string
+	_ = apiframework.Encode(w, r, http.StatusOK, "model registry entry removed")
 }
 
-// download fetches a registered model's artifact to the local model store,
-// reporting whether it was already present.
 func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	req, err := apiframework.Decode[downloadRequest](r) // @request modelregistryapi.downloadRequest
+	req, err := apiframework.Decode[downloadRequest](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -163,7 +155,7 @@ func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 	destPath := filepath.Join(modelDir, "model.gguf")
 	if _, statErr := os.Stat(destPath); statErr == nil {
 		h.ensureLocalSetup(ctx, req.Name, homeDir)
-		_ = apiframework.Encode(w, r, http.StatusOK, "already downloaded") // @response string
+		_ = apiframework.Encode(w, r, http.StatusOK, "already downloaded")
 		return
 	}
 
@@ -206,7 +198,7 @@ func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 
 	h.ensureLocalSetup(ctx, req.Name, homeDir)
 
-	_ = apiframework.Encode(w, r, http.StatusOK, "downloaded") // @response string
+	_ = apiframework.Encode(w, r, http.StatusOK, "downloaded")
 }
 
 func (h *handler) ensureLocalSetup(ctx context.Context, modelName, homeDir string) {

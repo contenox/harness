@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-// The script file is user-facing input, so its contract is pinned here: what a
-// document may leave out, and what it may not get away with.
 func TestUnit_ParseScriptDocument(t *testing.T) {
 	t.Run("defaults name the fake", func(t *testing.T) {
 		script, err := Parse("/tmp/dialog.json", []byte(`{"turns":[{"text":"hi"}]}`))
@@ -85,8 +83,6 @@ func TestUnit_ParseScriptDocument(t *testing.T) {
 	}
 }
 
-// Exhaustion is the whole safety property: no invented reply, and a message
-// that says which file ran out and on which turn.
 func TestUnit_ScriptExhaustionNamesFileAndTurn(t *testing.T) {
 	script, err := Parse("/tmp/dialog.json", []byte(`{"turns":[{"text":"only one"}]}`))
 	if err != nil {

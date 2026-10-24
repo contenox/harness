@@ -1,22 +1,11 @@
-//! `contenox-cli session`, and the one workspace an instance serves.
-//!
-//! Sessions are read back through the product's own commands — `session list`,
-//! `session show`, `session list --all`, `session workspaces`. The single file
-//! a case opens directly is `.contenox/workspace.id`, because that file *is*
-//! one of the promises: a stable UUID that travels with the directory.
 
 use contenox_e2e::{Instance, Pty, Script, SessionRow, Table, ToolCall, Turn, WorkspaceSessionRow};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-/// Anything that builds an engine: a chat turn, a fork that summarises, a run.
 const SLOW: Duration = Duration::from_secs(180);
 
-/// A scratch instance whose model answers `answer` whenever it is asked.
-///
-/// Every command is its own process and the scripted backend replays from the
-/// top, so a single turn serves any number of invocations.
 fn instance(label: &str, answer: &str) -> Instance {
     let cx = Instance::named(label).expect("scratch instance");
     cx.init().ok();
@@ -25,8 +14,6 @@ fn instance(label: &str, answer: &str) -> Instance {
     cx
 }
 
-/// The dialog an unattended run needs to land: file a result, finish, answer
-/// the loop's last question.
 fn lands_reporting(summary: &str) -> Script {
     Script::new()
         .turn(
@@ -38,15 +25,11 @@ fn lands_reporting(summary: &str) -> Script {
         .turn("Mission finished.")
 }
 
-/// Point the scripted backend at a different dialog for the next process.
 fn rescript(cx: &Instance, script: &Script) {
     cx.write_script("scripted.json", script)
         .expect("rewrite the scripted dialog");
 }
 
-/// A marked project of its own, whatever the surrounding directories carry:
-/// `--project` pins the marker to this directory instead of walking up to a
-/// parent's.
 fn marked_project(cx: &Instance, name: &str) -> PathBuf {
     let dir = cx.work().join(name);
     std::fs::create_dir_all(&dir).expect("create the project directory");
@@ -58,8 +41,6 @@ fn marked_project(cx: &Instance, name: &str) -> PathBuf {
     dir
 }
 
-/// The workspace UUID a directory carries — the scoping token every session
-/// under the project is filed under.
 fn marker_id(project: &Path) -> String {
     let path = project.join(".contenox").join("workspace.id");
     let raw = std::fs::read_to_string(&path)
@@ -70,7 +51,6 @@ fn marker_id(project: &Path) -> String {
         .unwrap_or_else(|| raw.trim().to_string())
 }
 
-/// Hold one turn of conversation in the active session of `dir`.
 fn chat(cx: &Instance, dir: &Path, message: &str) {
     cx.cmd(["chat", message])
         .cwd(dir)
@@ -105,7 +85,6 @@ fn row_named<'a>(rows: &'a [WorkspaceSessionRow], name: &str) -> &'a WorkspaceSe
         .unwrap_or_else(|| panic!("no session named {name:?} in {rows:?}"))
 }
 
-/// The one session an instance recorded that a unit ran under.
 fn only_unit_session(rows: &[WorkspaceSessionRow]) -> &WorkspaceSessionRow {
     let units: Vec<&WorkspaceSessionRow> = rows
         .iter()
@@ -150,7 +129,6 @@ fn deleting_the_active_session_leaves_none_active() {
         .expect_stderr("no active session");
 }
 
-// ======================================================= inspecting the whole db
 
 #[test]
 fn a_plain_list_stays_in_this_workspace_while_list_all_reaches_the_database() {
@@ -220,7 +198,6 @@ fn list_filters_the_whole_database_by_workspace_and_by_namespace() {
     .ok()
     .expect_stdout("No matching sessions.");
 }
-// ========================================================= workspace authority
 
 #[test]
 fn the_workspace_is_the_marked_project_the_launch_directory_belongs_to() {

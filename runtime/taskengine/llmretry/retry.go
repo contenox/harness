@@ -1,7 +1,3 @@
-// Package llmretry wraps a single LLM call with classified retry, exponential
-// backoff, and an optional model fallback. The classifier reads the typed
-// sentinels the provider clients attach, and falls back to substring matching for
-// errors that carry none.
 package llmretry
 
 import (
@@ -17,32 +13,19 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// ErrorClass is a coarse classification of an LLM call failure used for retry
-// and fallback decisions. Empty (ClassNone) means no error.
 type ErrorClass string
 
 const (
-	// ClassNone is returned for nil errors.
-	ClassNone ErrorClass = ""
-	// ClassRateLimit is HTTP 429 / 529 (Anthropic overload). Retried with a
-	// longer floor (RateLimitMinWait).
-	ClassRateLimit ErrorClass = "rate_limit"
-	// ClassServerError is HTTP 5xx. Retried with normal backoff.
+	ClassNone        ErrorClass = ""
+	ClassRateLimit   ErrorClass = "rate_limit"
 	ClassServerError ErrorClass = "server_error"
-	// ClassTimeout is context.DeadlineExceeded or i/o timeout. Retried.
-	ClassTimeout ErrorClass = "timeout"
-	// ClassAuth is HTTP 401/403 or "invalid api key". Never retried.
-	ClassAuth ErrorClass = "auth"
-	// ClassCapacity is a context-length / token-overflow error. Never retried.
-	ClassCapacity ErrorClass = "capacity"
-	// ClassCanceled is context.Canceled. Never retried.
-	ClassCanceled ErrorClass = "canceled"
-	// ClassPermanent is anything that does not match a known transient pattern.
-	// Never retried by default.
-	ClassPermanent ErrorClass = "permanent"
+	ClassTimeout     ErrorClass = "timeout"
+	ClassAuth        ErrorClass = "auth"
+	ClassCapacity    ErrorClass = "capacity"
+	ClassCanceled    ErrorClass = "canceled"
+	ClassPermanent   ErrorClass = "permanent"
 )
 
-// IsRetryable reports whether an error of class c warrants another attempt.
 func (c ErrorClass) IsRetryable() bool {
 	switch c {
 	case ClassRateLimit, ClassServerError, ClassTimeout:
@@ -52,8 +35,6 @@ func (c ErrorClass) IsRetryable() bool {
 	}
 }
 
-// NoRetry wraps cause so [ClassifyError] reports [ClassPermanent], vetoing a
-// retry the error's own class would have allowed; the message is unchanged.
 func NoRetry(cause error) error {
 	if cause == nil {
 		return nil
@@ -69,7 +50,6 @@ func (e *noRetryError) Error() string { return e.cause.Error() }
 
 func (e *noRetryError) Unwrap() error { return e.cause }
 
-// ClassifyError inspects err for known transient classes.
 func ClassifyError(err error) ErrorClass {
 	if err == nil {
 		return ClassNone
@@ -85,16 +65,9 @@ func ClassifyError(err error) ErrorClass {
 		return ClassTimeout
 	}
 
-	// Typed sentinels first: modelrepo.ClassifyProviderError decides these in the
-	// provider clients, where the status is known, and a decision made there is
-	// not re-derived from the text here. A provider that reports a 429 with no
-	// number in the message, or a key failure without the word "unauthorized",
-	// otherwise needs a marker added below to be classified at all.
 	if class, ok := classOfSentinel(err); ok {
 		return class
 	}
-	// A truncated stream delivered part of a turn and then stopped; a fresh
-	// attempt can clear it, so it is not classified from its own text.
 	if modelrepo.IsRetryableStreamFailure(err) {
 		return ClassServerError
 	}
@@ -133,9 +106,6 @@ func ClassifyError(err error) ErrorClass {
 	return ClassPermanent
 }
 
-// classOfSentinel maps the typed provider sentinels onto retry classes. The text
-// heuristics below remain for errors that carry no sentinel: a transport failure,
-// a client still building its errors by hand, a wrapped third-party message.
 func classOfSentinel(err error) (ErrorClass, bool) {
 	switch {
 	case errors.Is(err, modelrepo.ErrRateLimited):
@@ -160,21 +130,14 @@ func containsAny(s string, needles ...string) bool {
 	return false
 }
 
-// Duration is a time.Duration that decodes from either a numeric nanosecond
-// value or a duration string ("1s", "500ms", "2m"), in JSON and in text formats
-// such as TOML.
 type Duration time.Duration
 
-// D returns the underlying time.Duration.
 func (d Duration) D() time.Duration { return time.Duration(d) }
 
-// MarshalText writes the duration string form.
 func (d Duration) MarshalText() ([]byte, error) {
 	return []byte(time.Duration(d).String()), nil
 }
 
-// UnmarshalText parses a duration string, for formats that decode text rather
-// than JSON.
 func (d *Duration) UnmarshalText(b []byte) error {
 	s := strings.TrimSpace(string(b))
 	if s == "" {
@@ -189,13 +152,10 @@ func (d *Duration) UnmarshalText(b []byte) error {
 	return nil
 }
 
-// MarshalJSON serializes as a duration string for readability.
 func (d Duration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Duration(d).String())
 }
 
-// UnmarshalJSON accepts either a JSON number (interpreted as nanoseconds, the
-// stdlib default) or a JSON string parsed with time.ParseDuration.
 func (d *Duration) UnmarshalJSON(b []byte) error {
 	if len(b) == 0 || string(b) == "null" {
 		return nil
@@ -224,30 +184,16 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// RetryPolicy controls Do's retry/backoff/fallback behavior. The zero value
-// disables retry (MaxAttempts = 0 → 1 attempt total).
 type RetryPolicy struct {
-	// MaxAttempts is the total attempts including the first. 0 or 1 disables retry.
-	MaxAttempts int `yaml:"max_attempts,omitempty" json:"max_attempts,omitempty" toml:"max_attempts,omitempty"`
-	// InitialBackoff is the wait before the second attempt; doubled (capped at
-	// MaxBackoff) before each subsequent attempt. Defaults to 500ms when zero.
-	InitialBackoff Duration `yaml:"initial_backoff,omitempty" json:"initial_backoff,omitempty" toml:"initial_backoff,omitempty"`
-	// MaxBackoff caps the exponential backoff. 0 = no cap.
-	MaxBackoff Duration `yaml:"max_backoff,omitempty" json:"max_backoff,omitempty" toml:"max_backoff,omitempty"`
-	// Jitter is a 0..1 fraction added to backoff (uniform random).
-	Jitter float64 `yaml:"jitter,omitempty" json:"jitter,omitempty" toml:"jitter,omitempty"`
-	// RateLimitMinWait sets a floor for ClassRateLimit backoff.
+	MaxAttempts      int      `yaml:"max_attempts,omitempty" json:"max_attempts,omitempty" toml:"max_attempts,omitempty"`
+	InitialBackoff   Duration `yaml:"initial_backoff,omitempty" json:"initial_backoff,omitempty" toml:"initial_backoff,omitempty"`
+	MaxBackoff       Duration `yaml:"max_backoff,omitempty" json:"max_backoff,omitempty" toml:"max_backoff,omitempty"`
+	Jitter           float64  `yaml:"jitter,omitempty" json:"jitter,omitempty" toml:"jitter,omitempty"`
 	RateLimitMinWait Duration `yaml:"rate_limit_min_wait,omitempty" json:"rate_limit_min_wait,omitempty" toml:"rate_limit_min_wait,omitempty"`
-	// FallbackModelID is the alternate model id used after FallbackAfter
-	// consecutive failures. Empty disables fallback.
-	FallbackModelID string `yaml:"fallback_model_id,omitempty" json:"fallback_model_id,omitempty" toml:"fallback_model_id,omitempty"`
-	// FallbackAfter is the consecutive-failure threshold that triggers the
-	// fallback swap. 0 disables fallback regardless of FallbackModelID.
-	FallbackAfter int `yaml:"fallback_after,omitempty" json:"fallback_after,omitempty" toml:"fallback_after,omitempty"`
+	FallbackModelID  string   `yaml:"fallback_model_id,omitempty" json:"fallback_model_id,omitempty" toml:"fallback_model_id,omitempty"`
+	FallbackAfter    int      `yaml:"fallback_after,omitempty" json:"fallback_after,omitempty" toml:"fallback_after,omitempty"`
 }
 
-// Outcome reports what happened during Do. It is set even on error so callers
-// can record retry/fallback usage in caveats or telemetry.
 type Outcome struct {
 	Attempts       int
 	UsedFallback   bool
@@ -255,7 +201,6 @@ type Outcome struct {
 	Elapsed        time.Duration
 }
 
-// Do invokes call with primaryModel, retrying on transient errors per p.
 func Do(ctx context.Context, p RetryPolicy, primaryModel string, call func(modelID string) (any, error)) (any, Outcome, error) {
 	start := time.Now()
 	out := Outcome{}

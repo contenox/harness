@@ -18,16 +18,12 @@ type contextKey string
 
 const SessionIDContextKey contextKey = "contenox_session_id"
 
-// ACPMCPServerNamePrefix marks MCP servers supplied by an ACP client as
-// session-scoped runtime registrations. They may pass through the shared MCP
-// worker machinery, but they are not durable user configuration.
 const ACPMCPServerNamePrefix = "acp-"
 
 func IsACPManagedMCPServerName(name string) bool {
 	return strings.HasPrefix(name, ACPMCPServerNamePrefix)
 }
 
-// orEmptyMap returns m if non-nil, otherwise an empty map.
 func orEmptyMap(m map[string]string) map[string]string {
 	if m == nil {
 		return map[string]string{}
@@ -35,22 +31,21 @@ func orEmptyMap(m map[string]string) map[string]string {
 	return m
 }
 
-// MCPServer represents a persisted MCP server configuration.
 type MCPServer struct {
 	ID                    string            `json:"id" example:"a1b2c3d4-e5f6-7890-abcd-ef1234567890"`
 	Name                  string            `json:"name" example:"filesystem"`
-	Transport             string            `json:"transport" example:"sse"` // sse | http | stdio
+	Transport             string            `json:"transport" example:"sse"`
 	Command               string            `json:"command,omitempty" example:"npx"`
-	Args                  []string          `json:"args,omitempty" example:"['-y','@modelcontextprotocol/server-filesystem','/tmp']" openapi_include_type:"string"`
+	Args                  []string          `json:"args,omitempty" example:"['-y','@modelcontextprotocol/server-filesystem','/tmp']"`
 	URL                   string            `json:"url,omitempty" example:"http://mcp-fs:8080/sse"`
-	AuthType              string            `json:"authType,omitempty" example:"bearer"`         // "" | "bearer" | "oauth"
-	AuthToken             string            `json:"authToken,omitempty"`                         // literal token (avoid in prod)
-	AuthEnvKey            string            `json:"authEnvKey,omitempty" example:"MCP_FS_TOKEN"` // env var name
+	AuthType              string            `json:"authType,omitempty" example:"bearer"`
+	AuthToken             string            `json:"authToken,omitempty"`
+	AuthEnvKey            string            `json:"authEnvKey,omitempty" example:"MCP_FS_TOKEN"`
 	OAuthClientID         string            `json:"oauthClientId,omitempty"`
 	OAuthClientSecretEnv  string            `json:"oauthClientSecretEnv,omitempty"`
 	ConnectTimeoutSeconds int               `json:"connectTimeoutSeconds" example:"30"`
-	Headers               map[string]string `json:"headers,omitempty"`      // additional HTTP headers for SSE/HTTP transports
-	InjectParams          map[string]string `json:"injectParams,omitempty"` // injected as tool call args, hidden from model schema
+	Headers               map[string]string `json:"headers,omitempty"`
+	InjectParams          map[string]string `json:"injectParams,omitempty"`
 	CreatedAt             time.Time         `json:"createdAt" example:"2024-01-15T10:00:00Z"`
 	UpdatedAt             time.Time         `json:"updatedAt" example:"2024-01-15T10:00:00Z"`
 }
@@ -62,15 +57,9 @@ func (srv *MCPServer) ResolveOAuthClientSecret() string {
 	return os.Getenv(srv.OAuthClientSecretEnv)
 }
 
-// MCPTool is a minimal tool descriptor returned by mcpworker list-tools.
-// It avoids importing the MCP SDK in packages that only need the tool metadata.
 type MCPTool struct {
-	// Name is the tool identifier as advertised by the MCP server.
-	Name string `json:"name" example:"read_file"`
-	// Description is a human-readable description of the tool.
-	Description string `json:"description,omitempty" example:"Read a file from the filesystem"`
-	// InputSchema is the raw JSON schema for the tool's input parameters.
-	// Preserved as json.RawMessage so it survives NATS serialization unchanged.
+	Name        string          `json:"name" example:"read_file"`
+	Description string          `json:"description,omitempty" example:"Read a file from the filesystem"`
 	InputSchema json.RawMessage `json:"inputSchema,omitempty"`
 }
 
@@ -110,10 +99,6 @@ func (s *store) CreateMCPServer(ctx context.Context, srv *MCPServer) error {
 	return err
 }
 
-// UpsertMCPServerByName inserts or updates an MCP server keyed by name.
-// If a server with the same name already exists, its fields are updated in place
-// (preserving the original ID and created_at). If not, a new record is inserted.
-// Works on both SQLite and Postgres via the ON CONFLICT clause.
 func (s *store) UpsertMCPServerByName(ctx context.Context, srv *MCPServer) error {
 	now := time.Now().UTC()
 	if srv.ID == "" {

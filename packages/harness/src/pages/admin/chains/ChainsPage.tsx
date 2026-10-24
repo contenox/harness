@@ -1,4 +1,3 @@
-// src/pages/admin/chains/ChainsPage.tsx
 import { Button, ErrorState, Fill, LoadingState, Page, Section, Tabs } from '@contenox/ui';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';

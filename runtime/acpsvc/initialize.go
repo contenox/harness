@@ -32,9 +32,6 @@ func (t *Transport) Initialize(ctx context.Context, req libacp.InitializeRequest
 				},
 			}),
 		})
-		// The browser sibling: same terminal-auth launch mechanics, but the
-		// command serves the Beam onboarding UI, opens the browser, and exits
-		// once setup is complete.
 		authMethods = append(authMethods, libacp.AuthMethod{
 			ID:          browserAuthMethodID,
 			Name:        "Setup Contenox in browser",
@@ -50,10 +47,6 @@ func (t *Transport) Initialize(ctx context.Context, req libacp.InitializeRequest
 			}),
 		})
 	}
-	// The env_var method is the non-interactive setup route: the client
-	// collects the listed variables and relaunches the agent with them set (or
-	// they are already set, and authenticate completes setup in place). Only
-	// meaningful while unconfigured.
 	if t.deps.Engine == nil && t.deps.EnvSetup != nil {
 		authMethods = append(authMethods, libacp.AuthMethod{
 			ID:          envAuthMethodID,
@@ -87,23 +80,11 @@ func (t *Transport) Initialize(ctx context.Context, req libacp.InitializeRequest
 				Resume: &struct{}{},
 				Close:  &struct{}{},
 				Delete: &struct{}{},
-				// AdditionalDirectories is intentionally left unset: NewSession,
-				// LoadSession, and ResumeSession (session.go) never read
-				// NewSessionRequest/LoadSessionRequest.AdditionalDirectories — there
-				// is no extra-workspace-root support behind this capability yet.
-				// Advertising it would promise a client behavior contenox does not
-				// implement; see TestUnit_Initialize_DoesNotAdvertiseAdditionalDirectories.
 			},
 		},
 		AuthMethods: authMethods,
 	}
 
-	// contenox extension (WorkspaceConfigOptionsMetaKey): advertise the
-	// workspace-level config options so a client can render the
-	// model/think/HITL/token-limit controls on an empty chat, before any
-	// session exists. Only when configured (engine present) — a setup-required
-	// agent has no models to list and drives the client to its setup UI
-	// instead. Conformant clients that don't recognize the key ignore _meta.
 	if t.deps.Engine != nil {
 		if opts := t.workspaceConfigOptions(ctx); len(opts) > 0 {
 			resp.Meta = mustJSON(map[string]any{
@@ -123,8 +104,6 @@ func negotiateProtocolVersion(client int) int {
 }
 
 func clientSupportsTerminalAuth(caps libacp.ClientCapabilities) bool {
-	// The spec's (unstable) capability field, and Zed's earlier _meta
-	// convention — honor both.
 	if caps.Auth.Terminal {
 		return true
 	}

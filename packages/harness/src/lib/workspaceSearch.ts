@@ -1,36 +1,10 @@
 import type { WorkspaceSearchDone, WorkspaceSearchMatch } from './types';
 
-/**
- * The workspace-search transport + pure presentation helpers (Arc 2 of
- * ide-workflows.md): `GET /api/workspace/search` streams matches as named SSE
- * events (`event: match` / `event: done`), refusing BEFORE any byte with a 422
- * (bad query / out-of-bounds root) or a 501 `dependency_missing` (ripgrep
- * absent).
- *
- * WHY fetch + ReadableStream and not `EventSource`: the two refusals arrive as
- * ordinary non-2xx HTTP responses whose JSON body carries the reason, and
- * `EventSource` exposes neither the status code nor the body on error — it can
- * only report an opaque `onerror`. Surfacing the ripgrep teaching state and the
- * boundary notice (a hard requirement of the Search tab) is therefore
- * impossible over `EventSource`; a fetch stream reads the status and body, and
- * an `AbortController` gives the same per-keystroke cancellation. The SSE frame
- * parsing and byte-offset slicing are factored into pure helpers so the stream
- * consumption is unit-testable against a mocked fetch, with no DOM.
- */
 
-// ── Byte-offset highlighting ────────────────────────────────────────────────
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-/**
- * Split a match preview into `{ before, match, after }` at the server's BYTE
- * offsets (`column`, `length`) — the match's start and byte length within the
- * UTF-8 encoding of `preview`. JS strings are UTF-16, so a naive `slice` would
- * mis-highlight any line with a multi-byte character before the match; this
- * encodes to bytes, slices, and decodes each part. Offsets are clamped so a
- * malformed frame can never throw or index out of range.
- */
 export function byteSlice(
   preview: string,
   column: number,
@@ -46,18 +20,12 @@ export function byteSlice(
   };
 }
 
-// ── Per-file grouping ───────────────────────────────────────────────────────
 
 export type SearchFileGroup = {
   path: string;
   matches: WorkspaceSearchMatch[];
 };
 
-/**
- * Cluster matches by file, preserving first-seen file order and per-file arrival
- * order (rg streams a file's matches contiguously and in file order, so this is
- * stable without a sort). One group per path with its own count badge.
- */
 export function groupMatchesByFile(matches: readonly WorkspaceSearchMatch[]): SearchFileGroup[] {
   const groups: SearchFileGroup[] = [];
   const byPath = new Map<string, SearchFileGroup>();
@@ -73,17 +41,9 @@ export function groupMatchesByFile(matches: readonly WorkspaceSearchMatch[]): Se
   return groups;
 }
 
-// ── SSE frame parsing ───────────────────────────────────────────────────────
 
 export type SSEFrame = { event: string; data: string };
 
-/**
- * Parse whatever complete SSE frames are in `buffer`, returning them plus the
- * trailing incomplete text (`rest`) to prepend to the next chunk. Frames are
- * separated by a blank line; within a frame, `event:` names the event and one or
- * more `data:` lines are joined with newlines (the SSE spec). A frame with no
- * `event:` defaults to `message`, matching `EventSource`.
- */
 export function parseSSEFrames(buffer: string): { frames: SSEFrame[]; rest: string } {
   const normalized = buffer.replace(/\r\n/g, '\n');
   const segments = normalized.split('\n\n');
@@ -102,9 +62,7 @@ export function parseSSEFrames(buffer: string): { frames: SSEFrame[]; rest: stri
   return { frames, rest };
 }
 
-// ── The streaming consumer ──────────────────────────────────────────────────
 
-/** A pre-stream HTTP refusal: `dependency` (501, ripgrep absent) or `refusal` (422, bad query / out-of-bounds root). */
 export type SearchRefusal = {
   kind: 'dependency' | 'refusal';
   status: number;
@@ -117,7 +75,6 @@ export type SearchFetch = (
   init: { signal?: AbortSignal; headers: Record<string, string>; credentials: 'same-origin' },
 ) => Promise<SearchResponseLike>;
 
-/** The minimal shape of a fetch `Response` this consumer reads — satisfied by the real `Response`. */
 export interface SearchResponseLike {
   ok: boolean;
   status: number;
@@ -134,7 +91,6 @@ export interface RunWorkspaceSearchOptions {
   root?: string;
   limit?: number;
   signal?: AbortSignal;
-  /** Injected for tests; defaults to same-origin `fetch`. */
   fetchImpl?: SearchFetch;
   onMatch: (match: WorkspaceSearchMatch) => void;
   onDone: (done: WorkspaceSearchDone) => void;
@@ -142,7 +98,6 @@ export interface RunWorkspaceSearchOptions {
   onError: (message: string) => void;
 }
 
-/** Root-relative so it stays same-origin behind the dev proxy, mirroring `api.taskEvents`. */
 export function buildSearchUrl(query: string, root?: string, limit?: number): string {
   const params = new URLSearchParams({ q: query });
   if (root) params.set('root', root);
@@ -167,12 +122,6 @@ function messageFromErrorBody(body: unknown): { message?: string; code?: string 
 const defaultFetch: SearchFetch = (url, init) =>
   fetch(url, init) as unknown as Promise<SearchResponseLike>;
 
-/**
- * Run one search, streaming matches to the callbacks until `done` or an abort.
- * A non-2xx response is classified into a refusal (501 dependency / 422) or a
- * generic error before any frame is read; an aborted stream resolves quietly
- * (the caller intended it, e.g. a newer keystroke superseded this one).
- */
 export async function runWorkspaceSearch(opts: RunWorkspaceSearchOptions): Promise<void> {
   const fetchImpl = opts.fetchImpl ?? defaultFetch;
   const url = buildSearchUrl(opts.query, opts.root, opts.limit);
@@ -195,7 +144,6 @@ export async function runWorkspaceSearch(opts: RunWorkspaceSearchOptions): Promi
     try {
       parsed = messageFromErrorBody(await response.json());
     } catch {
-      /* non-JSON error body — fall back to a status-derived message */
     }
     const message = parsed.message ?? `search failed (${response.status})`;
     if (response.status === 501 && parsed.code === 'dependency_missing') {

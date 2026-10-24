@@ -1,12 +1,5 @@
 package serverapi
 
-// These tests exercise ProtectMutatingAPI(WithAllowedOrigins) directly against
-// a bare stub handler — the request never reaches the real mux — so the path
-// below is only a stand-in for "some mutating product route" and carries no
-// dependency on any specific handler being registered. It uses /api/backends
-// (a route that both accepts POST and survives; see backendapi) rather than
-// the retired /api/chats, which internalchatapi (deleted, Stage 6 of the beam
-// ACP unification) used to serve.
 import (
 	"net/http"
 	"net/http/httptest"
@@ -216,9 +209,6 @@ func TestProtectMutatingAPI_TokenRejectsSecFetchCrossSiteReadWithoutToken(t *tes
 	}
 }
 
-// SECURITY REGRESSION: a same-origin browser GET with NO credential used to be
-// served (the mutation-only gate never checked reads). With a TOKEN configured,
-// every read must now require a credential — same-origin is not enough.
 func TestProtectMutatingAPI_TokenRejectsSameOriginBrowserReadWithoutToken(t *testing.T) {
 	called := false
 	handler := ProtectMutatingAPI("secret", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -240,8 +230,6 @@ func TestProtectMutatingAPI_TokenRejectsSameOriginBrowserReadWithoutToken(t *tes
 	}
 }
 
-// SECURITY REGRESSION: a non-browser GET with no credential (e.g. a LAN attacker's
-// curl) used to be served. With a TOKEN configured it must now 401.
 func TestProtectMutatingAPI_TokenRejectsNonBrowserReadWithoutToken(t *testing.T) {
 	called := false
 	handler := ProtectMutatingAPI("secret", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

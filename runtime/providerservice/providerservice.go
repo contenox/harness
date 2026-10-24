@@ -202,9 +202,6 @@ func (s *service) Configure(ctx context.Context, providerType string, req Config
 	}
 
 	if cfg.APIKey != "" || cfg.APIKeyEnv != "" {
-		// The runtime resolves a connection's credential from its own record, not
-		// the shared provider row that status uses. Write both: this is what makes
-		// a freshly configured provider reachable without a serve restart.
 		if err := s.writeBackendCredential(ctx, store, providerType, backend.ID, *cfg); err != nil {
 			return nil, err
 		}
@@ -321,8 +318,6 @@ func (s *service) writeProviderConfig(ctx context.Context, store runtimetypes.St
 	return nil
 }
 
-// writeBackendCredential stores the credential in the per-connection record the
-// runtime's provider resolution reads (BackendCredentialKey).
 func (s *service) writeBackendCredential(ctx context.Context, store runtimetypes.Store, providerType, backendID string, cfg runtimestate.ProviderConfig) error {
 	record := runtimestate.ProviderConfig{Type: providerType}
 	switch {

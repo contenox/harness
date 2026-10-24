@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// group manages keyed background routines, running at most one loop per key.
 type group struct {
 	managers   map[string]*Routine
 	loops      map[string]bool
@@ -20,7 +19,6 @@ var (
 	groupOnce     sync.Once
 )
 
-// GetGroup returns the singleton instance of the group.
 func GetGroup() *group {
 	groupOnce.Do(func() {
 		log.Println("Initializing routine group")
@@ -33,23 +31,14 @@ func GetGroup() *group {
 	return groupInstance
 }
 
-// LoopConfig configures one managed background loop.
 type LoopConfig struct {
-	// Key uniquely identifies the routine and prevents duplicate loops.
-	Key string
-	// Threshold is the number of consecutive failures before the circuit opens.
-	Threshold int
-	// ResetTimeout is how long the circuit stays open before half-open.
+	Key          string
+	Threshold    int
 	ResetTimeout time.Duration
-	// Interval is the time between executions.
-	Interval time.Duration
-	// Operation is the function executed periodically.
-	Operation func(ctx context.Context) error
+	Interval     time.Duration
+	Operation    func(ctx context.Context) error
 }
 
-// StartLoop starts a background loop for cfg.Key, wrapped by a circuit breaker.
-// It does nothing if a loop for that key is already running, and terminates when
-// ctx is cancelled.
 func (p *group) StartLoop(ctx context.Context, cfg *LoopConfig) {
 	p.mu.Lock()
 	log.Printf("Starting loop for key: %s", cfg.Key)
@@ -72,8 +61,6 @@ func (p *group) StartLoop(ctx context.Context, cfg *LoopConfig) {
 
 	p.loops[cfg.Key] = true
 
-	// manager is captured under p.mu; re-reading the map inside the goroutine
-	// would race a concurrent StartLoop.
 	go func() {
 		log.Printf("Loop started for key: %s", cfg.Key)
 		manager.Loop(ctx, cfg.Interval, triggerChan, cfg.Operation, func(err error) {
@@ -89,16 +76,12 @@ func (p *group) StartLoop(ctx context.Context, cfg *LoopConfig) {
 	}()
 }
 
-// IsLoopActive reports whether a background loop for key is currently active.
 func (p *group) IsLoopActive(key string) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.loops[key]
 }
 
-// ForceUpdate triggers an immediate execution attempt for key, bypassing the
-// interval timer. It has no effect when no loop is active or an update is
-// already pending.
 func (p *group) ForceUpdate(key string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -113,7 +96,6 @@ func (p *group) ForceUpdate(key string) {
 	}
 }
 
-// GetManager exposes the Routine associated with a key for testing.
 func (p *group) GetManager(key string) *Routine {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -121,7 +103,6 @@ func (p *group) GetManager(key string) *Routine {
 	return p.managers[key]
 }
 
-// Pool manages keyed Routines with a shared threshold and reset timeout.
 type Pool struct {
 	mu           sync.RWMutex
 	routines     map[string]*Routine
@@ -129,7 +110,6 @@ type Pool struct {
 	resetTimeout time.Duration
 }
 
-// NewPool creates a Pool that mints Routines configured with threshold and resetTimeout.
 func NewPool(threshold int, resetTimeout time.Duration) *Pool {
 	return &Pool{
 		routines:     make(map[string]*Routine),
@@ -138,7 +118,6 @@ func NewPool(threshold int, resetTimeout time.Duration) *Pool {
 	}
 }
 
-// Get returns the Routine for key, creating one if absent.
 func (p *Pool) Get(key string) *Routine {
 	if p == nil || key == "" {
 		return nil
@@ -160,12 +139,10 @@ func (p *Pool) Get(key string) *Routine {
 	return r
 }
 
-// Allow reports whether the circuit breaker for key permits an operation.
 func (p *Pool) Allow(key string) bool {
 	return p.AllowAt(key, time.Now())
 }
 
-// AllowAt reports whether the circuit breaker for key permits an operation at now.
 func (p *Pool) AllowAt(key string, now time.Time) bool {
 	if p == nil || key == "" {
 		return true

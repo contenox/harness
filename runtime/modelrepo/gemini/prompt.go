@@ -12,7 +12,6 @@ type GeminiPromptClient struct {
 	geminiClient
 }
 
-// Prompt implements the LLMPromptExecClient interface for a single-turn, non-chat request.
 func (c *GeminiPromptClient) Prompt(ctx context.Context, systemInstruction string, temperature float32, prompt string, promptArgs ...modelrepo.PromptArgument) (string, *modelrepo.TokenUsage, error) {
 	reportErr, reportChange, end := c.tracker.Start(ctx, "prompt", "gemini", "model", c.modelName)
 	defer end()

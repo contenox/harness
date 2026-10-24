@@ -1,8 +1,5 @@
 import { basename } from './fileLanguage';
 
-/**
- * PreviewKind identifies the viewer suitable for a workspace asset.
- */
 export type PreviewKind = 'code' | 'markdown' | 'image' | 'pdf' | 'unsupported';
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'avif']);
@@ -36,9 +33,6 @@ function extensionOf(name: string): string {
   return dot <= 0 ? '' : name.slice(dot + 1).toLowerCase();
 }
 
-/**
- * previewKind selects a viewer from a workspace path without inspecting its contents.
- */
 export function previewKind(path: string): PreviewKind {
   const name = basename(path).toLowerCase();
   const ext = extensionOf(name);

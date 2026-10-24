@@ -89,7 +89,6 @@ func (i *KVInspector) GetExecutionStateByRequestID(ctx context.Context, reqID st
 		}
 		out = append(out, u)
 	}
-	// ListPush prepends (LPUSH); reverse so callers get execution order.
 	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
 		out[i], out[j] = out[j], out[i]
 	}
@@ -122,8 +121,6 @@ func (i *KVInspector) GetStatefulRequests(ctx context.Context) ([]string, error)
 	return out, nil
 }
 
-// ClearExecutionState deletes every persisted inspector trace and returns the
-// number of request IDs removed.
 func (i *KVInspector) ClearExecutionState(ctx context.Context) (int, error) {
 	op, err := i.kv.Executor(ctx)
 	if err != nil {

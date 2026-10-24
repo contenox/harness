@@ -10,14 +10,8 @@ const MAX_DIRS = 400;
 const MAX_DEPTH = 8;
 const MAX_RESULTS = 100;
 
-/**
- * Lists one directory's entries (workspace-relative paths).
- */
 export type DirLister = (dir: string) => Promise<WorkspaceEntry[]>;
 
-/**
- * Quick-find over the workspace: a bounded breadth-first read_dir walk that never trusts the whole tree to fit memory.
- */
 export async function workspaceSearch(query: string, listDir: DirLister): Promise<SearchMatch[]> {
   const q = query.trim().toLowerCase();
   if (q === '') return [];

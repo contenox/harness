@@ -32,9 +32,6 @@ type SetupWizardFlowProps = {
   variant: SetupWizardFlowVariant;
 };
 
-/**
- * Shared setup steps (defaults → backends → health). Used in the layout banner and on `/settings`.
- */
 export function SetupWizardFlow({ variant }: SetupWizardFlowProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -105,7 +102,6 @@ export function SetupWizardFlow({ variant }: SetupWizardFlowProps) {
     try {
       localStorage.setItem(STORAGE_KEY, sig);
     } catch {
-      /* ignore */
     }
     setDismissedSig(sig);
   };
@@ -164,7 +160,6 @@ export function SetupWizardFlow({ variant }: SetupWizardFlowProps) {
 
   const [dStep] = steps;
 
-  /** On the Settings page, always show default fields so users can edit even when status is "complete". */
   const showDefaultsForm = variant === 'page' || dStep.status !== 'complete';
 
   const stepTitle =

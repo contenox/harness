@@ -15,9 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_BuildChatRequest_SerializesImageAsContentParts asserts an image
-// attachment becomes the OpenAI content-parts array vLLM's endpoint consumes,
-// while a text-only turn stays a bare-string content (unchanged wire shape).
 func TestUnit_BuildChatRequest_SerializesImageAsContentParts(t *testing.T) {
 	pngBytes := []byte{0x89, 0x50, 0x4e, 0x47}
 	req, _ := buildChatRequest("vlm", []modelrepo.Message{
@@ -117,7 +114,6 @@ func TestUnit_BuildChatRequest_MapsThinkingLevels(t *testing.T) {
 	require.NotNil(t, req.ChatTemplateKwargs)
 	assert.Equal(t, true, req.ChatTemplateKwargs["enable_thinking"])
 
-	// Every level the vendor publishes reaches the wire as itself.
 	for _, level := range []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"} {
 		mapped, _ := buildChatRequest("model", []modelrepo.Message{{Role: "user", Content: "hi"}}, []modelrepo.ChatArgument{
 			modelrepo.WithThink(level),

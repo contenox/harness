@@ -20,8 +20,6 @@ var keepAliveOnce = sync.OnceValue(func() *Duration {
 	return &Duration{Duration: d}
 })
 
-// Every model-loading call path must set it: an omitted keep_alive resets residency to the
-// server default.
 func keepAlive() *Duration {
 	return keepAliveOnce()
 }

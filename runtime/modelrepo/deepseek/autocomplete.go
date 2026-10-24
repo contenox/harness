@@ -19,17 +19,8 @@ const (
 	maxFIMStopPhrases = 16
 )
 
-// betaPathSegment is the path the vendor's beta features are served under. The
-// fill-in-the-middle operation, strict tool schemas and prefix completion are
-// all beta features, so the connection's configured base carries it and a base
-// that does not is completed with it rather than doubled.
 const betaPathSegment = "beta"
 
-// betaBaseURL returns the vendor's documented beta base for a configured
-// connection base: the configured value when it already names the beta base,
-// and otherwise the beta base at the host root. The beta base replaces the
-// versioned /v1 base rather than nesting under it: the vendor answers 404 for
-// /v1/beta/completions and serves fill-in-the-middle at /beta/completions.
 func betaBaseURL(base string) string {
 	trimmed := strings.TrimRight(strings.TrimSpace(base), "/")
 	if trimmed == "" {
@@ -49,9 +40,6 @@ type autocompleteClient struct {
 	tracker libtracker.ActivityTracker
 }
 
-// fimRequest is the beta completion request. It carries no echo member: the
-// vendor documents echo as incompatible with the suffix a fill-in-the-middle
-// request supplies, so the member is absent rather than sent as false.
 type fimRequest struct {
 	Model       string   `json:"model"`
 	Prompt      string   `json:"prompt"`
@@ -144,10 +132,6 @@ func (c *autocompleteClient) Autocomplete(ctx context.Context, input modelrepo.A
 	return result, nil
 }
 
-// fimOutcome maps the vendor's terminal reason onto the runtime's outcome: a
-// bounded generation is a result, a filtered completion is the vendor's
-// refusal, exhausted capacity is the documented capacity limit, and every other
-// reason is an error naming what the vendor reported.
 func fimOutcome(finishReason, text string) (modelrepo.AutocompleteResult, error) {
 	switch finishReason {
 	case "stop", "length":

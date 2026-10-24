@@ -59,7 +59,6 @@ func applyAll(opts []libmodelprovider.ChatArgument) libmodelprovider.ChatConfig 
 	return cfg
 }
 
-// Same registry contents advertised in two different enumeration orders must serialize byte-identically after canonicalization.
 func TestUnit_CanonicalToolOrder_ByteIdenticalAcrossInputOrder(t *testing.T) {
 	hints := providerCacheHints(nil, "")
 	orderA := withCanonicalRequestShape([]libmodelprovider.ChatArgument{
@@ -93,7 +92,7 @@ func TestUnit_CanonicalToolOrder_ByteIdenticalAcrossInputOrder(t *testing.T) {
 func TestUnit_CanonicalToolOrder_HandlesNilFunction(t *testing.T) {
 	tools := []libmodelprovider.Tool{
 		fnTool("function", "b"),
-		{Type: "function"}, // no Function block — must not panic
+		{Type: "function"},
 		fnTool("function", "a"),
 	}
 	sortToolsCanonically(tools)
@@ -117,7 +116,6 @@ func TestUnit_WithCanonicalRequestShape_DoesNotMutateCaller(t *testing.T) {
 	}
 }
 
-// With no caller hints, llmrepo synthesizes StableSystem+StableTools with no history assertion, keyed by the resolved session key.
 func TestUnit_ProviderCacheHints_DefaultsAreConservativeProducer(t *testing.T) {
 	h := providerCacheHints(nil, "session-key-hash")
 	if !h.StableSystem || !h.StableTools {

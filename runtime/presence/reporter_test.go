@@ -10,8 +10,6 @@ import (
 	"github.com/contenox/harness/runtime/presence"
 )
 
-// recordingStore is a ReporterStore test double that counts writes and can be
-// made to fail, so the best-effort guard is provable without a real db.
 type recordingStore struct {
 	mu           sync.Mutex
 	registers    []presence.Record
@@ -94,10 +92,6 @@ func TestUnit_Reporter_WritesOnStartAndFillsIdentity(t *testing.T) {
 	}
 }
 
-// TestUnit_Reporter_BestEffort_StoreFailureNeverBreaksStartup proves the guard:
-// a store that fails every write must NOT block StartReporter, must NOT panic,
-// and the reporter keeps trying (swallowing errors) — the process it observes is
-// entirely unaffected.
 func TestUnit_Reporter_BestEffort_StoreFailureNeverBreaksStartup(t *testing.T) {
 	store := &recordingStore{fail: true}
 
@@ -117,13 +111,11 @@ func TestUnit_Reporter_BestEffort_StoreFailureNeverBreaksStartup(t *testing.T) {
 	}
 	t.Cleanup(r.Stop)
 
-	// It kept trying despite every write erroring — errors are shrugged, not fatal.
 	waitFor(t, func() bool { return store.writeCount() >= 2 })
 }
 
 func TestUnit_Reporter_UpdateTriggersImmediateHeartbeat(t *testing.T) {
 	store := &recordingStore{}
-	// A long interval proves the extra write came from Update, not the ticker.
 	r := presence.StartReporter(context.Background(), store, presence.Record{Kind: presence.KindACP},
 		presence.WithInterval(time.Hour),
 	)
@@ -151,7 +143,6 @@ func TestUnit_Reporter_StopDeregisters(t *testing.T) {
 	if !dereg {
 		t.Error("Stop must best-effort deregister the record")
 	}
-	// Stop is idempotent.
 	r.Stop()
 }
 
@@ -162,7 +153,6 @@ func TestUnit_Reporter_CtxCancelDeregisters(t *testing.T) {
 	waitFor(t, func() bool { return store.writeCount() >= 1 })
 
 	cancel()
-	// Stop joins the goroutine; after ctx-cancel the deregister has run.
 	r.Stop()
 
 	store.mu.Lock()

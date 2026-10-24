@@ -10,11 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_ListParams_BehaviorTable pins the full absent/valid/invalid matrix
-// for both pagination parameters. The distinction that matters is absent vs.
-// invalid: an absent limit must keep meaning "use the call site's default"
-// (several stores read a non-positive limit as "apply my own default"), while
-// an explicitly invalid one must be refused.
 func TestUnit_ListParams_BehaviorTable(t *testing.T) {
 	const defaultLimit = 100
 	const validCursor = "2024-03-01T12:00:00.123456789Z"
@@ -115,11 +110,6 @@ func TestUnit_ListParams_BehaviorTable(t *testing.T) {
 	}
 }
 
-// TestUnit_ListParams_InvalidInputMapsTo400 is the whole point of routing the
-// parse errors through a classified framework error: mapErrorToStatus's
-// fallback for an unclassified error is 404 under ListOperation, which reads
-// as "no such collection" for what is really a malformed parameter, and 422
-// under CreateOperation. Classified, it is 400 for every Operation.
 func TestUnit_ListParams_InvalidInputMapsTo400(t *testing.T) {
 	for _, query := range []string{"cursor=garbage", "limit=not-a-number", "limit=0"} {
 		t.Run(query, func(t *testing.T) {
@@ -134,9 +124,6 @@ func TestUnit_ListParams_InvalidInputMapsTo400(t *testing.T) {
 	}
 }
 
-// TestUnit_ListParams_ErrorBodyNamesTheParameter proves the classified error
-// survives into the wire payload with its parameter name and code intact, so
-// a client can tell which of the two parameters it got wrong.
 func TestUnit_ListParams_ErrorBodyNamesTheParameter(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/things?cursor=garbage", nil)
 	_, _, err := ListParams(r, 100)
@@ -153,9 +140,6 @@ func TestUnit_ListParams_ErrorBodyNamesTheParameter(t *testing.T) {
 	}}`, rec.Body.String())
 }
 
-// TestUnit_LimitParam_AbsentKeepsCallSiteDefault pins that the default is the
-// call site's to choose, including a non-positive one that a store reads as
-// "apply my own default" — LimitParam must not second-guess it.
 func TestUnit_LimitParam_AbsentKeepsCallSiteDefault(t *testing.T) {
 	for _, defaultLimit := range []int{0, -1, 25, 100} {
 		r := httptest.NewRequest(http.MethodGet, "/things", nil)
@@ -165,8 +149,6 @@ func TestUnit_LimitParam_AbsentKeepsCallSiteDefault(t *testing.T) {
 	}
 }
 
-// TestUnit_LimitParam_IgnoresCursor pins that the limit-only endpoints keep
-// ignoring a stray cursor rather than newly rejecting one they never accepted.
 func TestUnit_LimitParam_IgnoresCursor(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/things?cursor=garbage&limit=4", nil)
 	got, err := LimitParam(r, 100)

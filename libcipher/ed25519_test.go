@@ -47,8 +47,6 @@ func TestUnit_GenerateSigningKeyRoundTrip(t *testing.T) {
 	}
 }
 
-// TestUnit_ParsePublicKeyAcceptedSpellings pins the leniency the doc promises:
-// every encoding a human might have moved the key in must decode to one key.
 func TestUnit_ParsePublicKeyAcceptedSpellings(t *testing.T) {
 	pub, _, err := libcipher.GenerateSigningKey()
 	if err != nil {
@@ -99,8 +97,6 @@ func TestUnit_SigningKeyParsersRejectMalformed(t *testing.T) {
 	}
 }
 
-// TestUnit_SignVerifyRejectWrongLengths covers the promise that neither call
-// panics on key material that came out of a config file.
 func TestUnit_SignVerifyRejectWrongLengths(t *testing.T) {
 	pub, priv, err := libcipher.GenerateSigningKey()
 	if err != nil {
@@ -158,8 +154,6 @@ func TestUnit_EqualSigningKey(t *testing.T) {
 	}
 }
 
-// FuzzSigningKeyParsers asserts the parsers are total: any input either yields
-// a key of exactly the documented length or an error, and never a panic.
 func FuzzSigningKeyParsers(f *testing.F) {
 	pub, priv, err := libcipher.GenerateSigningKey()
 	if err != nil {
@@ -185,7 +179,6 @@ func FuzzSigningKeyParsers(f *testing.F) {
 			if len(gotPriv) != libcipher.SigningPrivateKeySize || len(gotPub) != libcipher.SigningPublicKeySize {
 				t.Fatalf("ParseSigningSeed(%q) returned pub=%d priv=%d", s, len(gotPub), len(gotPriv))
 			}
-			// A parsed seed must be usable, not merely well-sized.
 			sig, err := libcipher.Sign(gotPriv, []byte("fuzz"))
 			if err != nil || !libcipher.Verify(gotPub, []byte("fuzz"), sig) {
 				t.Fatalf("ParseSigningSeed(%q) produced an unusable keypair (err=%v)", s, err)
@@ -194,8 +187,6 @@ func FuzzSigningKeyParsers(f *testing.F) {
 	})
 }
 
-// TestUnit_SigningKeyAliasesAreStdlibTypes keeps the aliases assignable from
-// crypto/ed25519, which is what lets callers migrate without conversions.
 func TestUnit_SigningKeyAliasesAreStdlibTypes(t *testing.T) {
 	var pub libcipher.SigningPublicKey = ed25519.PublicKey(make([]byte, ed25519.PublicKeySize))
 	var priv libcipher.SigningPrivateKey = ed25519.NewKeyFromSeed(make([]byte, ed25519.SeedSize))

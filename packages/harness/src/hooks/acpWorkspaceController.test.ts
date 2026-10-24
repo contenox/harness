@@ -16,12 +16,6 @@ import {
   type AcpWorkspaceState,
 } from './acpWorkspaceState';
 
-/**
- * `@testing-library/react` is not a dependency of `packages/beam` — this
- * drives `acpWorkspaceController` directly against a `Transport` double, the
- * same approach `acpSessionController`'s tests used for the single-session
- * controller it replaces.
- */
 
 class MockTransport implements Transport {
   readonly sentRaw: string[] = [];
@@ -46,7 +40,6 @@ class MockTransport implements Transport {
     const text = JSON.stringify(msg);
     for (const cb of this.messageCbs) cb(text);
   }
-  /** Simulates the remote/underlying socket actually closing (async in real WebSocket, explicit here). */
   fireClose(err?: Error): void {
     if (this.closedFired) return;
     this.closedFired = true;
@@ -78,14 +71,6 @@ function makeStore<S, A>(reducer: (s: S, a: A) => S, initial: S) {
   };
 }
 
-/**
- * A backward-compatible view of the single "focused" session slice over the
- * multiplexed sessions store. `.state` returns whichever slice
- * `selectFocusedSession` picks (the one the single-view UI renders); `.dispatch`
- * routes a raw single-session action into that focused slice — so the vast
- * majority of these tests, which only ever have one session focused, read and
- * write exactly as they did against the pre-multiplexing single reducer.
- */
 interface FocusedSessionStore {
   readonly state: AcpSessionState;
   dispatch: (action: AcpSessionAction) => void;
@@ -94,11 +79,8 @@ interface FocusedSessionStore {
 interface Harness {
   controller: AcpWorkspaceController;
   wsStore: ReturnType<typeof makeStore<AcpWorkspaceState, Parameters<typeof acpWorkspaceReducer>[1]>>;
-  /** The multiplexed sessions store (one slice per open session) the controller actually drives. */
   sessionsStore: ReturnType<typeof makeStore<AcpSessionsState, Parameters<typeof acpSessionsReducer>[1]>>;
-  /** Focused-slice adapter over `sessionsStore` — see `FocusedSessionStore`. */
   sessStore: FocusedSessionStore;
-  /** Reads a specific session's slice by id (for concurrency assertions), or `undefined` if it has none. */
   sliceOf: (sessionId: string) => AcpSessionState | undefined;
   transports: MockTransport[];
 }
@@ -123,9 +105,6 @@ function setup(): Harness {
     get state() {
       return selectFocusedSession(sessionsStore.state);
     },
-    // Route a raw session action into the focused slice — the focused key is
-    // the empty-chat key ('') when no session is active, mirroring how the old
-    // single reducer behaved with a null sessionId.
     dispatch: (action: AcpSessionAction) =>
       sessionsStore.dispatch({ type: 'session_dispatch', key: sessionsStore.state.focusedKey, action }),
   };
@@ -133,7 +112,6 @@ function setup(): Harness {
   return { controller, wsStore, sessionsStore, sessStore, sliceOf, transports };
 }
 
-/** Drives `connect()` to completion against `transports[0]`: initialize + one empty session/list page. */
 async function connectReady(h: Harness): Promise<void> {
   const p = h.controller.connect();
   await flushMicrotasks();
@@ -145,7 +123,6 @@ async function connectReady(h: Harness): Promise<void> {
   await p;
 }
 
-/** Drives `newSession()` to completion against `transports[0]`, returning the minted id. */
 async function createSession(h: Harness, sessionId: string): Promise<string> {
   const p = h.controller.newSession();
   await flushMicrotasks();
@@ -156,7 +133,6 @@ async function createSession(h: Harness, sessionId: string): Promise<string> {
   return sessionId;
 }
 
-/** Drives `openSessionTab()` to completion against `transports[0]` (additive open — does NOT close other tabs). */
 async function openTab(h: Harness, sessionId: string): Promise<void> {
   const p = h.controller.openSessionTab(sessionId);
   await flushMicrotasks();
@@ -166,7 +142,6 @@ async function openTab(h: Harness, sessionId: string): Promise<void> {
   await p;
 }
 
-/** Feeds an `agent_message_chunk` `session/update` for `sessionId` on the given transport. */
 function feedAgentChunk(t: MockTransport, sessionId: string, messageId: string, text: string): void {
   t.feed({
     jsonrpc: '2.0',
@@ -204,8 +179,6 @@ describe('acpWorkspaceController: connect()', () => {
       result: {
         protocolVersion: 1,
         agentInfo: { name: 'contenox' },
-        // Wire-fact: exact _meta key the acpsvc server emits
-        // (acpsvc.WorkspaceConfigOptionsMetaKey).
         _meta: { 'contenox.workspaceConfigOptions': workspaceConfigOptions },
       },
     });
@@ -300,7 +273,6 @@ describe('acpWorkspaceController: newSession() is lazy (D5)', () => {
     expect(h.wsStore.state.sessions.map(s => s.sessionId)).toContain('sess-a');
     expect(h.sessStore.state.sessionId).toBe('sess-a');
 
-    // The standing subscription (not a per-prompt handler) routes live updates.
     h.transports[0].feed({
       jsonrpc: '2.0',
       method: 'session/update',
@@ -332,12 +304,8 @@ describe('acpWorkspaceController: newSession() is lazy (D5)', () => {
     await flushMicrotasks();
     const req = h.transports[0].lastSent();
     expect(req.method).toBe('session/new');
-    // Wire-fact: the exact _meta key acpsvc reads to spawn the external agent
-    // (acpsvc.AgentMetaKey).
     expect((req.params as Record<string, unknown>)._meta).toEqual({ 'contenox.agent': 'stub-bot' });
 
-    // acpsvc echoes the binding back on the response (agentMetaJSON); it must
-    // reach the roster so the sidebar row + transcript attribution can read it.
     h.transports[0].feed({
       jsonrpc: '2.0',
       id: req.id,
@@ -375,9 +343,6 @@ describe('acpWorkspaceController: newSession() is lazy (D5)', () => {
 
     await expect(p).rejects.toThrow();
     expect(h.sessStore.state.error).toContain('boom');
-    // Not the whole-page takeover reserved for auth failures — the composer
-    // stays usable so the caller (AcpChatPage's handleSubmit) can restore the
-    // draft and let the user retry.
     expect(h.wsStore.state.status).not.toBe('error');
     expect(h.wsStore.state.status).not.toBe('setup_required');
   });
@@ -409,9 +374,6 @@ describe('acpWorkspaceController: openSession() switching', () => {
     expect((req.params as Record<string, unknown>).sessionId).toBe('sess-b');
     expect((req.params as Record<string, unknown>).cwd).toBe('/work');
 
-    // Replay reaches the wire before the session/load response — matches
-    // acpsvc/session.go's replayMessages, which runs synchronously inside
-    // the handler before the RPC response is written.
     h.transports[0].feed({
       jsonrpc: '2.0',
       method: 'session/update',
@@ -445,10 +407,6 @@ describe('acpWorkspaceController: openSession() switching', () => {
 
     const openPromise = h.controller.openSession('sess-b');
     await flushMicrotasks();
-    // Not lastSent(): the permission rejection's "cancelled" response is only
-    // sent once its promise's .catch runs as a microtask, which can land
-    // after the (synchronously-sent) session/load request — search by method
-    // rather than assume send order between the two.
     const loadReq = h.transports[0].sent.find(f => f.method === 'session/load')!;
     expect(loadReq).toBeDefined();
     h.transports[0].feed({ jsonrpc: '2.0', id: loadReq.id, result: {} });
@@ -504,10 +462,8 @@ describe('acpWorkspaceController: openSession() explicit outcome signal (replace
 
     expect(h.wsStore.state.sessionLoadState).toBe('not_found');
     expect(h.wsStore.state.sessionLoadError).toBeNull();
-    // No session is left "open" pointing at an id that doesn't exist.
     expect(h.wsStore.state.activeSessionId).toBeNull();
     expect(h.sessStore.state.sessionId).toBeNull();
-    // The connection-level status is untouched — this is not a connection error.
     expect(h.wsStore.state.status).toBe('ready');
   });
 
@@ -571,8 +527,6 @@ describe('acpWorkspaceController: deleteSession()', () => {
     const deletePromise = h.controller.deleteSession('sess-a');
     await flushMicrotasks();
 
-    // session/close is fire-and-forget cleanup (see deleteSession's doc
-    // comment) — deletePromise does not wait on it.
     const closeReq = h.transports[0].sent.find(f => f.method === 'session/close');
     expect(closeReq).toBeDefined();
 
@@ -598,8 +552,6 @@ describe('acpWorkspaceController: clearActiveSession() (BUG 1 — "new session" 
 
     expect(h.wsStore.state.activeSessionId).toBeNull();
     expect(h.sessStore.state.sessionId).toBeNull();
-    // session/close (connection-local cleanup) fires, but never session/delete
-    // — the session still exists on the server/roster, just no longer open.
     await flushMicrotasks();
     expect(h.transports[0].sent.some(f => f.method === 'session/close')).toBe(true);
     expect(h.transports[0].sent.some(f => f.method === 'session/delete')).toBe(false);
@@ -661,8 +613,6 @@ describe('acpWorkspaceController: clearActiveSession() (BUG 1 — "new session" 
     await connectReady(h);
     await createSession(h, 'sess-a');
 
-    // Turn on sess-a starts but does NOT settle yet — the connection-global
-    // "new session" click happens mid-turn.
     h.controller.sendPrompt('slow first prompt');
     const promptReqA = h.transports[0].sent.filter(f => f.method === 'session/prompt').at(-1)!;
     expect(h.sessStore.state.isPrompting).toBe(true);
@@ -670,9 +620,6 @@ describe('acpWorkspaceController: clearActiveSession() (BUG 1 — "new session" 
     h.controller.clearActiveSession();
     expect(h.sessStore.state.isPrompting).toBe(false);
 
-    // Lazy-create the next session and prompt it immediately: sess-a's
-    // still-settling turn must not block this (per-session in-flight
-    // tracking, not one global flag).
     const p = h.controller.newSession();
     await flushMicrotasks();
     const newReq = h.transports[0].sent.filter(f => f.method === 'session/new').at(-1)!;
@@ -687,14 +634,11 @@ describe('acpWorkspaceController: clearActiveSession() (BUG 1 — "new session" 
     expect(h.sessStore.state.isPrompting).toBe(true);
     expect(h.wsStore.state.activeSessionId).toBe('sess-b');
 
-    // Now sess-a's old turn finally fails: its prompt_error must NOT land in
-    // sess-b's state (no leaked banner, isPrompting untouched).
     h.transports[0].feed({ jsonrpc: '2.0', id: promptReqA.id, error: { code: -32603, message: 'chain execution failed: old turn' } });
     await flushMicrotasks();
     expect(h.sessStore.state.error).toBeNull();
-    expect(h.sessStore.state.isPrompting).toBe(true); // sess-b's own turn is still running
+    expect(h.sessStore.state.isPrompting).toBe(true);
 
-    // sess-b's turn settles normally.
     h.transports[0].feed({ jsonrpc: '2.0', id: promptReqB.id, result: { stopReason: 'end_turn' } });
     await flushMicrotasks();
     expect(h.sessStore.state.isPrompting).toBe(false);
@@ -721,10 +665,6 @@ describe('acpWorkspaceController: clearActiveSession() (BUG 1 — "new session" 
 });
 
 describe('acpWorkspaceController: focusEmptyTab() (additive empty surface — the sidebar "New session" contract)', () => {
-  // The action the sidebar's `startNewChat` drives (via `useAcpWorkspace`) to
-  // move focus to the empty/new-chat surface. Unlike `clearActiveSession`, it is
-  // ADDITIVE: it re-points focus WITHOUT tearing the focused session down, so a
-  // fresh new-chat surface can coexist with already-open session tabs.
   it('re-points focus to the empty surface WITHOUT tearing down the focused session', async () => {
     const h = setup();
     await connectReady(h);
@@ -734,12 +674,8 @@ describe('acpWorkspaceController: focusEmptyTab() (additive empty surface — th
 
     h.controller.focusEmptyTab();
 
-    // Focus is now the empty-chat surface (activeSessionId -> null, focused key
-    // is the reserved empty-chat slice)...
     expect(h.wsStore.state.activeSessionId).toBeNull();
     expect(h.sessionsStore.state.focusedKey).toBe('');
-    // ...but sess-a stays OPEN and live (its slice survives) and nothing goes to
-    // the wire — no session/close, unlike clearActiveSession.
     expect(h.sliceOf('sess-a')).toBeDefined();
     await flushMicrotasks();
     expect(h.transports[0].sentRaw.length).toBe(sentBefore);
@@ -751,12 +687,11 @@ describe('acpWorkspaceController: focusEmptyTab() (additive empty surface — th
     const h = setup();
     await connectReady(h);
     await createSession(h, 'sess-a');
-    await openTab(h, 'sess-b'); // additive open: both live, focus is sess-b
+    await openTab(h, 'sess-b');
 
     h.controller.focusEmptyTab();
 
     expect(h.wsStore.state.activeSessionId).toBeNull();
-    // Both sessions remain subscribed/open — the empty surface coexists with them.
     expect(h.sliceOf('sess-a')).toBeDefined();
     expect(h.sliceOf('sess-b')).toBeDefined();
   });
@@ -837,12 +772,10 @@ describe('acpWorkspaceController: dead-turn watchdog (never end silently-dead)',
     h.controller.sendPrompt('go');
     expect(h.sessStore.state.isPrompting).toBe(true);
 
-    // The server never responds and the socket never closes — a silent stall.
     await vi.advanceTimersByTimeAsync(PROMPT_STALL_TIMEOUT_MS);
 
     expect(h.sessStore.state.isPrompting).toBe(false);
     expect(h.sessStore.state.error).toContain('stopped responding');
-    // Anchored in the transcript, not just the transient banner.
     expect(h.sessStore.state.items.some(it => it.kind === 'error')).toBe(true);
   });
 
@@ -855,15 +788,12 @@ describe('acpWorkspaceController: dead-turn watchdog (never end silently-dead)',
     h.controller.sendPrompt('go');
     const req = h.transports[0].sent.filter(f => f.method === 'session/prompt').at(-1)!;
 
-    // Two activity bursts, each just under the timeout — total elapsed exceeds
-    // one window, but the turn never goes silent for a whole window.
     await vi.advanceTimersByTimeAsync(PROMPT_STALL_TIMEOUT_MS - 1000);
     feedAgentChunk(h.transports[0], 'sess-a', 'm1', 'still working');
     await vi.advanceTimersByTimeAsync(PROMPT_STALL_TIMEOUT_MS - 1000);
     expect(h.sessStore.state.isPrompting).toBe(true);
     expect(h.sessStore.state.error).toBeNull();
 
-    // A real terminal event still settles it cleanly (and disarms the watchdog).
     h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { stopReason: 'end_turn' } });
     await vi.advanceTimersByTimeAsync(PROMPT_STALL_TIMEOUT_MS);
     expect(h.sessStore.state.isPrompting).toBe(false);
@@ -883,7 +813,6 @@ describe('acpWorkspaceController: dead-turn watchdog (never end silently-dead)',
     await vi.advanceTimersByTimeAsync(0);
     expect(h.sessStore.state.stopReason).toBe('end_turn');
 
-    // Long after settling, no spurious stall error appears.
     await vi.advanceTimersByTimeAsync(PROMPT_STALL_TIMEOUT_MS * 2);
     expect(h.sessStore.state.error).toBeNull();
     expect(h.sessStore.state.items.some(it => it.kind === 'error')).toBe(false);
@@ -937,7 +866,6 @@ describe('acpWorkspaceController: applyConfigOptions() — empty-chat staged flu
       { configId: 'think', value: 'high' },
     ]);
 
-    // First in flight; the second must NOT be sent until the first resolves.
     await flushMicrotasks();
     let req = h.transports[0].lastSent();
     expect(req.method).toBe('session/set_config_option');
@@ -1048,13 +976,9 @@ describe('acpWorkspaceController: reconnect supervisor (D2)', () => {
     h.transports[1].feed({ jsonrpc: '2.0', id: resumeReq.id, result: { configOptions } });
     await vi.advanceTimersByTimeAsync(0);
 
-    // Resume keeps the client-side transcript — no session_reset happened.
     expect(h.sessStore.state.messages['a1']).toMatchObject({ text: 'before the drop' });
     expect(h.sessStore.state.connectionBanner).toBe('resumed');
     expect(h.wsStore.state.status).toBe('ready');
-    // session/resume's response carries configOptions inline too (same as
-    // session/new / session/load) — applied here rather than waiting on a
-    // session/update notification that may never come.
     expect(h.sessStore.state.configOptions).toEqual(configOptions);
 
     const listReq = h.transports[1].lastSent();
@@ -1083,8 +1007,6 @@ describe('acpWorkspaceController: reconnect supervisor (D2)', () => {
     h.transports[1].feed({ jsonrpc: '2.0', id: resumeReq.id, error: { code: -32602, message: 'unknown session' } });
     await vi.advanceTimersByTimeAsync(0);
 
-    // Fallback to session/load — the client-side transcript is cleared for a
-    // clean server-side replay.
     expect(h.sessStore.state.messages['a1']).toBeUndefined();
     const loadReq = h.transports[1].lastSent();
     expect(loadReq.method).toBe('session/load');
@@ -1125,7 +1047,6 @@ describe('acpWorkspaceController: reconnect supervisor (D2)', () => {
 
     expect(h.wsStore.state.status).toBe('setup_required');
 
-    // No further attempts scheduled, even given a long time.
     await vi.advanceTimersByTimeAsync(120_000);
     expect(h.transports).toHaveLength(2);
   });
@@ -1140,7 +1061,7 @@ describe('acpWorkspaceController: reconnect supervisor (D2)', () => {
     await vi.advanceTimersByTimeAsync(120_000);
 
     expect(h.transports).toHaveLength(1);
-    expect(h.wsStore.state.status).toBe('ready'); // untouched by the post-dispose close
+    expect(h.wsStore.state.status).toBe('ready');
   });
 });
 
@@ -1150,8 +1071,6 @@ describe('acpWorkspaceController: reconnect() (manual retry, D2 follow-up)', () 
     await connectReady(h);
     vi.useFakeTimers();
 
-    // Exhaust the automatic supervisor, mirroring the "gives up after 8
-    // attempts" test above.
     h.transports[0].fireClose();
     await vi.advanceTimersByTimeAsync(0);
     const delays = [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000];
@@ -1165,7 +1084,6 @@ describe('acpWorkspaceController: reconnect() (manual retry, D2 follow-up)', () 
 
     const reconnectPromise = h.controller.reconnect();
     await vi.advanceTimersByTimeAsync(0);
-    // A brand-new transport was opened immediately — no 1s+ wait required.
     expect(h.transports).toHaveLength(transportCountBeforeManualRetry + 1);
     expect(h.wsStore.state.status).toBe('reconnecting');
 
@@ -1190,11 +1108,10 @@ describe('acpWorkspaceController: reconnect() (manual retry, D2 follow-up)', () 
     h.transports[0].fireClose();
     await vi.advanceTimersByTimeAsync(0);
     expect(h.wsStore.state.status).toBe('reconnecting');
-    // Still mid-backoff: the automatic attempt is not due for another ~1s.
 
     const reconnectPromise = h.controller.reconnect();
     await vi.advanceTimersByTimeAsync(0);
-    expect(h.transports).toHaveLength(2); // fired immediately, not after the scheduled 1s
+    expect(h.transports).toHaveLength(2);
 
     const latest = h.transports[1];
     latest.feed({ jsonrpc: '2.0', id: latest.lastSent().id, result: { protocolVersion: 1 } });
@@ -1203,8 +1120,6 @@ describe('acpWorkspaceController: reconnect() (manual retry, D2 follow-up)', () 
     await reconnectPromise;
     expect(h.wsStore.state.status).toBe('ready');
 
-    // The original (now-superseded) backoff timer must not fire a second,
-    // redundant reconnect attempt later.
     await vi.advanceTimersByTimeAsync(30_000);
     expect(h.transports).toHaveLength(2);
   });
@@ -1223,9 +1138,6 @@ describe('acpWorkspaceController: reconnect() (manual retry, D2 follow-up)', () 
     h.transports[1].fireClose();
     await vi.advanceTimersByTimeAsync(0);
 
-    // Failing right away schedules attempt index 1 next (2s), not 0 again —
-    // "resets the attempt counter" means the manual call itself is attempt 0,
-    // not that every subsequent automatic failure restarts from scratch.
     await vi.advanceTimersByTimeAsync(1999);
     expect(h.transports).toHaveLength(2);
     await vi.advanceTimersByTimeAsync(1);
@@ -1247,23 +1159,18 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     await openTab(h, 'sess-a');
     await openTab(h, 'sess-b');
 
-    // Both open; the last-opened (sess-b) is focused/rendered.
     expect(h.wsStore.state.activeSessionId).toBe('sess-b');
-    expect(h.controller /* both tracked */ && h.sliceOf('sess-a')).toBeDefined();
+    expect(h.controller  && h.sliceOf('sess-a')).toBeDefined();
     expect(h.sliceOf('sess-b')).toBeDefined();
 
-    // Route an update for the BACKGROUND session (sess-a) AND the focused one
-    // (sess-b) over the single connection — each must land in its own slice.
     feedAgentChunk(h.transports[0], 'sess-a', 'ma', 'hello A');
     feedAgentChunk(h.transports[0], 'sess-b', 'mb', 'hello B');
     await flushMicrotasks();
 
     expect(h.sliceOf('sess-a')!.messages['ma']).toMatchObject({ text: 'hello A' });
     expect(h.sliceOf('sess-b')!.messages['mb']).toMatchObject({ text: 'hello B' });
-    // Isolation: neither slice sees the other's message.
     expect(h.sliceOf('sess-a')!.messages['mb']).toBeUndefined();
     expect(h.sliceOf('sess-b')!.messages['ma']).toBeUndefined();
-    // The focused single-view accessor renders sess-b.
     expect(h.sessStore.state.messages['mb']).toMatchObject({ text: 'hello B' });
     expect(h.sessStore.state.messages['ma']).toBeUndefined();
   });
@@ -1271,26 +1178,22 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
   it('a turn that began while focused keeps streaming and settles into its OWN slice after focus switches away', async () => {
     const h = setup();
     await connectReady(h);
-    await createSession(h, 'sess-a'); // focused sess-a
+    await createSession(h, 'sess-a');
 
     h.controller.sendPrompt('long running');
     const promptA = h.transports[0].sent.filter(f => f.method === 'session/prompt').at(-1)!;
     expect(h.sliceOf('sess-a')!.isPrompting).toBe(true);
 
-    // Open + focus a second tab WHILE sess-a's turn is still in flight.
     await openTab(h, 'sess-b');
     expect(h.wsStore.state.activeSessionId).toBe('sess-b');
-    expect(h.sliceOf('sess-a')!.isPrompting).toBe(true); // background turn untouched
+    expect(h.sliceOf('sess-a')!.isPrompting).toBe(true);
     expect(h.sliceOf('sess-b')!.isPrompting).toBe(false);
 
-    // A chunk for the backgrounded session lands in its slice, not the focused view.
     feedAgentChunk(h.transports[0], 'sess-a', 'am', 'streamed while backgrounded');
     await flushMicrotasks();
     expect(h.sliceOf('sess-a')!.messages['am']).toMatchObject({ text: 'streamed while backgrounded' });
-    expect(h.sessStore.state.messages['am']).toBeUndefined(); // focused (sess-b) unaffected
+    expect(h.sessStore.state.messages['am']).toBeUndefined();
 
-    // sess-a's turn settles: prompt_end lands in sess-a's slice, never bleeding
-    // into the focused sess-b slice (the whole point of per-session slices).
     h.transports[0].feed({ jsonrpc: '2.0', id: promptA.id, result: { stopReason: 'end_turn' } });
     await flushMicrotasks();
     expect(h.sliceOf('sess-a')!.isPrompting).toBe(false);
@@ -1302,46 +1205,41 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     const h = setup();
     await connectReady(h);
     await createSession(h, 'sess-a');
-    await openTab(h, 'sess-b'); // both open, sess-b focused
+    await openTab(h, 'sess-b');
 
-    // Prompt the focused session (sess-b).
     h.controller.sendPrompt('prompt B');
     const promptB = h.transports[0].sent.filter(f => f.method === 'session/prompt').at(-1)!;
     expect((promptB.params as Record<string, unknown>).sessionId).toBe('sess-b');
     expect(h.sliceOf('sess-b')!.isPrompting).toBe(true);
 
-    // Re-prompting sess-b while its turn is in flight is a no-op.
     const sentAfterB = h.transports[0].sentRaw.length;
     h.controller.sendPrompt('second B while first in flight');
     expect(h.transports[0].sentRaw.length).toBe(sentAfterB);
 
-    // Switch to sess-a and prompt it — sess-b's in-flight turn does NOT block it.
     h.controller.focusSession('sess-a');
     h.controller.sendPrompt('prompt A');
     const promptA = h.transports[0].sent.filter(f => f.method === 'session/prompt').at(-1)!;
     expect((promptA.params as Record<string, unknown>).sessionId).toBe('sess-a');
     expect(promptA.id).not.toBe(promptB.id);
     expect(h.sliceOf('sess-a')!.isPrompting).toBe(true);
-    expect(h.sliceOf('sess-b')!.isPrompting).toBe(true); // still running concurrently
+    expect(h.sliceOf('sess-b')!.isPrompting).toBe(true);
   });
 
   it('closeSessionTab closes ONE session (session/close, not delete) and leaves the other live', async () => {
     const h = setup();
     await connectReady(h);
     await openTab(h, 'sess-a');
-    await openTab(h, 'sess-b'); // focused sess-b
+    await openTab(h, 'sess-b');
 
-    // Close the BACKGROUND session (sess-a).
     h.controller.closeSessionTab('sess-a');
     await flushMicrotasks();
 
     const closeReq = h.transports[0].sent.find(f => f.method === 'session/close' && (f.params as Record<string, unknown>).sessionId === 'sess-a');
     expect(closeReq).toBeDefined();
-    expect(h.transports[0].sent.some(f => f.method === 'session/delete')).toBe(false); // NOT deleted
-    expect(h.sliceOf('sess-a')).toBeUndefined(); // its slice is dropped
-    expect(h.wsStore.state.activeSessionId).toBe('sess-b'); // focus unchanged
+    expect(h.transports[0].sent.some(f => f.method === 'session/delete')).toBe(false);
+    expect(h.sliceOf('sess-a')).toBeUndefined();
+    expect(h.wsStore.state.activeSessionId).toBe('sess-b');
 
-    // sess-b is still live — a fresh update lands in its slice.
     feedAgentChunk(h.transports[0], 'sess-b', 'bm', 'still here');
     await flushMicrotasks();
     expect(h.sliceOf('sess-b')!.messages['bm']).toMatchObject({ text: 'still here' });
@@ -1351,13 +1249,13 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     const h = setup();
     await connectReady(h);
     await openTab(h, 'sess-a');
-    await openTab(h, 'sess-b'); // focused sess-b
+    await openTab(h, 'sess-b');
 
-    h.controller.closeSessionTab('sess-b'); // close the focused one
+    h.controller.closeSessionTab('sess-b');
     await flushMicrotasks();
 
     expect(h.sliceOf('sess-b')).toBeUndefined();
-    expect(h.wsStore.state.activeSessionId).toBe('sess-a'); // fell back to the still-open sess-a
+    expect(h.wsStore.state.activeSessionId).toBe('sess-a');
     expect(h.sessStore.state.sessionId).toBe('sess-a');
   });
 
@@ -1365,27 +1263,27 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     const h = setup();
     await connectReady(h);
     await openTab(h, 'sess-a');
-    await openTab(h, 'sess-b'); // focused sess-b
+    await openTab(h, 'sess-b');
 
     const sentBefore = h.transports[0].sentRaw.length;
     h.controller.focusSession('sess-a');
-    expect(h.transports[0].sentRaw.length).toBe(sentBefore); // pure local re-point
+    expect(h.transports[0].sentRaw.length).toBe(sentBefore);
     expect(h.wsStore.state.activeSessionId).toBe('sess-a');
     expect(h.sessStore.state.sessionId).toBe('sess-a');
 
     h.controller.focusSession('never-opened');
-    expect(h.wsStore.state.activeSessionId).toBe('sess-a'); // unchanged
+    expect(h.wsStore.state.activeSessionId).toBe('sess-a');
   });
 
   it('openSessionTab on an already-open session just focuses it (dedup by identity, no second load)', async () => {
     const h = setup();
     await connectReady(h);
     await openTab(h, 'sess-a');
-    await openTab(h, 'sess-b'); // focused sess-b
+    await openTab(h, 'sess-b');
 
     const loadsBefore = h.transports[0].sent.filter(f => f.method === 'session/load').length;
-    await h.controller.openSessionTab('sess-a'); // already open
-    expect(h.transports[0].sent.filter(f => f.method === 'session/load').length).toBe(loadsBefore); // no new load
+    await h.controller.openSessionTab('sess-a');
+    expect(h.transports[0].sent.filter(f => f.method === 'session/load').length).toBe(loadsBefore);
     expect(h.wsStore.state.activeSessionId).toBe('sess-a');
   });
 
@@ -1394,14 +1292,12 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     await connectReady(h);
     await openTab(h, 'sess-a');
     await openTab(h, 'sess-b');
-    // Seed each slice so we can prove per-session transcripts survive a resume.
     h.sessionsStore.dispatch({ type: 'session_dispatch', key: 'sess-a', action: { type: 'message_chunk', id: 'a1', text: 'A pre-drop' } });
     h.sessionsStore.dispatch({ type: 'session_dispatch', key: 'sess-b', action: { type: 'message_chunk', id: 'b1', text: 'B pre-drop' } });
     vi.useFakeTimers();
 
     h.transports[0].fireClose();
     await vi.advanceTimersByTimeAsync(0);
-    // Both sessions' live updates flagged stale — not only the focused one.
     expect(h.sliceOf('sess-a')!.connectionBanner).toBe('disconnected');
     expect(h.sliceOf('sess-b')!.connectionBanner).toBe('disconnected');
 
@@ -1410,7 +1306,6 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     t1.feed({ jsonrpc: '2.0', id: t1.lastSent().id, result: { protocolVersion: 1, agentInfo: { name: 'contenox' } } });
     await vi.advanceTimersByTimeAsync(0);
 
-    // session/resume is issued for BOTH open sessions, in turn.
     const resumeA = t1.lastSent();
     expect(resumeA.method).toBe('session/resume');
     expect((resumeA.params as Record<string, unknown>).sessionId).toBe('sess-a');
@@ -1423,7 +1318,6 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     t1.feed({ jsonrpc: '2.0', id: resumeB.id, result: {} });
     await vi.advanceTimersByTimeAsync(0);
 
-    // Both resumed with transcripts intact (resume keeps client-side state).
     expect(h.sliceOf('sess-a')!.connectionBanner).toBe('resumed');
     expect(h.sliceOf('sess-b')!.connectionBanner).toBe('resumed');
     expect(h.sliceOf('sess-a')!.messages['a1']).toMatchObject({ text: 'A pre-drop' });
@@ -1434,22 +1328,16 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     t1.feed({ jsonrpc: '2.0', id: listReq.id, result: { sessions: [{ sessionId: 'sess-a' }, { sessionId: 'sess-b' }] } });
     await vi.advanceTimersByTimeAsync(0);
 
-    // The NEW subscriptions on t1 route each session's live traffic into its own slice.
     feedAgentChunk(t1, 'sess-a', 'a2', 'A after');
     feedAgentChunk(t1, 'sess-b', 'b2', 'B after');
     await vi.advanceTimersByTimeAsync(0);
     expect(h.sliceOf('sess-a')!.messages['a2']).toMatchObject({ text: 'A after' });
     expect(h.sliceOf('sess-b')!.messages['b2']).toMatchObject({ text: 'B after' });
-    expect(h.sliceOf('sess-a')!.messages['b2']).toBeUndefined(); // still isolated
+    expect(h.sliceOf('sess-a')!.messages['b2']).toBeUndefined();
   });
 });
 
 describe('acpWorkspaceController: session_info_update-derived title (tab-strip/sidebar pinning)', () => {
-  // Pins the exact data both `AcpSessionSidebar` and `WorkspaceTabs`'s
-  // `sessionLabelFor` read: `workspace.sessions` — see acpWorkspaceState.ts's
-  // `session_upserted` merge and sessionLabel.ts's `meaningfulTitle`. Both
-  // consumers derive their label from this SAME roster entry, so pinning the
-  // roster's post-push shape pins their displayed label too.
   it('a title pushed via session_info_update lands on the roster entry for that session (not the raw-id fallback)', async () => {
     const h = setup();
     await connectReady(h);
@@ -1467,9 +1355,6 @@ describe('acpWorkspaceController: session_info_update-derived title (tab-strip/s
 
     const entry = h.wsStore.state.sessions.find(s => s.sessionId === 'sess-a');
     expect(entry?.title).toBe('Read README.md, then update its title');
-    // The derivation both the sidebar and the tab strip apply
-    // (`meaningfulTitle`): a title distinct from the raw id IS meaningful, so
-    // neither ever falls back to rendering the short id.
     expect(entry?.title).not.toBe(entry?.sessionId);
   });
 
@@ -1491,19 +1376,12 @@ describe('acpWorkspaceController: session_info_update-derived title (tab-strip/s
       'Read README.md, then update its title',
     );
 
-    // `refreshSessions()` (called automatically after every reconnect, see
-    // attemptReconnect()) re-pages session/list to completion and replaces the
-    // roster. The server's OWN listing index can lag behind the title we
-    // already learned live — its row for this session still has none.
     const p = h.controller.refreshSessions();
     await flushMicrotasks();
     const req = h.transports[0].lastSent();
     h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { sessions: [{ sessionId: 'sess-a' }] } });
     await p;
 
-    // A same-membership refresh must not undo a title already known fresher —
-    // see acpWorkspaceState.ts's `sessions_replaced` merge (mirrors
-    // `session_upserted`'s `incoming ?? existing` rule instead of a bare replace).
     expect(h.wsStore.state.sessions.find(s => s.sessionId === 'sess-a')?.title).toBe(
       'Read README.md, then update its title',
     );
@@ -1520,24 +1398,11 @@ describe('acpWorkspaceController: session_info_update-derived title (tab-strip/s
     h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { sessions: [] } });
     await p;
 
-    // Membership still comes from the server: merging fields must not resurrect
-    // a session the server no longer lists.
     expect(h.wsStore.state.sessions.find(s => s.sessionId === 'sess-a')).toBeUndefined();
   });
 });
 
-/**
- * The inline permission card (PermissionCard, rendered in the transcript) answers
- * a `session/request_permission` ONLY through an explicit option-button click,
- * which routes to `controller.respondPermission`. These tests pin that contract
- * at the wire: the ONLY thing that sends a response is `respondPermission`, it
- * sends exactly one `selected` outcome with the chosen optionId, and a request
- * left unanswered stays pending (no implicit deny on dismiss/scroll/tab-switch —
- * the UI equivalents have no controller path at all). Concurrency: two open
- * sessions each hold their own pending request and are answered independently.
- */
 describe('acpWorkspaceController: inline permission card responses (explicit-only)', () => {
-  /** Feeds a `session/request_permission` request for `sessionId` with a stable rpc id and an allow/deny option pair. */
   function feedPermissionRequest(t: MockTransport, rpcId: string, sessionId: string, toolCallId: string): void {
     t.feed({
       jsonrpc: '2.0',
@@ -1562,7 +1427,6 @@ describe('acpWorkspaceController: inline permission card responses (explicit-onl
     feedPermissionRequest(h.transports[0], 'perm-c', 'sess-a', 'tc-1');
     await flushMicrotasks();
     expect(h.sessStore.state.pendingPermission).not.toBeNull();
-    // No response goes out merely from the request arriving.
     expect(h.transports[0].sent.filter(f => f.id === 'perm-c')).toHaveLength(0);
 
     h.controller.respondPermission('allow-1');
@@ -1573,8 +1437,6 @@ describe('acpWorkspaceController: inline permission card responses (explicit-onl
     expect(responses[0]).toMatchObject({ result: { outcome: { outcome: 'selected', optionId: 'allow-1' } } });
     expect(h.sessStore.state.pendingPermission).toBeNull();
 
-    // Exactly once: a second respondPermission after the request is resolved is a
-    // no-op — no further response, and the recorded one still carries allow-1.
     h.controller.respondPermission('deny-1');
     await flushMicrotasks();
     const after = h.transports[0].sent.filter(f => f.id === 'perm-c');
@@ -1591,19 +1453,14 @@ describe('acpWorkspaceController: inline permission card responses (explicit-onl
     await flushMicrotasks();
     expect(h.sessStore.state.pendingPermission).not.toBeNull();
 
-    // Simulate everything the OLD modal treated as an implicit deny — none of
-    // these has a controller path in the inline-card design, so we drive the
-    // closest runtime analogues (unrelated stream traffic + focus changes) and
-    // assert nothing answers the request.
     feedAgentChunk(h.transports[0], 'sess-a', 'm-1', 'still working…');
-    h.controller.focusEmptyTab(); // "navigate away" from the tab
-    h.controller.focusSession('sess-a'); // "navigate back"
+    h.controller.focusEmptyTab();
+    h.controller.focusSession('sess-a');
     await flushMicrotasks();
 
     expect(h.transports[0].sent.filter(f => f.id === 'perm-b')).toHaveLength(0);
     expect(h.sliceOf('sess-a')?.pendingPermission).not.toBeNull();
 
-    // The explicit button click is still the one path that answers it.
     h.controller.respondPermission('deny-1');
     await flushMicrotasks();
     expect(h.transports[0].sent.filter(f => f.id === 'perm-b')).toHaveLength(1);
@@ -1614,17 +1471,15 @@ describe('acpWorkspaceController: inline permission card responses (explicit-onl
     const h = setup();
     await connectReady(h);
     await createSession(h, 'sess-a');
-    await openTab(h, 'sess-b'); // additive: both sessions stay open, focus is sess-b
+    await openTab(h, 'sess-b');
 
     feedPermissionRequest(h.transports[0], 'perm-a', 'sess-a', 'tc-a');
     feedPermissionRequest(h.transports[0], 'perm-b', 'sess-b', 'tc-b');
     await flushMicrotasks();
 
-    // Each session's slice holds ITS OWN pending request (each renders its own card).
     expect(h.sliceOf('sess-a')?.pendingPermission?.toolCall.toolCallId).toBe('tc-a');
     expect(h.sliceOf('sess-b')?.pendingPermission?.toolCall.toolCallId).toBe('tc-b');
 
-    // Answer the focused session (sess-b) — the other must remain pending.
     h.controller.respondPermission('allow-1');
     await flushMicrotasks();
     expect(h.transports[0].sent.filter(f => f.id === 'perm-b')).toMatchObject([
@@ -1634,7 +1489,6 @@ describe('acpWorkspaceController: inline permission card responses (explicit-onl
     expect(h.sliceOf('sess-a')?.pendingPermission?.toolCall.toolCallId).toBe('tc-a');
     expect(h.transports[0].sent.filter(f => f.id === 'perm-a')).toHaveLength(0);
 
-    // Now focus + answer sess-a independently.
     h.controller.focusSession('sess-a');
     h.controller.respondPermission('deny-1');
     await flushMicrotasks();
@@ -1689,11 +1543,9 @@ describe('acpWorkspaceController: image prompt capability + image blocks', () =>
     expect(req.method).toBe('session/prompt');
     expect((req.params as Record<string, unknown>).prompt).toEqual([
       { type: 'text', text: 'what is on this screenshot?' },
-      // libacp ContentBlock wire form: raw base64 data + mimeType, no id/name.
       { type: 'image', data: 'aGVsbG8=', mimeType: 'image/png' },
     ]);
 
-    // Local echo: ONE user message carrying both the text and the image.
     const user = Object.values(h.sessStore.state.messages).find(m => m.role === 'user');
     expect(user).toMatchObject({
       text: 'what is on this screenshot?',

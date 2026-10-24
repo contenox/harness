@@ -34,18 +34,11 @@ func TestUnit_ClassifyError(t *testing.T) {
 		{"timeout", fmt.Errorf("Post \"https://api/x\": net/http: request canceled (i/o timeout)"), llmretry.ClassTimeout},
 		{"unknown", fmt.Errorf("totally unexpected provider error"), llmretry.ClassPermanent},
 
-		// The provider clients classify with typed sentinels, and that decision
-		// outranks the text. Each of these messages matches no marker below, so
-		// the text path would call them permanent and never retry.
 		{"typed rate limit", fmt.Errorf("provider refused: %w", modelrepo.ErrRateLimited), llmretry.ClassRateLimit},
 		{"typed auth", fmt.Errorf("provider refused: %w", modelrepo.ErrModelAccessDenied), llmretry.ClassAuth},
 		{"typed capacity", fmt.Errorf("provider refused: %w", modelrepo.ErrContextLengthExceeded), llmretry.ClassCapacity},
 		{"typed model missing", fmt.Errorf("provider refused: %w", modelrepo.ErrModelNotFoundOnBackend), llmretry.ClassPermanent},
-		// A truncated stream reads as a retryable connection failure, not as a
-		// permanent one: the attempt delivered part of a turn and stopped.
 		{"truncated stream", fmt.Errorf("chat stream failed: %w", modelrepo.ErrStreamTruncated), llmretry.ClassServerError},
-		// And a sentinel outranks text that would classify the other way: this
-		// message says 503, the typed decision says the key is dead.
 		{"sentinel over text", fmt.Errorf("upstream returned 503: %w", modelrepo.ErrModelAccessDenied), llmretry.ClassAuth},
 	}
 	for _, tc := range cases {
@@ -152,7 +145,6 @@ func TestUnit_Do_FallbackAfterThreshold(t *testing.T) {
 	}), "primary", func(model string) (any, error) {
 		models = append(models, model)
 		calls++
-		// Fail twice on primary, then succeed on whatever model is asked.
 		if calls < 3 {
 			return nil, fmt.Errorf("status: 503 service unavailable")
 		}
@@ -203,7 +195,6 @@ func TestUnit_Do_ContextCanceledDuringBackoff(t *testing.T) {
 	calls := 0
 	_, _, err := llmretry.Do(ctx, llmretry.RetryPolicy{MaxAttempts: 5, InitialBackoff: llmretry.Duration(50 * time.Millisecond), MaxBackoff: llmretry.Duration(50 * time.Millisecond)}, "primary", func(model string) (any, error) {
 		calls++
-		// Cancel after first attempt; sleep should observe cancel.
 		go func() {
 			time.Sleep(5 * time.Millisecond)
 			cancel()
@@ -239,7 +230,6 @@ func TestUnit_Duration_JSON(t *testing.T) {
 			t.Fatalf("%s: got %v want %v", tc.in, w.B.D(), tc.want)
 		}
 	}
-	// Round-trip a policy using string form.
 	pin := llmretry.RetryPolicy{
 		MaxAttempts:      3,
 		InitialBackoff:   llmretry.Duration(500 * time.Millisecond),

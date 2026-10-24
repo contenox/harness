@@ -32,7 +32,6 @@ type bedrockProvider struct {
 	apiErr error
 }
 
-// NewBedrockProvider returns a modelrepo.Provider for an AWS Bedrock model via the Converse API; credBlob is optional static-credentials JSON, empty falls back to the ambient AWS credential chain.
 func NewBedrockProvider(region, credBlob, modelName string, cap modelrepo.CapabilityConfig, httpClient *http.Client, tracker libtracker.ActivityTracker) modelrepo.Provider {
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}

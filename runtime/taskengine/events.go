@@ -25,7 +25,6 @@ const (
 
 	TaskEventChainCompleted TaskEventKind = "chain_completed"
 	TaskEventChainFailed    TaskEventKind = "chain_failed"
-	// TaskEventChainSuspended terminates a run segment that left a recorded, unanswered approval behind rather than waiting for it; carries the interrupt address ({chain, task, tool_call}) and approval_id.
 	TaskEventChainSuspended TaskEventKind = "chain_suspended"
 
 	TaskEventApprovalRequested TaskEventKind = "approval_requested"
@@ -36,7 +35,6 @@ const (
 	TaskEventTokenUsage        TaskEventKind = "token_usage"
 )
 
-// AllTaskEventKinds enumerates every kind the engine can emit.
 func AllTaskEventKinds() []TaskEventKind {
 	return []TaskEventKind{
 		TaskEventChainStarted,
@@ -57,7 +55,6 @@ func AllTaskEventKinds() []TaskEventKind {
 	}
 }
 
-// EventScope is the hierarchical address (chain/task/tool_call) of an event or captured state unit.
 type EventScope struct {
 	Chain    string `json:"chain,omitempty"`
 	Task     string `json:"task,omitempty"`
@@ -65,23 +62,22 @@ type EventScope struct {
 }
 
 type TaskEvent struct {
-	Kind      TaskEventKind `json:"kind"`
-	Timestamp time.Time     `json:"timestamp"`
-	RequestID string        `json:"request_id,omitempty"`
-	// Scope is the event's hierarchical address (chain/task/tool-call); additive on the wire alongside the legacy flat fields below.
-	Scope        EventScope `json:"scope,omitzero"`
-	ChainID      string     `json:"chain_id,omitempty"`
-	TaskID       string     `json:"task_id,omitempty"`
-	TaskHandler  string     `json:"task_handler,omitempty"`
-	Retry        int        `json:"retry"`
-	ModelName    string     `json:"model_name,omitempty"`
-	ProviderType string     `json:"provider_type,omitempty"`
-	BackendID    string     `json:"backend_id,omitempty"`
-	OutputType   string     `json:"output_type,omitempty"`
-	Transition   string     `json:"transition,omitempty"`
-	Content      string     `json:"content,omitempty"`
-	Thinking     string     `json:"thinking,omitempty"`
-	Error        string     `json:"error,omitempty"`
+	Kind         TaskEventKind `json:"kind"`
+	Timestamp    time.Time     `json:"timestamp"`
+	RequestID    string        `json:"request_id,omitempty"`
+	Scope        EventScope    `json:"scope,omitzero"`
+	ChainID      string        `json:"chain_id,omitempty"`
+	TaskID       string        `json:"task_id,omitempty"`
+	TaskHandler  string        `json:"task_handler,omitempty"`
+	Retry        int           `json:"retry"`
+	ModelName    string        `json:"model_name,omitempty"`
+	ProviderType string        `json:"provider_type,omitempty"`
+	BackendID    string        `json:"backend_id,omitempty"`
+	OutputType   string        `json:"output_type,omitempty"`
+	Transition   string        `json:"transition,omitempty"`
+	Content      string        `json:"content,omitempty"`
+	Thinking     string        `json:"thinking,omitempty"`
+	Error        string        `json:"error,omitempty"`
 
 	ApprovalID   string         `json:"approval_id,omitempty"`
 	HookName     string         `json:"hook_name,omitempty"`
@@ -102,11 +98,9 @@ type TaskEvent struct {
 	ToolDiffOldText string `json:"tool_diff_old_text,omitempty"`
 	ToolDiffNewText string `json:"tool_diff_new_text,omitempty"`
 
-	// For token_usage
 	TokenUsed int `json:"token_used,omitempty"`
 	TokenSize int `json:"token_size,omitempty"`
 
-	// step_stream_end bracket: ChunkCount counts step_chunk parcels seen, FinishReason is the provider's verbatim reason, Usage is provider-reported token usage.
 	ChunkCount   int         `json:"chunk_count,omitempty"`
 	FinishReason string      `json:"finish_reason,omitempty"`
 	Usage        *TokenUsage `json:"usage,omitempty"`
@@ -119,7 +113,6 @@ type TaskEventScope struct {
 	Retry       int
 }
 
-// TaskEventSink receives engine observation events; Wants gates whether events are built and published but must never select an execution path.
 type TaskEventSink interface {
 	PublishTaskEvent(ctx context.Context, event TaskEvent) error
 	Wants(kind TaskEventKind) bool
@@ -150,7 +143,6 @@ func TaskEventRequestSubject(requestID string) string {
 	return TaskEventSubjectAll + ".request." + requestID
 }
 
-// Wants accepts every kind while a bus is attached.
 func (s *BusTaskEventSink) Wants(TaskEventKind) bool {
 	return s != nil && s.bus != nil
 }
@@ -215,7 +207,6 @@ func taskEventScopeFromContext(ctx context.Context) (TaskEventScope, bool) {
 	return scope, ok
 }
 
-// NewTaskEvent builds an event of the given kind addressed from ctx (request ID, chain/task scope, and tool-call address when present).
 func NewTaskEvent(ctx context.Context, kind TaskEventKind) TaskEvent {
 	event := TaskEvent{
 		Kind:      kind,

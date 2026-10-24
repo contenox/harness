@@ -1,42 +1,15 @@
-/**
- * The pluggable transport boundary.
- */
 export interface Transport {
-  /**
-   * Send one JSON-RPC message (already serialized) as a single frame.
-   */
   send(text: string): void;
-  /**
-   * Register a callback invoked once per received frame, in arrival order.
-   */
   onMessage(cb: (text: string) => void): void;
-  /**
-   * Register a callback invoked when the transport closes (locally or remotely).
-   */
   onClose(cb: (err?: Error, close?: TransportClose) => void): void;
-  /**
-   * Close the transport.
-   */
   close(): void;
 }
 
-/**
- * How a transport ended, as the peer reported it.
- */
 export interface TransportClose {
-  /**
-   * RFC 6455 close code.
-   */
   code: number;
-  /**
-   * The peer's close reason, `''` when it sent none.
-   */
   reason: string;
 }
 
-/**
- * Constructor shape `WebSocketTransport` needs — matches the browser `WebSocket` global.
- */
 export interface WebSocketLike {
   readyState: number;
   send(data: string): void;
@@ -52,13 +25,7 @@ export interface WebSocketConstructorLike {
 }
 
 export interface WebSocketTransportOptions {
-  /**
-   * WebSocket subprotocols to request.
-   */
   protocols?: string | string[];
-  /**
-   * WebSocket constructor to use.
-   */
   WebSocketImpl?: WebSocketConstructorLike;
 }
 
@@ -67,9 +34,6 @@ const READY_STATE_OPEN = 1;
 
 const CLOSE_NO_STATUS = 1005;
 
-/**
- * `Transport` over the browser `WebSocket` API: one ACP JSON-RPC message per TEXT frame, exactly what `/acp` speaks.
- */
 export class WebSocketTransport implements Transport {
   private readonly ws: WebSocketLike;
   private readonly messageCbs: Array<(text: string) => void> = [];
@@ -103,9 +67,6 @@ export class WebSocketTransport implements Transport {
       });
     });
     this.ws.addEventListener('error', () => {
-      // The 'close' event always follows 'error' for WebSocket, so closing is
-      // handled there; this listener only exists so an unhandled-error is
-      // never thrown by the underlying implementation.
     });
   }
 

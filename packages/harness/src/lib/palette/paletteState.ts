@@ -2,15 +2,7 @@ import { blend, frecencyBoost, type FrecencyStore } from './frecency';
 import { createSearcher, type FuzzySearcher, type WeightedField } from './fuzzy';
 import type { PaletteItem, PaletteItemType } from './types';
 
-/**
- * The palette's pure core: how items become a matched field set, how a query +
- * frecency become a ranked result list, and the keyboard state machine. All of
- * it is synchronous and side-effect-free so the instant-feel latency budget
- * (filter on every keystroke over the full in-memory set, no async, no spinner)
- * is met by construction and is unit-testable without a DOM.
- */
 
-/** Field weights: the title leads, then hidden keywords (names/aliases), then subtitle, then the id. */
 export const FIELD_WEIGHTS = {
   title: 4,
   keyword: 3,
@@ -18,7 +10,6 @@ export const FIELD_WEIGHTS = {
   id: 1,
 } as const;
 
-/** Maps a PaletteItem to its weighted searchable fields; only the title feeds highlighting. */
 export function paletteItemFields(item: PaletteItem): WeightedField[] {
   const fields: WeightedField[] = [{ text: item.title, weight: FIELD_WEIGHTS.title, highlight: true }];
   for (const kw of item.keywords ?? []) fields.push({ text: kw, weight: FIELD_WEIGHTS.keyword });
@@ -27,23 +18,18 @@ export function paletteItemFields(item: PaletteItem): WeightedField[] {
   return fields;
 }
 
-/** Builds the searcher for a set of items (index build happens once here). */
 export function createPaletteSearcher(items: PaletteItem[]): FuzzySearcher<PaletteItem> {
   return createSearcher(items, paletteItemFields);
 }
 
-/** A result row: the item, its final blended rank, and highlight indexes into the title. */
 export interface RankedItem {
   item: PaletteItem;
   score: number;
   matchIndexes: number[];
 }
 
-/** How many results the overlay renders at most — a hard cap so the list stays instant. */
 export const RESULT_CAP = 50;
 
-// Empty-query recents ordering: when the operator has typed nothing, pending
-// asks are the loudest, then the live work objects, then declared/static ones.
 const TYPE_PRIORITY: Record<PaletteItemType, number> = {
   inbox: 0,
   mission: 1,
@@ -54,13 +40,6 @@ const TYPE_PRIORITY: Record<PaletteItemType, number> = {
   action: 6,
 };
 
-/**
- * The ranked results for the current query. On a blank query it is the recents
- * view — most-frecent first, then by type priority (asks loudest), preserving
- * provider order within a tier. On a real query it is `matchScore × frecencyBoost`,
- * highest first, capped. Frecency only ever lifts a match; it never hides a
- * freshly-typed, well-matched item behind history (a zero match stays out).
- */
 export function computeResults(
   searcher: FuzzySearcher<PaletteItem>,
   allItems: PaletteItem[],
@@ -93,9 +72,7 @@ function recents(
     boost: frecencyBoost(store[item.id], now),
   }));
   withOrder.sort((a, b) => {
-    // Used items first, hottest at the top.
     if (b.boost !== a.boost) return b.boost - a.boost;
-    // Then loudest type (asks), then original provider order.
     const typeDelta = TYPE_PRIORITY[a.item.type] - TYPE_PRIORITY[b.item.type];
     if (typeDelta !== 0) return typeDelta;
     return a.order - b.order;
@@ -103,12 +80,10 @@ function recents(
   return withOrder.slice(0, cap).map(({ item, boost }) => ({ item, score: boost, matchIndexes: [] }));
 }
 
-// ── Keyboard / open state machine ───────────────────────────────────────────
 
 export interface PaletteUIState {
   open: boolean;
   query: string;
-  /** Index into the current result list of the highlighted row. */
   selected: number;
 }
 
@@ -122,7 +97,6 @@ export type PaletteAction =
   | { type: 'move'; delta: number; count: number }
   | { type: 'setSelected'; index: number; count: number };
 
-/** Pure reducer for the overlay's open/query/selection state. */
 export function paletteReducer(state: PaletteUIState, action: PaletteAction): PaletteUIState {
   switch (action.type) {
     case 'open':
@@ -132,7 +106,6 @@ export function paletteReducer(state: PaletteUIState, action: PaletteAction): Pa
     case 'toggle':
       return state.open ? { open: false, query: '', selected: 0 } : { open: true, query: '', selected: 0 };
     case 'setQuery':
-      // Any edit re-ranks from scratch, so selection returns to the top match.
       return { ...state, query: action.query, selected: 0 };
     case 'move':
       return { ...state, selected: wrapIndex(state.selected + action.delta, action.count) };
@@ -143,7 +116,6 @@ export function paletteReducer(state: PaletteUIState, action: PaletteAction): Pa
   }
 }
 
-/** Wraps a selection index around a list of `count` items (empty list → 0). */
 export function wrapIndex(index: number, count: number): number {
   if (count <= 0) return 0;
   return ((index % count) + count) % count;

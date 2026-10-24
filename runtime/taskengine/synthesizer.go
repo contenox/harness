@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// SynthesizeHistory rebuilds a persisted-ready transcript from prior history and a chain run's captured step stream, including hard-failed turns and deduped by message identity.
 func SynthesizeHistory(prior []Message, units []CapturedStateUnit, chainErr error) []Message {
 	out := make([]Message, 0, len(prior)+len(units))
 	out = append(out, prior...)

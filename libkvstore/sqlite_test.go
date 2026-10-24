@@ -66,7 +66,6 @@ func TestUnit_SQLiteKVTTLExpiry(t *testing.T) {
 		t.Fatalf("SetWithTTL: %v", err)
 	}
 
-	// Should be available immediately
 	got, err := exec.Get(ctx, "expkey")
 	if err != nil {
 		t.Fatalf("Get before expiry: %v", err)
@@ -77,7 +76,6 @@ func TestUnit_SQLiteKVTTLExpiry(t *testing.T) {
 		t.Errorf("want 42, got %d", n)
 	}
 
-	// Wait past TTL
 	time.Sleep(100 * time.Millisecond)
 	_, err = exec.Get(ctx, "expkey")
 	if err != libkvstore.ErrNotFound {
@@ -145,7 +143,6 @@ func TestUnit_SQLiteKVListPushRange(t *testing.T) {
 	if len(items) != 3 {
 		t.Errorf("expected 3 items, got %d", len(items))
 	}
-	// LPUSH means newest is index 0
 	var first string
 	json.Unmarshal(items[0], &first)
 	if first != "c" {
@@ -159,7 +156,7 @@ func TestUnit_SQLiteKVSetAddMembers(t *testing.T) {
 
 	exec.SetAdd(ctx, "s", json.RawMessage(`"x"`))
 	exec.SetAdd(ctx, "s", json.RawMessage(`"y"`))
-	exec.SetAdd(ctx, "s", json.RawMessage(`"x"`)) // duplicate
+	exec.SetAdd(ctx, "s", json.RawMessage(`"x"`))
 
 	members, err := exec.SetMembers(ctx, "s")
 	if err != nil {
@@ -184,8 +181,6 @@ func TestUnit_SQLiteKVOverwrite(t *testing.T) {
 	}
 }
 
-// openSQLiteKVFile opens a file-backed SQLite KV store. Concurrency tests must not
-// use ":memory:" because every pooled connection would get its own private database.
 func openSQLiteKVFile(t *testing.T) libkvstore.KVExecutor {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "kv.db")

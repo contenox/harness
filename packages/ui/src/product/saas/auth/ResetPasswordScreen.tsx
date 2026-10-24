@@ -11,9 +11,6 @@ const MIN_PASSWORD_LENGTH = 12;
 
 const FIELDS = ['password'] as const;
 
-/**
- * Spends the token from the emailed link.
- */
 export function ResetPasswordScreen({ token }: { token: string }) {
   const { routes, useConfirmPasswordReset } = useProductPorts();
   const [password, setPassword] = useState('');

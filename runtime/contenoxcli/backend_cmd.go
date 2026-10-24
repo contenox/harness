@@ -21,10 +21,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// invalidateBackendModelCache busts the cached model list (prov:<id>) for a
-// backend so the next chat/run refetches from the provider. Best-effort: a
-// failure is surfaced as a warning but does not fail the backend operation.
-// NewSQLiteManager wraps db without taking ownership, so it is not closed here.
 func invalidateBackendModelCache(ctx context.Context, errW io.Writer, db libdb.DBManager, backendID string) {
 	if err := runtimestate.InvalidateModelCache(ctx, libkvstore.NewSQLiteManager(db), backendID); err != nil {
 		fmt.Fprintf(errW, "warning: model cache invalidation failed for backend %s: %v\n", backendID, err)
@@ -75,11 +71,6 @@ Examples:
   contenox backend remove myvllm`,
 }
 
-// defaultBaseURLForType infers --url for backend types with one sensible
-// default, and errors out for types where a default would be actively wrong
-// (vertex-google/bedrock carry account-specific info no default could guess).
-// Types not listed here (vllm, custom OpenAI-compatible endpoints) return ""
-// unchanged — the caller must pass --url explicitly.
 func defaultBaseURLForType(typ string) (string, error) {
 	switch typ {
 	case "ollama":
@@ -152,14 +143,10 @@ Examples:
 			apiKey = os.Getenv(apiKeyEnv)
 		}
 
-		// Sanity-check the URL: a double-slash in the path (after stripping the scheme)
-		// is almost always caused by an un-expanded environment variable such as
-		// $GOOGLE_CLOUD_PROJECT being empty.  Catch it early rather than silently
-		// registering a broken backend.
 		if baseURL != "" {
 			pathPart := baseURL
 			if idx := strings.Index(baseURL, "://"); idx >= 0 {
-				pathPart = baseURL[idx+3:] // skip "https://"
+				pathPart = baseURL[idx+3:]
 			}
 			if strings.Contains(pathPart, "//") {
 				return fmt.Errorf(
@@ -193,7 +180,6 @@ Examples:
 			}
 		}
 
-		// Drop any stale cached model list so the next chat/run refetches.
 		invalidateBackendModelCache(ctx, cmd.ErrOrStderr(), db, backend.ID)
 
 		fmt.Fprintf(cmd.OutOrStdout(), "Backend %q added (%s → %s).\n", name, typ, baseURL)
@@ -285,7 +271,6 @@ registration; it does not affect the remote provider or endpoint.`,
 			return fmt.Errorf("failed to remove backend: %w", err)
 		}
 
-		// Drop the removed backend's cached model list.
 		invalidateBackendModelCache(ctx, cmd.ErrOrStderr(), db, b.ID)
 
 		fmt.Fprintf(cmd.OutOrStdout(), "Backend %q removed.\n", args[0])

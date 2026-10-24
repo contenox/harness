@@ -14,26 +14,19 @@ import (
 )
 
 var (
-	ErrEventTypeRequired = errors.New("event_log: event type is required")
-	// ErrInvalidEventParameter rejects a malformed argument.
-	ErrInvalidEventParameter = errors.New("event_log: invalid parameter")
-	// ErrEventMissingRequiredField rejects an append or query without its workspace.
+	ErrEventTypeRequired         = errors.New("event_log: event type is required")
+	ErrInvalidEventParameter     = errors.New("event_log: invalid parameter")
 	ErrEventMissingRequiredField = errors.New("event_log: missing required field")
-	// ErrEventTooOld / ErrEventTooNew reject event times outside the acceptance window.
-	ErrEventTooOld = errors.New("event_log: event is too old")
-	ErrEventTooNew = errors.New("event_log: event is too new")
+	ErrEventTooOld               = errors.New("event_log: event is too old")
+	ErrEventTooNew               = errors.New("event_log: event is too new")
 )
 
-// EventAcceptanceWindow bounds how far an event's Time may deviate from now on
-// append — ±10 minutes.
 const EventAcceptanceWindow = 10 * time.Minute
 
-// MaxEventListLimit bounds one list/query page.
 const MaxEventListLimit = 1000
 
 const eventPartitionPrefix = "event_log_"
 
-// Event is one stored domain event, CloudEvents-ish; WorkspaceID scopes it and Hop guards dispatch-loop depth.
 type Event struct {
 	NID         int64           `json:"nid"`
 	WorkspaceID string          `json:"workspace_id"`
@@ -45,38 +38,23 @@ type Event struct {
 	Hop         int             `json:"hop"`
 }
 
-// EventPartition is one registered per-day event table (row of event_partitions).
 type EventPartition struct {
 	Period    string
 	TableName string
 	CreatedAt time.Time
 }
 
-// EventStore is the persistence surface over the partitioned event log; every read is workspace-scoped.
 type EventStore interface {
-	// AppendEvent inserts event into its period's table, assigning the next global NID; Type and WorkspaceID are required, and Time outside the acceptance window is rejected.
 	AppendEvent(ctx context.Context, event *Event) error
-	// ListEventsSince returns workspaceID's events with nid > afterNID in ascending nid order, limit clamped to [1, MaxEventListLimit].
 	ListEventsSince(ctx context.Context, workspaceID string, afterNID int64, limit int) ([]Event, error)
-	// ListRecentEvents returns workspaceID's events newest first; beforeNID == 0 starts from the newest event, otherwise returns events with nid < beforeNID.
 	ListRecentEvents(ctx context.Context, workspaceID string, beforeNID int64, limit int) ([]Event, error)
-	// GetEventsByType returns workspaceID's events of eventType with time in
-	// [from, to], newest first.
 	GetEventsByType(ctx context.Context, workspaceID, eventType string, from, to time.Time, limit int) ([]Event, error)
-	// GetEventsBySource is GetEventsByType narrowed to one producer.
 	GetEventsBySource(ctx context.Context, workspaceID, eventType string, from, to time.Time, eventSource string, limit int) ([]Event, error)
-	// GetEventsBySubject returns one entity's history in a time range, newest first.
 	GetEventsBySubject(ctx context.Context, workspaceID, eventType string, from, to time.Time, subject string, limit int) ([]Event, error)
-	// GetEventTypesInRange returns the distinct event types workspaceID
-	// logged with time in [from, to], sorted.
 	GetEventTypesInRange(ctx context.Context, workspaceID string, from, to time.Time, limit int) ([]string, error)
-	// DeleteEventsByTypeInRange deletes workspaceID's events of eventType with time in [from, to].
 	DeleteEventsByTypeInRange(ctx context.Context, workspaceID, eventType string, from, to time.Time) error
-	// EnsureEventPartitionExists creates ts's period table, its indexes, and its registry row when absent; idempotent DDL, safe for concurrent callers.
 	EnsureEventPartitionExists(ctx context.Context, ts time.Time) error
-	// ListEventPartitions returns the registered partitions in period order.
 	ListEventPartitions(ctx context.Context) ([]EventPartition, error)
-	// PruneEventPartitionsBefore drops every partition whose period is strictly before t's period and returns the dropped periods; t's own period always survives.
 	PruneEventPartitionsBefore(ctx context.Context, t time.Time) ([]string, error)
 }
 
@@ -85,10 +63,8 @@ type eventStore struct {
 	now func() time.Time
 }
 
-// EventStoreOption configures an event store at construction.
 type EventStoreOption func(*eventStore)
 
-// WithEventClock overrides the store's time source.
 func WithEventClock(now func() time.Time) EventStoreOption {
 	return func(s *eventStore) {
 		if now != nil {
@@ -97,7 +73,6 @@ func WithEventClock(now func() time.Time) EventStoreOption {
 	}
 }
 
-// NewEventStore creates an event-log store bound to db.
 func NewEventStore(db libdb.DBManager, opts ...EventStoreOption) EventStore {
 	if db == nil {
 		panic("SERVER BUG: runtimetypes.NewEventStore called with nil db")
@@ -111,7 +86,6 @@ func NewEventStore(db libdb.DBManager, opts ...EventStoreOption) EventStore {
 
 type eventHopContextKey struct{}
 
-// WithEventHop returns ctx carrying hop for events appended downstream; hop <= 0 returns ctx unchanged.
 func WithEventHop(ctx context.Context, hop int) context.Context {
 	if hop <= 0 {
 		return ctx
@@ -119,13 +93,11 @@ func WithEventHop(ctx context.Context, hop int) context.Context {
 	return context.WithValue(ctx, eventHopContextKey{}, hop)
 }
 
-// EventHopFromContext returns the hop WithEventHop set, or 0.
 func EventHopFromContext(ctx context.Context) int {
 	hop, _ := ctx.Value(eventHopContextKey{}).(int)
 	return hop
 }
 
-// EventPeriodKey derives an event time's partition period, UTC daily (YYYYMMDD).
 func EventPeriodKey(t time.Time) string {
 	return t.UTC().Format("20060102")
 }
@@ -241,8 +213,6 @@ func (s *eventStore) prepareEvent(ctx context.Context, event *Event) error {
 	return nil
 }
 
-// AppendEventInTransaction appends through an existing transaction. The caller
-// must ensure the event's daily partition first and commit before publishing its NID.
 func AppendEventInTransaction(ctx context.Context, exec libdb.Exec, event *Event) error {
 	s := &eventStore{now: time.Now}
 	if err := s.prepareEvent(ctx, event); err != nil {
@@ -546,7 +516,6 @@ func (s *eventStore) PruneEventPartitionsBefore(ctx context.Context, t time.Time
 		if !validEventPartitionTableName(p.TableName) {
 			return dropped, fmt.Errorf("%w: registry names invalid table %q", ErrInvalidEventParameter, p.TableName)
 		}
-		// Registry delete and table drop commit together, so no registered period ever points at a missing table.
 		exec, commit, release, err := s.db.WithTransaction(ctx)
 		if err != nil {
 			return dropped, fmt.Errorf("event_log: prune tx: %w", err)
@@ -592,7 +561,6 @@ func scanEventRows(rows *sql.Rows) ([]Event, error) {
 	events := []Event{}
 	for rows.Next() {
 		var e Event
-		// data scans via string, not json.RawMessage, for SQLite TEXT compatibility.
 		var data string
 		if err := rows.Scan(&e.NID, &e.WorkspaceID, &e.Type, &e.Source, &e.Subject, &e.Time, &data, &e.Hop); err != nil {
 			return nil, fmt.Errorf("event_log: scan row: %w", err)

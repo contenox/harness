@@ -72,9 +72,6 @@ type mcpServerACPWire struct {
 	Meta     json.RawMessage `json:"_meta,omitempty"`
 }
 
-// MarshalJSON forces args/env (stdio) and headers (http/sse) onto the wire as
-// `[]` rather than omitting them when empty, since the spec requires them
-// always present.
 func (m McpServer) MarshalJSON() ([]byte, error) {
 	switch m.Kind() {
 	case McpServerKindACP:
@@ -127,7 +124,6 @@ func (m McpServer) Validate() error {
 	return nil
 }
 
-// MessageMCPRequest identifies one MCP request carried over ACP.
 type MessageMCPRequest struct {
 	ServerID  string          `json:"serverId"`
 	RequestID string          `json:"requestId"`
@@ -136,21 +132,18 @@ type MessageMCPRequest struct {
 	Meta      json.RawMessage `json:"_meta,omitempty"`
 }
 
-// MCPError is an inner MCP protocol error returned through mcp/message.
 type MCPError struct {
 	Code    int64           `json:"code"`
 	Message string          `json:"message"`
 	Data    json.RawMessage `json:"data,omitempty"`
 }
 
-// MessageMCPResponse carries exactly one inner MCP result or error.
 type MessageMCPResponse struct {
 	Result json.RawMessage `json:"result,omitempty"`
 	Error  *MCPError       `json:"error,omitempty"`
 	Meta   json.RawMessage `json:"_meta,omitempty"`
 }
 
-// Validate rejects ambiguous or incomplete MCP-over-ACP responses.
 func (r MessageMCPResponse) Validate() error {
 	hasResult := r.Result != nil
 	hasError := r.Error != nil

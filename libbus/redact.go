@@ -7,11 +7,6 @@ import (
 
 const maskedCredential = "xxxxx"
 
-// redactURL masks credentials in a NATS server URL, or a comma-separated
-// list of them (as nats.Connect and Config.NATSURL accept), before it is
-// logged: libbus logs through the standard "log" package rather than slog,
-// so a caller that redirects the process's slog output does not stop these
-// lines from reaching stderr.
 func redactURL(raw string) string {
 	parts := strings.Split(raw, ",")
 	for i, part := range parts {
@@ -39,7 +34,6 @@ func redactOne(raw string) string {
 	return u.String()
 }
 
-// maskUserinfo finds '@' scanning from the end, since a password may itself contain '/', '?' or '#'.
 func maskUserinfo(raw string) string {
 	sep := strings.Index(raw, "://")
 	if sep < 0 {

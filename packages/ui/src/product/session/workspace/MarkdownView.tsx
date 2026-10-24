@@ -9,9 +9,6 @@ function decodeUtf8(b64: string): string {
   return new TextDecoder('utf-8').decode(bytes);
 }
 
-/**
- * The markdown viewer of the preview pipe.
- */
 export default function MarkdownView({ content, path }: PreviewViewerProps) {
   return (
     <div

@@ -49,7 +49,6 @@ func TestUnit_OpenAIStreamClient_StreamsThinkingDeltas(t *testing.T) {
 	assert.Equal(t, "hello", res.Content)
 }
 
-// Drives a recorded chat-completions SSE transcript with two parallel tool calls through the real adapter and assembler end to end.
 func TestUnit_OpenAIStreamClient_GoldenFixture_ToolCallFragments(t *testing.T) {
 	t.Parallel()
 
@@ -113,7 +112,6 @@ func TestUnit_OpenAIStreamClient_GoldenFixture_ToolCallFragments(t *testing.T) {
 	assert.Equal(t, 62, res.Usage.TotalTokens)
 }
 
-// Pins the Responses-API stream path: function_call argument deltas, reasoning-summary deltas as thinking, and response.completed as the terminal parcel with usage.
 func TestUnit_OpenAIStreamClient_ResponsesGoldenFixture_FunctionCallDeltas(t *testing.T) {
 	t.Parallel()
 
@@ -168,7 +166,6 @@ func TestUnit_OpenAIStreamClient_ResponsesGoldenFixture_FunctionCallDeltas(t *te
 	assert.Equal(t, 11, res.Usage.CompletionTokens)
 }
 
-// An SSE `error` event ends the stream with an Error parcel, and the assembler refuses to produce a result from it.
 func TestUnit_OpenAIStreamClient_ErrorEventSurfaces(t *testing.T) {
 	t.Parallel()
 
@@ -252,7 +249,6 @@ func TestUnit_OpenAIStreamClient_ResponsesAPIEmitsReasoningSummary(t *testing.T)
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprint(w, "event: response.output_text.delta\n")
 		fmt.Fprint(w, `data: {"type":"response.output_text.delta","delta":"ans"}`+"\n\n")
-		// The fixture carries a decoy top-level "reasoning" field that must be ignored.
 		fmt.Fprint(w, "event: response.completed\n")
 		fmt.Fprint(w, `data: {"type":"response.completed","response":{"output":[{"type":"reasoning","id":"rs_1","summary":[{"type":"summary_text","text":"I reasoned this"}]}],"reasoning":{"effort":"medium","summary":"auto"}}}`+"\n\n")
 	}))

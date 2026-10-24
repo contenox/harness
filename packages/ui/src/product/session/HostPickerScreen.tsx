@@ -9,9 +9,6 @@ import { useProductPorts } from '../ports';
 import type { Instance } from '../lib/api/types';
 import { hostDetail, isReachable } from '../lib/hostState';
 
-/**
- * Step one of the only flow that matters: which machine.
- */
 export default function HostPickerPage() {
   const { routes, useAuth, useHosts } = useProductPorts();
   const accountID = useAuth().accountID ?? '';

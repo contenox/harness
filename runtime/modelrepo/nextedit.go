@@ -8,10 +8,8 @@ import (
 	"github.com/contenox/harness/runtime/modelcontract"
 )
 
-// ErrNextEditUnsupported means the selected model cannot execute independent edit prediction.
 var ErrNextEditUnsupported = errors.New("independent next edit prediction is unavailable for the selected model")
 
-// NextEditRequest carries a document edit prediction and generation settings.
 type NextEditRequest struct {
 	Input       modelcontract.NextEditInput
 	MaxTokens   int
@@ -21,7 +19,6 @@ type NextEditRequest struct {
 	SessionKey  string
 }
 
-// Validate rejects incomplete sampling settings and session identity.
 func (r NextEditRequest) Validate() error {
 	if err := r.Input.Validate(); err != nil {
 		return err
@@ -32,15 +29,12 @@ func (r NextEditRequest) Validate() error {
 	return nil
 }
 
-// NextEditResult carries exact source replacements and provider accounting.
 type NextEditResult struct {
 	Edits        []modelcontract.TextEdit
 	FinishReason string
 	Usage        *TokenUsage
 }
 
-// LLMNextEditClient executes an independent next edit prediction.
 type LLMNextEditClient interface {
-	// NextEdit predicts independent source replacements for one document.
 	NextEdit(context.Context, NextEditRequest) (NextEditResult, error)
 }

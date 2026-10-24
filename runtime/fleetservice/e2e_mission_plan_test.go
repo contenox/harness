@@ -16,12 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// missionPlanChain is a deterministic, model-free chain the dispatched unit runs
-// as its first and only turn: a `tools` task that calls its granted mission_plan
-// tool with a full-snapshot plan (entries carried as a JSON string, the only
-// shape a deterministic `tools` task's map[string]string Args can hold), then a
-// noop terminator. It never touches a model — the fake default-model would fail
-// loudly if it tried — proving the plan grant reaches a real unit, not inference.
 const missionPlanChain = `{
   "id": "e2e-mission-plan",
   "tasks": [
@@ -46,16 +40,6 @@ const missionPlanChain = `{
   ]
 }`
 
-// TestFleetService_E2E_MissionPlanFromDispatchedUnit is the acceptance for the
-// plan tool through a REAL subprocess, the sibling of
-// TestFleetService_E2E_MissionReportFromDispatchedUnit: a declared unit is
-// dispatched on a mission, runs unattended, and writes its plan through the
-// mission_plan tool — a full snapshot that lands on ITS OWN mission in the shared
-// store and is read back here via missionservice.Get. It proves the same grant
-// seam the report e2e proves (dispatcher forwards the mission id at session/new,
-// the unit binds it into its session, the tool is scoped to exactly that
-// mission), now for the plan channel, and that SetPlan's full-snapshot replace
-// survives the process boundary a fleet unit is.
 func TestFleetService_E2E_MissionPlanFromDispatchedUnit(t *testing.T) {
 	if testing.Short() {
 		t.Skip("e2e: builds the contenox binary and spawns a real ACP subprocess")
@@ -89,9 +73,6 @@ func TestFleetService_E2E_MissionPlanFromDispatchedUnit(t *testing.T) {
 	}))
 	require.NoError(t, agents.Create(ctx, agent))
 
-	// A concurrency-safe stderr sink (the package's lockedBuffer, as every other
-	// e2e here uses): the subprocess's stderr-reader goroutine writes it while the
-	// assertion messages below read String(), and a plain bytes.Buffer would race.
 	stderr := &lockedBuffer{}
 	kernel := agentinstance.New(agents, agentinstance.WithStderr(stderr))
 	t.Cleanup(func() { _ = kernel.Close() })
@@ -106,8 +87,6 @@ func TestFleetService_E2E_MissionPlanFromDispatchedUnit(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, result.MissionID)
 
-	// The intent-driven first turn runs detached; poll for the plan the unit
-	// writes onto its own mission over the shared DB.
 	var m *missionservice.Mission
 	deadline := time.Now().Add(45 * time.Second)
 	for time.Now().Before(deadline) {
@@ -127,11 +106,8 @@ func TestFleetService_E2E_MissionPlanFromDispatchedUnit(t *testing.T) {
 	require.Equal(t, missionservice.PlanEntryPriorityHigh, m.Plan.Entries[0].Priority)
 	require.Equal(t, "port the hot loop", m.Plan.Entries[1].Content)
 	require.Equal(t, "first cut from the field", m.Plan.Explanation)
-	// SetPlan assigned ids to the id-less entries — the id echo the projection and
-	// the next revision both rely on.
 	require.NotEmpty(t, m.Plan.Entries[0].ID)
 	require.NotEmpty(t, m.Plan.Entries[1].ID)
 
-	// Writing the plan stamped mission liveness — the heartbeat rides meaningful activity.
 	require.NotNil(t, m.LastHeartbeat, "a written plan is proof of life and heartbeats the mission")
 }

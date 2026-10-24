@@ -14,22 +14,19 @@ type vertexRequest struct {
 }
 
 type vertexGenerationConfig struct {
-	Temperature     *float64 `json:"temperature,omitempty"`
-	TopP            *float64 `json:"topP,omitempty"`
-	MaxOutputTokens *int     `json:"maxOutputTokens,omitempty"`
-	Seed            *int     `json:"seed,omitempty"`
-	// ResponseMimeType is application/json for a schema-constrained request; empty leaves the default text output.
-	ResponseMimeType string `json:"responseMimeType,omitempty"`
-	// ResponseJsonSchema is the caller's JSON Schema the response must satisfy, sent whole.
+	Temperature        *float64              `json:"temperature,omitempty"`
+	TopP               *float64              `json:"topP,omitempty"`
+	MaxOutputTokens    *int                  `json:"maxOutputTokens,omitempty"`
+	Seed               *int                  `json:"seed,omitempty"`
+	ResponseMimeType   string                `json:"responseMimeType,omitempty"`
 	ResponseJsonSchema any                   `json:"responseJsonSchema,omitempty"`
 	ThinkingConfig     *vertexThinkingConfig `json:"thinkingConfig,omitempty"`
 }
 
 type vertexThinkingConfig struct {
-	ThinkingBudget *int   `json:"thinkingBudget,omitempty"`
-	ThinkingLevel  string `json:"thinkingLevel,omitempty"`
-	// IncludeThoughts asks the model to return its thoughts beside its answer.
-	IncludeThoughts bool `json:"includeThoughts,omitempty"`
+	ThinkingBudget  *int   `json:"thinkingBudget,omitempty"`
+	ThinkingLevel   string `json:"thinkingLevel,omitempty"`
+	IncludeThoughts bool   `json:"includeThoughts,omitempty"`
 }
 
 type vertexToolRequest struct {
@@ -37,12 +34,8 @@ type vertexToolRequest struct {
 }
 
 type vertexFunctionDeclaration struct {
-	Name string `json:"name"`
-	// Description is the vendor's human-readable description of the function.
-	Description string `json:"description,omitempty"`
-	// ParametersJsonSchema is the caller's JSON Schema verbatim, which the
-	// vendor documents as the full JSON Schema form of the function's
-	// parameters.
+	Name                 string          `json:"name"`
+	Description          string          `json:"description,omitempty"`
 	ParametersJsonSchema json.RawMessage `json:"parametersJsonSchema,omitempty"`
 }
 
@@ -119,27 +112,16 @@ type vertexErrorResponse struct {
 	} `json:"error"`
 }
 
-// vertexContinuation is the response content this adapter replays on the next
-// turn: a Vertex thought signature lives inside the part it was returned on (a
-// text part as much as a functionCall part), so the parts are kept verbatim
-// rather than rebuilt from the neutral message.
 type vertexContinuation struct {
 	Parts []vertexPart `json:"parts"`
 }
 
-// continuationProvider identifies content this adapter stored for replay.
 const continuationProvider = "vertex"
 
-// thoughtSignatureMetaKey is the ToolCall.ProviderMeta key a response part's
-// thought signature round-trips under.
 const thoughtSignatureMetaKey = "thought_signature"
 
-// skipThoughtSignatureValidator is the vendor's documented thought_signature
-// value for a functionCall part the API did not generate and that therefore has
-// no signature to return, such as history carried over from another model.
 const skipThoughtSignatureValidator = "skip_thought_signature_validator"
 
-// replayContinuation decodes a stored turn for this provider and model.
 func replayContinuation(continuation *modelrepo.Continuation, modelName string) ([]vertexPart, bool) {
 	if continuation == nil || continuation.Provider != continuationProvider || continuation.Model != modelName {
 		return nil, false
@@ -154,7 +136,6 @@ func replayContinuation(continuation *modelrepo.Continuation, modelName string) 
 	return stored.Parts, true
 }
 
-// responseContinuation stores a response's parts for verbatim replay.
 func responseContinuation(modelName string, parts []vertexPart) *modelrepo.Continuation {
 	if len(parts) == 0 {
 		return nil

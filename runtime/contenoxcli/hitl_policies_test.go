@@ -99,11 +99,6 @@ func TestUnit_SeededACPXPolicy_SecretInvariantAndHeavyDeltas(t *testing.T) {
 	svc := seededPolicyService(t, "hitl-policy-acpx.json", hitlPolicyACPX)
 	ctx := context.Background()
 
-	// acpx is the untrusted-driver profile. There is no interactive operator on
-	// a non-interactive channel (e.g. OpenClaw's Telegram bridge), so "approve"
-	// is not a valid action class here: it would only ever degrade to deny or
-	// allow at the host. The policy is therefore pure allow/deny — every
-	// mutating capability is an explicit deny, not an unhonorable "approve".
 	deny := map[string][2]string{
 		"shell":      {"local_shell", "local_shell"},
 		"web_post":   {"webtools", "web_post"},
@@ -121,13 +116,10 @@ func TestUnit_SeededACPXPolicy_SecretInvariantAndHeavyDeltas(t *testing.T) {
 		assert.Equal(t, hitlservice.ActionDeny, r.Action, "acpx must deny %s (no approve tier on an untrusted driver)", label)
 	}
 
-	// Reads still pass (containment, not lockout).
 	r, err := svc.Evaluate(ctx, "local_fs", "read_file", nil)
 	require.NoError(t, err)
 	assert.Equal(t, hitlservice.ActionAllow, r.Action, "acpx must allow plain reads")
 
-	// Floor is deny: an untrusted driver gets least privilege. An unaccounted
-	// tool is denied, never silently approved.
 	r, err = svc.Evaluate(ctx, "some_unaccounted_mcp", "arbitrary_tool", nil)
 	require.NoError(t, err)
 	assert.Equal(t, hitlservice.ActionDeny, r.Action, "acpx default_action must be deny (untrusted driver, least privilege)")

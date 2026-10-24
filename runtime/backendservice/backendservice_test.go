@@ -25,15 +25,6 @@ func TestUnit_BackendService_ValidateRejectsUnknownTypes(t *testing.T) {
 	}
 }
 
-
-// TestUnit_BackendService_ValidateAcceptsModeld locks in that "modeld" (local
-// sentinel or remote host:port) is an accepted backend type. It regressed
-// silently — the CLI's `backend add --type modeld` help text and examples
-// documented this as first-class, but this switch was never updated when the
-// modeld backend type was introduced, so every real "backend add --type
-// modeld" invocation failed validation until this fix.
-
-
 func TestUnit_BackendService_ValidateRejectsRetiredLocalNodeType(t *testing.T) {
 	for _, typ := range []string{"localnode"} {
 		err := validate(&runtimetypes.Backend{

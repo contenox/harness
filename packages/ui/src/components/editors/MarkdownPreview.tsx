@@ -1,9 +1,6 @@
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-/**
- * MarkdownPreview renders GitHub-flavoured Markdown in a scrollable reading surface.
- */
 export function MarkdownPreview({ value, label }: { value: string; label: string }) {
   return (
     <div

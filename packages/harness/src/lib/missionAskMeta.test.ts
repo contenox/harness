@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MISSION_ASK_META_KEY, missionAskFromMeta } from './acp';
 
-/**
- * A delivered question is what unblocks a parked unit, so misreading its `_meta`
- * has two bad failure modes: dropping the answer box (the unit waits for a human
- * who never sees the ask), or rendering one for a message that is not a question
- * (an answer with no ask to resolve). Both directions are pinned.
- */
 describe('missionAskFromMeta', () => {
   it('reads a delivered question, trimming the handle', () => {
     const ask = missionAskFromMeta({

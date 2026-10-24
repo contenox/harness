@@ -12,7 +12,6 @@ type autocompleteClient struct {
 	format string
 }
 
-// GetAutocompleteConnection binds the model's declared FIM contract to its raw completion endpoint.
 func (p *vLLMProvider) GetAutocompleteConnection(_ context.Context, backend string) (modelrepo.LLMAutocompleteClient, error) {
 	if !p.CanAutocomplete() {
 		return nil, modelrepo.ErrAutocompleteUnsupported

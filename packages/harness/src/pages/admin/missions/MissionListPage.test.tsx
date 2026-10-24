@@ -11,21 +11,11 @@ import MissionListPage from './MissionListPage';
 vi.mock('../../../lib/api', () => ({
   api: {
     listMissions: vi.fn(async () => []),
-    // The list now joins the fleet (process state) and the report feed
-    // (blocked chip) into the one composed status; both degrade to absent.
     getFleet: vi.fn(async () => []),
     listMissionReports: vi.fn(async () => []),
   },
 }));
 
-/**
- * `@testing-library/react` is not a dependency of `packages/beam` (see
- * PermissionCard.test.tsx / FleetPage.test.tsx). The list is rendered to
- * static markup with the mission list pre-seeded into the query cache, which
- * is enough to pin what a row shows for each fact this slice requires:
- * intent as the primary, linked fact; agent; status; envelope; and liveness
- * (heartbeat, rendered honestly when it has never been reported).
- */
 beforeAll(async () => {
   await i18n.changeLanguage('en');
 });

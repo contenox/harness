@@ -20,17 +20,11 @@ const MODEL_DEFAULT_GROUP = 'default';
 
 const HITL_POLICY_DEFAULT_VALUE = '__contenox_default__';
 
-/**
- * Command name to the values it accepts, in the order the machine sent them.
- */
 export type CommandValueDomains = ReadonlyMap<string, readonly string[]>;
 
 
 export const NO_VALUE_DOMAINS: CommandValueDomains = new Map<string, readonly string[]>();
 
-/**
- * Projects the advertised config options onto the four commands that set them.
- */
 export function commandValueDomains(
   options: readonly SessionConfigOption[] | undefined,
 ): CommandValueDomains {

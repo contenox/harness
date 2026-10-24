@@ -17,7 +17,6 @@ import (
 
 const localExecToolsName = "local_shell"
 
-// LocalExecResult is the structured result returned by the local_shell tools.
 type LocalExecResult struct {
 	ExitCode        int     `json:"exit_code"`
 	Stdout          string  `json:"stdout"`
@@ -30,70 +29,54 @@ type LocalExecResult struct {
 	OS              string  `json:"os,omitempty"`
 }
 
-// LocalExecTools runs commands on the local host (same machine as the process).
-// It is opt-in and can be restricted by an allowlist and optional denylist. Enable via -enable-local-exec.
 type LocalExecTools struct {
 	defaultTimeout  time.Duration
-	allowedDir      string   // if set, command path must be under this dir (after resolving)
-	allowedCommands []string // if set, executable must be in this list (exact or resolved path)
-	deniedCommands  []string // if set, executable basename or path must not be in this list (checked first)
+	allowedDir      string
+	allowedCommands []string
+	deniedCommands  []string
 	runner          CommandRunner
 	shell           PlatformShell
-	scrubEnv        func([]string) []string // if set, the default runner scrubs the child environment
+	scrubEnv        func([]string) []string
 }
 
-// LocalExecOption configures LocalExecTools.
 type LocalExecOption func(*LocalExecTools)
 
-// WithLocalExecTimeout sets the default execution timeout.
 func WithLocalExecTimeout(d time.Duration) LocalExecOption {
 	return func(h *LocalExecTools) {
 		h.defaultTimeout = d
 	}
 }
 
-// WithLocalExecAllowedDir restricts execution to scripts/binaries under this directory.
 func WithLocalExecAllowedDir(dir string) LocalExecOption {
 	return func(h *LocalExecTools) {
 		h.allowedDir = filepath.Clean(dir)
 	}
 }
 
-// WithLocalExecAllowedCommands restricts execution to these executable names/paths.
 func WithLocalExecAllowedCommands(commands []string) LocalExecOption {
 	return func(h *LocalExecTools) {
 		h.allowedCommands = commands
 	}
 }
 
-// WithLocalExecDeniedCommands forbids these executable basenames or paths (checked before allowlist).
 func WithLocalExecDeniedCommands(commands []string) LocalExecOption {
 	return func(h *LocalExecTools) {
 		h.deniedCommands = commands
 	}
 }
 
-// WithLocalExecShell sets the detected platform shell used for shell:true calls
-// and for tool schema descriptions.
 func WithLocalExecShell(shell PlatformShell) LocalExecOption {
 	return func(h *LocalExecTools) {
 		h.shell = shell.WithDefaults()
 	}
 }
 
-// WithLocalExecScrubEnv sets the environment scrub applied to every local_shell
-// command run through the default runner: `scrub` maps the parent environment to
-// the one the command inherits, so credentials in serve's environment do not leak
-// into an LLM-driven shell (see libsandbox.EnvScrub). Nil (the default) keeps the
-// full inherited environment. Ignored when an explicit runner is supplied to
-// NewLocalExecToolsWith, which owns its own environment handling.
 func WithLocalExecScrubEnv(scrub func([]string) []string) LocalExecOption {
 	return func(h *LocalExecTools) {
 		h.scrubEnv = scrub
 	}
 }
 
-// NewLocalExecTools creates a new LocalExecTools with the given options.
 func NewLocalExecTools(opts ...LocalExecOption) taskengine.ToolsRepo {
 	return NewLocalExecToolsWith(nil, opts...)
 }
@@ -113,10 +96,6 @@ func NewLocalExecToolsWith(runner CommandRunner, opts ...LocalExecOption) tasken
 	return h
 }
 
-// resolvePolicy returns the effective allow/deny lists for this invocation.
-// Chain-level context args (injected by ExecEnv via WithToolsArgs) take
-// precedence over the global struct-level defaults set at construction time.
-// The returned map values are comma-separated lists (e.g. "git,ls").
 func (h *LocalExecTools) resolvePolicy(ctx context.Context) (allowedCommands []string, allowedDir string, deniedCommands []string) {
 	if args := taskengine.ToolsArgsFromContext(ctx, localExecToolsName); len(args) > 0 {
 		if v := args["_allowed_commands"]; v != "" {
@@ -130,11 +109,9 @@ func (h *LocalExecTools) resolvePolicy(ctx context.Context) (allowedCommands []s
 		}
 		return
 	}
-	// Fall back to construction-time defaults.
 	return h.allowedCommands, h.allowedDir, h.deniedCommands
 }
 
-// splitTrimmed splits a comma-separated string and trims whitespace.
 func splitTrimmed(s string) []string {
 	parts := strings.Split(s, ",")
 	out := make([]string, 0, len(parts))
@@ -146,10 +123,6 @@ func splitTrimmed(s string) []string {
 	return out
 }
 
-// Exec implements taskengine.ToolsRepo.
-// Input is passed as stdin to the command when it is a string or when map contains "stdin".
-// When invoked from execute_tool_calls, tools.Args may be nil and the command comes from input (e.g. {"command":"ls"}).
-// Args (when set): command (required), args (optional space-separated), cwd, timeout, shell (default false).
 func (h *LocalExecTools) Exec(ctx context.Context, startTime time.Time, input any, debug bool, tools *taskengine.ToolsCall) (any, taskengine.DataType, error) {
 	if tools == nil {
 		return nil, taskengine.DataTypeAny, errors.New("local_shell: tools required")
@@ -174,7 +147,6 @@ func (h *LocalExecTools) Exec(ctx context.Context, startTime time.Time, input an
 
 func (h *LocalExecTools) parseArgs(tools *taskengine.ToolsCall, input any) (command string, argsSlice []string, cwd string, timeout time.Duration, useShell bool, stdin string, err error) {
 	timeout = h.defaultTimeout
-	// From tools.Args (string map)
 	get := func(k string) string { return tools.Args[k] }
 	if cmd := get("command"); cmd != "" {
 		command = cmd
@@ -196,7 +168,6 @@ func (h *LocalExecTools) parseArgs(tools *taskengine.ToolsCall, input any) (comm
 	if s := get("shell"); s != "" {
 		useShell = strings.EqualFold(s, "true") || s == "1"
 	}
-	// Input as stdin or as command when command not in args
 	switch v := input.(type) {
 	case string:
 		stdin = v
@@ -216,7 +187,6 @@ func (h *LocalExecTools) parseArgs(tools *taskengine.ToolsCall, input any) (comm
 		if s, ok := v["stdin"].(string); ok {
 			stdin = s
 		}
-		// Read shell, args, cwd, timeout from dynamic tool args if not already set by tools.Args
 		if s, ok := v["shell"].(bool); ok && !useShell {
 			useShell = s
 		} else if s, ok := v["shell"].(string); ok && !useShell {
@@ -248,13 +218,6 @@ func (h *LocalExecTools) parseArgs(tools *taskengine.ToolsCall, input any) (comm
 }
 
 func (h *LocalExecTools) checkAllowlist(command string, useShell bool, allowedCommands []string, allowedDir string, deniedCommands []string) error {
-	// Security: forbid shell mode entirely when any policy is active.
-	// It is impossible to statically analyse a raw shell string for pipes (|),
-	// logic operators (&&, ||) and subshells ($(...)), so we refuse to run
-	// a platform shell string when an allowlist, denylist or allowed-dir policy is
-	// configured.  Without this guard, an LLM could bypass
-	// This prevents the model from escaping policy via shell injection, e.g.
-	// with _allowed_commands=git and: {"command":"git status; rm -rf /","shell":true}
 	if useShell && (len(allowedCommands) > 0 || allowedDir != "" || len(deniedCommands) > 0) {
 		return fmt.Errorf("local_shell: 'shell: true' is strictly forbidden when security " +
 			"policies (allowlist / denylist / allowed-dir) are active to prevent command injection; " +
@@ -271,7 +234,6 @@ func (h *LocalExecTools) checkAllowlist(command string, useShell bool, allowedCo
 	} else {
 		resolved = filepath.Clean(command)
 	}
-	// 1. Denylist: never allow these basenames or paths
 	if len(deniedCommands) > 0 {
 		base := filepath.Base(resolved)
 		for _, d := range deniedCommands {
@@ -281,8 +243,6 @@ func (h *LocalExecTools) checkAllowlist(command string, useShell bool, allowedCo
 			}
 		}
 	}
-	// 2. Allowlist checks (only enforced when configured; otherwise authorization
-	// is the responsibility of upstream layers — typically the HITL wrapper).
 	if allowedDir != "" {
 		absDir, err := filepath.Abs(allowedDir)
 		if err != nil {
@@ -351,16 +311,11 @@ func (h *LocalExecTools) run(ctx context.Context, command string, argsSlice []st
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	limit := int64(2 * 1024 * 1024) // 2MB default fallback if no budget is provided
+	limit := int64(2 * 1024 * 1024)
 	if val, ok := ctx.Value(taskengine.ContextKeyOutputByteLimit).(int64); ok {
 		limit = val
 	}
 
-	// Rec 4 (tool-hardening.md): never truncate silently. The spool writers keep
-	// a bounded 20%-head/80%-tail slice for the inline result AND spill the FULL
-	// stream to a durable file so the truncated result can name it concretely
-	// ("full output: <path>"). Errors cluster at the tail (gemini-cli's finding),
-	// so the 80% weight is on the end of the stream.
 	stdout := newSpoolWriter(ctx, "local_shell-stdout", limit)
 	stderr := newSpoolWriter(ctx, "local_shell-stderr", limit)
 
@@ -377,9 +332,6 @@ func (h *LocalExecTools) run(ctx context.Context, command string, argsSlice []st
 	result.DurationSeconds = time.Since(start).Seconds()
 
 	if errors.Is(runErr, ErrOutputBudgetExceeded) {
-		// Backend signalled it had already truncated its own output stream. The
-		// partial bytes are from an incomplete write and must not be surfaced or
-		// spooled (a poisoned partial is worse than nothing).
 		stdout.discard()
 		stderr.discard()
 		result.Success = false
@@ -394,10 +346,6 @@ func (h *LocalExecTools) run(ctx context.Context, command string, argsSlice []st
 	result.Stderr = strings.TrimRight(stderr.inlineOutput(), "\r\n")
 
 	if stdout.truncated() || stderr.truncated() {
-		// Never silent: the inline Stdout/Stderr already carry the 20/80 split with
-		// an embedded spool pointer; the Error field names the concrete next step
-		// and its severity (Rec 5). A spool that could not be written is the only
-		// genuinely fatal case here (disk full / spool unwritable).
 		result.Success = false
 		result.ExitCode = -1
 		var parts []string
@@ -425,9 +373,6 @@ func (h *LocalExecTools) run(ctx context.Context, command string, argsSlice []st
 	return result, nil
 }
 
-// spoolNotice renders the truncation notice for one stream: it names the exact
-// retrieval step (the spool file path and full size) per Rec 4, and always
-// contains the phrase "context budget" so callers keying on it keep working.
 func spoolNotice(stream string, w *spoolWriter, path string, budget int64) string {
 	if w.spoolErr != nil {
 		return fmt.Sprintf("Output truncated: %s exceeded the context budget (%d bytes); the full output could not be spooled (%v).", stream, budget, w.spoolErr)
@@ -438,9 +383,6 @@ func spoolNotice(stream string, w *spoolWriter, path string, budget int64) strin
 	return fmt.Sprintf("Output truncated: %s exceeded the context budget (%d bytes); showing the first 20%% and last 80%%; full output: %s (%s).", stream, budget, path, humanSize(w.total))
 }
 
-// truncationSeverity returns the fatal marker when a spool could not be written
-// (disk full / spool unwritable), otherwise the recoverable marker — a
-// too-large output is fixable by narrowing the command.
 func truncationSeverity(stdout, stderr *spoolWriter) string {
 	if stdout.spoolErr != nil || stderr.spoolErr != nil {
 		reason := "spool unwritable"
@@ -452,7 +394,6 @@ func truncationSeverity(stdout, stderr *spoolWriter) string {
 	return severityRecoverable
 }
 
-// splitShellArgs splits a string into an array of shell arguments, respecting single and double quotes and basic backslash escapes.
 func splitShellArgs(s string) []string {
 	var args []string
 	var current strings.Builder
@@ -492,12 +433,10 @@ func splitShellArgs(s string) []string {
 	return args
 }
 
-// Supports implements taskengine.ToolsRegistry.
 func (h *LocalExecTools) Supports(ctx context.Context) ([]string, error) {
 	return []string{localExecToolsName}, nil
 }
 
-// GetSchemasForSupportedTools implements taskengine.ToolsWithSchema.
 func (h *LocalExecTools) GetSchemasForSupportedTools(ctx context.Context) (map[string]*openapi3.T, error) {
 	shellDesc := h.shell.ShellModeDescription()
 	schema := &openapi3.T{
@@ -547,9 +486,6 @@ func (h *LocalExecTools) GetSchemasForSupportedTools(ctx context.Context) (map[s
 	return map[string]*openapi3.T{localExecToolsName: schema}, nil
 }
 
-// GetToolsForToolsByName implements taskengine.ToolsWithSchema.
-// Chain-level policy (allowed/denied commands, allowed dir) is read from ctx
-// via ToolsArgsFromContext when present, falling back to the struct defaults.
 func (h *LocalExecTools) GetToolsForToolsByName(ctx context.Context, name string) ([]taskengine.Tool, error) {
 	if name != localExecToolsName {
 		return nil, fmt.Errorf("unknown tools: %s", name)
@@ -567,9 +503,6 @@ func (h *LocalExecTools) GetToolsForToolsByName(ctx context.Context, name string
 		desc += " Denied commands: " + strings.Join(deniedCommands, ", ") + "."
 	}
 
-	// When any policy constraint is active, shell mode is rejected at execution
-	// time. Keep the schema provider-compatible and communicate the restriction
-	// in prose; Gemini rejects boolean enum values in tool declarations.
 	policyActive := len(allowedCommands) > 0 || allowedDir != "" || len(deniedCommands) > 0
 	var shellProp map[string]interface{}
 	if policyActive {

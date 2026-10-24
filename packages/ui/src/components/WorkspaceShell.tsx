@@ -2,9 +2,6 @@ import type { ReactNode } from 'react';
 import { Panel } from './Panel';
 import { cn } from '../utils';
 
-/**
- * WorkspaceShell provides a fixed header and optional navigation around scrollable content.
- */
 export function WorkspaceShell({
   header,
   navigation,
@@ -33,9 +30,6 @@ export function WorkspaceShell({
   );
 }
 
-/**
- * PageContent applies the shared workspace gutter and bounded content width.
- */
 export function PageContent({
   children,
   narrow = false,

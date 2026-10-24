@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// Message represents a stored message.
 type Message struct {
 	ID      string    `json:"id"`
 	IDX     string    `json:"idx_id"`
@@ -13,18 +12,15 @@ type Message struct {
 	AddedAt time.Time `json:"added_at"`
 }
 
-// SessionInfo represents a chat session index row.
 type SessionInfo struct {
 	ID           string
 	Identity     string
-	Name         string // empty if unnamed
+	Name         string
 	MessageCount int
 	UpdatedAt    time.Time
 }
 
-// Store defines the data access interface for messages.
 type Store interface {
-	// Index operations
 	CreateMessageIndex(ctx context.Context, id string, identity string) error
 	CreateNamedMessageIndex(ctx context.Context, id string, identity string, name string) error
 	DeleteMessageIndex(ctx context.Context, id string, identity string) error
@@ -34,7 +30,6 @@ type Store interface {
 	GetSessionByName(ctx context.Context, identity string, name string) (*SessionInfo, error)
 	RenameSession(ctx context.Context, id string, name string) error
 
-	// Message operations
 	AppendMessages(ctx context.Context, messages ...*Message) error
 	DeleteMessages(ctx context.Context, stream string) error
 	ListMessages(ctx context.Context, stream string) ([]*Message, error)

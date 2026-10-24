@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestSystem_VLLM_Smoke exercises the vLLM provider against a live container.
 func TestSystem_VLLM_Smoke(t *testing.T) {
 	requireVLLMContainerTests(t)
 
@@ -250,7 +249,6 @@ func TestSystem_VLLM_Smoke(t *testing.T) {
 				require.NoError(t, err, "failed to get third response")
 				require.NotEmpty(t, resp3.Message.Content, "third response should not be empty")
 
-				// Different seeds usually (not guaranteed) produce different output.
 				if resp1.Message.Content == resp3.Message.Content {
 					t.Logf("WARNING: Responses with different seeds were identical. "+
 						"This is unusual but can happen with very short completions. \n\n%s\n%s\n%s", resp1.Message.Content, resp2.Message.Content, resp3.Message.Content)
@@ -268,7 +266,7 @@ func TestSystem_VLLM_Smoke(t *testing.T) {
 				[]string{apiBase},
 				http.DefaultClient,
 				tt.caps,
-				"", // No auth token for local testing
+				"",
 				nil,
 			)
 			tt.testFunc(t, provider, apiBase)

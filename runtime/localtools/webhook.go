@@ -20,24 +20,14 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// WebToolsName is the namespace under which all web_* verb tools are exposed
-// and the key used to look up tools_policies entries.
 const WebToolsName = "webtools"
 
-// WebCaller exposes per-verb HTTP tools (web_get, web_head, web_post, web_put,
-// web_patch, web_delete) under the "webtools" namespace. Each call is gated
-// by tools_policies.webtools (host allow/deny, scheme allowlist, size limits,
-// timeout, retry, redirects), tracked through libtracker, and — for mutating
-// verbs — gated by HITL approval per the default policy.
 type WebCaller struct {
 	client         *http.Client
 	defaultHeaders map[string]string
 	tracker        libtracker.ActivityTracker
 }
 
-// NewWebCaller creates a new WebCaller. Pass nil for tracker to disable
-// tracing; the constructor swaps it for a NoopTracker so the call sites stay
-// uniform.
 func NewWebCaller(tracker libtracker.ActivityTracker, options ...WebtoolsOption) taskengine.ToolsRepo {
 	if tracker == nil {
 		tracker = libtracker.NoopTracker{}
@@ -65,8 +55,6 @@ func WithHTTPClient(client *http.Client) WebtoolsOption {
 func WithDefaultHeader(key, value string) WebtoolsOption {
 	return func(h *WebCaller) { h.defaultHeaders[key] = value }
 }
-
-// ── policy readers ────────────────────────────────────────────────────────────
 
 func (h *WebCaller) policyArgs(ctx context.Context) map[string]string {
 	return taskengine.ToolsArgsFromContext(ctx, WebToolsName)
@@ -117,12 +105,6 @@ func (h *WebCaller) policyBool(args map[string]string, key string, fallback bool
 	return fallback
 }
 
-// ── URL / host validation ─────────────────────────────────────────────────────
-
-// validateURL parses raw and enforces scheme + host policies. Returns the
-// parsed URL on success or a soft denial string (with denial=true) on policy
-// violation. denial=true means "return this string to the model as a tool
-// result"; denial=false with err set means a hard error (malformed URL).
 func (h *WebCaller) validateURL(args map[string]string, raw string) (*url.URL, string, bool, error) {
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -137,8 +119,6 @@ func (h *WebCaller) validateURL(args map[string]string, raw string) (*url.URL, s
 	if host == "" {
 		return nil, "webtools: URL must include a host", true, nil
 	}
-	// No host is denied by default; host policy is opt-in, either via this
-	// _denied_hosts knob or — preferably — an HITL policy rule with op:"host".
 	denied := h.policyCSV(args, "_denied_hosts", "")
 	if hostMatches(host, denied) {
 		return nil, fmt.Sprintf("webtools: host %q is denied by tools_policies.webtools._denied_hosts", host), true, nil
@@ -150,9 +130,6 @@ func (h *WebCaller) validateURL(args map[string]string, raw string) (*url.URL, s
 	return u, "", false, nil
 }
 
-// hostMatches checks whether host equals or is a subdomain of any pattern in
-// patterns. A pattern of "example.com" matches "example.com" and "api.example.com".
-// IP literals match exactly. Empty list = no match.
 func hostMatches(host string, patterns []string) bool {
 	host = strings.ToLower(host)
 	if ip := net.ParseIP(host); ip != nil {
@@ -185,8 +162,6 @@ func contains(list []string, v string) bool {
 	}
 	return false
 }
-
-// ── arg extraction ────────────────────────────────────────────────────────────
 
 func (h *WebCaller) extractURL(input map[string]any, toolsCall *taskengine.ToolsCall) (string, error) {
 	if v, ok := input["url"].(string); ok && v != "" {
@@ -272,12 +247,6 @@ func (h *WebCaller) extractBody(input map[string]any, maxBytes int) (io.Reader, 
 	return bytes.NewReader(raw), len(raw), nil
 }
 
-// ── core request loop ─────────────────────────────────────────────────────────
-
-// doRequest is the per-verb dispatch. It validates the URL, builds the
-// request, runs the retry/backoff loop, reads the size-limited response, and
-// closes the tracker span. On a soft policy denial (host/scheme/size) it
-// returns (denialString, DataTypeString, nil) so the model sees a tool result.
 func (h *WebCaller) doRequest(ctx context.Context, method, toolName string, input any, toolsCall *taskengine.ToolsCall) (any, taskengine.DataType, error) {
 	dynArgs, _ := input.(map[string]any)
 	if dynArgs == nil {
@@ -342,8 +311,6 @@ func (h *WebCaller) doRequest(ctx context.Context, method, toolName string, inpu
 	reportErr, reportChange, end := h.tracker.Start(ctx, "exec", toolName, "url", u.String(), "host", host, "method", method)
 	defer end()
 
-	// Build a per-call client so timeout and redirect policy come from
-	// tools_policies, not the shared default client.
 	client := *h.client
 	client.Timeout = time.Duration(timeoutSec) * time.Second
 	if disallowRedirects {
@@ -364,7 +331,6 @@ func (h *WebCaller) doRequest(ctx context.Context, method, toolName string, inpu
 	}
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		// Body must be re-built per attempt because io.Reader is single-use.
 		body, _, bodyErr := h.extractBody(dynArgs, maxBodyBytes)
 		if bodyErr != nil {
 			reportErr(bodyErr)
@@ -491,14 +457,10 @@ func jitter(d time.Duration) time.Duration {
 	if d <= 0 {
 		return 0
 	}
-	// Up to ±25% jitter.
 	r := rand.Float64()*0.5 - 0.25
 	return d + time.Duration(float64(d)*r)
 }
 
-// ── ToolsRepo surface ─────────────────────────────────────────────────────────
-
-// Exec dispatches to one of the verb-specific handlers based on toolsCall.ToolName.
 func (h *WebCaller) Exec(ctx context.Context, _ time.Time, input any, _ bool, toolsCall *taskengine.ToolsCall) (any, taskengine.DataType, error) {
 	if toolsCall == nil {
 		return nil, taskengine.DataTypeAny, errors.New("webtools: tools_call required")
@@ -533,7 +495,6 @@ func (h *WebCaller) GetSchemasForSupportedTools(_ context.Context) (map[string]*
 	return map[string]*openapi3.T{}, nil
 }
 
-// readVerbProps returns the JSON schema parameters for read-only verbs (GET, HEAD).
 func readVerbProps() map[string]any {
 	return map[string]any{
 		"type": "object",
@@ -546,7 +507,6 @@ func readVerbProps() map[string]any {
 	}
 }
 
-// writeVerbProps returns the schema for verbs that may carry a request body.
 func writeVerbProps() map[string]any {
 	return map[string]any{
 		"type": "object",

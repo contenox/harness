@@ -62,21 +62,6 @@ func TestCreateBackendDuplicateReturnsSanitizedConflict(t *testing.T) {
 	}
 }
 
-// TestListPaginationErrorsAgreeAcrossRoutes mounts two list routes that used
-// to disagree onto one mux and asserts they now answer identical malformed
-// pagination input identically.
-//
-// Before apiframework.ListParams these two hand-rolled the same parse with
-// different error treatments: GET /backends wrapped apiframework
-// .ErrUnprocessableEntity and answered 422, while GET /missions wrapped a
-// bare fmt.Errorf, which apiframework.mapErrorToStatus could not classify and
-// so resolved through its ListOperation fallback to 404 — "no such
-// collection" for what is really a malformed query parameter. Same input,
-// two answers, decided only by which handler you hit.
-//
-// It lives in this package because an external test package can import both
-// route packages; the assertion is deliberately "the two agree, and agree on
-// 400", not just "each returns 400".
 func TestListPaginationErrorsAgreeAcrossRoutes(t *testing.T) {
 	ctx := context.Background()
 	db, err := libdb.NewSQLiteDBManager(ctx, filepath.Join(t.TempDir(), "listparams.db"), runtimetypes.SchemaSQLite)
@@ -106,8 +91,6 @@ func TestListPaginationErrorsAgreeAcrossRoutes(t *testing.T) {
 		}
 	}
 
-	// A well-formed request on both routes still succeeds, so the assertion
-	// above is not passing because the routes are uniformly broken.
 	for _, path := range []string{"/backends", "/missions"} {
 		rr := httptest.NewRecorder()
 		mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path+"?limit=5&cursor=2024-03-01T12:00:00Z", nil))

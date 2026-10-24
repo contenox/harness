@@ -8,13 +8,6 @@ export interface MissionInspectorTabsProps {
   onTabChange: (id: string) => void;
 }
 
-/**
- * The flat tab bar on the mission detail — a thin, accessible wrapper over the
- * house `Tabs` (keyboard nav, `role=tab`), mapping each registration entry to a
- * trigger whose label is `icon + text`. It owns no state: the page owns the
- * persisted active-tab hook and the per-id content, so this stays purely
- * presentational and future Changes/Search tabs render here for free.
- */
 export function MissionInspectorTabs({ tabs, activeTab, onTabChange }: MissionInspectorTabsProps) {
   const { t } = useTranslation();
 

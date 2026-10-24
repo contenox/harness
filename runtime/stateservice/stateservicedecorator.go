@@ -90,7 +90,6 @@ func (d *activityTrackerDecorator) SetCLIConfig(ctx context.Context, patch CLICo
 	return snap, err
 }
 
-// WithActivityTracker wraps a StateService with activity tracking
 func WithActivityTracker(service Service, tracker libtracker.ActivityTracker) Service {
 	return &activityTrackerDecorator{
 		service: service,
@@ -98,5 +97,4 @@ func WithActivityTracker(service Service, tracker libtracker.ActivityTracker) Se
 	}
 }
 
-// Ensure the decorator implements the Service interface
 var _ Service = (*activityTrackerDecorator)(nil)

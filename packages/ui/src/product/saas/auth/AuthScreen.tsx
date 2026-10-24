@@ -5,9 +5,6 @@ import { FormErrorBanner, SubmitButton } from '@contenox/ui';
 import { LegalLinksNav } from '../LegalScreens';
 import type { FormErrors } from './formErrors';
 
-/**
- * The frame the sign-in screens share: a single card, centred, with the cross-links underneath.
- */
 export function AuthScreen({
   children,
   footer,
@@ -45,9 +42,6 @@ export function AuthScreen({
   );
 }
 
-/**
- * A step in the funnel: a title, some fields, one action, one banner.
- */
 export function AuthForm({
   title,
   submitLabel,
@@ -88,9 +82,6 @@ export function AuthForm({
   );
 }
 
-/**
- * The product line above the sign-in and sign-up cards: the name, and one sentence saying what this is.
- */
 export function ProductIntro() {
   return (
     <div className="mb-6 w-full max-w-sm text-center">
@@ -110,9 +101,6 @@ export function ProductIntro() {
   );
 }
 
-/**
- * A cross-link between sign-in screens.
- */
 export function AuthLink({
   to,
   state,

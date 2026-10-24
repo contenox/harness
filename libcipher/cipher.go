@@ -1,11 +1,9 @@
 package libcipher
 
-// Encryptor crypts a message with additional data. Misuse may lead to a panic.
 type Encryptor interface {
 	Crypt(message []byte, additionalData []byte) ([]byte, error)
 }
 
-// Decryptor crypts a cipher package. Misuse may lead to a panic.
 type Decryptor interface {
 	Crypt(cipherpackage []byte) ([]byte, []byte, error)
 }

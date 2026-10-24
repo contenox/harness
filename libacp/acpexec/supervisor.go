@@ -9,35 +9,18 @@ import (
 	"github.com/contenox/harness/libacp"
 )
 
-// Supervisor keeps an agent subprocess alive across transient crashes by
-// respawning it with backoff and re-running a caller-supplied session. A startup
-// error (IsStartupError) is never retried.
 type Supervisor struct {
-	// Command builds a fresh *exec.Cmd for each (re)start; required, since an
-	// exec.Cmd cannot be reused once started.
 	Command func(ctx context.Context) *exec.Cmd
 
-	// MaxRestarts caps how many times Serve respawns after the first attempt;
-	// zero means one attempt with no restarts.
 	MaxRestarts int
 
-	// Backoff returns the delay before restart attempt n (1-based, nil means
-	// no delay); Serve honors ctx cancellation while waiting.
 	Backoff func(attempt int) time.Duration
 
-	// OnRestart, if set, is called just before each genuine restart with the
-	// 1-based restart number and the triggering error, but not for a startup
-	// or non-retryable error (check libacp.IsStartupError).
 	OnRestart func(attempt int, cause error)
 
-	// SpawnOptions are forwarded to Spawn on every attempt (e.g. WithStderr).
 	SpawnOptions []Option
 }
 
-// Serve spawns the agent and runs session against each live Process, passing
-// a zero-based attempt counter, until session succeeds, ctx is cancelled, or
-// a failure that is not worth retrying (per libacp.IsRetryableError, up to
-// MaxRestarts) occurs.
 func (s *Supervisor) Serve(ctx context.Context, session func(ctx context.Context, proc *Process, attempt int) error) error {
 	if s.Command == nil {
 		return fmt.Errorf("acpexec: Supervisor.Command is required")

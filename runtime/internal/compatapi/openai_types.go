@@ -9,7 +9,6 @@ import (
 	"github.com/contenox/harness/runtime/taskengine"
 )
 
-// ChatCompletionRequest is the OpenAI /v1/chat/completions request body.
 type ChatCompletionRequest struct {
 	Model               string        `json:"model"`
 	Messages            []ChatMessage `json:"messages"`
@@ -20,21 +19,12 @@ type ChatCompletionRequest struct {
 	Stop                []string      `json:"stop,omitempty"`
 }
 
-// ChatMessage is a single message in the OpenAI chat format.
-//
-// On decode, content accepts both OpenAI wire forms: a plain string, or the
-// content-parts array of {"type":"text"|"image_url"} objects. Text parts are
-// concatenated into Content; image_url parts (data: URIs only) are decoded
-// into Images. Responses always encode content as a plain string.
 type ChatMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-	// Images holds image attachments decoded from image_url content parts.
-	// Request-only; responses never carry images.
-	Images []taskengine.ImagePart `json:"-"`
+	Role    string                 `json:"role"`
+	Content string                 `json:"content"`
+	Images  []taskengine.ImagePart `json:"-"`
 }
 
-// chatContentPart is one element of the OpenAI content-parts array form.
 type chatContentPart struct {
 	Type     string        `json:"type"`
 	Text     string        `json:"text,omitempty"`
@@ -45,7 +35,6 @@ type chatImageURL struct {
 	URL string `json:"url"`
 }
 
-// UnmarshalJSON accepts content as either a JSON string or a content-parts array.
 func (m *ChatMessage) UnmarshalJSON(data []byte) error {
 	var wire struct {
 		Role    string          `json:"role"`
@@ -92,9 +81,6 @@ func (m *ChatMessage) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// decodeImageDataURI decodes a data: URI (data:image/png;base64,<payload>)
-// into an image attachment. Remote http(s) image URLs are rejected — the
-// served API never fetches external content on a client's behalf.
 func decodeImageDataURI(uri string) (taskengine.ImagePart, error) {
 	rest, ok := strings.CutPrefix(uri, "data:")
 	if !ok {
@@ -119,7 +105,6 @@ func decodeImageDataURI(uri string) (taskengine.ImagePart, error) {
 	return taskengine.ImagePart{Data: raw, MimeType: mimeType}, nil
 }
 
-// FIMCompletionRequest is the OpenAI /v1/fim/completions (and legacy /v1/completions) request body.
 type FIMCompletionRequest struct {
 	Model       string   `json:"model"`
 	Prompt      string   `json:"prompt"`
@@ -130,7 +115,6 @@ type FIMCompletionRequest struct {
 	Stop        []string `json:"stop,omitempty"`
 }
 
-// chatCompletionChunk is one SSE frame for chat completions (delta.content style).
 type chatCompletionChunk struct {
 	ID      string               `json:"id"`
 	Object  string               `json:"object"`
@@ -157,7 +141,6 @@ type chatCompletionUsage struct {
 	TotalTokens      int `json:"total_tokens"`
 }
 
-// chatCompletionResponse is the non-streaming response for chat completions.
 type chatCompletionResponse struct {
 	ID      string               `json:"id"`
 	Object  string               `json:"object"`
@@ -173,7 +156,6 @@ type chatChoiceResponse struct {
 	FinishReason string      `json:"finish_reason"`
 }
 
-// fimChunk is one SSE frame for FIM/text completions (choices[0].text style).
 type fimChunk struct {
 	Choices []fimChunkChoice     `json:"choices"`
 	Usage   *chatCompletionUsage `json:"usage,omitempty"`
@@ -184,7 +166,6 @@ type fimChunkChoice struct {
 	FinishReason *string `json:"finish_reason"`
 }
 
-// fimCompletionResponse is the non-streaming response for FIM/text completions.
 type fimCompletionResponse struct {
 	ID      string              `json:"id"`
 	Object  string              `json:"object"`

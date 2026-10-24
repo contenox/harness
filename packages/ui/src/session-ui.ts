@@ -1,11 +1,3 @@
-/**
- * The ACP session components, without the workspace/editor surface.
- *
- * `./session` is the whole product surface and re-exports `workspace/`, which
- * drags Monaco (and its workers) into any consumer. Pages that only need the
- * session shell — transcript, config bar, permission ask, composer, pickers —
- * import this entry instead.
- */
 export * from './product/session/components/AgentSelector';
 export * from './product/session/components/ChatSessionList';
 export * from './product/session/components/ConnectionState';

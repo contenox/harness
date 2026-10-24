@@ -16,12 +16,6 @@ vi.mock('../lib/api', () => ({
 
 const { api } = await import('../lib/api');
 
-/**
- * Same DOM-free harness as useFleet.test.tsx: `@testing-library/react` is not a
- * dependency of packages/beam, so a mutation hook is driven through
- * `renderToStaticMarkup` + `mutateAsync`, which exercises the real endpoint call
- * and `onSuccess` invalidation contract.
- */
 function mountHook<T>(client: QueryClient, hook: () => T): T {
   let captured: T | undefined;
   const Probe = (): ReactNode => {
@@ -50,7 +44,6 @@ describe('useAnswerApproval', () => {
     await expect(answer.mutateAsync({ id: 'ask-1', approved: true })).resolves.toBe('approved');
 
     expect(api.answerApproval).toHaveBeenCalledExactlyOnceWith('ask-1', true);
-    // Answering can unblock the unit, so all three surfaces are refreshed.
     expect(invalidate).toHaveBeenCalledWith({ queryKey: approvalKeys.list() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: fleetKeys.list() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: missionKeys.list() });

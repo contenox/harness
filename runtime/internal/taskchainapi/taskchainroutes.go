@@ -29,8 +29,6 @@ func normalizeChainPath(raw string) (string, error) {
 	return taskchainservice.NormalizePath(raw)
 }
 
-// listTaskChains returns the relative file paths of every stored task-chain
-// definition.
 func (h *handler) listTaskChains(w http.ResponseWriter, r *http.Request) {
 	paths, err := h.service.List(r.Context())
 	if err != nil {
@@ -40,11 +38,9 @@ func (h *handler) listTaskChains(w http.ResponseWriter, r *http.Request) {
 	if paths == nil {
 		paths = []string{}
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, paths) // @response []string
+	_ = apiframework.Encode(w, r, http.StatusOK, paths)
 }
 
-// getTaskChain reads one task-chain definition from its file path (query
-// parameter `path`).
 func (h *handler) getTaskChain(w http.ResponseWriter, r *http.Request) {
 	rawPath := apiframework.GetQueryParam(r, "path", "", "Relative chain JSON path inside .contenox.")
 	path, err := normalizeChainPath(rawPath)
@@ -57,11 +53,9 @@ func (h *handler) getTaskChain(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.GetOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, chain) // @response taskengine.TaskChainDefinition
+	_ = apiframework.Encode(w, r, http.StatusOK, chain)
 }
 
-// createTaskChain writes a new task-chain definition file and returns the
-// stored definition.
 func (h *handler) createTaskChain(w http.ResponseWriter, r *http.Request) {
 	rawPath := apiframework.GetQueryParam(r, "path", "", "Relative chain JSON path inside .contenox.")
 	path, err := normalizeChainPath(rawPath)
@@ -69,7 +63,7 @@ func (h *handler) createTaskChain(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
 	}
-	chain, err := apiframework.Decode[taskengine.TaskChainDefinition](r) // @request taskengine.TaskChainDefinition
+	chain, err := apiframework.Decode[taskengine.TaskChainDefinition](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
@@ -78,11 +72,9 @@ func (h *handler) createTaskChain(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.CreateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusCreated, chain) // @response taskengine.TaskChainDefinition
+	_ = apiframework.Encode(w, r, http.StatusCreated, chain)
 }
 
-// updateTaskChain overwrites an existing task-chain definition file and
-// returns the stored definition.
 func (h *handler) updateTaskChain(w http.ResponseWriter, r *http.Request) {
 	rawPath := apiframework.GetQueryParam(r, "path", "", "Relative chain JSON path inside .contenox.")
 	path, err := normalizeChainPath(rawPath)
@@ -90,7 +82,7 @@ func (h *handler) updateTaskChain(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
 	}
-	chain, err := apiframework.Decode[taskengine.TaskChainDefinition](r) // @request taskengine.TaskChainDefinition
+	chain, err := apiframework.Decode[taskengine.TaskChainDefinition](r)
 	if err != nil {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
@@ -99,10 +91,9 @@ func (h *handler) updateTaskChain(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.UpdateOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, chain) // @response taskengine.TaskChainDefinition
+	_ = apiframework.Encode(w, r, http.StatusOK, chain)
 }
 
-// deleteTaskChain removes a task-chain definition file by path.
 func (h *handler) deleteTaskChain(w http.ResponseWriter, r *http.Request) {
 	rawPath := apiframework.GetQueryParam(r, "path", "", "Relative chain JSON path inside .contenox.")
 	path, err := normalizeChainPath(rawPath)
@@ -114,5 +105,5 @@ func (h *handler) deleteTaskChain(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.DeleteOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, fmt.Sprintf("task chain file %s deleted", path)) // @response string
+	_ = apiframework.Encode(w, r, http.StatusOK, fmt.Sprintf("task chain file %s deleted", path))
 }

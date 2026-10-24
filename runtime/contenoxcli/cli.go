@@ -1,4 +1,3 @@
-// cli.go holds the contenox CLI entrypoint (Main), default constants, flags, and merge logic.
 package contenoxcli
 
 import (
@@ -29,12 +28,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// Version is an optional link-time override via
-// -ldflags "-X github.com/contenox/harness/runtime/contenoxcli.Version=…"
-// (e.g. distro packagers). When empty, CLIVersion uses runtime/version/version.txt.
 var Version string
 
-// CLIVersion returns the effective CLI version string (embedded file or link override).
 func CLIVersion() string {
 	return cliVersion()
 }
@@ -55,15 +50,10 @@ const (
 	defaultTimeout = 5 * time.Minute
 )
 
-// reservedSubcommands are first-arg names that must not be treated as run input (Cobra or our subcommands).
 var reservedSubcommands = map[string]bool{"init": true, "chat": true, "help": true, "completion": true, "session": true, "run": true, "tools": true, "mcp": true, "backend": true, "agent": true, "config": true, "model": true, "models": true, "doctor": true, "version": true, "state": true, "acp": true, "acpx": true, "setup": true, "cache": true, "serve": true, "update": true, "approvals": true, "fleet": true, "mission": true, "workspace": true, "sandbox": true, "shell-env": true}
 
-// Main runs the contenox CLI: init subcommand or run (default) with optional positional input.
 func Main() {
 	args := os.Args[1:]
-	// Only inject "run" when no reserved subcommand was given (so "contenox completion" and "contenox help" work).
-	// Scan past leading flags (e.g. --db /path) to find the first non-flag argument.
-	// Also skip injection when args contains only --help/-h so the root command shows its own help.
 	onlyHelp := len(args) == 0
 	if !onlyHelp {
 		allRootFlags := true
@@ -79,20 +69,9 @@ func Main() {
 		rootCmd.SetArgs(append([]string{sub}, args...))
 	}
 	err := rootCmd.Execute()
-	// Flush warm-session KV snapshots to the durable store before the process
-	// exits, so the next invocation (one-shot CLI) or the next start (a restarted
-	// server) can restore warm instead of cold-prefilling. Best-effort; a capture
-	// failure must never change the command's exit status.
 	_ = modelrepo.Shutdown()
 	if err != nil {
 		recordStartupFailure(err)
-		// A command that chose its own exit status (an *exitError) has already
-		// written whatever it wanted the operator to see — `mission fire --wait`
-		// prints its terminal-outcome line, the chain/editor sentinels print
-		// their own guidance. Honor the code and skip the generic "Error:" prefix
-		// so a deliberate non-zero exit (a mission that failed, blocked, or timed
-		// out) reads as a status, not a crash. Every pre-existing exitError uses
-		// code 1, so this changes nothing for them but the cosmetic prefix.
 		var ee *exitError
 		if errors.As(err, &ee) {
 			os.Exit(ee.code)
@@ -106,11 +85,6 @@ func containsExperimentalACPFlag(args []string) bool {
 	return slices.Contains(args, "--experimental-acp")
 }
 
-// dispatchSubcommand decides which subcommand a bare invocation is routed to.
-// Bare input is session-backed chat, as the quickstart and chat help document
-// ("the first run auto-creates a 'default' session"); 'contenox run' remains
-// the explicit stateless path. Returns "" when args already name a subcommand
-// or are help/version-only.
 func dispatchSubcommand(args []string, onlyHelp bool) string {
 	switch {
 	case containsExperimentalACPFlag(args) && !firstNonFlagIsReserved(args):
@@ -142,12 +116,7 @@ func recordStartupFailure(execErr error) {
 	end()
 }
 
-// firstNonFlagIsReserved scans args, skipping flags and their values, and returns
-// true if the first positional argument is a reserved subcommand name.
 func firstNonFlagIsReserved(args []string) bool {
-	// Boolean flags that do NOT consume the next token as their value.
-	// Without this list, `contenox --trace chat` would mistake "chat" for the
-	// value of --trace and then forward it to the chat command as text input.
 	boolFlags := map[string]bool{
 		"--shell": true, "--trace": true, "--steps": true, "--raw": true,
 		"--no-delete-models": true, "--editor": true,
@@ -156,28 +125,24 @@ func firstNonFlagIsReserved(args []string) bool {
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if a == "--" {
-			// Explicit end of flags; next arg would be positional.
 			if i+1 < len(args) {
 				return reservedSubcommands[args[i+1]]
 			}
 			return false
 		}
 		if strings.HasPrefix(a, "--") {
-			// Long flag: boolean flags and flag=value forms don't consume next token.
 			if strings.Contains(a, "=") || boolFlags[a] {
 				continue
 			}
-			i++ // this flag consumes the next token as its value
+			i++
 			continue
 		}
 		if strings.HasPrefix(a, "-") && len(a) > 1 {
-			// Short flag: skip (simplified: assume it consumes next token if no value attached).
 			if len(a) == 2 {
-				i++ // skip value
+				i++
 			}
 			continue
 		}
-		// First non-flag argument found.
 		return reservedSubcommands[a]
 	}
 	return false
@@ -345,8 +310,6 @@ Use --force to overwrite existing files, or --update to refresh unchanged defaul
 	RunE: runInitCmd,
 }
 
-// versionCmd prints the same line as `contenox --version` so `contenox version`
-// is not mistaken for chat input (the default run command).
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the contenox CLI version",
@@ -363,10 +326,8 @@ func init() {
 	v := cliVersion()
 	rootCmd.Version = v
 	rootCmd.Short = fmt.Sprintf("AI harness runtime v%s: run versioned chains with your tools and models.", v)
-	// Cobra prints Long for --help when set; include version so it matches runtime/version/version.txt.
 	rootCmd.Long = fmt.Sprintf("Version: %s\n\n%s", v, rootCmd.Long)
 
-	// Run flags on root so "contenox --input x" and "contenox hi" both work.
 	f := rootCmd.PersistentFlags()
 	f.String("db", "", "SQLite database path (default: ~/.contenox-harness/local.db)")
 	f.String("data-dir", "", "Override the .contenox data directory path")
@@ -410,22 +371,18 @@ func init() {
 	rootCmd.AddCommand(sandboxCmd)
 	rootCmd.AddCommand(shellEnvCmd)
 
-	rootCmd.InitDefaultHelpCmd() // so "contenox help" is handled by Cobra, not passed as run input
+	rootCmd.InitDefaultHelpCmd()
 	initCmd.Flags().BoolP("force", "f", false, "Overwrite existing files")
 	initCmd.Flags().Bool("update", false, "Update unchanged default files to the latest version")
 	initCmd.Flags().Bool("project", false, "Create a project marker in the CURRENT directory (a fresh workspace id), instead of reusing an ancestor's .contenox")
 	initCmd.Flags().String("name", "", "Friendly project name for the marker (default: the directory name)")
 
-	// Chat-specific local flags (not exposed globally).
 	chatCmd.Flags().Int("trim", 0, "Only send the last N messages from session history to the model (0 = send all)")
 	chatCmd.Flags().Int("last", 0, "Print last N user/assistant turns after the reply (0 = only print new reply)")
 	chatCmd.Flags().Bool("auto", false, "Non-interactive mode: disable HITL approval prompts. Default is HITL on; tools route through the active hitl-policy. Use --auto only in trusted/scripted contexts.")
 
 }
 
-// setupTelemetryLogging checks if the user has enabled file logging.
-// If enabled, it sets up slog to write to both os.Stderr and ~/.contenox-harness/telemetry.log.
-// Returns a cleanup function to close the file.
 func setupTelemetryLogging(ctx context.Context, store runtimetypes.Store, contenoxDir string) (func(), error) {
 	enabledStr := clikv.Read(ctx, store, "telemetry-enabled")
 	if enabledStr != "true" {
@@ -443,11 +400,6 @@ func setupTelemetryLogging(ctx context.Context, store runtimetypes.Store, conten
 	return func() { f.Close() }, nil
 }
 
-// ResolveContenoxDir finds the closest .contenox directory by walking up from the
-// current working directory. If cmd is non-nil and --data-dir is set, that value
-// is returned directly. Otherwise it walks up from cwd; if it hits the root
-// without finding one, it returns the .contenox directory in the current working
-// directory as a fallback.
 func ResolveContenoxDir(cmd *cobra.Command) (string, error) {
 	if cmd != nil {
 		dataDir, _ := cmd.Root().PersistentFlags().GetString("data-dir")
@@ -464,16 +416,11 @@ func ResolveContenoxDir(cmd *cobra.Command) (string, error) {
 	home, _ := os.UserHomeDir()
 	dir := cwd
 	for {
-		// Stop at the user's home directory: ~/.contenox is a per-user data
-		// directory from earlier product shapes, never a workspace marker.
 		if home != "" && dir == home {
 			return filepath.Join(cwd, ".contenox"), nil
 		}
 		candidate := filepath.Join(dir, ".contenox")
 		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
-			// Require workspace.id to be present — a .contenox/ without it is
-			// not a valid workspace (e.g. a backup or pre-init directory).
-			// Keep walking up so callers get a proper workspace or the cwd fallback.
 			if _, werr := os.Stat(filepath.Join(candidate, "workspace.id")); werr == nil {
 				return candidate, nil
 			}
@@ -481,29 +428,12 @@ func ResolveContenoxDir(cmd *cobra.Command) (string, error) {
 
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			// Hit root without finding it. Fallback to cwd/.contenox
 			return filepath.Join(cwd, ".contenox"), nil
 		}
 		dir = parent
 	}
 }
 
-// controlPlaneDirs is the SINGLE definition of "what the runtime's control plane
-// is" for a given command: the resolved .contenox data/config dir (contenoxDir —
-// chains, HITL policies, declared agents, and, unless split by --db, the local.db)
-// PLUS the home global ~/.contenox-harness (the default database and the model cache).
-// These are the directories no session, browse root, or agent fs tool may reach,
-// per the control-plane isolation invariant (runtime/vfs/controlplane.go).
-//
-// Both serve (which calls vfs.SetControlPlaneDenied at boot) and the
-// `contenox workspace add` grant guard (which runs in a SEPARATE process with no
-// global set, so it consults vfs.WithinControlPlane with these dirs directly)
-// derive the set from here, so the two never disagree about the boundary. --data-dir
-// may point contenoxDir away from home; both are denied, so the split is covered
-// either way. NOTE: a database relocated by --db to an arbitrary directory is an
-// operator's explicit choice and is NOT auto-denied — denying its parent could
-// swallow a legitimate workspace root (e.g. --db ./local.db in the served project);
-// the two canonical control dirs are the boundary the invariant protects.
 func controlPlaneDirs(contenoxDir string) []string {
 	dirs := []string{contenoxDir}
 	if home, err := globalContenoxDir(); err == nil {
@@ -513,9 +443,6 @@ func controlPlaneDirs(contenoxDir string) []string {
 }
 
 func ResolveWorkspaceID(contenoxDir string) string {
-	// The project package owns the marker format (JSON {id,name}, with a
-	// legacy bare-UUID read) so serve, the CLI, and the /workspace/roots API
-	// agree on a project's identity. The DB scoping token is the marker's ID.
 	if m, ok := project.ReadFromContenoxDir(contenoxDir); ok && m.ID != "" {
 		return m.ID
 	}
@@ -538,8 +465,6 @@ func runInitCmd(cmd *cobra.Command, args []string) error {
 
 	var contenoxDir string
 	if projectMode {
-		// Force a LOCAL project marker in the current directory, bypassing the
-		// git-style walk-up that would otherwise reuse an ancestor's .contenox.
 		cwd, err := os.Getwd()
 		if err != nil {
 			return fmt.Errorf("failed to resolve current directory: %w", err)
@@ -548,9 +473,6 @@ func runInitCmd(cmd *cobra.Command, args []string) error {
 		if err := RunInit(cmd.OutOrStdout(), cmd.ErrOrStderr(), force, update, provider, contenoxDir, projectName); err != nil {
 			return err
 		}
-		// Marking a project does NOT grant it as a workspace root — that is a
-		// separate, explicit security decision. Bridge the journey with the verb
-		// that registers it for serve and the Beam picker.
 		fmt.Fprintf(cmd.OutOrStdout(),
 			"To let sessions open it (serve + Beam picker): contenox workspace add %s\n", cwd)
 		return nil
@@ -562,10 +484,6 @@ func runInitCmd(cmd *cobra.Command, args []string) error {
 	return RunInit(cmd.OutOrStdout(), cmd.ErrOrStderr(), force, update, provider, contenoxDir, projectName)
 }
 
-// resolveProjectInit computes the target .contenox dir and effective marker name
-// for `init --project`: a LOCAL marker in cwd (bypassing the ancestor walk-up in
-// ResolveContenoxDir), always named — defaulting to the project directory's
-// basename when no explicit --name is given.
 func resolveProjectInit(cwd, name string) (contenoxDir, projectName string) {
 	contenoxDir = filepath.Join(cwd, project.ContenoxDirName)
 	projectName = name
@@ -584,7 +502,6 @@ func runChat(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// No subcommand, no input, no editor, and no piped stdin: show help and exit 0.
 	if len(args) == 0 && !flags.Changed("input") && !useEditor {
 		if stat, err := os.Stdin.Stat(); err != nil || (stat.Mode()&os.ModeCharDevice) != 0 {
 			_ = cmd.Usage()
@@ -597,7 +514,6 @@ func runChat(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to resolve .contenox dir: %w", err)
 	}
 
-	// Resolve DB path (needed for KV reads below).
 	dbPath, err := resolveDBPath(cmd)
 	if err != nil {
 		return err
@@ -628,7 +544,6 @@ func runChat(cmd *cobra.Command, args []string) error {
 		configuredDefaultProvider = kv
 	}
 
-	// Resolve model: flag > SQLite KV > hardcoded default.
 	effectiveModel, _ := flags.GetString("model")
 	if !changed("model") || effectiveModel == defaultModel {
 		if configuredDefaultModel != "" {
@@ -730,8 +645,6 @@ func runChat(cmd *cobra.Command, args []string) error {
 	timeoutCtx, timeoutCancel := context.WithTimeout(libtracker.WithNewRequestID(context.Background()), timeout)
 	defer timeoutCancel()
 
-	// Use signal.NotifyContext so cleanup is automatic when the cmd returns;
-	// avoids leaking a goroutine blocked forever on <-sigCh.
 	ctx, stop := signal.NotifyContext(timeoutCtx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -813,7 +726,6 @@ func shouldPrintThinking(level string) bool {
 	return reasoning.DisplayEnabled(level)
 }
 
-// Sentinel errors so RunE can return and main can os.Exit(1).
 var (
 	errChainRequired = &exitError{1}
 	errPromptAborted = &exitError{1}

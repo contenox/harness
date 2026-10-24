@@ -4,103 +4,37 @@ import type {
   ToolCallContent,
 } from '@contenox/acp-client';
 
-/**
- * What a pending permission request actually contains, extracted once so the card renders and never parses.
- */
 
-/**
- * A `type:"diff"` content block, with both texts resolved and a path to name it.
- */
 export interface PermissionDiff {
   path: string;
   oldText: string;
   newText: string;
 }
 
-/**
- * One top-level entry of `rawInput`, as text, clamped for a phone.
- */
 export interface PermissionArgument {
-  /**
-   * The argument's own key.
-   */
   key: string;
-  /**
-   * The value as text: a string as itself, anything else as indented JSON.
-   */
   value: string;
-  /**
-   * Lines of `value` withheld by the clamp; 0 when it was shown whole.
-   */
   hiddenLines: number;
 }
 
-/**
- * Everything the card can put in front of a person, already bounded.
- */
 export interface PermissionEvidence {
-  /**
-   * Structured diffs, in wire order.
-   */
   diffs: PermissionDiff[];
-  /**
-   * The text the runtime chose to describe the call — a raw diff, or an argument summary.
-   */
   summary: string;
-  /**
-   * Whether `rawInput` was on the request at all.
-   */
   argumentsSent: boolean;
-  /**
-   * `rawInput`'s entries, clamped.
-   */
   args: PermissionArgument[];
-  /**
-   * Entries of `rawInput` withheld by the clamp; 0 when all were shown.
-   */
   hiddenArguments: number;
 }
 
-/**
- * The approval envelope, validated.
- */
 export interface PermissionMeta {
-  /**
-   * The HITL policy that evaluated the call, and where it lives on the machine.
-   */
   policyName: string;
   policyPath: string;
-  /**
-   * The 0-based index of the rule that gated the call, or `null`.
-   */
   matchedRule: number | null;
-  /**
-   * What in the call tripped the rule, when the rule names a cause.
-   */
   detail: string;
-  /**
-   * The call's DECLARED reach — a declaration, not a proof.
-   */
   mayCall: string[];
-  /**
-   * `true` = [mayCall] is exhaustive, `false` = it reaches undeclared others, `null` = unknown.
-   */
   mayCallDeclared: boolean | null;
-  /**
-   * The durable ask's id — the argument `contenox approvals respond` takes.
-   */
   askId: string;
-  /**
-   * RFC3339 UTC: when the ask stops being answerable.
-   */
   expiresAt: string;
-  /**
-   * The verdict that applies at [expiresAt] if nobody answers ("allow" / "deny").
-   */
   onTimeout: string;
-  /**
-   * The command that answers this ask from a terminal, when the card is gone.
-   */
   recoveryCommand: string;
 }
 
@@ -111,9 +45,6 @@ export const ARGUMENT_MAX_CHARS = 800;
 
 export const ARGUMENT_MAX_ENTRIES = 12;
 
-/**
- * Reads the approval envelope off a permission request.
- */
 export function permissionMetaFrom(request: RequestPermissionRequest): PermissionMeta {
   const outer = asRecord(request._meta);
   const inner = asRecord(request.toolCall._meta);
@@ -133,9 +64,6 @@ export function permissionMetaFrom(request: RequestPermissionRequest): Permissio
   };
 }
 
-/**
- * Reads and bounds everything a permission's tool call says about itself.
- */
 export function permissionEvidence(toolCall: PermissionToolCall): PermissionEvidence {
   const blocks: ToolCallContent[] = Array.isArray(toolCall.content) ? toolCall.content : [];
   const { args, hidden } = clampArguments(toolCall.rawInput);

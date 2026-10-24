@@ -9,16 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MapRequest is the inverse of BuildRequest, and the property that matters most
-// is what it REFUSES to invent. A fabricated (toolsName, toolName) pair can
-// match an allow rule, which would turn "we could not understand this request"
-// into "this request is permitted" — the one direction a permission gate must
-// never fail in. These tests pin both halves: the round trip is faithful, and
-// everything short of it is reported as unknown rather than guessed at.
-
-// A request BuildRequest produced maps straight back to the inputs it was built
-// from — the round trip that makes the envelope evaluable for a contenox
-// downstream.
 func TestUnit_MapRequest_RoundTripsBuildRequest(t *testing.T) {
 	args := map[string]any{"path": "/workspace/main.go", "content": "hello"}
 	built := BuildRequest(hitlservice.ApprovalRequest{
@@ -41,8 +31,6 @@ func TestUnit_MapRequest_RoundTripsBuildRequest(t *testing.T) {
 	require.NotEmpty(t, mapped.Title)
 }
 
-// A foreign agent's request — a title and arguments, but no contenox envelope —
-// is UNNAMED. It is not guessed from the title, the kind, or the tool-call id.
 func TestUnit_MapRequest_ForeignRequestIsUnnamed(t *testing.T) {
 	mapped := MapRequest(libacp.RequestPermissionRequest{
 		SessionID: "sess-1",
@@ -61,8 +49,6 @@ func TestUnit_MapRequest_ForeignRequestIsUnnamed(t *testing.T) {
 	require.Equal(t, "Write file main.go", mapped.Title)
 }
 
-// Half an envelope is no envelope: naming a tools namespace without a tool (or
-// the reverse) cannot address a policy rule, so it does not count as named.
 func TestUnit_MapRequest_PartialMetaIsUnnamed(t *testing.T) {
 	meta, err := json.Marshal(Meta{ToolsName: "local_fs"})
 	require.NoError(t, err)
@@ -74,9 +60,6 @@ func TestUnit_MapRequest_PartialMetaIsUnnamed(t *testing.T) {
 	require.Equal(t, "local_fs", mapped.ToolsName)
 }
 
-// Arguments that are absent, malformed, or not an object are reported unknown —
-// never as an empty argument map, which would silently make condition-bearing
-// rules unevaluable while looking like a normal evaluation.
 func TestUnit_MapRequest_ArgsKnownOnlyForObjects(t *testing.T) {
 	meta, err := json.Marshal(Meta{ToolsName: "local_fs", ToolName: "write_file"})
 	require.NoError(t, err)
@@ -100,8 +83,6 @@ func TestUnit_MapRequest_ArgsKnownOnlyForObjects(t *testing.T) {
 	}
 }
 
-// The request-level envelope is preferred over the tool-call one, and either
-// alone is enough.
 func TestUnit_MapRequest_MetaFromEitherLevel(t *testing.T) {
 	reqMeta, err := json.Marshal(Meta{ToolsName: "webtools", ToolName: "web_post"})
 	require.NoError(t, err)
@@ -122,8 +103,6 @@ func TestUnit_MapRequest_MetaFromEitherLevel(t *testing.T) {
 	require.Equal(t, "sed", callOnly.ToolName)
 }
 
-// Answering picks an option of the right polarity, preferring the ONCE forms so
-// a single decision never becomes a standing grant.
 func TestUnit_Answer_PrefersOnceOverAlways(t *testing.T) {
 	req := libacp.RequestPermissionRequest{Options: []libacp.PermissionOption{
 		{OptionID: "always-yes", Kind: libacp.PermissionAllowAlways},
@@ -136,9 +115,6 @@ func TestUnit_Answer_PrefersOnceOverAlways(t *testing.T) {
 	require.Equal(t, libacp.PermissionOutcomeSelected, Answer(req, true).Outcome.Outcome)
 }
 
-// With no option of the needed polarity offered, the answer degrades to the
-// spec-graceful cancelled outcome rather than naming an id the downstream never
-// offered.
 func TestUnit_Answer_DegradesToCancelled(t *testing.T) {
 	rejectOnly := libacp.RequestPermissionRequest{Options: []libacp.PermissionOption{
 		{OptionID: "no", Kind: libacp.PermissionRejectOnce},
@@ -151,9 +127,6 @@ func TestUnit_Answer_DegradesToCancelled(t *testing.T) {
 	require.Equal(t, libacp.PermissionOutcomeCancelled, none.Outcome.Outcome)
 }
 
-// ParseMeta tells "said nothing" apart from "said nothing useful": an envelope
-// present but empty of every field is reported absent, so a caller never treats
-// a zero Meta as a statement.
 func TestUnit_ParseMeta_EmptyIsAbsent(t *testing.T) {
 	_, ok := ParseMeta(nil)
 	require.False(t, ok)

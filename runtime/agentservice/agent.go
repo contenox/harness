@@ -24,12 +24,7 @@ type Agent interface {
 	SessionNew(ctx context.Context, name string) (string, error)
 	SessionList(ctx context.Context) ([]*SessionInfo, error)
 	SessionLoad(ctx context.Context, name string) (contenoxSessionID string, messages []taskengine.Message, err error)
-	// SessionResume switches to an existing session without loading its
-	// message history — the reconnect path for clients that kept their
-	// transcript.
 	SessionResume(ctx context.Context, name string) (contenoxSessionID string, err error)
-	// SessionDelete removes a session and its messages by name; missing
-	// sessions are not an error (delete is idempotent).
 	SessionDelete(ctx context.Context, name string) error
 	SessionEnsureDefault(ctx context.Context) (string, error)
 	Prompt(ctx context.Context, req PromptRequest) (*PromptResponse, error)
@@ -124,8 +119,6 @@ func (a *agent) SessionResume(ctx context.Context, name string) (string, error) 
 func (a *agent) SessionDelete(ctx context.Context, name string) error {
 	_, err := a.sessionSvc().Delete(ctx, a.deps.Identity, name)
 	if err != nil && errors.Is(err, messagestore.ErrNotFound) {
-		// Deleting a session that does not exist is a success: the desired
-		// state (no such session) already holds.
 		return nil
 	}
 	return err
@@ -192,12 +185,8 @@ func (a *agent) Prompt(ctx context.Context, req PromptRequest) (*PromptResponse,
 	output, outputType, stateUnits, execErr := a.deps.Engine.TaskService.Execute(ctx, chain, inputVal, inputType)
 
 	if req.SessionID != "" {
-		// Pre-flight Guard: If the input immediately triggers a context length overflow,
-		// do not save it to the session history. This prevents the "poison pill" effect
-		// where a massive input permanently bricks the session.
 		isPoisonPill := false
 		if execErr != nil && errors.Is(execErr, taskengine.ErrContextLengthExceeded) {
-			// If it failed before any real LLM steps could execute, it's an input failure
 			if len(stateUnits) <= 1 {
 				isPoisonPill = true
 				promptReportErr(fmt.Errorf("input rejected to protect session: %w", execErr))
@@ -267,10 +256,6 @@ func (a *agent) startObserving(ctx context.Context, obs Observer) func() {
 	}
 }
 
-// ComposeUserInput renders the effective user message the model sees:
-// per-turn context artifacts (from Beam's ArtifactRegistry, sent as
-// {artifacts: [{kind, payload}, ...]}) are prepended as an
-// "Additional context" block. Plain input passes through unchanged.
 func ComposeUserInput(input string, contextBundle map[string]any) string {
 	content := input
 
@@ -331,11 +316,6 @@ func (a *agent) buildChatInput(ctx context.Context, req PromptRequest) (any, tas
 	return chatInput, taskengine.DataTypeChatHistory, nil
 }
 
-// stampTurnProvenance sets RequestID/ChainRef on messages that don't carry
-// provenance yet (i.e. the messages produced by this turn). Messages from
-// prior turns already have their own provenance — or, for pre-provenance
-// history, get transiently stamped here but are dropped by PersistDiff's
-// ID-based dedupe before reaching storage.
 func stampTurnProvenance(msgs []taskengine.Message, requestID, chainRef string) {
 	for i := range msgs {
 		if msgs[i].RequestID != "" {

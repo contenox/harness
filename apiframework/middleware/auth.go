@@ -10,8 +10,6 @@ import (
 	"github.com/contenox/harness/libauth"
 )
 
-// ExtractAndSetTokenMiddleware extracts a token from Authorization header or
-// auth_token cookie and injects it into the context under libauth.ContextTokenKey.
 func ExtractAndSetTokenMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var token string
@@ -36,9 +34,6 @@ func ExtractAndSetTokenMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// JWTAuthMiddleware validates the token and enriches context with identity and
-// permissions. Missing tokens are passed through so route-level auth can decide
-// whether the endpoint is public.
 func JWTAuthMiddleware(tokenManager AuthzManager, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -57,7 +52,6 @@ func JWTAuthMiddleware(tokenManager AuthzManager, next http.Handler) http.Handle
 	})
 }
 
-// JWTRefreshMiddleware attempts to refresh browser-client tokens.
 func JWTRefreshMiddleware(tokenManager AuthzManager, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

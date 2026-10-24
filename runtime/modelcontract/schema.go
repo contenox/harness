@@ -7,9 +7,6 @@ import (
 	"github.com/contenox/harness/runtime/internal/schemafile"
 )
 
-// CompletionFormatSchemaFile is the schema file every declared FIM and Next Edit
-// format is defined in; tokenizer companion builders read this file rather than
-// restating the vocabulary.
 const CompletionFormatSchemaFile = "completion_formats.json"
 
 //go:embed completion_formats.json
@@ -77,7 +74,6 @@ func checkFormatEntry(id, operation, list string, version int, seen map[string]s
 	return nil
 }
 
-// FIMFormats returns every declared native completion format name.
 func FIMFormats() []string {
 	formats := make([]string, 0, len(declaredFormats.FIM))
 	for _, entry := range declaredFormats.FIM {
@@ -86,7 +82,6 @@ func FIMFormats() []string {
 	return formats
 }
 
-// NextEditFormats returns every declared edit format name.
 func NextEditFormats() []string {
 	formats := make([]string, 0, len(declaredFormats.NextEdit))
 	for _, entry := range declaredFormats.NextEdit {
@@ -95,8 +90,6 @@ func NextEditFormats() []string {
 	return formats
 }
 
-// TokenizerCompanionControls returns the format version and control vocabulary a
-// literal-source tokenizer companion must remove for a completion or edit format.
 func TokenizerCompanionControls(operation, format string) (int, []string, error) {
 	switch operation {
 	case "fim":

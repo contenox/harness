@@ -8,9 +8,6 @@ import (
 	"strings"
 )
 
-// ErrChainLint marks every defect the load-time chain linter reports, so
-// services can distinguish "this chain is invalid" (disable it, teach the
-// author) from I/O failures (retry, propagate).
 var ErrChainLint = errors.New("chain failed load-time validation")
 
 type dtSet uint16
@@ -55,15 +52,10 @@ func acceptSet(sig HandlerSignature) dtSet {
 	return s
 }
 
-// LintChain vets a chain at load time; entryTypes are the DataTypes the caller may
-// feed the entry task (omitted treated as DataTypeAny), and all defects are collected
-// and joined into one error wrapping ErrChainLint.
 func LintChain(chain *TaskChainDefinition, entryTypes ...DataType) error {
 	if chain == nil {
 		return fmt.Errorf("%w: chain is nil", ErrChainLint)
 	}
-	// Structural checks first: the dataflow walk assumes unique IDs, known handlers,
-	// and resolvable goto/on_failure targets.
 	if err := validateChain(chain.Tasks); err != nil {
 		return fmt.Errorf("%w: chain[%s]: %w", ErrChainLint, chain.ID, err)
 	}
@@ -380,10 +372,10 @@ func (l *chainLinter) checkEdge(p, t *TaskDefinition, sig HandlerSignature, acce
 		carried = carried.union(l.failureOut(p))
 	}
 	if carried.isEmpty() || carried.has(DataTypeAny) {
-		return nil // no live edge, or unknown types
+		return nil
 	}
 	if carried.intersects(accepts) {
-		return nil // at least one runtime value can pass
+		return nil
 	}
 	return fmt.Errorf("task[%s] handler %s cannot accept input from task[%s] (produces %s; accepts %s)",
 		t.ID, t.Handler, p.ID, carried.describe(), sig.acceptsDescription())

@@ -6,50 +6,23 @@ import type {
   ToolCallStatus,
 } from '@contenox/acp-client';
 
-/**
- * The Activity model: what an attached session's agent actually did, derived from the session state the reducer already keeps (`items` arrival order + the `toolCalls` map).
- */
 
-/**
- * How a tool call reads in the timeline: coarse, colour-bearing.
- */
 export type ActivityStatus = 'pending' | 'running' | 'success' | 'error';
 
-/**
- * One external tool call, flattened for display.
- */
 export interface ActivityTool {
   toolCallId: string;
   title: string;
   kind?: ToolKind;
   status: ActivityStatus;
   locations: ToolCallLocation[];
-  /**
-   * The diff blocks this call produced (`content` kind `diff`).
-   */
   diffs: { path?: string; oldText?: string; newText?: string }[];
-  /**
-   * True when raw input or output is available to expand.
-   */
   hasRaw: boolean;
-  /**
-   * Raw values, redacted only at the display boundary (see the panel).
-   */
   input?: unknown;
   output?: unknown;
-  /**
-   * The turn this call belonged to, when it ran in one.
-   */
   turnId?: string;
-  /**
-   * When the call started, if the reducer saw its first update.
-   */
   startTime?: number;
 }
 
-/**
- * The status words the record uses, mapped from the wire's four.
- */
 export function activityStatus(status: ToolCallStatus | undefined): ActivityStatus {
   switch (status) {
     case 'pending':
@@ -66,9 +39,6 @@ export function activityStatus(status: ToolCallStatus | undefined): ActivityStat
   }
 }
 
-/**
- * What to call a tool call in one line, preferring the runtime's own title.
- */
 export function toolTitle(call: { title?: string; kind?: ToolKind; toolCallId: string }): string {
   if (call.title !== undefined && call.title !== '') return call.title;
   const byKind: Record<ToolKind, string> = {
@@ -100,9 +70,6 @@ function diffBlocks(content: ToolCallContent[] | undefined): ActivityTool['diffs
   return diffs;
 }
 
-/**
- * Every tool call this session made, in the order the agent made them (the transcript's `items` order, filtered to tool calls).
- */
 export function activityTools(session: AcpSessionState): ActivityTool[] {
   const tools: ActivityTool[] = [];
   for (const item of session.items) {
@@ -126,9 +93,6 @@ export function activityTools(session: AcpSessionState): ActivityTool[] {
   return tools;
 }
 
-/**
- * What kind of change a tool call made to a path, when it made one.
- */
 export type FileAction = 'created' | 'modified' | 'deleted' | 'moved';
 
 function actionFor(call: ActivityTool): FileAction | null {
@@ -141,22 +105,13 @@ function actionFor(call: ActivityTool): FileAction | null {
   return null;
 }
 
-/**
- * One file the agent changed, with every diff the session saw for it.
- */
 export interface ChangedFile {
   path: string;
   action: FileAction;
-  /**
-   * Tool calls that touched it, oldest first.
-   */
   tools: { toolCallId: string; action: FileAction }[];
   diffs: { toolCallId: string; oldText?: string; newText?: string }[];
 }
 
-/**
- * Every path the agent changed, in first-touch order, with its diffs accumulated across calls.
- */
 export function changedFiles(session: AcpSessionState): ChangedFile[] {
   const order: string[] = [];
   const byPath = new Map<string, ChangedFile>();

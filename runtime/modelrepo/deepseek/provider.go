@@ -33,9 +33,6 @@ func newProvider(apiKey, model, baseURL string, caps modelrepo.CapabilityConfig,
 	declaredAutocomplete := caps.CanAutocomplete
 	canAutocomplete := declaredAutocomplete && caps.FIMFormat == "deepseek-fim"
 	caps.CanAutocomplete = false
-	// Every model this backend serves is reached through DeepSeek's own request
-	// reference, so the dialect is a property of the vendor rather than of a
-	// catalogue row: a model declared by hand speaks the same spelling.
 	caps.Dialect = dialectName
 	return &provider{Provider: openai.NewOpenAIProvider(apiKey, model, []string{baseURL}, caps, client, tracker), apiKey: apiKey, baseURL: baseURL, client: client, model: model, tracker: tracker, canAutocomplete: canAutocomplete, declaredAutocomplete: declaredAutocomplete, fimFormat: caps.FIMFormat}
 }
@@ -43,10 +40,8 @@ func newProvider(apiKey, model, baseURL string, caps modelrepo.CapabilityConfig,
 func (p *provider) GetType() string       { return "deepseek" }
 func (p *provider) CanAutocomplete() bool { return p.canAutocomplete }
 
-// CanNextEdit reports that DeepSeek's beta FIM operation is not a structured edit protocol.
 func (p *provider) CanNextEdit() bool { return false }
 
-// GetNextEditConnection refuses to treat DeepSeek FIM as an independent edit operation.
 func (p *provider) GetNextEditConnection(context.Context, string) (modelrepo.LLMNextEditClient, error) {
 	return nil, modelrepo.ErrNextEditUnsupported
 }

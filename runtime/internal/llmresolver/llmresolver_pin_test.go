@@ -10,10 +10,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// TestUnit_ChatModelResolution_PinnedNonVisionRefuses pins that an explicit
-// model pin combined with an image request refuses with a teaching error
-// when the pinned model lacks vision, rather than silently resolving to a
-// different vision-capable model; unpinned requests keep auto-selecting.
 func TestUnit_ChatModelResolution_PinnedNonVisionRefuses(t *testing.T) {
 	getModels := func(providers []modelrepo.Provider) func(context.Context, ...string) ([]modelrepo.Provider, error) {
 		return func(context.Context, ...string) ([]modelrepo.Provider, error) { return providers, nil }

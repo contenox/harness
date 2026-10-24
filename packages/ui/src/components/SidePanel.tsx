@@ -1,9 +1,6 @@
 import { forwardRef } from "react";
 import { cn } from "../utils";
 
-/**
- * Fixed-width secondary column (e.g. run log) with left border.
- */
 export type SidePanelColumnProps = React.HTMLAttributes<HTMLDivElement> & {
   side?: "left" | "right";
 };

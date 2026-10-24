@@ -13,14 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_Search_ExcludesControlPlaneRecursion pins the carveout on rg's WALK,
-// not its root: a denied directory can never BE the search root (the Factory
-// refuses it — covered in the vfs suite), but rg recurses, so a search rooted
-// at a granted PARENT of the control plane would read the runtime's own
-// config/policies/DB into results without the per-denied-dir glob excludes
-// search.go builds. This is the residual surface the carveout slice flagged;
-// the sibling-named lookalike stays searchable to prove the exclusion is
-// segment-exact, not substring-sloppy.
 func TestUnit_Search_ExcludesControlPlaneRecursion(t *testing.T) {
 	if _, err := exec.LookPath("rg"); err != nil {
 		t.Skip("ripgrep not installed; the exclusion args are still covered by the build, skipping the live walk")

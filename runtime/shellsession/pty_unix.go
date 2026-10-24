@@ -9,17 +9,11 @@ import (
 	"github.com/creack/pty"
 )
 
-// ptySession is a running shell attached to a pseudo-terminal master. Writing to
-// it feeds the shell's stdin (that is how an approved/user line is "typed"),
-// reading drains its combined output.
 type ptySession struct {
 	master *os.File
 	cmd    *exec.Cmd
 }
 
-// startPTY launches an interactive shell rooted at cwd on a fresh PTY. The PTY
-// becomes the shell's controlling terminal, so job control and an interactive
-// prompt behave as on a real terminal.
 func startPTY(cwd, shell string, scrub func([]string) []string) (*ptySession, error) {
 	if shell == "" {
 		shell = defaultShell()
@@ -32,8 +26,6 @@ func startPTY(cwd, shell string, scrub func([]string) []string) (*ptySession, er
 		cmd = exec.Command(shell)
 	}
 	cmd.Dir = cwd
-	// Scrub serve's credentials out of the shell's environment when configured;
-	// TERM is appended last so it wins regardless of the policy.
 	parent := os.Environ()
 	if scrub != nil {
 		parent = scrub(parent)
@@ -50,7 +42,6 @@ func startPTY(cwd, shell string, scrub func([]string) []string) (*ptySession, er
 func (p *ptySession) Read(b []byte) (int, error)  { return p.master.Read(b) }
 func (p *ptySession) Write(b []byte) (int, error) { return p.master.Write(b) }
 
-// close kills the shell process and releases the PTY master.
 func (p *ptySession) close() {
 	if p.cmd != nil && p.cmd.Process != nil {
 		_ = p.cmd.Process.Kill()
@@ -58,7 +49,6 @@ func (p *ptySession) close() {
 	_ = p.master.Close()
 }
 
-// wait reaps the shell process (called from the read loop once output ends).
 func (p *ptySession) wait() {
 	if p.cmd != nil {
 		_ = p.cmd.Wait()

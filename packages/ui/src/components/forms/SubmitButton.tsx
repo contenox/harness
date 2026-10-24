@@ -1,9 +1,6 @@
 import { Button } from '../Button';
 import type { ReactNode } from 'react';
 
-/**
- * The single action a step offers.
- */
 export function SubmitButton({
   children,
   pending,

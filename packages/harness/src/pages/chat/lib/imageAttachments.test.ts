@@ -10,12 +10,10 @@ import {
   type DataTransferLike,
 } from './imageAttachments';
 
-/** Structural stand-in for a File — the extraction helpers only ever read `.type`. */
 function fakeFile(type: string, name = 'f'): File {
   return { type, name } as File;
 }
 
-/** A paste-style payload: `items` entries whose `getAsFile()` materializes the file. */
 function pastePayload(...types: string[]): DataTransferLike {
   return {
     items: types.map(type => ({
@@ -77,7 +75,6 @@ describe('imageFilesFromDataTransfer', () => {
 
 describe('dataTransferHasImages — dragover acceptance (files not yet materialized)', () => {
   it('detects an image drag by item TYPE alone', () => {
-    // During dragover getAsFile() returns null — the type is all we have.
     const dt = { items: [{ kind: 'file', type: 'image/png' }] };
     expect(dataTransferHasImages(dt)).toBe(true);
   });
@@ -93,9 +90,9 @@ describe('dataTransferHasImages — dragover acceptance (files not yet materiali
 describe('base64ByteLength', () => {
   it('computes decoded sizes including padding variants', () => {
     expect(base64ByteLength('')).toBe(0);
-    expect(base64ByteLength('aGVsbG8=')).toBe(5); // "hello"
-    expect(base64ByteLength('aGVsbG8h')).toBe(6); // "hello!"
-    expect(base64ByteLength('aGVsbG8hIQ==')).toBe(7); // "hello!!"
+    expect(base64ByteLength('aGVsbG8=')).toBe(5);
+    expect(base64ByteLength('aGVsbG8h')).toBe(6);
+    expect(base64ByteLength('aGVsbG8hIQ==')).toBe(7);
   });
   it('agrees with the byte cap constant scale (a 5 MB payload is ~6.67 MB of base64)', () => {
     const b64Len = Math.ceil(MAX_IMAGE_BYTES / 3) * 4;

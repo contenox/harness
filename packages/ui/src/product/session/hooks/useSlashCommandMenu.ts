@@ -24,88 +24,31 @@ import {
   type ValueHighlight,
 } from '../lib/slashMenu';
 
-/**
- * Which list the menu is showing: the command names, or one command's values.
- */
 export type SlashMenuMode = 'commands' | 'values';
 
-/**
- * What the composer needs in order to render and drive the menu.
- */
 export interface SlashCommandMenuState {
-  /**
-   * Whether there is a list to show right now.
-   */
   open: boolean;
-  /**
-   * Which of the two lists `open` refers to.
-   */
   mode: SlashMenuMode;
-  /**
-   * The advertised commands matching what has been typed, in the machine's own order.
-   */
   entries: AvailableCommand[];
-  /**
-   * The matching values of the command being argued, in the machine's own order.
-   */
   values: string[];
-  /**
-   * The command whose values are listed, or null in command mode.
-   */
   command: string | null;
-  /**
-   * Index of the highlighted row in whichever list `mode` names — always in range.
-   */
   activeIndex: number;
-  /**
-   * DOM id of the listbox, so the textarea can point at it.
-   */
   listboxId: string;
-  /**
-   * DOM id of one row, so the textarea can name the active one.
-   */
   optionId: (index: number) => string;
-  /**
-   * Fills the composer with a command.
-   */
   pick: (command: AvailableCommand) => void;
-  /**
-   * Fills the command's argument with one of its values.
-   */
   pickValue: (value: string) => void;
-  /**
-   * How many values a command accepts, for the hint beside its name.
-   */
   valueCount: (name: string) => number;
-  /**
-   * Moves the highlight, e.g. as a thumb drags over the list.
-   */
   setActiveIndex: (index: number) => void;
-  /**
-   * Arrow/Tab/Escape while the menu is open.
-   */
   handleKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
-  /**
-   * Consumes a submit that was meant to accept the highlighted row rather than send the draft, reporting whether it did.
-   */
   acceptOnSubmit: () => boolean;
-  /**
-   * aria wiring for the textarea.
-   */
   textareaAria: SlashMenuTextareaAria;
 }
 
-/**
- * The combobox half of the pattern, on the textarea: what it controls, whether that list is showing, and which row is current.
- */
 export type SlashMenuTextareaAria = Pick<
   TextareaHTMLAttributes<HTMLTextAreaElement>,
   'role' | 'aria-autocomplete' | 'aria-controls' | 'aria-expanded' | 'aria-activedescendant'
 >;
 
-/**
- * The composer's slash-command menu: what is open, what it is filtered to, and which row is selected.
- */
 export function useSlashCommandMenu(
   draft: string,
   onDraftChange: (value: string) => void,

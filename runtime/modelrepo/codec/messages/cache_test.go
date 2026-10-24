@@ -35,9 +35,6 @@ func cacheFixtureConfig(hints *modelrepo.CacheHints) *modelrepo.ChatConfig {
 	}
 }
 
-// stripCacheMetadata removes every cache_control key from a decoded request
-// and normalizes the system field to its text content, so hinted and unhinted
-// requests can be compared for model-visible equality.
 func stripCacheMetadata(t *testing.T, raw []byte) map[string]any {
 	t.Helper()
 	var m map[string]any
@@ -92,7 +89,6 @@ func countCacheControls(v any) int {
 }
 
 func TestUnit_CacheHints_AbsentIsByteIdenticalPreChangeShape(t *testing.T) {
-	// No hints: request keeps the pre-cache wire shape — plain-string system, zero cache_control keys.
 	req, _, err := msgcodec.Build(cacheFixtureMessages(), cacheFixtureConfig(nil))
 	raw, err := json.Marshal(req)
 	if err != nil {
@@ -111,11 +107,10 @@ func TestUnit_CacheHints_PlacementToolsSystemHistory(t *testing.T) {
 	hints := &modelrepo.CacheHints{
 		StableSystem:     true,
 		StableTools:      true,
-		StableHistoryLen: 4, // system + user + assistant + tool of the fixture
+		StableHistoryLen: 4,
 	}
 	req, _, err := msgcodec.Build(cacheFixtureMessages(), cacheFixtureConfig(hints))
 
-	// Breakpoint 1: the last tool definition, and only it.
 	if req.Tools[0].CacheControl != nil {
 		t.Fatalf("cache_control must sit on the last tool only")
 	}
@@ -124,7 +119,6 @@ func TestUnit_CacheHints_PlacementToolsSystemHistory(t *testing.T) {
 		t.Fatalf("last tool must carry {type:ephemeral} without TTL, got %+v", last.CacheControl)
 	}
 
-	// Breakpoint 2: system rendered as one text block with cache_control, same text as the string form.
 	rawSystem, err := json.Marshal(req.System)
 	if err != nil {
 		t.Fatal(err)
@@ -147,9 +141,6 @@ func TestUnit_CacheHints_PlacementToolsSystemHistory(t *testing.T) {
 		t.Fatalf("system block malformed: %+v", blocks[0])
 	}
 
-	// Breakpoint 3: StableHistoryLen=4 covers neutral messages 0..3; the last
-	// wire message from that prefix is the tool_result message (wire index 2,
-	// since system is hoisted). The trailing user turn stays unmarked.
 	if got := req.Messages[2].Content[len(req.Messages[2].Content)-1].CacheControl; got == nil {
 		t.Fatalf("stable-history breakpoint missing on wire message 2")
 	}
@@ -158,7 +149,6 @@ func TestUnit_CacheHints_PlacementToolsSystemHistory(t *testing.T) {
 		t.Fatalf("volatile tail must not carry a breakpoint")
 	}
 
-	// Documented limit: never more than the codec's breakpoint cap.
 	raw, err := json.Marshal(req)
 	if err != nil {
 		t.Fatal(err)
@@ -173,7 +163,6 @@ func TestUnit_CacheHints_PlacementToolsSystemHistory(t *testing.T) {
 }
 
 func TestUnit_CacheHints_NeverChangeModelVisibleContent(t *testing.T) {
-	// Hinted and unhinted requests must be identical modulo cache metadata.
 	plain, _, err := msgcodec.Build(cacheFixtureMessages(), cacheFixtureConfig(nil))
 	hinted, _, err := msgcodec.Build(cacheFixtureMessages(), cacheFixtureConfig(&modelrepo.CacheHints{
 		StableSystem:     true,
@@ -210,7 +199,6 @@ func TestUnit_CacheHints_TTLMapsToOneHourVariant(t *testing.T) {
 	if last.CacheControl == nil || last.CacheControl.TTL != "1h" {
 		t.Fatalf("TTL ≥ 1h must map to the documented 1h variant, got %+v", last.CacheControl)
 	}
-	// Sub-hour TTLs use the 5m default (field omitted).
 	req5, _, err := msgcodec.Build(cacheFixtureMessages(), cacheFixtureConfig(&modelrepo.CacheHints{
 		StableTools: true,
 		TTL:         5 * time.Minute,
@@ -224,7 +212,6 @@ func TestUnit_CacheHints_TTLMapsToOneHourVariant(t *testing.T) {
 }
 
 func TestUnit_CacheHints_NoContentNoBreakpoint(t *testing.T) {
-	// Hints asserting stability over absent content place nothing.
 	req, _, err := msgcodec.Build([]modelrepo.Message{{Role: "user", Content: "hi"}}, &modelrepo.ChatConfig{
 		CacheHints: &modelrepo.CacheHints{StableSystem: true, StableTools: true},
 	})
@@ -238,7 +225,6 @@ func TestUnit_CacheHints_NoContentNoBreakpoint(t *testing.T) {
 }
 
 func TestUnit_CacheUsage_NormalizationRule(t *testing.T) {
-	// Anthropic input_tokens excludes cache reads/writes; PromptTokens is the sum of the three.
 	body := `{"role":"assistant","content":[{"type":"text","text":"ok"}],"stop_reason":"end_turn",
 		"usage":{"input_tokens":7,"output_tokens":11,"cache_read_input_tokens":100,"cache_creation_input_tokens":30}}`
 	res, err := msgcodec.DecodeResponse([]byte(body), nil)

@@ -1,6 +1,5 @@
 import type { ChainDefinition } from './types';
 
-/** Parses active-plan `compiled_chain_json` into a ChainDefinition for workflow visualization. */
 export function parseCompiledChainJSON(raw: string | undefined | null): ChainDefinition | null {
   if (!raw?.trim()) return null;
   try {

@@ -8,8 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// functionSchemaOf builds a request carrying one function tool and returns the
-// schema the declaration put on the wire.
 func functionSchemaOf(t *testing.T, parameters any) map[string]any {
 	t.Helper()
 
@@ -33,19 +31,6 @@ func functionSchemaOf(t *testing.T, parameters any) map[string]any {
 	return schema
 }
 
-// TestUnit_BuildVertexRequest_UnionWithItemsIsSentWhole pins the declaration
-// this adapter used to rewrite: a property whose type is the union ("string" or
-// "array") carrying its own items.
-//
-// The OpenAPI-subset `parameters` member rejects that shape — a property whose
-// type is a union with items makes Vertex answer 400 INVALID_ARGUMENT ("for
-// schema with items, schema type should be ARRAY") for the whole request, so
-// one such property disables every tool in the turn rather than just itself.
-// That is local_fs/git's `paths` argument (localtools.gitPathsProp), which is
-// why the failure surfaced as every ACP turn on vertex-google burning its
-// entire request budget on recovery attempts. The declaration now goes out on
-// `parametersJsonSchema`, the member the vendor documents as taking JSON Schema
-// whole, so the union reaches the API exactly as the caller declared it.
 func TestUnit_BuildVertexRequest_UnionWithItemsIsSentWhole(t *testing.T) {
 	t.Parallel()
 
@@ -67,9 +52,6 @@ func TestUnit_BuildVertexRequest_UnionWithItemsIsSentWhole(t *testing.T) {
 	require.NotNil(t, paths["items"], "the array branch keeps its items")
 }
 
-// TestUnit_BuildVertexRequest_UnionWithoutItemsIsSentWhole guards the other
-// half: webtools' `body` is a seven-way union with no items, and reaches the
-// API as declared rather than collapsed to its first member.
 func TestUnit_BuildVertexRequest_UnionWithoutItemsIsSentWhole(t *testing.T) {
 	t.Parallel()
 
@@ -89,9 +71,6 @@ func TestUnit_BuildVertexRequest_UnionWithoutItemsIsSentWhole(t *testing.T) {
 	require.Nil(t, body["items"])
 }
 
-// TestUnit_BuildVertexRequest_ScalarItemsIsSentWhole covers a plain
-// (non-union) property that carries items under a scalar type. The schema the
-// caller declared is what the API receives.
 func TestUnit_BuildVertexRequest_ScalarItemsIsSentWhole(t *testing.T) {
 	t.Parallel()
 
@@ -111,8 +90,6 @@ func TestUnit_BuildVertexRequest_ScalarItemsIsSentWhole(t *testing.T) {
 	require.NotNil(t, name["items"])
 }
 
-// TestUnit_BuildVertexRequest_PlainArrayKeepsItems is the control: an ordinary
-// array declaration reaches the API untouched.
 func TestUnit_BuildVertexRequest_PlainArrayKeepsItems(t *testing.T) {
 	t.Parallel()
 
@@ -126,9 +103,6 @@ func TestUnit_BuildVertexRequest_PlainArrayKeepsItems(t *testing.T) {
 	require.Equal(t, "string", items["type"])
 }
 
-// TestUnit_BuildVertexRequest_SchemaMembersAreNotTrimmed pins the members the
-// OpenAPI-subset member had no place for and that the JSON Schema member
-// documents: the declaration reaches the API with them intact.
 func TestUnit_BuildVertexRequest_SchemaMembersAreNotTrimmed(t *testing.T) {
 	t.Parallel()
 

@@ -12,8 +12,6 @@ import (
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
-// ExecutionProviders resolves observed models using the selected connections' current credentials.
-// Endpoint changes require refreshed discovery before credentials can be sent to that endpoint.
 func (s *State) ExecutionProviders(tracker libtracker.ActivityTracker) ProviderFromRuntimeState {
 	return func(ctx context.Context, selectors ...string) ([]modelrepo.Provider, error) {
 		tx, commit, release, err := s.dbInstance.WithTransaction(ctx)
@@ -52,22 +50,15 @@ func (s *State) ExecutionProviders(tracker libtracker.ActivityTracker) ProviderF
 	}
 }
 
-// AmbiguousRouteError reports a route that names a provider type or name
-// several connections share, so no single connection is selected; a route is
-// one connection, named by its selector.
 type AmbiguousRouteError struct {
 	Reference   string
 	Connections []string
 }
 
-// Error names the reference and the connections that share it.
 func (e *AmbiguousRouteError) Error() string {
 	return fmt.Sprintf("inference route %q matches multiple connections (%s); name one connection: /role <role> <connection> <model> assigns it, /providers lists them", e.Reference, strings.Join(e.Connections, ", "))
 }
 
-// refuseAmbiguousRoute refuses a single reference that is not a connection
-// selector when more than one discovered connection matches it, instead of
-// letting a request spread over them.
 func refuseAmbiguousRoute(states map[string]BackendRuntimeState, selectors []string) error {
 	if len(selectors) != 1 || matchesEveryProvider(selectors) {
 		return nil

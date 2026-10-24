@@ -17,8 +17,6 @@ type statemux struct {
 	stateService stateservice.Service
 }
 
-// list returns the observed runtime state of every registered backend, with
-// each backend's model list normalized to observed model names.
 func (s *statemux) list(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	internalModels, err := s.stateService.Get(ctx)
@@ -26,5 +24,5 @@ func (s *statemux) list(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, sanitizeRuntimeStates(internalModels)) // @response []statetype.BackendRuntimeState
+	_ = apiframework.Encode(w, r, http.StatusOK, sanitizeRuntimeStates(internalModels))
 }

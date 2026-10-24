@@ -160,7 +160,6 @@ func TestUnit_RefreshToken_Success(t *testing.T) {
 		t.Fatalf("RefreshToken failed: %v", err)
 	}
 
-	// Parse new token to verify claims
 	claims, err := libauth.ValidateToken[TestPermissions](context.Background(), newToken, cfg.JWTSecret)
 	if err != nil {
 		t.Fatalf("Validating refreshed token failed: %v", err)
@@ -170,36 +169,14 @@ func TestUnit_RefreshToken_Success(t *testing.T) {
 	}
 }
 
-// func TestCheckPasswordHash_Correct(t *testing.T) {
-// 	hash, _ := libcipher.NewHash(libcipher.GenerateHashArgs{
-// 		Payload:    []byte("password"),
-// 		SigningKey: []byte("key"),
-// 		Salt:       []byte("salt"),
-// 	}, sha256.New)
-
-// 	ok, err := libcipher.CheckHash("key", "salt", "password", hash)
-// 	if err != nil {
-// 		t.Fatalf("CheckPasswordHash failed: %v", err)
-// 	}
-// 	if !ok {
-// 		t.Error("Expected password to match hash")
-// 	}
-// }
-
 type TestPermissions struct{}
 
 func (t TestPermissions) RequireAuthorisation(forResource string, permission int) (bool, error) {
 	return true, nil
 }
 
-// jwt/v5 dispatches custom claim validation on the ClaimsValidator interface
-// (Validate), not the v4-style Valid. Losing this assertion silently disables
-// every invariant AuthClaims enforces.
 var _ jwt.ClaimsValidator = libauth.AuthClaims[TestPermissions]{}
 
-// An expired session must be distinguishable from a malformed request:
-// apiframework maps ErrTokenExpired to 401 and parse failures to 400, so a
-// client can only know to re-authenticate if this sentinel survives.
 func TestUnit_ValidateToken_ExpiredSurfacesAsErrTokenExpired(t *testing.T) {
 	cfg := libauth.CreateTokenArgs{JWTSecret: "test_secret_test_secret", JWTExpiry: -time.Hour}
 	tokenStr, _, err := libauth.CreateToken(cfg, "user1", TestPermissions{})
@@ -216,7 +193,6 @@ func TestUnit_ValidateToken_ExpiredSurfacesAsErrTokenExpired(t *testing.T) {
 	}
 }
 
-// The identity invariant is only real if parsing actually enforces it.
 func TestUnit_ValidateToken_RejectsEmptyIdentity(t *testing.T) {
 	const secret = "test_secret_test_secret"
 	claims := libauth.AuthClaims[TestPermissions]{
@@ -224,7 +200,7 @@ func TestUnit_ValidateToken_RejectsEmptyIdentity(t *testing.T) {
 			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		},
-		Identity: "", // must be rejected
+		Identity: "",
 	}
 	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
 	if err != nil {
@@ -236,8 +212,6 @@ func TestUnit_ValidateToken_RejectsEmptyIdentity(t *testing.T) {
 	}
 }
 
-// Validation runs on hosts whose clocks disagree; a peer a few seconds ahead
-// must not have its freshly minted tokens rejected as issued in the future.
 func TestUnit_ValidateToken_ToleratesModestClockSkew(t *testing.T) {
 	const secret = "test_secret_test_secret"
 	claims := libauth.AuthClaims[TestPermissions]{
@@ -257,20 +231,9 @@ func TestUnit_ValidateToken_ToleratesModestClockSkew(t *testing.T) {
 	}
 }
 
-// An alg:none token must be rejected identically by validation and by both
-// refresh paths.
-//
-// Honest scope: this currently passes with or without the explicit
-// SigningMethodHMAC check, because jwt/v5 already refuses alg:none unless the
-// keyfunc hands back its UnsafeAllowNoneSignatureType sentinel, and ours
-// returns a []byte secret. The explicit pin is defence in depth — it is what
-// keeps this true if the keyfunc ever changes shape. The test pins the
-// property, not the mechanism, and is deliberately kept for that reason.
 func TestUnit_SigningMethodIsPinnedOnEveryParsePath(t *testing.T) {
 	const secret = "test_secret_test_secret"
 
-	// "alg: none" is the classic downgrade. jwt/v5 requires an explicit
-	// sentinel key for it, so this is the strongest form of the attack.
 	unsigned, err := jwt.NewWithClaims(jwt.SigningMethodNone, libauth.AuthClaims[TestPermissions]{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Hour)),

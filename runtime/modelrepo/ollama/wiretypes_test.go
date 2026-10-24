@@ -6,11 +6,6 @@ import (
 	"time"
 )
 
-// Every expectation here was captured from github.com/ollama/ollama/api
-// v0.17.5 before that module was dropped. They are the wire contract: a
-// failure means real Ollama servers now see different bytes than they used to,
-// which no fake-backed test can catch.
-
 func mustMarshal(t *testing.T, v any) string {
 	t.Helper()
 	b, err := json.Marshal(v)
@@ -30,8 +25,6 @@ func TestDurationMarshalJSON(t *testing.T) {
 		{90 * time.Second, `"1m30s"`},
 		{time.Hour + 30*time.Minute, `"1h30m0s"`},
 		{1500 * time.Millisecond, `"1.5s"`},
-		// Negative is ollama's "keep loaded indefinitely" sentinel and must
-		// stay the bare number -1, not a duration string.
 		{-1, `-1`},
 	}
 	for _, tc := range cases {
@@ -47,13 +40,11 @@ func TestDurationUnmarshalJSON(t *testing.T) {
 		in   string
 		want time.Duration
 	}{
-		// A bare number is seconds, not nanoseconds.
 		{`300`, 5 * time.Minute},
 		{`0`, 0},
 		{`1.5`, 1500 * time.Millisecond},
 		{`"10m"`, 10 * time.Minute},
 		{`"10m0s"`, 10 * time.Minute},
-		// Negative saturates rather than staying negative.
 		{`-1`, maxDuration},
 		{`"-5s"`, maxDuration},
 	}
@@ -109,9 +100,6 @@ func TestThinkValueUnmarshalJSON(t *testing.T) {
 			t.Errorf("ThinkValue %s: round-tripped to %s", in, got)
 		}
 	}
-	// The transport accepts a level name; which names a model honours is its
-	// own declaration, so only a value that is neither a boolean nor a string
-	// is a transport error.
 	for _, in := range []string{`5`, `{}`, `[]`} {
 		var tv ThinkValue
 		if err := json.Unmarshal([]byte(in), &tv); err == nil {
@@ -126,8 +114,6 @@ func TestImageDataMarshalJSON(t *testing.T) {
 		in   ImageData
 		want string
 	}{
-		// Base64 of the PNG magic bytes plus a high byte: standard encoding
-		// with padding, which is what ollama decodes.
 		{"png header", ImageData([]byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0xff, 0x00}), `"iVBORw0KGgr/AA=="`},
 		{"empty", ImageData{}, `""`},
 		{"nil", ImageData(nil), `null`},
@@ -153,14 +139,10 @@ func TestToolCallFunctionArgumentsJSON(t *testing.T) {
 		in   string
 		want string
 	}{
-		// Key order is the model's, not sorted: a plain Go map would emit
-		// alpha,mike,zulu here.
 		{"preserves key order", `{"zulu":1,"alpha":"a","mike":true}`, `{"zulu":1,"alpha":"a","mike":true}`},
 		{"empty object", `{}`, `{}`},
 		{"null stays null", `null`, `null`},
 		{"numbers", `{"n":1.5,"big":10000000000,"neg":-3}`, `{"n":1.5,"big":10000000000,"neg":-3}`},
-		// Only the top level is ordered; nested objects decode to plain maps
-		// and re-emit sorted. HTML characters are escaped, as encoding/json does.
 		{
 			"nested sorts, html escapes",
 			`{"nested":{"z":1,"a":2},"arr":[1,"two",null],"esc":"a<b>&c","uni":"héllo"}`,
@@ -176,14 +158,11 @@ func TestToolCallFunctionArgumentsJSON(t *testing.T) {
 		if got := mustMarshal(t, args); got != tc.want {
 			t.Errorf("%s: marshal got %s, want %s", tc.name, got, tc.want)
 		}
-		// String is what feeds modelrepo.ToolCall.Function.Arguments.
 		if got := args.String(); got != tc.want {
 			t.Errorf("%s: String got %s, want %s", tc.name, got, tc.want)
 		}
 	}
 
-	// The zero value must never marshal as null: it is a by-value field on
-	// every tool call we send.
 	var zero ToolCallFunctionArguments
 	if got := mustMarshal(t, zero); got != `{}` {
 		t.Errorf("zero arguments: got %s, want {}", got)
@@ -217,7 +196,6 @@ func TestToolCallMarshalJSON(t *testing.T) {
 }
 
 func TestToolSchemaJSON(t *testing.T) {
-	// Property order is the schema author's; required order is preserved too.
 	const schema = `{"type":"object","required":["b","a"],"properties":{"zebra":{"type":"string","description":"z"},"apple":{"type":["string","null"],"enum":["x",1,null]},"nest":{"type":"object","properties":{"inner":{"type":"integer"}}}}}`
 
 	var params ToolFunctionParameters
@@ -234,8 +212,6 @@ func TestToolSchemaJSON(t *testing.T) {
 		t.Errorf("Tools:\n got %s\nwant %s", got, want)
 	}
 
-	// An unset schema still emits the parameters object with a null
-	// properties key, as ollama expects.
 	got = mustMarshal(t, Tools{{Type: "function", Function: ToolFunction{Name: "n"}}})
 	want = `[{"type":"function","function":{"name":"n","parameters":{"type":"","properties":null}}}]`
 	if got != want {
@@ -244,7 +220,6 @@ func TestToolSchemaJSON(t *testing.T) {
 }
 
 func TestPropertyTypeJSON(t *testing.T) {
-	// A single type collapses to a bare string; anything else stays an array.
 	cases := []string{`"string"`, `["string","null"]`, `[]`}
 	for _, in := range cases {
 		var pt PropertyType
@@ -320,11 +295,9 @@ func TestChatResponseUnmarshalJSON(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	// Message.UnmarshalJSON lowercases the role.
 	if resp.Message.Role != "assistant" {
 		t.Errorf("role: got %q, want %q", resp.Message.Role, "assistant")
 	}
-	// Metrics is embedded untagged, so its counters come from the top level.
 	if resp.Metrics.PromptEvalCount != 7 || resp.Metrics.EvalCount != 9 {
 		t.Errorf("metrics: got prompt=%d eval=%d, want 7/9", resp.Metrics.PromptEvalCount, resp.Metrics.EvalCount)
 	}
@@ -399,8 +372,6 @@ func TestShowAndListResponseJSON(t *testing.T) {
 }
 
 func TestCapabilityConstants(t *testing.T) {
-	// These strings are the server's, not ours: renaming one silently
-	// misclassifies every model.
 	cases := map[Capability]string{
 		CapabilityCompletion: "completion",
 		CapabilityTools:      "tools",

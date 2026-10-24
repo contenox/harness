@@ -39,8 +39,8 @@ describe('isCaseSensitive (smart-case)', () => {
 describe('createSearcher — field weights', () => {
   it('ranks a title match above an id-only match for the same query', () => {
     const rows: Row[] = [
-      { title: 'zzz', id: 'Deploy' }, // matches only via the low-weight id
-      { title: 'Deploy', id: 'zzz' }, // matches via the high-weight title
+      { title: 'zzz', id: 'Deploy' },
+      { title: 'Deploy', id: 'zzz' },
     ];
     expect(searchTitles(rows, 'Deploy')[0]).toBe('Deploy');
   });
@@ -75,7 +75,6 @@ describe('createSearcher — smart-case', () => {
   });
 
   it('rejects a mixed-case query whose case does not line up', () => {
-    // 'Ma' is case-sensitive (has an uppercase M); the 'a' cannot match the 'A'.
     expect(searchTitles(rows, 'Ma')).toEqual([]);
   });
 });
@@ -102,7 +101,6 @@ describe('createSearcher — highlight indexes', () => {
   it('remaps highlight positions across a stripped diacritic', () => {
     const rows: Row[] = [{ title: 'Café', id: 'c' }];
     const [match] = createSearcher(rows, toFields).search('cafe');
-    // The 'e' matched the normalized index that maps back to 'é' at 3.
     expect(match.matchIndexes).toContain(3);
   });
 

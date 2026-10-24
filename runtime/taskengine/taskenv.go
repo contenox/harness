@@ -20,10 +20,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// pinnedModelRefusal returns the refusal for a step that asked for the
-// explicitly pinned model and found no backend serving it, or nil when the
-// failure may still route to on_failure. The pin binds only the step running
-// that model; a recovery step on another model is never reached by it.
 func pinnedModelRefusal(ctx context.Context, task *TaskDefinition, taskErr error) error {
 	if task.ExecuteConfig == nil || !errors.Is(taskErr, llmresolver.ErrNoSatisfactoryModel) {
 		return nil
@@ -39,7 +35,6 @@ func pinnedModelRefusal(ctx context.Context, task *TaskDefinition, taskErr error
 	return fmt.Errorf("task %s: model %q was requested explicitly and no backend serves it; run 'contenox-cli model list' to see the served models: %w", task.ID, model, taskErr)
 }
 
-// DataType represents the type of data passed between tasks.
 type DataType int
 
 const (
@@ -51,7 +46,6 @@ const (
 	DataTypeNil
 )
 
-// String returns the string representation of the data type.
 func (d *DataType) String() string {
 	switch *d {
 	case DataTypeAny:
@@ -71,7 +65,6 @@ func (d *DataType) String() string {
 	}
 }
 
-// DataTypeFromString converts a string to DataType.
 func DataTypeFromString(s string) (DataType, error) {
 	switch strings.ToLower(s) {
 	case "any":
@@ -91,19 +84,14 @@ func DataTypeFromString(s string) (DataType, error) {
 	}
 }
 
-// EnvExecutor executes complete task chains with input and environment management.
 type EnvExecutor interface {
 	ExecEnv(ctx context.Context, chain *TaskChainDefinition, input any, dataType DataType) (any, DataType, []CapturedStateUnit, error)
 }
 
-// ErrUnsupportedTaskType indicates unrecognized task type
 var ErrUnsupportedTaskType = errors.New("executor does not support the task type")
 
-// ErrToolsNotFound is returned when a named tools is not registered in any repo.
 var ErrToolsNotFound = errors.New("tools not found")
 
-// ErrToolsToolsUnavailable is returned when a registered tools's tool list
-// cannot be loaded (e.g. MCP server unreachable).
 var ErrToolsToolsUnavailable = errors.New("tools tools unavailable")
 
 type toolsToolsUnavailableError struct {
@@ -122,7 +110,6 @@ func (e *toolsToolsUnavailableError) Unwrap() []error {
 	return []error{ErrToolsToolsUnavailable, e.cause}
 }
 
-// ToolsToolsUnavailable wraps cause as ErrToolsToolsUnavailable for toolsName (for errors.Is).
 func ToolsToolsUnavailable(toolsName string, cause error) error {
 	if cause == nil {
 		return nil
@@ -133,17 +120,12 @@ func ToolsToolsUnavailable(toolsName string, cause error) error {
 	}
 }
 
-// ToolsRepo defines interface for external system integrations and side effects.
 type ToolsRepo interface {
 	Exec(ctx context.Context, startingTime time.Time, input any, debug bool, args *ToolsCall) (any, DataType, error)
 	ToolsRegistry
 	ToolsWithSchema
 }
 
-// Prechecker refuses a call from static configuration alone, running and
-// changing nothing; optional, a repo without it is gated unchanged. A repo that
-// wraps another must forward it, or the inner refusal arrives only after the
-// approval gate has already cost a human a decision.
 type Prechecker interface {
 	Precheck(ctx context.Context, input any, args *ToolsCall) error
 }
@@ -162,7 +144,6 @@ type ToolsWithSchema interface {
 	GetToolsForToolsByName(ctx context.Context, name string) ([]Tool, error)
 }
 
-// SimpleEnv is the default implementation of EnvExecutor.
 type SimpleEnv struct {
 	exec          TaskExecutor
 	tracker       libtracker.ActivityTracker
@@ -171,7 +152,6 @@ type SimpleEnv struct {
 	eventSink     TaskEventSink
 }
 
-// NewEnv creates a new SimpleEnv with the given tracker and task executor.
 func NewEnv(
 	ctx context.Context,
 	tracker libtracker.ActivityTracker,
@@ -191,14 +171,11 @@ func NewEnv(
 	}, nil
 }
 
-// ChainContext carries the tools and execution metadata for a chain.
 type ChainContext struct {
 	Tools       map[string]ToolWithResolution
 	ClientTools []Tool
 	Debug       bool
-	// ModelCall records the resolved model call for the current task attempt.
-	// ExecEnv clears it before each attempt; TaskExec fills it from the provider result.
-	ModelCall llmrepo.Meta
+	ModelCall   llmrepo.Meta
 }
 
 type ToolWithResolution struct {
@@ -206,13 +183,10 @@ type ToolWithResolution struct {
 	ToolsName string
 }
 
-// ExecEnv executes the given chain with the provided input.
 func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, input any, dataType DataType) (result any, resultType DataType, history []CapturedStateUnit, retErr error) {
 	_, reportChangeChain, endChain := env.tracker.Start(ctx, "chain_exec", chain.ID, "chain_id", chain.ID)
 	defer endChain()
 
-	// Invariant: every event of this run carries at least the chain in its
-	// scope; task attempts below override with the full task scope.
 	ctx = WithTaskEventScope(ctx, TaskEventScope{ChainID: chain.ID})
 
 	stack := env.inspector.Start(ctx)
@@ -224,8 +198,6 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 		if retErr != nil {
 			var susp *ChainSuspendedError
 			if errors.As(retErr, &susp) {
-				// Published after the checkpoint is persisted, so a
-				// consumer reacting to it can already resume.
 				chainEvent.Kind = TaskEventChainSuspended
 				chainEvent.ApprovalID = susp.ApprovalID
 				chainEvent.Scope = susp.Scope
@@ -266,24 +238,15 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 	var taskErr error
 	var inputVar string
 
-	// rootFailureErr holds the first taskErr routed through on_failure,
-	// reported ahead of a later failure handler's own error; cleared on success.
 	var rootFailureErr error
 	var recovering bool
 	var rootFailureTaskID string
 	var rootFailureRetries int
 
-	// enteredViaFailure marks that currentTask was reached over an on_failure
-	// edge, so input preparation guarantees a non-empty routed context (see
-	// ensureFailureContext); cleared once consumed.
 	var enteredViaFailure bool
 
-	// edgeCounts tracks traversal counts per "fromTaskID->toTaskID" edge for
-	// this run; consulted by OpEdgeTraversedAtLeast.
 	edgeCounts := map[string]int{}
 
-	// A checkpoint on the context re-enters the chain at the interrupted task
-	// with the suspended run's state restored.
 	resumeFirstAttempt := false
 	if cp := resumeCheckpointFromContext(ctx); cp != nil {
 		currentTask, err = findTaskByID(chain.Tasks, cp.TaskID)
@@ -323,8 +286,6 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 			if _, unavailable := unavailableTools[toolsName]; unavailable {
 				continue
 			}
-			// WithToolsArgs copies the map, so the stored value is immutable
-			// and safe to read concurrently without locks.
 			toolCtx := ctx
 			if task.ExecuteConfig != nil {
 				if policy, ok := task.ExecuteConfig.ToolsPolicies[toolsName]; ok && len(policy) > 0 {
@@ -337,7 +298,6 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 			toolsTools, err := env.toolsProvider.GetToolsForToolsByName(toolCtx, toolsName)
 			if err != nil {
 				if errors.Is(err, ErrToolsNotFound) {
-					// Tools not registered (e.g. local_shell disabled).
 					continue
 				}
 				if errors.Is(err, ErrToolsToolsUnavailable) {
@@ -370,9 +330,6 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 		taskInputType := outputType
 		inputVar = currentTask.ID
 		if resumeFirstAttempt {
-			// The resumed task re-enters with the checkpointed transcript
-			// verbatim — no redirection, template render, or cap — or it
-			// would resume a different run than the one that suspended.
 			resumeFirstAttempt = false
 		} else {
 			if currentTask.InputVar != "" {
@@ -399,9 +356,6 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 			}
 			taskInput, taskInputType = capTaskInputForExecution(taskInput, taskInputType, currentTask.InputMaxBytes)
 
-			// A failure handler must never die of its own prompt: an
-			// effectively empty post-cap context is replaced with the root
-			// failure as a user message (see failurecontext.go).
 			if enteredViaFailure {
 				taskInput, taskInputType = ensureFailureContext(taskInput, taskInputType, rootFailureTaskID, rootFailureErr)
 			}
@@ -410,8 +364,6 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 		maxRetries := max(currentTask.RetryOnFailure, 0)
 
 		for retry := 0; retry <= maxRetries; retry++ {
-			// taskCtx stays attached to ctx so parent cancellation stops
-			// in-flight work.
 			taskCtx := ctx
 
 			var cancel context.CancelFunc
@@ -447,8 +399,6 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 			stepTask.Print = expandStepMacros(currentTask.Print, edgeCounts)
 			taskCtx = WithEdgeCounts(taskCtx, edgeCounts)
 
-			// chain.TokenLimit is the base budget; a per-request context
-			// length on taskCtx is preferred when present.
 			tokenLimit := int(chain.TokenLimit)
 			if requested := RequestedContextLengthFromContext(taskCtx); requested > 0 {
 				if tokenLimit <= 0 || requested < tokenLimit {
@@ -475,8 +425,6 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 				cancel()
 			}
 
-			// A parked approval is handled before retry/on_failure: it is
-			// neither a failure to retry nor one to route around.
 			var pendErr *ApprovalPendingError
 			if errors.As(taskErr, &pendErr) {
 				return env.suspendRun(ctx, stack, chain, currentTask, retry, vars, varTypes, edgeCounts, output, pendErr)
@@ -556,8 +504,6 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 					rootFailureTaskID = currentTask.ID
 					rootFailureRetries = maxRetries
 				}
-				// Keep the task's output only if it is a real, typed value;
-				// otherwise fall back to the failure's typed input.
 				failedOutput := taskInput
 				failedOutputType := taskInputType
 				if output != nil && outputType != DataTypeAny && outputType != DataTypeNil {
@@ -571,8 +517,6 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 				varTypes[currentTask.ID] = failedOutputType
 				vars["previous_output"] = failedOutput
 				varTypes["previous_output"] = failedOutputType
-				// Expose the raw error message so failure-handler tasks can
-				// reference it via {{.last_error}} or {{.<taskID>_error}}.
 				if taskErr != nil {
 					vars["last_error"] = taskErr.Error()
 					varTypes["last_error"] = DataTypeString
@@ -597,7 +541,7 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 					"reason", "error",
 				)
 				reportChangeErrTransition(currentTask.ID, taskErr)
-				endErrTransition() // direct call, not defer: defers inside loops leak
+				endErrTransition()
 				continue
 			}
 			if rootFailureErr != nil {
@@ -634,7 +578,7 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 				"chain_complete",
 				"chain")
 			reportChangeFinal("chain", taskLogSummary(finalOutput, outputType))
-			endFinal() // direct call, not defer
+			endFinal()
 			break
 		}
 
@@ -645,9 +589,8 @@ func (env SimpleEnv) ExecEnv(ctx context.Context, chain *TaskChainDefinition, in
 			"next_task", nextTaskID,
 		)
 		reportChangeTransition(nextTaskID, transitionEval)
-		endTransition() // direct call, not defer
+		endTransition()
 
-		// Count this traversal before reassigning currentTask.
 		edgeCounts[currentTask.ID+"->"+nextTaskID]++
 
 		currentTask, err = findTaskByID(chain.Tasks, nextTaskID)
@@ -678,9 +621,6 @@ func taskLogSummary(v any, dataType DataType) map[string]any {
 }
 
 func renderTemplate(tmplStr string, vars any) (string, error) {
-	// missingkey=error is intentionally not set: templates legitimately
-	// reference not-yet-populated keys (e.g. a task referencing its own id
-	// before Print sets it), which must render "<no value>", not error.
 	tmpl, err := template.New("prompt").Funcs(sprig.TxtFuncMap()).Parse(tmplStr)
 	if err != nil {
 		return "", err
@@ -693,7 +633,6 @@ func renderTemplate(tmplStr string, vars any) (string, error) {
 }
 
 func (exe SimpleEnv) evaluateTransitions(_ context.Context, _ string, transition TaskTransition, eval string, edgeCounts map[string]int) (string, *TransitionBranch, error) {
-	// A task with no branches is a leaf: it ends the chain cleanly with its output.
 	if len(transition.Branches) == 0 {
 		return "", nil, nil
 	}
@@ -703,11 +642,9 @@ func (exe SimpleEnv) evaluateTransitions(_ context.Context, _ string, transition
 			continue
 		}
 
-		// Edge-state operators read engine state, not task output.
 		if branch.Operator == OpEdgeTraversedAtLeast {
 			threshold, err := strconv.Atoi(strings.TrimSpace(branch.When))
 			if err != nil {
-				// Treat as non-match so OpDefault can still fire.
 				continue
 			}
 			if edgeCounts[branch.Edge] >= threshold {
@@ -718,7 +655,6 @@ func (exe SimpleEnv) evaluateTransitions(_ context.Context, _ string, transition
 
 		match, err := compare(branch.Operator, eval, branch.When)
 		if err != nil {
-			// Treat parse errors as non-match so OpDefault can still fire.
 			match = false
 		}
 		if match {
@@ -785,28 +721,21 @@ func validateChain(tasks []TaskDefinition) error {
 		taskIDs[ct.ID] = struct{}{}
 	}
 	for _, ct := range tasks {
-		// Handler must be one of the known handlers, else it fails opaquely at
-		// runtime on the default switch arm.
 		if !isKnownHandler(ct.Handler) {
 			return fmt.Errorf("task %q: unknown handler %q %w", ct.ID, ct.Handler, errdefs.ErrBadRequest)
 		}
-		// A 'tools' task without a tools block silently execs an empty call.
 		if ct.Handler == HandleTools && (ct.Tools == nil || ct.Tools.Name == "") {
 			return fmt.Errorf("task %q: 'tools' handler requires a tools block with a name %w", ct.ID, errdefs.ErrBadRequest)
 		}
-		// on_failure must reference a real task ('end' is not resolvable at runtime).
 		if ct.Transition.OnFailure != "" {
 			if _, ok := taskIDs[ct.Transition.OnFailure]; !ok {
 				return fmt.Errorf("task %q: on_failure references unknown task %q %w", ct.ID, ct.Transition.OnFailure, errdefs.ErrBadRequest)
 			}
 		}
 		for _, br := range ct.Transition.Branches {
-			// Operator must be a supported term — an empty/unknown operator never
-			// matches (compare errors → swallowed), producing a silent dead branch.
 			if _, err := ToOperatorTerm(string(br.Operator)); err != nil {
 				return fmt.Errorf("task %q: %v %w", ct.ID, err, errdefs.ErrBadRequest)
 			}
-			// goto must reference a real task; empty or 'end' ends the chain.
 			if br.Goto != "" && br.Goto != TermEnd {
 				if _, ok := taskIDs[br.Goto]; !ok {
 					return fmt.Errorf("task %q: branch goto references unknown task %q %w", ct.ID, br.Goto, errdefs.ErrBadRequest)

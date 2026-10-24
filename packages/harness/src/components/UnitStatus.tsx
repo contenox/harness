@@ -3,15 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { relativeTime } from '../lib/relativeTime';
 import { composeUnitStatus, type UnitStatusFacts } from '../lib/unitStatus';
 
-/**
- * One composed status for a fleet unit — the single presentational truth used
- * by the fleet board, the mission list, the mission detail, and the inbox (see
- * `composeUnitStatus` for the reasoning). It renders the ordered atoms as a
- * wrapping row of chips: the process state as a StatusIndicator "signal light",
- * and the verdict / liveness / blocked facts as labelled badges, each carrying a
- * tooltip that says which truth it reports so they never read as a
- * contradiction. Renders nothing when there is nothing to say (no facts).
- */
 export function UnitStatus({
   facts,
   className,
@@ -43,8 +34,6 @@ export function UnitStatus({
           );
         }
 
-        // atom.label is the literal fallback for a fact with no translation key —
-        // a mission status this build does not know (see UNKNOWN_VERDICT).
         const label =
           atom.kind === 'liveness' && atom.heartbeat
             ? `${t('unit.liveness_prefix')}: ${relativeTime(atom.heartbeat, i18n.language, t('common.just_now'))}`

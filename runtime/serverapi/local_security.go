@@ -33,19 +33,6 @@ func IsLoopbackAddress(addr string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// ProtectAPI is the primary /api/* gate. When a TOKEN is configured, EVERY
-// request — all methods including GET/HEAD, same-origin or cross-site — must
-// present a valid credential (a session-cookie JWT from /ui/login, or the raw
-// TOKEN as a Bearer / X-API-Key header for programmatic clients); anything else
-// is 401. This closes the same-origin-read hole where a LAN attacker's browser,
-// or any local script, could read /api/state, /api/backends, /api/mcp-servers,
-// etc. with no credential because only mutations were gated.
-//
-// When NO token is configured (the loopback zero-friction case), the historical
-// CSRF stance is preserved: reads pass, and browser-originated mutations must be
-// same-origin (or an explicitly allowed origin) — a cross-site browser mutation
-// is 403. Non-loopback binds already require a TOKEN (ValidateLocalServeSecurity),
-// so the no-token branch only ever serves local development.
 func ProtectAPI(token, allowedOrigins string, next http.Handler) http.Handler {
 	token = strings.TrimSpace(token)
 	allowedOrigins = strings.TrimSpace(allowedOrigins)
@@ -69,21 +56,14 @@ func ProtectAPI(token, allowedOrigins string, next http.Handler) http.Handler {
 	})
 }
 
-// ProtectMutatingAPI wraps next with ProtectAPI and no explicit allowed origins.
 func ProtectMutatingAPI(token string, next http.Handler) http.Handler {
 	return ProtectAPI(token, "", next)
 }
 
-// ProtectMutatingAPIWithAllowedOrigins is retained as an alias for ProtectAPI so
-// existing callers keep compiling; the name is historical (the wrapper no longer
-// gates only mutations — see ProtectAPI).
 func ProtectMutatingAPIWithAllowedOrigins(token, allowedOrigins string, next http.Handler) http.Handler {
 	return ProtectAPI(token, allowedOrigins, next)
 }
 
-// requireCredential enforces that the request carries a valid credential (cookie
-// JWT or raw token) when a TOKEN is configured, writing a 401 and returning false
-// otherwise.
 func requireCredential(w http.ResponseWriter, r *http.Request, token string) bool {
 	if !AuthenticateCredential(token, extractRequestToken(r)) {
 		_ = apiframework.Error(w, r, apiframework.ErrUnauthorized, apiframework.GetOperation)
@@ -92,20 +72,8 @@ func requireCredential(w http.ResponseWriter, r *http.Request, token string) boo
 	return true
 }
 
-// sessionCookieName is the HttpOnly cookie the Beam login flow (see ui_auth.go)
-// sets, carrying a signed session JWT (see session_auth.go) that browser
-// requests present as their credential. It matches the cookie name terminalapi
-// and the /acp WebSocket handler already read, so one login satisfies the API,
-// the terminal, and the ACP upgrade uniformly.
 const sessionCookieName = "auth_token"
 
-// extractRequestToken returns the caller's raw credential string from, in order:
-// the Authorization/X-API-Key bearer header (programmatic clients present the
-// raw TOKEN), then the HttpOnly session cookie (browser clients present the
-// session JWT minted by /ui/login). The value is handed to AuthenticateCredential,
-// which accepts either form. The cookie rides automatically on same-origin
-// requests — including the /acp WebSocket upgrade — so a logged-in browser needs
-// no explicit token plumbing, while Bearer/X-API-Key keep working for scripts.
 func extractRequestToken(r *http.Request) string {
 	if t := extractBearerToken(r); t != "" {
 		return t
@@ -160,9 +128,6 @@ func originMatchesRequest(origin string, r *http.Request) bool {
 	if strings.EqualFold(u.Host, r.Host) {
 		return true
 	}
-	// Loopback aliases are one origin for a local serve: a page opened as
-	// http://localhost:32123 and a request Host of 127.0.0.1:32123 (or the
-	// reverse) are the same local cockpit. Ports still have to match.
 	originHost, originPort := splitHostPort(u.Host)
 	requestHost, requestPort := splitHostPort(r.Host)
 	return originPort == requestPort &&

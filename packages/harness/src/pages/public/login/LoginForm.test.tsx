@@ -7,11 +7,6 @@ import { AuthContext, type AuthContextType } from '../../../lib/authContext';
 import { AccessSettingsSection } from '../../admin/settings/AccessSettingsSection';
 import AuthPage from './AuthPage';
 
-// Pin the language so label assertions are deterministic (the app default is
-// German). @testing-library/react is not a dependency here (see the sibling
-// ApprovalViewTab.test.tsx) — these render to static markup, enough to prove
-// the gate shows the token form and the logout affordance appears only when
-// login is required.
 beforeAll(async () => {
   await i18n.changeLanguage('en');
 });

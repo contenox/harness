@@ -20,7 +20,6 @@ describe('revisionsNewestFirst', () => {
     const wire = [rev({ revision: 1 }), rev({ revision: 2 }), rev({ revision: 3 })];
     const out = revisionsNewestFirst(wire);
     expect(out.map(r => r.revision)).toEqual([3, 2, 1]);
-    // input untouched
     expect(wire.map(r => r.revision)).toEqual([1, 2, 3]);
   });
 

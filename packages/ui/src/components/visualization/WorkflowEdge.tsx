@@ -192,10 +192,10 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
         { x: centerX, y: centerY + normalOffset },
       ];
       const diagonals = [
-        { x: centerX - diagOffsetX, y: centerY - diagOffsetY }, // TL
-        { x: centerX + diagOffsetX, y: centerY - diagOffsetY }, // TR
-        { x: centerX - diagOffsetX, y: centerY + diagOffsetY }, // BL
-        { x: centerX + diagOffsetX, y: centerY + diagOffsetY }, // BR
+        { x: centerX - diagOffsetX, y: centerY - diagOffsetY },
+        { x: centerX + diagOffsetX, y: centerY - diagOffsetY },
+        { x: centerX - diagOffsetX, y: centerY + diagOffsetY },
+        { x: centerX + diagOffsetX, y: centerY + diagOffsetY },
       ];
       const lateral =
         dx >= 0
@@ -330,7 +330,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
         markerEnd="url(#arrowhead)"
       />
 
-      {/* SINGLE CLICKABLE LABEL CHIP (two lines when composed) */}
+
       <g
         transform={`translate(${labelCenter.x}, ${labelCenter.y})`}
         className="cursor-pointer select-none"
@@ -349,7 +349,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
           className={cn("shadow-sm", chipClass)}
         />
 
-        {/* Text: one or two lines */}
+
         {hasCompose ? (
           <>
             <text

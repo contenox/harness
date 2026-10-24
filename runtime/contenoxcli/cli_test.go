@@ -66,15 +66,12 @@ func TestUnit_firstNonFlagIsReserved_version(t *testing.T) {
 }
 
 func TestUnit_resolveContenoxDir(t *testing.T) {
-	// Create a temporary directory structure for testing.
 	tempDir, err := os.MkdirTemp("", "contenox-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir) // cleanup
+	defer os.RemoveAll(tempDir)
 
-	// Setup: /tempDir/project/.contenox
-	// Setup: /tempDir/project/sub1/sub2
 	projectDir := filepath.Join(tempDir, "project")
 	sub2Dir := filepath.Join(projectDir, "sub1", "sub2")
 
@@ -86,16 +83,10 @@ func TestUnit_resolveContenoxDir(t *testing.T) {
 	if err := os.MkdirAll(contenoxDir, 0755); err != nil {
 		t.Fatalf("Failed to create .contenox dir: %v", err)
 	}
-	// ResolveContenoxDir requires a workspace.id file to recognize a directory
-	// as a valid workspace (so backups / pre-init dirs don't shadow the real one).
 	if err := os.WriteFile(filepath.Join(contenoxDir, "workspace.id"), []byte("test"), 0644); err != nil {
 		t.Fatalf("Failed to write workspace.id: %v", err)
 	}
 
-	// 1. Test from sub2Dir. It should walk up and find it in projectDir.
-	// t.Chdir restores the original cwd on cleanup — a plain os.Chdir would
-	// leave the whole test process inside a deleted temp dir, breaking any
-	// later test in the package that spawns a subprocess (getwd fails).
 	t.Chdir(sub2Dir)
 
 	resolvedDir, err := ResolveContenoxDir(nil)
@@ -106,7 +97,6 @@ func TestUnit_resolveContenoxDir(t *testing.T) {
 		t.Errorf("Expected resolved dir %q, got %q", contenoxDir, resolvedDir)
 	}
 
-	// 2. Test from a directory with no .contenox anywhere in the tree.
 	noContenoxDir := filepath.Join(tempDir, "otherproject", "sub1")
 	if err := os.MkdirAll(noContenoxDir, 0755); err != nil {
 		t.Fatalf("Failed to create no-contenox subdirectories: %v", err)
@@ -125,9 +115,6 @@ func TestUnit_resolveContenoxDir(t *testing.T) {
 	}
 }
 
-// Bare invocations must route to session-backed chat, not the stateless run
-// pipeline — this dispatch silently regressed to "run" once before (BUG-011),
-// making the documented default-session auto-create a no-op.
 func TestUnit_DispatchSubcommand_BarePromptIsChat(t *testing.T) {
 	if got := dispatchSubcommand([]string{"say hello"}, false); got != "chat" {
 		t.Fatalf("bare prompt dispatched to %q, want chat", got)

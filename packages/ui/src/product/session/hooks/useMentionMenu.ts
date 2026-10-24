@@ -20,42 +20,18 @@ const MAX_ENTRIES = 50;
 
 export interface UseMentionMenuArgs {
   draft: string;
-  /**
-   * Current caret index in the composer textarea.
-   */
   caret: number;
-  /**
-   * Per-directory listing cache from `useWorkspaceFiles` (root keyed by `''`).
-   */
   cache: DirCache;
-  /**
-   * Lazily loads a directory's children when the menu browses into it.
-   */
   ensureLoaded: (dir: string) => void;
-  /**
-   * Whether a directory's listing is still loading.
-   */
   isLoading: (dir: string) => boolean;
-  /**
-   * Inserts a picked FILE as a mention: new draft, caret after the token, the file.
-   */
   onInsert: (nextDraft: string, nextCaret: number, file: WorkspaceFileRef) => void;
-  /**
-   * Drills into a picked FOLDER: new draft (`@dir/`) and caret; the menu keeps browsing.
-   */
   onDrill: (nextDraft: string, nextCaret: number) => void;
 }
 
 export interface UseMentionMenuResult {
   open: boolean;
   entries: MentionCandidate[];
-  /**
-   * The directory currently being browsed (root is `''`), shown as a breadcrumb.
-   */
   scope: string;
-  /**
-   * True when the browsed directory's listing has not arrived yet.
-   */
   loading: boolean;
   activeIndex: number;
   pick: (entry: MentionCandidate) => void;
@@ -65,9 +41,6 @@ export interface UseMentionMenuResult {
 
 const EMPTY_ENTRIES: MentionCandidate[] = [];
 
-/**
- * Drives the composer's `@`-mention popover as a scoped file BROWSER: the `@query` is read as a path, split into a directory scope and a leaf filter (`lib/mentions.ts`).
- */
 export function useMentionMenu({
   draft,
   caret,

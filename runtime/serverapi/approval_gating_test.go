@@ -15,8 +15,6 @@ import (
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
-// approvalGatingMux builds the product mux the way serve does, with or
-// without the HITL service dependency.
 func approvalGatingMux(t *testing.T, withHITL bool) *http.ServeMux {
 	t.Helper()
 	ctx := context.Background()
@@ -43,9 +41,6 @@ func approvalGatingMux(t *testing.T, withHITL bool) *http.ServeMux {
 	return mux
 }
 
-// TestServe_ApprovalRoutesGatedOnHITL proves /approvals is registered only
-// when serve passes an HITL service, mirroring the other nil-gated route
-// groups (fleet, missions).
 func TestServe_ApprovalRoutesGatedOnHITL(t *testing.T) {
 	withHITL := approvalGatingMux(t, true)
 	rr := httptest.NewRecorder()

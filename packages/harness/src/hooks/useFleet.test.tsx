@@ -18,18 +18,8 @@ vi.mock('../lib/api', () => ({
   },
 }));
 
-// Imported after the mock so the hooks see the doubles.
 const { api } = await import('../lib/api');
 
-/**
- * `@testing-library/react` is not a dependency of `packages/beam` (see
- * PermissionCard.test.tsx / acpWorkspaceController.test.ts). A mutation hook is
- * still drivable without a DOM: `renderToStaticMarkup` runs the component body,
- * so the `MutationObserver` react-query builds during render is real, and
- * `mutateAsync` on the captured result performs the request and runs
- * `onSuccess` — which is exactly the endpoint + invalidation contract under
- * test. Only the re-render of `isPending`/`error` is out of reach here.
- */
 function mountHook<T>(client: QueryClient, hook: () => T): T {
   let captured: T | undefined;
   const Probe = (): ReactNode => {

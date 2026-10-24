@@ -119,9 +119,6 @@ func TestUnit_SessionCancel_CancelsInFlightPrompt(t *testing.T) {
 	requireCancelledStop(t, h.expectResponse(1))
 }
 
-// Invariant: a superseded first prompt's cleanup must never delete the
-// second prompt's cancel registration (regression: comparing cancel funcs by
-// %p is always equal for closures of the same function).
 func TestUnit_OverlappingPrompts_CancelStillReachesSecondPrompt(t *testing.T) {
 	agent := &blockingAgent{started: make(chan libacp.SessionID, 2)}
 	h := newCancelHarness(t, agent)
@@ -133,8 +130,6 @@ func TestUnit_OverlappingPrompts_CancelStillReachesSecondPrompt(t *testing.T) {
 		t.Fatal("first prompt never started")
 	}
 
-	// Second prompt on the same session supersedes the first: its registration
-	// cancels prompt #1, which resolves as cancelled.
 	h.send(libacp.MethodSessionPrompt, 2, promptParams("sess-1"))
 	requireCancelledStop(t, h.expectResponse(1))
 	select {
@@ -143,14 +138,10 @@ func TestUnit_OverlappingPrompts_CancelStillReachesSecondPrompt(t *testing.T) {
 		t.Fatal("second prompt never started")
 	}
 
-	// Prompt #1's cleanup has run by now (its response is on the wire), but the
-	// registry must still hold prompt #2, so this cancel must end it.
 	h.notify(libacp.MethodSessionCancel, libacp.CancelNotification{SessionID: "sess-1"})
 	requireCancelledStop(t, h.expectResponse(2))
 }
 
-// Invariant: a cancel written immediately after its prompt still cancels it,
-// since registration happens at dispatch time on the read loop.
 func TestUnit_CancelImmediatelyAfterPrompt_PreservesWireOrder(t *testing.T) {
 	agent := &blockingAgent{started: make(chan libacp.SessionID, 2)}
 	h := newCancelHarness(t, agent)
@@ -161,8 +152,6 @@ func TestUnit_CancelImmediatelyAfterPrompt_PreservesWireOrder(t *testing.T) {
 	requireCancelledStop(t, h.expectResponse(1))
 }
 
-// $/cancel_request aborts the request with that JSON-RPC id — session-agnostic
-// protocol-level cancellation, wire-ordered like session/cancel.
 func TestUnit_CancelRequest_AbortsInFlightPromptByRequestID(t *testing.T) {
 	agent := &blockingAgent{started: make(chan libacp.SessionID, 2)}
 	h := newCancelHarness(t, agent)
@@ -177,7 +166,6 @@ func TestUnit_CancelRequest_AbortsInFlightPromptByRequestID(t *testing.T) {
 	h.notify(libacp.MethodCancelRequest, libacp.CancelRequestNotification{RequestID: libacp.NewRequestIDNumber(7)})
 	requireCancelledStop(t, h.expectResponse(7))
 
-	// Unknown ids are ignored, and the connection stays healthy.
 	h.notify(libacp.MethodCancelRequest, libacp.CancelRequestNotification{RequestID: libacp.NewRequestIDNumber(999)})
 	h.send(libacp.MethodInitialize, 8, libacp.InitializeRequest{ProtocolVersion: libacp.ProtocolVersion})
 	resp := h.expectResponse(8)
@@ -226,8 +214,6 @@ func TestUnit_AbandonedClientCall_SendsCancelRequest(t *testing.T) {
 		t.Fatal("prompt never started")
 	}
 
-	// The client never answers the permission request; the agent must abandon
-	// the awaited call and tell the client via $/cancel_request.
 	line, err := h.reader()
 	require.NoError(t, err)
 	in, err := libacp.ParseIncoming(line)
@@ -275,23 +261,19 @@ func TestUnit_MalformedInput_GetsJSONRPCErrorResponses(t *testing.T) {
 		return in.Response
 	}
 
-	// Invalid JSON: parse error with null id.
 	_, err := h.clientSide.Write([]byte("this is not json\n"))
 	require.NoError(t, err)
 	resp := expectError(libacp.ErrParseError)
 	assert.Equal(t, libacp.NewRequestIDNull(), resp.ID)
 
-	// Boolean id cannot be salvaged: invalid request, id null.
 	_, err = h.clientSide.Write([]byte(`{"jsonrpc":"2.0","id":true,"method":"initialize"}` + "\n"))
 	require.NoError(t, err)
 	expectError(libacp.ErrInvalidRequest)
 
-	// Valid JSON, neither method nor id.
 	_, err = h.clientSide.Write([]byte(`{"jsonrpc":"2.0"}` + "\n"))
 	require.NoError(t, err)
 	expectError(libacp.ErrInvalidRequest)
 
-	// The connection survives malformed input: a normal request still works.
 	h.send(libacp.MethodInitialize, 9, libacp.InitializeRequest{ProtocolVersion: libacp.ProtocolVersion})
 	resp = h.expectResponse(9)
 	require.Nil(t, resp.Error)
@@ -301,7 +283,6 @@ func TestUnit_AbsentParams_TreatedAsEmptyObject(t *testing.T) {
 	agent := &blockingAgent{started: make(chan libacp.SessionID, 1)}
 	h := newCancelHarness(t, agent)
 
-	// session/list has all-optional params; omitting them entirely must work.
 	require.NoError(t, h.writer(libacp.NewRequest(libacp.NewRequestIDNumber(1), libacp.MethodSessionList, nil)))
 	resp := h.expectResponse(1)
 	require.Nil(t, resp.Error)
@@ -329,7 +310,6 @@ func TestUnit_HandlerPanic_BecomesInternalErrorResponse(t *testing.T) {
 	require.NotNil(t, resp.Error)
 	assert.Equal(t, libacp.ErrInternalError, resp.Error.Code)
 
-	// The connection survives the panic.
 	h.send(libacp.MethodInitialize, 2, libacp.InitializeRequest{ProtocolVersion: libacp.ProtocolVersion})
 	resp = h.expectResponse(2)
 	require.Nil(t, resp.Error)
@@ -363,6 +343,4 @@ func ExampleSessionConfigOptionValue() {
 	_ = json.Unmarshal([]byte(`{"sessionId":"s","configId":"c","type":"boolean","value":true}`), &req)
 	fmt.Println(req.Value.AsString(), req.Value.IsBool)
 	// Output:
-	// model-x false
-	// true true
 }

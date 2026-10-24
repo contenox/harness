@@ -20,7 +20,6 @@ type codexCatalog struct {
 	baseURL string
 }
 
-// codexClientVersion selects the upstream catalog compatibility level, not the Contenox release version.
 const codexClientVersion = "0.158.0"
 
 func init() {

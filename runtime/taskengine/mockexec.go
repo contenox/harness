@@ -5,27 +5,22 @@ import (
 	"time"
 )
 
-// MockTaskExecutor is a mock implementation of taskengine.TaskExecutor.
 type MockTaskExecutor struct {
-	// Single value responses
 	MockOutput          any
 	MockTransitionValue string
 	MockError           error
 
-	// Sequence responses
 	MockOutputSequence          []any
 	MockTaskTypeSequence        []DataType
 	MockTransitionValueSequence []string
 	ErrorSequence               []error
 
-	// Tracking
 	CalledWithTask   *TaskDefinition
 	CalledWithInput  any
 	CalledWithPrompt string
 	callCount        int
 }
 
-// TaskExec is the mock implementation of the TaskExec method.
 func (m *MockTaskExecutor) TaskExec(ctx context.Context, startingTime time.Time, tokenLimit int, chainContext *ChainContext, currentTask *TaskDefinition, input any, dataType DataType) (any, DataType, string, error) {
 	m.callCount++
 	m.CalledWithTask = currentTask
@@ -95,7 +90,6 @@ func (m *MockTaskExecutor) TaskExec(ctx context.Context, startingTime time.Time,
 	return output, outputDataType, transitionResponse, err
 }
 
-// Reset clears all mock state between tests
 func (m *MockTaskExecutor) Reset() {
 	m.MockOutput = nil
 	m.MockTransitionValue = ""
@@ -110,7 +104,6 @@ func (m *MockTaskExecutor) Reset() {
 	m.callCount = 0
 }
 
-// CallCount returns how many times TaskExec was called
 func (m *MockTaskExecutor) CallCount() int {
 	return m.callCount
 }

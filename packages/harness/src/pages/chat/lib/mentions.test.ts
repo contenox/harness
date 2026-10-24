@@ -80,7 +80,6 @@ describe('promptBlocksFromDraft', () => {
       { type: 'text', text: 'review @main.go' },
       { type: 'resource_link', name: 'main.go', uri: 'main.go' },
     ]);
-    // Reference-only: never an embedded resource block.
     expect(blocks.some(b => b.type === 'resource')).toBe(false);
   });
   it('de-duplicates mentions by path', () => {
@@ -109,7 +108,6 @@ describe('promptBlocksFromDraft', () => {
       { type: 'image', data: 'aGVsbG8=', mimeType: 'image/png' },
       { type: 'image', data: 'd29ybGQ=', mimeType: 'image/jpeg' },
     ]);
-    // Client-local presentation fields (id/name) never reach the wire.
     expect(blocks.some(b => 'id' in b || ('name' in b && b.type === 'image'))).toBe(false);
   });
   it('emits no image blocks when there are no attachments (default arg — existing callers unchanged)', () => {
@@ -282,7 +280,6 @@ describe('applyMentionFolder', () => {
     const { text, caret } = applyMentionFolder(draft, q, { path: 'src', name: 'src' });
     expect(text).toBe('look at @src/');
     expect(caret).toBe(text.length);
-    // the new draft still parses as an active query scoped into src
     const q2 = deriveMentionQuery(text, caret);
     expect(splitMentionQuery(q2.query)).toEqual({ dir: 'src', leaf: '' });
   });

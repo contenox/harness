@@ -12,7 +12,6 @@ type autocompleteClient struct {
 	format string
 }
 
-// GetAutocompleteConnection uses a declared native FIM endpoint; subscription Chat has no such operation.
 func (p *OpenAIProvider) GetAutocompleteConnection(_ context.Context, backend string) (modelrepo.LLMAutocompleteClient, error) {
 	if !p.CanAutocomplete() {
 		return nil, modelrepo.ErrAutocompleteUnsupported

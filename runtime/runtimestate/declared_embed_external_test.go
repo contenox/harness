@@ -15,9 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A declared row that claims embedding for a model the catalog lists as chat
-// only does not make the model an embedder: the embedding gate reads the
-// catalog's answer.
 func TestUnit_RunBackendCycle_DeclaredRowDoesNotMakeAChatModelEmbed(t *testing.T) {
 	ctx := context.Background()
 	db, err := libdb.NewSQLiteDBManager(ctx, filepath.Join(t.TempDir(), "runtime.db"), runtimetypes.SchemaSQLite)

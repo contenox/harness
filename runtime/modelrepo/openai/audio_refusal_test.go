@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_OpenAIChat_RefusesAudioBeforeWire checks an audio-bearing request is refused with the typed capability error before any bytes reach the backend.
 func TestUnit_OpenAIChat_RefusesAudioBeforeWire(t *testing.T) {
 	t.Parallel()
 

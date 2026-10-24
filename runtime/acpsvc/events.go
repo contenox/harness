@@ -22,11 +22,6 @@ func (t *Transport) publishEvent(ctx context.Context, sid libacp.SessionID, payl
 	}
 	switch ev.Kind {
 	case taskengine.TaskEventStepChunk:
-		// Only a handler whose streamed output IS assistant narration reaches the
-		// transcript. A route task's streamed output, for instance, is its routing
-		// decision ("general", "coding_change", ...) — control flow, not prose — and
-		// used to leak into the reply text as a prefix. taskengine owns the handler
-		// vocabulary and therefore this judgement; vscodeagent consumes the same one.
 		if !taskengine.IsAssistantProseHandler(ev.TaskHandler) {
 			return
 		}
@@ -70,21 +65,12 @@ func (t *Transport) publishEvent(ctx context.Context, sid libacp.SessionID, payl
 	case taskengine.TaskEventToolCall:
 		id := t.toolCallWireID(sid, ev, true)
 		t.sendToolCallUpdateGuarded(ctx, sid, id, toolCallUpdateNotification(sid, ev, id))
-		// A mission_plan call ALSO projects the stored plan snapshot onto this
-		// session as a full-snapshot ACP `plan` update — in addition to the
-		// tool-call card above, since the plan is a distinct wire surface an editor
-		// renders on its own. planUpdateNotification returns ok only for a
-		// successful mission_plan event whose content parses; every other tool
-		// event no-ops here.
 		if note, ok := planUpdateNotification(sid, ev); ok {
 			t.sendUpdate(ctx, note)
 		}
 	case taskengine.TaskEventTokenUsage:
 		used := ev.TokenUsed
 		size := ev.TokenSize
-		// If the execution didn't have a ctxLength budget set (chain token_limit 0 and no override),
-		// fall back to the session's effective token limit (if set) or leave as-is.
-		// This keeps indicators based on the session budget the user configured.
 		if size <= 0 {
 			if s, ok := t.sessionFor(sid); ok && s != nil {
 				if eff := s.effectiveTokenLimit(); eff > 0 {
@@ -189,11 +175,6 @@ func toolCallIDFromCtx(ctx context.Context) string {
 	return v
 }
 
-// terminalAttachNotification is sent with SessionUpdateToolCall (the
-// create-or-update kind) so it's race-safe vs the pending notification.
-// The ACP schema requires `title` on tool_call notifications — Zed rejects
-// the whole update with "missing field `title`" otherwise, and the user
-// sees "Tool call not found" because the embed never registered.
 func terminalAttachNotification(sid libacp.SessionID, toolCallID, terminalID, title string) libacp.SessionNotification {
 	return libacp.SessionNotification{
 		SessionID: sid,
@@ -210,9 +191,6 @@ func terminalAttachNotification(sid libacp.SessionID, toolCallID, terminalID, ti
 	}
 }
 
-// fallbackToolCallID is the name-derived id used when the engine minted no
-// per-invocation ApprovalID. It is NOT invocation-unique on its own — see
-// Transport.toolCallWireID, which layers an invocation counter on top.
 func fallbackToolCallID(ev taskengine.TaskEvent) string {
 	if ev.ApprovalID != "" {
 		return ev.ApprovalID

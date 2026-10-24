@@ -32,10 +32,6 @@ func TestUnit_RedactURL_MasksEveryEntryOfAServerList(t *testing.T) {
 	require.Contains(t, out, "b:4222")
 }
 
-// A password containing '/', '?' or '#' must not defeat the userinfo scan:
-// those characters are also URL delimiters, so a naive left-to-right scan for
-// the end of the authority can land inside the password and hide the real
-// '@' from view, leaving the credential unmasked.
 func TestUnit_RedactURL_MasksAPasswordContainingURLDelimiters(t *testing.T) {
 	for name, tc := range map[string]struct {
 		raw     string
@@ -61,9 +57,6 @@ func TestUnit_RedactURL_LeavesAURLWithoutUserinfoAlone(t *testing.T) {
 	}
 }
 
-// NewPubSub logs through the standard "log" package (see nats.go), which a
-// caller redirecting slog output does not touch, so the connect-failure log
-// line must never carry the raw credential itself.
 func TestUnit_NewPubSub_ConnectFailureLogDoesNotEchoThePassword(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)

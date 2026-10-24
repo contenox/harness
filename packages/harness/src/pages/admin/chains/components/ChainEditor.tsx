@@ -6,7 +6,6 @@ import { ChainDefinition, ChainTask } from '../../../../lib/types';
 
 interface ChainEditorProps {
   chain: ChainDefinition;
-  /** Local chain path for PUT /api/taskchains?path= */
   vfsPath: string;
   selectedTask?: ChainTask | null;
   onTaskSelect?: (task: ChainTask) => void;
@@ -28,13 +27,12 @@ export default function ChainEditor({
   const [tasksError, setTasksError] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Scroll to highlighted task
   useEffect(() => {
     if (highlightTaskId && textareaRef.current) {
       const taskIndex = chain.tasks.findIndex(t => t.id === highlightTaskId);
       if (taskIndex !== -1) {
-        const lineHeight = 20; // Approximate line height
-        const scrollPosition = taskIndex * lineHeight * 10; // 10 lines per task
+        const lineHeight = 20;
+        const scrollPosition = taskIndex * lineHeight * 10;
         textareaRef.current.scrollTop = scrollPosition;
       }
     }
@@ -111,7 +109,7 @@ export default function ChainEditor({
           className="h-max min-h-[400px] font-mono text-sm"
         />
 
-        {/* Task navigation bar */}
+
         <div>
           <Label>{t('workflow.task_navigation')}</Label>
           <div className="flex flex-wrap gap-2 pt-2">

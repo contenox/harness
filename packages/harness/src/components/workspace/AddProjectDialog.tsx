@@ -21,28 +21,11 @@ import { folderBasename, joinRootRelative, toFolderNodes } from './folderTree';
 
 export interface AddProjectDialogProps {
   open: boolean;
-  /** Close without adding (Cancel / Esc / backdrop). */
   onClose: () => void;
-  /** The allowlisted roots — the browse starting points. */
   roots: readonly WorkspaceRoot[];
-  /** Called after a folder is successfully registered, before the dialog closes. */
   onAdded?: () => void;
 }
 
-/**
- * The "add a project" journey: browse the runtime's allowlisted roots as a
- * folder tree, click the project directory, name it (defaulted to the folder
- * name), and register it — replacing the old blind "paste an absolute path"
- * form. Browsing runs through the same `/files` endpoint the session file tree
- * uses, so the picker never reaches outside the workspace boundary; a manual
- * path field stays as the escape hatch for a folder that lives outside every
- * browsable root. The server still does the real bounds/too-broad check on
- * submit and returns a teaching 422 — this UI never pretends to validate the
- * path itself (matching RootSelector).
- *
- * `Dialog` unmounts its children when closed, so the body remounts fresh on each
- * open: no reset effects, and the browse fetch only runs while the dialog is up.
- */
 export function AddProjectDialog({ open, onClose, roots, onAdded }: AddProjectDialogProps) {
   const { t } = useTranslation();
   return (
@@ -71,23 +54,16 @@ function AddProjectBody({
 
   const [mode, setMode] = useState<'browse' | 'manual'>(hasRoots ? 'browse' : 'manual');
   const [browseRoot, setBrowseRoot] = useState(() => activeWorkspaceRoot(roots)?.path ?? '');
-  // The picked folder's path RELATIVE to `browseRoot` (the FileTree node id), or
-  // null when nothing is picked yet.
   const [selectedRel, setSelectedRel] = useState<string | null>(null);
   const [manualPath, setManualPath] = useState('');
   const [name, setName] = useState('');
-  // Once the operator edits the name we stop overwriting it with the folder
-  // basename, so a deliberate rename survives further navigation.
   const [nameEdited, setNameEdited] = useState(false);
 
   const addMutation = useAddWorkspaceRoot();
 
-  // Only browse (and only while in browse mode) — manual entry needs no listing.
   const files = useWorkspaceFiles(mode === 'browse' ? browseRoot : null);
   const nodes = useMemo(() => toFolderNodes(files.cache), [files.cache]);
 
-  // The absolute path the grant will register: browse mode joins the picked
-  // relative path onto its root; manual mode takes the field verbatim.
   const selectedAbsolute =
     mode === 'manual'
       ? manualPath.trim()
@@ -95,14 +71,11 @@ function AddProjectBody({
         ? joinRootRelative(browseRoot, selectedRel)
         : '';
 
-  // Default the name to the folder's basename until the operator types their own.
   useEffect(() => {
     if (nameEdited) return;
     setName(selectedAbsolute ? folderBasename(selectedAbsolute) : '');
   }, [selectedAbsolute, nameEdited]);
 
-  // A directory click both loads its children (lazy tree) AND picks it as the
-  // target — one gesture drills in and selects, the same row highlighted.
   const handleNodeSelect = useCallback(
     (node: FileTreeNode) => {
       const path = node.path ?? node.id;
@@ -114,7 +87,7 @@ function AddProjectBody({
 
   const handleRootChange = (next: string) => {
     setBrowseRoot(next);
-    setSelectedRel(null); // the old relative pick is meaningless under a new root
+    setSelectedRel(null);
   };
 
   const switchMode = (next: 'browse' | 'manual') => {
@@ -125,11 +98,6 @@ function AddProjectBody({
     addMutation.reset();
   };
 
-  // Whether the picked folder is ALREADY a registered root (exact, trailing-
-  // slash-insensitive match). The grant is idempotent server-side — re-adding a
-  // known path never errors: it just re-stamps the marker name (a rename), or is
-  // a no-op when the name is unchanged. We surface that up front so a re-add is
-  // an informed choice, not a silent surprise, and relabel the action to match.
   const normalizedSelected = selectedAbsolute.replace(/\/+$/, '');
   const existingRoot = normalizedSelected
     ? roots.find(r => r.path.replace(/\/+$/, '') === normalizedSelected)
@@ -151,9 +119,6 @@ function AddProjectBody({
     );
   };
 
-  // apiFetch always throws an ApiError; its 422 carries the server's teaching
-  // message (too broad, not permitted, already-a-root). Fall back to a generic
-  // line for the unexpected non-ApiError case so a failed add is never blank.
   const addErrorMessage = addMutation.error
     ? addMutation.error instanceof ApiError
       ? addMutation.error.message
@@ -214,7 +179,7 @@ function AddProjectBody({
             )}
           </div>
 
-          {/* Always-visible confirmation of exactly which folder will be registered. */}
+
           <div className="border-surface-200 dark:border-dark-surface-600 bg-surface-50 dark:bg-dark-surface-100 rounded-lg border px-3 py-2">
             <span className="text-text-muted dark:text-dark-text-muted block text-[11px] font-medium tracking-wide uppercase">
               {t('projects.selected_label')}

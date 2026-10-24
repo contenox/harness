@@ -21,9 +21,6 @@ import type {
 import { DROPPED_KIND_AUDIO, DROPPED_KIND_IMAGE } from '../lib/droppedContent';
 import type { ImagePart, ToolCallStatus } from '@contenox/acp-client';
 
-/**
- * Renders one session's live timeline.
- */
 export function Transcript({ session }: { session: AcpSessionState }) {
   const { containerRef, endRef } = useChatScroll({
     deps: [session.items.length, session.messages],
@@ -121,12 +118,7 @@ function MessageImages({ message }: { message: AcpChatMessage }) {
       <InlineAttachments
         attachments={images.map((image, index) => inlineImage(image, index, images.length))}
       />
-      {/*
-        The marker is WARNING-COLOURED, NOT MUTED. It is the only thing telling
-        somebody their photograph was never looked at, so it cannot be the
-        quietest text in the message — a muted caption at this size sits at
-        about the weight of the "Copy" affordance beside it, in both schemes.
-      */}
+
       {dropped && (
         <p className="text-warning-700 dark:text-dark-warning-700 mt-1.5 flex items-start gap-1.5">
           <ImageOff className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -165,7 +157,7 @@ function MessageAudio({ message }: { message: AcpChatMessage }) {
           }
         />
       ))}
-      {/* Warning-coloured, not muted — the image marker's reasoning. */}
+
       {dropped && (
         <p className="text-warning-700 dark:text-dark-warning-700 mt-0 flex items-start gap-1.5">
           <VolumeX className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />

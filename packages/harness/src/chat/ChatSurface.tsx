@@ -155,7 +155,6 @@ export type BeamChatRuntimeSummary = {
   think?: string;
   hitlPolicy?: string;
   connected?: boolean;
-  // Used context indicator (ACP usage_update / engine tokens vs model ctx len)
   contextUsed?: number;
   contextSize?: number;
 };
@@ -303,7 +302,6 @@ export function BeamChat({
   readiness: BeamChatReadiness;
   embedded?: boolean;
   productName?: string;
-  /** Custom icon to use for product/assistant branding (e.g. Contenox logo). Falls back to a generic sparkles glyph. */
   productIcon?: React.ReactNode;
   composerAction?: BeamChatComposerAction | null;
   onComposerActionHandled?: () => void;
@@ -1262,7 +1260,7 @@ function ContextReadiness({
     const size = runtimeSummary.contextSize;
     const pct = Math.round((used / size) * 100);
     items.push({
-      icon: SlidersHorizontal, // reuse or import a new
+      icon: SlidersHorizontal,
       label: 'Context',
       ready: pct < 90,
       value: `${used.toLocaleString()}/${size.toLocaleString()} (${pct}%)`,

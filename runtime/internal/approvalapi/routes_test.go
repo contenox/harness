@@ -19,11 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeApprovals is a hand-rolled hitlservice.Service double. These tests
-// prove only ROUTING, status-code mapping, and DTO (de)serialization —
-// exactly like runtime/internal/fleetapi/routes_test.go's fakeFleet — the
-// service behavior itself (durability, the CAS, the wake-up channel) is
-// runtime/hitlservice's own responsibility and is covered by its tests.
 type fakeApprovals struct {
 	mu sync.Mutex
 
@@ -42,7 +37,6 @@ type respondArgs struct {
 	approved bool
 }
 
-// answerArgs records one Answer call — an attention ask resolved with text.
 type answerArgs struct {
 	id   string
 	text string
@@ -64,8 +58,6 @@ func (f *fakeApprovals) RequestAttention(context.Context, hitlservice.AttentionR
 	return "", nil
 }
 
-// The supervisor-facing reads/writes: this double covers the ROUTE's branch, so
-// they are inert here.
 func (f *fakeApprovals) AnswerAsAgent(context.Context, string, string) error { return nil }
 func (f *fakeApprovals) PendingAttentionAsks(context.Context, string) ([]*runtimetypes.HITLApproval, error) {
 	return nil, nil
@@ -75,8 +67,6 @@ func (f *fakeApprovals) AttentionBoundsFor(context.Context, string) (hitlservice
 }
 func (f *fakeApprovals) AgentAnswerCount(context.Context, string) (int, error) { return 0, nil }
 
-// Answer records the operator's reply to an attention ask, so the route's
-// text-vs-verdict branch can be asserted.
 func (f *fakeApprovals) Answer(_ context.Context, id, text string) error {
 	f.mu.Lock()
 	f.answerCalls = append(f.answerCalls, answerArgs{id: id, text: text})
@@ -140,8 +130,6 @@ func mkRow(id string) *runtimetypes.HITLApproval {
 	}
 }
 
-// ─── List ────────────────────────────────────────────────────────────────
-
 func TestUnit_ApprovalAPI_ListReturnsPending(t *testing.T) {
 	srv := setupApprovalAPI(t, &fakeApprovals{listItems: []*runtimetypes.HITLApproval{mkRow("a-1"), mkRow("a-2")}})
 
@@ -198,16 +186,6 @@ func TestUnit_ApprovalAPI_ListDefaultLimitIs100(t *testing.T) {
 	require.Equal(t, 100, f.listLimit)
 }
 
-// TestUnit_ApprovalAPI_ListInvalidLimitIsRejected pins that a non-numeric
-// limit is rejected rather than silently ignored, with 400 — a malformed
-// query parameter, not a missing resource.
-//
-// This used to assert 404, and the 404 was not a decision: the handler wrapped
-// the parse error in a bare fmt.Errorf and passed apiframework.ListOperation,
-// so apiframework.mapErrorToStatus fell through to its ListOperation default,
-// which is 404. Parsing now goes through apiframework.LimitParam, whose
-// classified ErrInvalidParameterValue maps to 400 whatever Operation the
-// handler passes.
 func TestUnit_ApprovalAPI_ListInvalidLimitIsRejected(t *testing.T) {
 	srv := setupApprovalAPI(t, &fakeApprovals{})
 
@@ -217,12 +195,6 @@ func TestUnit_ApprovalAPI_ListInvalidLimitIsRejected(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
-// TestUnit_ApprovalAPI_ListNonPositiveLimitIsRejected pins the tightening that
-// came with the shared parser: an explicit limit below 1 is now refused rather
-// than handed to hitlservice, which read it as "apply my own default". An
-// *absent* limit still means the handler's own default (100) — see
-// TestUnit_ApprovalAPI_ListDefaultLimitIs100 — so only an explicitly
-// nonsensical value is rejected.
 func TestUnit_ApprovalAPI_ListNonPositiveLimitIsRejected(t *testing.T) {
 	for _, limit := range []string{"0", "-1"} {
 		f := &fakeApprovals{}
@@ -236,11 +208,6 @@ func TestUnit_ApprovalAPI_ListNonPositiveLimitIsRejected(t *testing.T) {
 	}
 }
 
-// TestUnit_ApprovalAPI_ListServiceErrorPropagatesStatus proves the handler
-// does no error-mapping of its own beyond apiframework.Error: whatever
-// status the service's error carries (via the shared error taxonomy) is
-// what the wire gets — mirrors
-// fleetapi_test.go's TestUnit_FleetAPI_DispatchServiceErrorMapsToStatus.
 func TestUnit_ApprovalAPI_ListServiceErrorPropagatesStatus(t *testing.T) {
 	srv := setupApprovalAPI(t, &fakeApprovals{listErr: apiframework.InternalServerError("boom")})
 
@@ -249,8 +216,6 @@ func TestUnit_ApprovalAPI_ListServiceErrorPropagatesStatus(t *testing.T) {
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 }
-
-// ─── Answer ──────────────────────────────────────────────────────────────
 
 func answerPost(t *testing.T, url, id string, approved bool) *http.Response {
 	t.Helper()
@@ -300,10 +265,6 @@ func TestUnit_ApprovalAPI_AnswerMalformedBodyIsUnprocessable(t *testing.T) {
 	require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
 }
 
-// TestUnit_ApprovalAPI_AnswerErrorMapping is the honest-mapping requirement:
-// not-found is 404; already-resolved and expired are both 409 but must NOT
-// collapse into the same message — an operator needs to know which
-// happened.
 func TestUnit_ApprovalAPI_AnswerErrorMapping(t *testing.T) {
 	cases := []struct {
 		name        string
@@ -334,9 +295,6 @@ func TestUnit_ApprovalAPI_AnswerErrorMapping(t *testing.T) {
 	}
 }
 
-// TestUnit_ApprovalAPI_AnswerAlreadyResolvedAndExpiredAreDistinguishable
-// pins the "do not collapse them into one" requirement directly: both status
-// codes are 409, but the two messages must differ from each other.
 func TestUnit_ApprovalAPI_AnswerAlreadyResolvedAndExpiredAreDistinguishable(t *testing.T) {
 	alreadyResolved := setupApprovalAPI(t, &fakeApprovals{respondErr: hitlservice.ErrApprovalAlreadyResolved})
 	expired := setupApprovalAPI(t, &fakeApprovals{respondErr: hitlservice.ErrApprovalExpired})
@@ -356,10 +314,6 @@ func TestUnit_ApprovalAPI_AnswerAlreadyResolvedAndExpiredAreDistinguishable(t *t
 	require.NotEqual(t, string(b1), string(b2), "an already-resolved ask and an expired one must not read as the same conflict")
 }
 
-// TestUnit_Answer_WithTextRepliesToAnAttentionAsk pins the route's one branch:
-// a body carrying `answer` is a REPLY to a unit's question and must reach
-// hitlservice.Answer with the operator's words intact — not Respond, which would
-// resolve the ask with a verdict the unit cannot act on.
 func TestUnit_Answer_WithTextRepliesToAnAttentionAsk(t *testing.T) {
 	f := &fakeApprovals{}
 	srv := setupApprovalAPI(t, f)
@@ -376,8 +330,6 @@ func TestUnit_Answer_WithTextRepliesToAnAttentionAsk(t *testing.T) {
 	require.Empty(t, f.respondCalls, "…and must not also resolve it as a verdict")
 }
 
-// TestUnit_Answer_WithoutTextStaysAVerdict guards the other side of the branch:
-// the permission path is byte-for-byte what it was before replies existed.
 func TestUnit_Answer_WithoutTextStaysAVerdict(t *testing.T) {
 	f := &fakeApprovals{}
 	srv := setupApprovalAPI(t, f)

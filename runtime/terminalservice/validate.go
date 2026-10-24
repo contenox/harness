@@ -10,13 +10,11 @@ func ValidateShell(shell string) error {
 	return validateShell(filepath.Clean(shell))
 }
 
-// CwdUnderRoot ensures cwd is the same as allowedRoot or a subdirectory.
 func CwdUnderRoot(allowedRoot, cwd string) error {
 	_, err := ResolveCwdUnderRoot(allowedRoot, cwd)
 	return err
 }
 
-// ResolveCwdUnderRoot returns a cleaned, real cwd after validating it is inside allowedRoot.
 func ResolveCwdUnderRoot(allowedRoot, cwd string) (string, error) {
 	root, err := filepath.Abs(allowedRoot)
 	if err != nil {

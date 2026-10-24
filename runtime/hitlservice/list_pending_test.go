@@ -1,10 +1,5 @@
 package hitlservice_test
 
-// ListPending is the read half of the durable ask C1 introduced (see
-// durable_approval_test.go for the write half: RequestApproval/Respond/
-// SweepExpired). These tests use the same setupHITLDB/newDurableService/
-// seedPendingRow scaffolding that file defines.
-
 import (
 	"testing"
 	"time"
@@ -15,10 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_ListPending_ReturnsOnlyPendingNewestFirst proves ListPending
-// filters to state=pending (a resolved row must not appear in the inbox) and
-// orders newest-first — the shape fleet-consolidation.md slice C2's inbox
-// (REST GET /approvals, `contenox approvals list`) renders directly.
 func TestUnit_ListPending_ReturnsOnlyPendingNewestFirst(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
@@ -38,7 +29,6 @@ func TestUnit_ListPending_ReturnsOnlyPendingNewestFirst(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 3, "the resolved row must not appear in the pending inbox")
 
-	// newest first
 	require.Equal(t, pendingIDs[2], got[0].ID)
 	require.Equal(t, pendingIDs[1], got[1].ID)
 	require.Equal(t, pendingIDs[0], got[2].ID)
@@ -48,10 +38,6 @@ func TestUnit_ListPending_ReturnsOnlyPendingNewestFirst(t *testing.T) {
 	}
 }
 
-// TestUnit_ListPending_CarriesTheDecisionFields proves the returned rows
-// carry the fields an operator needs to decide (tool, args summary, diff,
-// policy name, matched rule) rather than a narrower projection — ListPending
-// hands back the durable row itself.
 func TestUnit_ListPending_CarriesTheDecisionFields(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
@@ -92,8 +78,6 @@ func TestUnit_ListPending_CarriesTheDecisionFields(t *testing.T) {
 	require.WithinDuration(t, row.ExpiresAt, gotRow.ExpiresAt, time.Second)
 }
 
-// TestUnit_ListPending_RespectsLimit proves the limit argument bounds the
-// result, matching runtimetypes.ListHITLApprovals's own contract.
 func TestUnit_ListPending_RespectsLimit(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
@@ -109,9 +93,6 @@ func TestUnit_ListPending_RespectsLimit(t *testing.T) {
 	require.Len(t, got, 2)
 }
 
-// TestUnit_ListPending_EmptyIsNonNil proves an empty inbox comes back as a
-// non-nil empty slice, not nil and not an error — fleet-consolidation.md
-// slice C2's acceptance is that "a fleet with nothing pending renders empty".
 func TestUnit_ListPending_EmptyIsNonNil(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
@@ -123,10 +104,6 @@ func TestUnit_ListPending_EmptyIsNonNil(t *testing.T) {
 	require.Empty(t, got)
 }
 
-// TestUnit_ListPending_ZeroLimitUsesStoreDefault proves limit<=0 does not
-// error (unlike a limit ABOVE runtimetypes.MAXLIMIT, which does): it defers
-// to the store's own "no cap given" default, mirroring
-// runtimetypes.ListHITLApprovals's contract.
 func TestUnit_ListPending_ZeroLimitUsesStoreDefault(t *testing.T) {
 	t.Parallel()
 	ctx, store, _ := setupHITLDB(t)
@@ -139,11 +116,6 @@ func TestUnit_ListPending_ZeroLimitUsesStoreDefault(t *testing.T) {
 	require.Len(t, got, 1)
 }
 
-// TestUnit_ListPending_WithoutDurableStoreErrors mirrors
-// RequestApproval/Respond's own "durable approval store not configured"
-// guard: a hitlservice built over a bare KVReader (no runtimetypes.Store)
-// must fail loudly on ListPending too, not report a silently empty inbox
-// that could be mistaken for "nothing pending".
 func TestUnit_ListPending_WithoutDurableStoreErrors(t *testing.T) {
 	t.Parallel()
 	svc := hitlservice.New(hitlservice.NewFSPolicySource(t.TempDir()), testTenant, fixedKVReader{"hitl-policy.json"}, libtracker.NoopTracker{})

@@ -102,7 +102,6 @@ func TestUnit_ServiceV2_ThinkAndVisionOverridesMerge(t *testing.T) {
 	require.NotNil(t, got.CanVision)
 	require.False(t, *got.CanVision)
 
-	// And the other direction: re-setting think keeps the vision override.
 	_, err = svc.SetThink(ctx, "openai", "gpt-5-mini", false)
 	require.NoError(t, err)
 	got, ok, err = svc.Get(ctx, "openai", "gpt-5-mini")
@@ -123,9 +122,6 @@ func TestUnit_ServiceV2_RejectsEmptyProviderOrModel(t *testing.T) {
 	require.ErrorContains(t, err, "model is required")
 }
 
-// An override saved under a model's resource name is the override of its bare
-// id, so a catalog that lists the bare id still applies what was declared
-// earlier, and removing it removes it under both spellings.
 func TestUnit_ServiceV2_OverrideIsFoundUnderEitherSpellingOfTheModelID(t *testing.T) {
 	ctx, svc := newTestServiceV2(t)
 

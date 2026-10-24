@@ -1,12 +1,3 @@
-// Package apiframework provides HTTP request/response helpers for the Contenox API.
-// For OpenAPI generation (tools/openapi-gen), place // @request pkg.Type after
-// Decode and // @response pkg.Type after Encode. Parameters are derived from
-// the helper calls in the handler's own body: GetQueryParam carries the query
-// parameter's name, default, and description; ListParams/CursorParam/LimitParam
-// emit the shared pagination parameters; GetPathParam attaches its description
-// to the route template's path parameter. The // @param name type description...
-// annotation remains the escape hatch for parameters those calls cannot show
-// (helper-derived wins over @param on a name collision).
 package apiframework
 
 import (

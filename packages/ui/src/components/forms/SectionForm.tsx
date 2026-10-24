@@ -8,9 +8,6 @@ export type SectionFormErrors = {
   retryable?: boolean;
 };
 
-/**
- * One editable group on a settings screen: a title, some fields, one action, one banner.
- */
 export function SectionForm({
   title,
   submitLabel,

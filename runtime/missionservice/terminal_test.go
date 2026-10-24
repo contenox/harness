@@ -10,9 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// statusChangedEvents decodes every StatusChangedEvent this publisher captured,
-// asserting each rode StatusChangedSubject. It is the terminal-transition twin
-// of report_events_test.go's events() helper.
 func (p *fakePublisher) statusChangedEvents(t *testing.T) []StatusChangedEvent {
 	t.Helper()
 	p.mu.Lock()
@@ -26,8 +23,6 @@ func (p *fakePublisher) statusChangedEvents(t *testing.T) []StatusChangedEvent {
 	}
 	return out
 }
-
-// ─── Finish: the guarded terminal transition ───────────────────────────────
 
 func TestUnit_MissionService_FinishMovesOpenToTerminal(t *testing.T) {
 	for _, status := range []Status{StatusLanded, StatusDerailed, StatusStuck, StatusAbandoned} {
@@ -51,8 +46,6 @@ func TestUnit_MissionService_FinishMovesOpenToTerminal(t *testing.T) {
 	}
 }
 
-// Finish refuses a non-terminal target: you cannot Finish a mission back to
-// open (or to any non-terminal value) — Finish only records END states.
 func TestUnit_MissionService_FinishRejectsNonTerminalTarget(t *testing.T) {
 	ctx, db := setupMissionDB(t)
 	svc := New(db)
@@ -71,10 +64,6 @@ func TestUnit_MissionService_FinishRejectsNonTerminalTarget(t *testing.T) {
 	require.Equal(t, StatusOpen, persisted.Status, "a rejected Finish leaves the mission untouched")
 }
 
-// The core guard: a mission already terminal is immutable through Finish. A
-// second Finish naming the SAME status is an idempotent no-op (safe retry); a
-// DIFFERENT terminal status is a conflict (a landed mission never becomes
-// derailed).
 func TestUnit_MissionService_FinishIsIdempotentForSameStatusAndConflictsOnDifferent(t *testing.T) {
 	ctx, db := setupMissionDB(t)
 	svc := New(db)
@@ -86,14 +75,12 @@ func TestUnit_MissionService_FinishIsIdempotentForSameStatusAndConflictsOnDiffer
 	require.NoError(t, err)
 	firstUpdatedAt := first.UpdatedAt
 
-	// Same terminal status again: idempotent no-op — unchanged, not restamped.
 	again, err := svc.Finish(ctx, m.ID, StatusLanded, "a different reason on retry")
 	require.NoError(t, err, "re-finishing with the same status is an idempotent no-op")
 	require.Equal(t, StatusLanded, again.Status)
 	require.Equal(t, "shipped it", again.StatusReason, "an idempotent retry must not overwrite the recorded reason")
 	require.Equal(t, firstUpdatedAt, again.UpdatedAt, "a true no-op must not restamp UpdatedAt")
 
-	// A different terminal status: a conflict, the mission stays landed.
 	_, err = svc.Finish(ctx, m.ID, StatusDerailed, "second thoughts")
 	require.Error(t, err)
 	require.ErrorIs(t, err, apiframework.ErrConflict, "a re-finish to a different terminal is a conflict")
@@ -112,10 +99,6 @@ func TestUnit_MissionService_FinishUnknownReturnsNotFound(t *testing.T) {
 	require.ErrorIs(t, err, libdb.ErrNotFound)
 }
 
-// ─── status_changed events ─────────────────────────────────────────────────
-
-// A successful Finish publishes a self-contained StatusChangedEvent carrying the
-// supervision edge, the old→new transition, and the reason.
 func TestUnit_MissionService_FinishPublishesStatusChangedEvent(t *testing.T) {
 	ctx, db := setupMissionDB(t)
 	pub := &fakePublisher{}
@@ -140,8 +123,6 @@ func TestUnit_MissionService_FinishPublishesStatusChangedEvent(t *testing.T) {
 	require.Equal(t, "ran into a wall", ev.Reason)
 }
 
-// The idempotent no-op path publishes nothing: a retried Finish that changed
-// nothing must not emit a second status_changed event.
 func TestUnit_MissionService_FinishIdempotentNoOpDoesNotRepublish(t *testing.T) {
 	ctx, db := setupMissionDB(t)
 	pub := &fakePublisher{}
@@ -158,8 +139,6 @@ func TestUnit_MissionService_FinishIdempotentNoOpDoesNotRepublish(t *testing.T) 
 	require.Len(t, pub.statusChangedEvents(t), 1, "an idempotent no-op emits no second event")
 }
 
-// The best-effort invariant: a publish failure never turns a durably-recorded
-// terminal transition into a failed Finish.
 func TestUnit_MissionService_FinishPublishFailureDoesNotFailFinish(t *testing.T) {
 	ctx, db := setupMissionDB(t)
 	pub := &fakePublisher{err: fmt.Errorf("bus is down")}
@@ -177,11 +156,9 @@ func TestUnit_MissionService_FinishPublishFailureDoesNotFailFinish(t *testing.T)
 	require.Equal(t, StatusStuck, persisted.Status, "the terminal status is durable regardless of the routing nudge")
 }
 
-// The publisher is optional: a service built without one finishes missions and
-// simply publishes nothing.
 func TestUnit_MissionService_FinishNoPublisherStillStores(t *testing.T) {
 	ctx, db := setupMissionDB(t)
-	svc := New(db) // no publisher
+	svc := New(db)
 
 	m := newMission("no bus wired")
 	require.NoError(t, svc.Create(ctx, m))

@@ -17,17 +17,10 @@ type sqliteDBManager struct {
 	dbInstance *sql.DB
 }
 
-// NewSQLiteDBManager creates a DBManager for the SQLite database at path,
-// creating the parent directory if missing and applying schema on open. The
-// path ":memory:" yields a private in-memory database that every connection of
-// the returned manager shares.
 func NewSQLiteDBManager(ctx context.Context, path string, schema string) (DBManager, error) {
 	return NewSQLiteDBManagerWithOptions(ctx, path, schema, SQLiteOptions{})
 }
 
-// NewSQLiteDBManagerWithOptions creates a DBManager for SQLite tuned by opts,
-// which is validated before anything is opened. A zero opts is equivalent to
-// NewSQLiteDBManager.
 func NewSQLiteDBManagerWithOptions(ctx context.Context, path string, schema string, opts SQLiteOptions) (DBManager, error) {
 	if err := opts.validate(); err != nil {
 		return nil, err
@@ -52,7 +45,6 @@ func NewSQLiteDBManagerWithOptions(ctx context.Context, path string, schema stri
 	}
 
 	if schema != "" {
-		// One statement at a time so an already-applied ALTER TABLE skips only itself.
 		for _, stmt := range splitSQLStatements(schema) {
 			if _, err = db.ExecContext(ctx, stmt); err != nil {
 				msg := err.Error()
@@ -68,9 +60,6 @@ func NewSQLiteDBManagerWithOptions(ctx context.Context, path string, schema stri
 	return &sqliteDBManager{dbInstance: db}, nil
 }
 
-// splitSQLStatements splits a SQL script into individual statements, correctly
-// handling semicolons inside single-quoted strings, double-quoted identifiers,
-// back-tick identifiers, line comments (--) and block comments (/* */).
 func splitSQLStatements(script string) []string {
 	var stmts []string
 	var cur strings.Builder
@@ -119,7 +108,6 @@ func splitSQLStatements(script string) []string {
 				quoteChar = c
 			} else if c == quoteChar {
 				if i+1 < len(script) && script[i+1] == quoteChar {
-					// Escaped quote ('' or "" or ``)
 					cur.WriteByte(c)
 					cur.WriteByte(script[i+1])
 					i++
@@ -144,17 +132,14 @@ func splitSQLStatements(script string) []string {
 	return stmts
 }
 
-// WithoutTransaction returns an executor that uses the connection pool directly.
 func (sm *sqliteDBManager) WithoutTransaction() Exec {
 	return &txAwareDB{db: sm.dbInstance, errTranslate: translateSQLiteError, driverName: "sqlite"}
 }
 
-// WithTransaction starts a SQLite transaction and returns executor, commit, and release.
 func (sm *sqliteDBManager) WithTransaction(ctx context.Context, onRollback ...func()) (Exec, CommitTx, ReleaseTx, error) {
 	return sm.WithTransactionOptions(ctx, nil, onRollback...)
 }
 
-// WithTransactionOptions starts a SQLite transaction with opts and returns executor, commit, and release. The driver ignores sql.TxOptions.ReadOnly, so a read-only transaction is enforced with PRAGMA query_only for its duration.
 func (sm *sqliteDBManager) WithTransactionOptions(ctx context.Context, opts *sql.TxOptions, onRollback ...func()) (Exec, CommitTx, ReleaseTx, error) {
 	tx, err := sm.dbInstance.BeginTx(ctx, opts)
 	if err != nil {
@@ -180,8 +165,6 @@ func (sm *sqliteDBManager) WithTransactionOptions(ctx context.Context, opts *sql
 	}
 
 	store := &txAwareDB{tx: tx, errTranslate: translateSQLiteError, driverName: "sqlite"}
-	// finalized guards against double-execution of onRollback hooks when
-	// releaseFn is deferred and commit also failed (both paths ran rollback logic).
 	finalized := false
 	fireRollback := func() {
 		for _, f := range onRollback {
@@ -189,7 +172,7 @@ func (sm *sqliteDBManager) WithTransactionOptions(ctx context.Context, opts *sql
 				f()
 			}
 		}
-		onRollback = nil // prevent a second call from re-running any hooks
+		onRollback = nil
 	}
 
 	commitFn := func(commitCtx context.Context) error {
@@ -228,7 +211,6 @@ func (sm *sqliteDBManager) WithTransactionOptions(ctx context.Context, opts *sql
 	return store, commitFn, releaseFn, nil
 }
 
-// Close closes the SQLite connection.
 func (sm *sqliteDBManager) Close() error {
 	if sm.dbInstance != nil {
 		return sm.dbInstance.Close()
@@ -236,8 +218,6 @@ func (sm *sqliteDBManager) Close() error {
 	return nil
 }
 
-// translateSQLiteError maps SQLite/driver errors to package errors where applicable.
-// It wraps with %w so callers can still inspect the original error via errors.Is/As.
 func translateSQLiteError(err error) error {
 	if err == nil {
 		return nil
@@ -252,8 +232,6 @@ func translateSQLiteError(err error) error {
 		return fmt.Errorf("%w: %w", ErrQueryCanceled, context.DeadlineExceeded)
 	}
 	s := err.Error()
-	// Wrap with %w (not just return sentinel) so the underlying constraint details
-	// (table name, column name) are preserved and visible in logs.
 	if strings.Contains(s, "UNIQUE constraint") {
 		return fmt.Errorf("%w: %w", ErrUniqueViolation, err)
 	}
@@ -269,8 +247,6 @@ func translateSQLiteError(err error) error {
 	return fmt.Errorf("libdb: sqlite error: %w", err)
 }
 
-// ensureSQLiteParentDir creates the parent directory of path if path is a file path.
-// Skips for :memory:. Uses the path before any ? query for file: URIs.
 func ensureSQLiteParentDir(path string) error {
 	if path == "" || path == ":memory:" || strings.HasPrefix(path, "file::memory") {
 		return nil

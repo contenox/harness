@@ -12,9 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// agentTestRoot builds an isolated root command carrying the persistent --db
-// flag (as the real rootCmd does) with sub attached, so tests exercise the real
-// RunE logic without touching the package-global rootCmd's flag state.
 func agentTestRoot(sub *cobra.Command) *cobra.Command {
 	root := &cobra.Command{Use: "contenox", SilenceUsage: true, SilenceErrors: true}
 	root.PersistentFlags().String("db", "", "SQLite database path")
@@ -30,8 +27,6 @@ func openServiceAt(t *testing.T, dbPath string) (context.Context, agentregistrys
 	return ctx, agentregistryservice.New(db), func() { _ = db.Close() }
 }
 
-// seedChainAgent persists a chain-kind agent (the runtime's only agent kind)
-// so the inspect/toggle commands have something to operate on.
 func seedChainAgent(t *testing.T, dbPath, name, path string) {
 	t.Helper()
 	ctx, svc, done := openServiceAt(t, dbPath)
@@ -43,15 +38,11 @@ func seedChainAgent(t *testing.T, dbPath, name, path string) {
 	require.NoError(t, svc.Create(ctx, a))
 }
 
-// ─── dispatch / reservation ─────────────────────────────────────────────────
-
 func TestUnit_agentIsReservedSubcommand(t *testing.T) {
 	require.True(t, reservedSubcommands["agent"], `"agent" must be reserved so it dispatches as a subcommand`)
 	require.True(t, firstNonFlagIsReserved([]string{"agent", "list"}))
 	require.True(t, firstNonFlagIsReserved([]string{"--db", "/tmp/x", "agent", "show"}))
 }
-
-// ─── list / show ────────────────────────────────────────────────────────────
 
 func TestUnit_AgentList_And_Show(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "agents.db")
@@ -79,8 +70,6 @@ func TestUnit_AgentList_And_Show(t *testing.T) {
 	require.Contains(t, out, "config_json")
 }
 
-// ─── remove ─────────────────────────────────────────────────────────────────
-
 func TestUnit_AgentRemove(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "agents.db")
 	seedChainAgent(t, dbPath, "gone-agent", "/home/user/.contenox/x.json")
@@ -97,8 +86,6 @@ func TestUnit_AgentRemove(t *testing.T) {
 	_, err := svc.GetByName(ctx, "gone-agent")
 	require.Error(t, err)
 }
-
-// ─── enable / disable ───────────────────────────────────────────────────────
 
 func TestUnit_AgentEnableDisable(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "agents.db")
@@ -118,8 +105,6 @@ func TestUnit_AgentEnableDisable(t *testing.T) {
 	require.False(t, got.Enabled)
 	done()
 }
-
-// ─── pure helpers ───────────────────────────────────────────────────────────
 
 func TestUnit_AgentHelpers(t *testing.T) {
 	require.Equal(t, "-", derefOr(nil, "-"))

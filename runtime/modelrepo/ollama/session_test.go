@@ -12,9 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// sentSession drives one real chat turn at a live endpoint and reports the
-// session that arrived on the request body, which is the only place a client's
-// mistake would be invisible.
 func sentSession(t *testing.T, sessionKey string, declared bool) string {
 	t.Helper()
 	var body map[string]any
@@ -44,14 +41,10 @@ func sentSession(t *testing.T, sessionKey string, declared bool) string {
 	return sent
 }
 
-// The session reaches the provider as the cache-affinity key the model layer
-// routed on, so the backend this request went to is the one that key pinned.
 func TestSystem_AClientNamesTheConversationOnTheWire(t *testing.T) {
 	require.Equal(t, "conversation-7", sentSession(t, "conversation-7", true))
 }
 
-// A peer that never declared the extension must not receive the field: upstream
-// Ollama has no such key.
 func TestSystem_AClientNamesNoConversationToAPeerWithoutTheExtension(t *testing.T) {
 	require.Empty(t, sentSession(t, "conversation-7", false))
 }

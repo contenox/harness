@@ -1,9 +1,6 @@
 import type { ReactNode } from 'react';
 import { H1, P } from './Typography';
 
-/**
- * ScreenHeader arranges a page title, supporting copy, and optional actions.
- */
 export function ScreenHeader({
   title,
   subtitle,

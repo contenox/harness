@@ -8,29 +8,20 @@ import (
 	"unicode/utf8"
 )
 
-// ErrAutocompleteUnsupported means the selected adapter cannot execute native FIM.
 var ErrAutocompleteUnsupported = errors.New("native autocomplete is unavailable; select a FIM-capable connection and model or explicitly configure instructed completion")
 
-// AutocompleteRequest carries source and generation settings without a chat envelope.
 type AutocompleteRequest struct {
-	Prefix      string
-	Suffix      string
-	MaxTokens   int
-	Temperature float64
-	TopP        float64
-	Seed        int
-	SessionKey  string
-	// StopSequences bound the completion at the endpoint: generation ends when
-	// the model emits any one of them, and the sequence is not part of the
-	// returned text. A dialect whose vendor documents a smaller list refuses a
-	// longer one rather than truncating it.
+	Prefix        string
+	Suffix        string
+	MaxTokens     int
+	Temperature   float64
+	TopP          float64
+	Seed          int
+	SessionKey    string
 	StopSequences []string
-	// MinTokens is the floor on generated tokens, zero when the caller set none;
-	// an endpoint whose reference declares no such member leaves it off.
-	MinTokens int
+	MinTokens     int
 }
 
-// Validate rejects incomplete native completion requests before dispatch.
 func (r AutocompleteRequest) Validate() error {
 	if r.Prefix == "" && r.Suffix == "" {
 		return errors.New("autocomplete requires a prefix or suffix")
@@ -55,14 +46,12 @@ func (r AutocompleteRequest) Validate() error {
 	return nil
 }
 
-// AutocompleteResult is the exact insertion and provider-reported accounting.
 type AutocompleteResult struct {
 	Text         string
 	FinishReason string
 	Usage        *TokenUsage
 }
 
-// LLMAutocompleteClient executes a model's native fill-in-the-middle operation.
 type LLMAutocompleteClient interface {
 	Autocomplete(context.Context, AutocompleteRequest) (AutocompleteResult, error)
 }

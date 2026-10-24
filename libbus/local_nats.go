@@ -27,8 +27,6 @@ func quiet() func() {
 	}
 }
 
-// SetupNatsInstance starts a NATS container and returns its URL, the container,
-// and a cleanup func.
 func SetupNatsInstance(ctx context.Context) (string, testcontainers.Container, func(), error) {
 	defer quiet()()
 	cleanup := func() {}
@@ -45,9 +43,6 @@ func SetupNatsInstance(ctx context.Context) (string, testcontainers.Container, f
 	if err != nil {
 		return "", nil, cleanup, err
 	}
-	// The nats module's readiness wait can return before the server accepts
-	// connections (observed as a first-connect EOF under host load), so probe
-	// the URL here rather than leaking that race into every caller.
 	deadline := time.Now().Add(30 * time.Second)
 	for {
 		probe, cerr := natsclient.Connect(cons)
@@ -67,8 +62,6 @@ func SetupNatsInstance(ctx context.Context) (string, testcontainers.Container, f
 	return cons, natsContainer, cleanup, nil
 }
 
-// NewTestPubSub starts a NATS container using SetupNatsInstance,
-// creates a new PubSub instance, and returns it along with a cleanup function.
 func NewTestPubSub() (Messenger, func(), error) {
 	ctx := context.Background()
 	cons, container, cleanup, err := SetupNatsInstance(ctx)
@@ -80,9 +73,6 @@ func NewTestPubSub() (Messenger, func(), error) {
 	cfg := &Config{
 		NATSURL: cons,
 	}
-	// The nats module's readiness wait can return before the server accepts
-	// connections (observed as a first-connect EOF under host load), so retry
-	// briefly rather than leaking that race into every suite using this helper.
 	var ps Messenger
 	deadline := time.Now().Add(10 * time.Second)
 	for {

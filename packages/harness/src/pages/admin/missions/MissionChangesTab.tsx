@@ -11,38 +11,18 @@ import {
 } from '../../../lib/missionChanges';
 import type { MissionChangedFile } from '../../../lib/types';
 
-// Monaco lives ONLY behind this lazy boundary — one level deeper than the tab's
-// own lazy load — so it enters neither the mission-detail bundle nor the
-// Changes-tab chunk's initial render, and loads only when a file is expanded.
 const MonacoDiffView = lazy(() => import('./MonacoDiffView'));
 
 export interface MissionChangesTabProps {
   missionId: string;
-  /** A path to auto-expand (e.g. a search hit routed here); absolute, from the changes list. */
   focusPath?: string | null;
 }
 
-/**
- * The mission inspector's Changes tab (Arc 1 — the state-diff bet). The
- * changed-files list, ordered by Degree-of-Interest (the server orders by score
- * DESC; this NEVER re-sorts, so review starts where the unit's attention
- * concentrated), rendered as instant collapsed rows with a lazy per-file diff on
- * expand. `incomplete` (capped list) is stated honestly, and a serve without
- * change tracking degrades to a graceful "unavailable" state (404), never an
- * error.
- *
- * Single-pane accordion, not a two-pane split: the mission inspector is a narrow
- * max-w-3xl column that must render at 390px, where expand-inline is the honest
- * fit and a side-by-side list|diff would be cramped. `useResizableSplit` stays
- * exported for a genuinely wide side-by-side surface, per its own doc comment —
- * the diff's inherent side-by-side is Monaco's internal split (MonacoDiffView).
- */
 export default function MissionChangesTab({ missionId, focusPath }: MissionChangesTabProps) {
   const { t } = useTranslation();
   const changes = useMissionChanges(missionId);
   const [expanded, setExpanded] = useState<string | null>(focusPath ?? null);
 
-  // A hit routed in from Search focuses its file; re-run when the target changes.
   useEffect(() => {
     if (focusPath) setExpanded(focusPath);
   }, [focusPath]);
@@ -149,7 +129,6 @@ function ChangedFileRow({
   );
 }
 
-/** Fetches one file's diff on expand (lazy) and renders it, or a plain load/error state. */
 function ChangedFileDiff({ missionId, file }: { missionId: string; file: MissionChangedFile }) {
   const { t } = useTranslation();
   const diffQuery = useMissionChangeDiff(missionId, file.path);

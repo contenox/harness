@@ -49,9 +49,6 @@ func runSandboxEnv(cmd *cobra.Command, _ []string) error {
 	if err := serverapi.LoadConfig(config); err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
-	// nil injector: this preview reports the SCRUB only (what serve's own
-	// environment keeps/strips). The operator-injected variables layered on top are
-	// listed separately by `contenox shell-env list`.
 	shellScrub, terminalScrub := resolveSandboxScrubs(config, nil)
 
 	terminal, _ := cmd.Flags().GetBool("terminal")
@@ -72,7 +69,7 @@ func runSandboxEnv(cmd *cobra.Command, _ []string) error {
 	}
 
 	parent := os.Environ()
-	kept := scrub(parent) // KEY=VALUE, sorted by name
+	kept := scrub(parent)
 	fmt.Fprintf(out, "# %d of %d variables pass; values withheld.\n", len(kept), len(parent))
 	for _, kv := range kept {
 		if eq := strings.IndexByte(kv, '='); eq >= 0 {

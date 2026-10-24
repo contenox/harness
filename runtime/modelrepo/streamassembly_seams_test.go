@@ -16,8 +16,6 @@ func terminal(reason string, terminated bool) *modelrepo.StreamParcel {
 	}}
 }
 
-// A stream that observed the provider's terminal marker assembled normally, and
-// the provider's own finish reason is preserved verbatim.
 func TestUnit_StreamAssembler_TerminatedStreamCompletes(t *testing.T) {
 	asm := modelrepo.NewStreamAssembler("provider", "model")
 	require.NoError(t, asm.Consume(&modelrepo.StreamParcel{Data: "half "}))
@@ -30,8 +28,6 @@ func TestUnit_StreamAssembler_TerminatedStreamCompletes(t *testing.T) {
 	assert.Equal(t, "content_filter", res.FinishReason)
 }
 
-// A stream whose connection ended before the provider's marker is truncated,
-// which is a different outcome from a completed turn.
 func TestUnit_StreamAssembler_UnterminatedStreamIsTruncated(t *testing.T) {
 	asm := modelrepo.NewStreamAssembler("provider", "model")
 	require.NoError(t, asm.Consume(&modelrepo.StreamParcel{Data: "half a tu"}))
@@ -44,9 +40,6 @@ func TestUnit_StreamAssembler_UnterminatedStreamIsTruncated(t *testing.T) {
 	assert.Contains(t, err.Error(), "model")
 }
 
-// A vendor-signalled finish reason completes the turn even though generation
-// stopped early: length and content_filter are outcomes the caller acts on, not
-// transport failures.
 func TestUnit_StreamAssembler_VendorFinishReasonWithoutMarkerCompletes(t *testing.T) {
 	for _, reason := range []string{"length", "content_filter", "max_tokens"} {
 		asm := modelrepo.NewStreamAssembler("provider", "model")
@@ -60,8 +53,6 @@ func TestUnit_StreamAssembler_VendorFinishReasonWithoutMarkerCompletes(t *testin
 	}
 }
 
-// A vendor that reports no finish reason but does send its terminal marker
-// still completes.
 func TestUnit_StreamAssembler_MarkerWithoutFinishReasonCompletes(t *testing.T) {
 	asm := modelrepo.NewStreamAssembler("provider", "model")
 	require.NoError(t, asm.Consume(terminal("", true)))
@@ -70,8 +61,6 @@ func TestUnit_StreamAssembler_MarkerWithoutFinishReasonCompletes(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// With no terminal parcel at all the failure names the missing parcel, which is
-// a contract violation rather than a transport truncation.
 func TestUnit_StreamAssembler_MissingTerminalIsAContractViolation(t *testing.T) {
 	asm := modelrepo.NewStreamAssembler("provider", "model")
 	require.NoError(t, asm.Consume(&modelrepo.StreamParcel{Data: "text"}))

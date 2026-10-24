@@ -42,40 +42,18 @@ type Service interface {
 	Find(ctx context.Context, opts FindOptions, emit func(Entry) error) (FindResult, error)
 }
 
-// FindOptions configures a recursive filename walk under the workspace root.
 type FindOptions struct {
-	// Path is the subtree to search, relative to the root; "" or "." is the whole
-	// workspace. It is normalized and contained exactly like every other rel path.
-	Path string
-	// Globs are filepath.Match patterns; a FILE matches if ANY of them matches. A
-	// pattern containing '/' is matched against the root-relative path, otherwise
-	// against the basename (mirrors local_fs.find_files). No pattern (or an empty
-	// slice) matches nothing.
-	Globs []string
-	// Limit caps emitted matches; on reaching it the walk stops and FindResult.Truncated
-	// is set. Limit <= 0 means unbounded (the caller is expected to clamp).
-	Limit int
-	// SkipDirs prunes directories by basename (noise dirs: .git, node_modules, …);
-	// nil prunes nothing.
+	Path     string
+	Globs    []string
+	Limit    int
 	SkipDirs map[string]bool
 }
 
-// FindResult reports the outcome of a Find walk.
 type FindResult struct {
 	Count     int
 	Truncated bool
 }
 
-// Find recursively walks opts.Path and streams, via emit, every FILE whose name
-// (or root-relative path, for a pattern containing '/') matches any of opts.Globs.
-//
-// Safety: the walk root is contained once up front, but filepath.WalkDir descends
-// into children the single-path guard has never seen — an interior symlink could
-// point out of the root or straight into the control plane (~/.contenox-harness). So EVERY
-// visited node is re-resolved through the same non-privileged vfs view the flat
-// methods use (s.view.Resolve): a node that escapes or is denied is skipped (a
-// directory via SkipDir, pruning its whole subtree), never emitted or descended.
-// This is the recursive analogue of the per-path boundary List/Stat/… enforce.
 func (s *localService) Find(ctx context.Context, opts FindOptions, emit func(Entry) error) (FindResult, error) {
 	var res FindResult
 	startAbs, _, err := s.resolveExisting(opts.Path, true)
@@ -90,7 +68,7 @@ func (s *localService) Find(ctx context.Context, opts FindOptions, emit func(Ent
 	var emitErr error
 	walkErr := filepath.WalkDir(startAbs, func(walkPath string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			return nil // skip unreadable entries/dirs rather than aborting the whole walk
+			return nil
 		}
 		if ctx.Err() != nil {
 			return filepath.SkipAll
@@ -101,9 +79,8 @@ func (s *localService) Find(ctx context.Context, opts FindOptions, emit func(Ent
 		}
 		rel = filepath.ToSlash(rel)
 		if rel == "." {
-			return nil // the walk root itself
+			return nil
 		}
-		// Per-node boundary re-check — the load-bearing safety line.
 		if _, rerr := s.view.Resolve(rel); rerr != nil {
 			if d.IsDir() {
 				return filepath.SkipDir
@@ -143,8 +120,6 @@ func (s *localService) Find(ctx context.Context, opts FindOptions, emit func(Ent
 	return res, nil
 }
 
-// matchesAnyGlob reports whether rel/name matches any pattern: a pattern with a
-// '/' is matched against the root-relative path, otherwise against the basename.
 func matchesAnyGlob(globs []string, rel, name string) bool {
 	for _, g := range globs {
 		target := name
@@ -174,9 +149,6 @@ func New(root string) (Service, error) {
 	if err := os.MkdirAll(abs, 0750); err != nil {
 		return nil, fmt.Errorf("create root: %w", err)
 	}
-	// Containment (path normalization + symlink-escape guarding) is delegated to
-	// the vfs package — the single implementation shared with the local_fs agent
-	// tool.
 	view, err := vfs.OpenView(abs)
 	if err != nil {
 		return nil, fmt.Errorf("resolve root: %w", err)
@@ -184,11 +156,6 @@ func New(root string) (Service, error) {
 	return &localService{root: abs, view: view}, nil
 }
 
-// NewPrivileged is New over a vfs.OpenPrivilegedView: the runtime reading its
-// OWN control plane (chain-agent discovery, serve's chain wiring, the
-// operator's chain-editor API — all deliberately rooted at ~/.contenox-harness). See
-// OpenPrivilegedView's doc for the invariant boundary; agent-facing consumers
-// must keep using New.
 func NewPrivileged(root string) (Service, error) {
 	if strings.TrimSpace(root) == "" {
 		return nil, fmt.Errorf("%w: root is required", ErrInvalidPath)
@@ -390,10 +357,6 @@ func (s *localService) Move(ctx context.Context, fromPath, toPath string) (*Entr
 	return &entry, nil
 }
 
-// resolveExisting normalizes a client path (rejecting absolute paths and
-// traversal via NormalizeRelPath), contains it within the root via vfs, then
-// confirms the target exists — vfs.Contain tolerates a missing leaf, but the
-// read/list/delete/move-source callers require existence and expect ErrNotFound.
 func (s *localService) resolveExisting(raw string, allowRoot bool) (string, string, error) {
 	rel, err := NormalizeRelPath(raw, allowRoot)
 	if err != nil {
@@ -412,9 +375,6 @@ func (s *localService) resolveExisting(raw string, allowRoot bool) (string, stri
 	return abs, rel, nil
 }
 
-// resolveForWrite normalizes and contains a write target (which need not exist
-// yet), rejecting any path whose deepest existing parent escapes the root
-// before creating intermediate directories.
 func (s *localService) resolveForWrite(raw string) (string, string, error) {
 	rel, err := NormalizeRelPath(raw, false)
 	if err != nil {

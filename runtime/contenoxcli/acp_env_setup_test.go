@@ -40,7 +40,6 @@ func TestUnit_CompleteEnvSetup_OllamaWithDefaults(t *testing.T) {
 	require.Len(t, backends, 1)
 	assert.Equal(t, "ollama", backends[0].Type)
 
-	// Idempotent: a second run must not duplicate the backend.
 	require.NoError(t, completeEnvSetup(ctx, db))
 	backends, err = backendservice.New(db).List(ctx, nil, 10)
 	require.NoError(t, err)
@@ -63,13 +62,11 @@ func TestUnit_CompleteEnvSetup_ActionableErrors(t *testing.T) {
 	assert.Contains(t, err.Error(), "not-a-provider")
 	assert.Contains(t, err.Error(), "ollama", "error must list valid providers")
 
-	// A cloud provider without its API key must name the key variable.
 	t.Setenv(envDefaultProvider, "openai")
 	err = completeEnvSetup(ctx, db)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "OPENAI_API_KEY")
 
-	// Nothing may have been persisted by the failed attempts.
 	assert.Empty(t, acpsvc.ReadConfigValue(ctx, db, "default-provider"))
 	assert.Empty(t, acpsvc.ReadConfigValue(ctx, db, "default-model"))
 }
@@ -112,15 +109,6 @@ func TestUnit_ACPEnvSetupVars_ContractShape(t *testing.T) {
 	assert.Contains(t, keyVars, "GEMINI_API_KEY")
 }
 
-// TestUnit_ChainAgentSpawnContract_MatchesTheACPCommand guards the one piece of
-// duplication chains-as-agents needs. The instance kernel spawns a chain unit by
-// re-executing this binary with a subcommand and a chain-path environment
-// variable it has to name literally — it cannot import the CLI or the ACP
-// service to ask, because both sit above it and one imports it (a cycle). This
-// test is the join: if the acp subcommand were renamed, or its chain-path
-// variable changed, every chain unit would silently stop finding its chain, and
-// only an end-to-end spawn would notice. Here it fails at compile-and-assert
-// time instead.
 func TestUnit_ChainAgentSpawnContract_MatchesTheACPCommand(t *testing.T) {
 	assert.Equal(t, acpProfileACP.chainEnv, agentinstance.ChainPathEnvVar,
 		"the kernel's chain-path variable must be the one `contenox acp` reads")

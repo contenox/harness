@@ -13,9 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// An error envelope whose code is a vendor string, not a number, still fails the
-// turn with the vendor's message instead of leaving the partial text to read as
-// a short answer.
 func TestUnit_VLLMStreamedErrorFrameWithAVendorCodeFailsTheTurn(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")

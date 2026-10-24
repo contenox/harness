@@ -14,12 +14,7 @@ type chatHandler struct {
 	deps CompatDeps
 }
 
-// handle serves an OpenAI-compatible chat completion, answering with a single
-// JSON completion object or, when the request sets stream, the same content
-// as SSE chat.completion.chunk frames over text/event-stream.
 func (h *chatHandler) handle(w http.ResponseWriter, r *http.Request) {
-	// @request compatapi.ChatCompletionRequest
-	// @response compatapi.chatCompletionResponse
 	ctx := r.Context()
 	if err := authorizeCompatRequest(r, h.deps, true); err != nil {
 		http.Error(w, `{"error":{"message":"Unauthorized","type":"auth_error"}}`, http.StatusUnauthorized)
@@ -108,7 +103,6 @@ func (h *chatHandler) writeStreamingResponse(w http.ResponseWriter, id string, t
 	setSSEHeaders(w)
 	w.WriteHeader(http.StatusOK)
 
-	// Frame 1: role init
 	_ = writeSSE(w, chatCompletionChunk{
 		ID:      id,
 		Object:  "chat.completion.chunk",
@@ -121,7 +115,6 @@ func (h *chatHandler) writeStreamingResponse(w http.ResponseWriter, id string, t
 		}},
 	})
 
-	// Frame 2: full content (fake streaming — single chunk)
 	_ = writeSSE(w, chatCompletionChunk{
 		ID:      id,
 		Object:  "chat.completion.chunk",
@@ -134,7 +127,6 @@ func (h *chatHandler) writeStreamingResponse(w http.ResponseWriter, id string, t
 		}},
 	})
 
-	// Frame 3: stop + usage
 	usage := extractUsage(resp)
 	stopReason := openAIFinishReason(resp)
 	_ = writeSSE(w, chatCompletionChunk{
@@ -235,7 +227,6 @@ func extractUsage(resp *agentservice.PromptResponse) chatCompletionUsage {
 
 func jsonEscape(s string) string {
 	b, _ := json.Marshal(s)
-	// json.Marshal wraps in quotes; strip them.
 	if len(b) >= 2 {
 		return string(b[1 : len(b)-1])
 	}

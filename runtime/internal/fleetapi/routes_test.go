@@ -20,11 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeFleet is a hand-rolled fleetservice.Service double. These tests prove
-// only ROUTING, status-code mapping, and DTO (de)serialization — the
-// orchestration itself (Enabled policy, teardown-on-failure, cancel fan-out)
-// is fleetservice's own responsibility and is covered by
-// runtime/fleetservice's tests.
 type fakeFleet struct {
 	mu sync.Mutex
 
@@ -32,7 +27,7 @@ type fakeFleet struct {
 	listErr     error
 
 	byID   map[string]agentinstance.InstanceStatus
-	getErr error // returned instead of the default ErrNotFound when set
+	getErr error
 
 	dispatchResult fleetservice.DispatchResult
 	dispatchErr    error
@@ -112,8 +107,6 @@ func setupFleetAPI(t *testing.T, f fleetservice.Service) *httptest.Server {
 	return srv
 }
 
-// ─── List ────────────────────────────────────────────────────────────────
-
 func TestUnit_FleetAPI_ListReturnsConfigRuntimeJoin(t *testing.T) {
 	started := time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)
 	running := agentinstance.InstanceStatus{
@@ -168,8 +161,6 @@ func TestUnit_FleetAPI_ListEmptyFleet(t *testing.T) {
 	require.Equal(t, "[]", strings.TrimSpace(buf.String()))
 }
 
-// ─── Get ─────────────────────────────────────────────────────────────────
-
 func TestUnit_FleetAPI_GetReturnsInstanceStatus(t *testing.T) {
 	started := time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)
 	srv := setupFleetAPI(t, &fakeFleet{byID: map[string]agentinstance.InstanceStatus{
@@ -205,8 +196,6 @@ func TestUnit_FleetAPI_GetUnknownReturns404(t *testing.T) {
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
-
-// ─── Dispatch ────────────────────────────────────────────────────────────
 
 func dispatchPost(t *testing.T, url string, body any) *http.Response {
 	t.Helper()
@@ -246,11 +235,6 @@ func TestUnit_FleetAPI_DispatchDecodesRequestAndEncodesResult(t *testing.T) {
 	require.Equal(t, "/workspace", reqs[0].Cwd)
 }
 
-// TestUnit_FleetAPI_DispatchWithMinimalRequest proves Cwd stays the only
-// optional field at the wire layer, and that MissionID — always present now
-// that every dispatch is a mission — decodes on the response like any other
-// field (no omitempty-shaped test needed on the response side, since the
-// generic decode above already proves that).
 func TestUnit_FleetAPI_DispatchWithMinimalRequest(t *testing.T) {
 	f := &fakeFleet{dispatchResult: fleetservice.DispatchResult{InstanceID: "inst-1", SessionID: "sess-1", MissionID: "mission-1"}}
 	srv := setupFleetAPI(t, f)
@@ -272,10 +256,6 @@ func TestUnit_FleetAPI_DispatchWithMinimalRequest(t *testing.T) {
 	require.Empty(t, reqs[0].Cwd, "cwd stays optional at the wire layer; fleetservice resolves the default")
 }
 
-// TestUnit_FleetAPI_DispatchServiceErrorMapsToStatus proves the handler does no
-// error-mapping of its own beyond apiframework.Error: whatever status
-// fleetservice's error carries (via the shared error taxonomy) is what the
-// wire gets.
 func TestUnit_FleetAPI_DispatchServiceErrorMapsToStatus(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -295,8 +275,6 @@ func TestUnit_FleetAPI_DispatchServiceErrorMapsToStatus(t *testing.T) {
 		})
 	}
 }
-
-// ─── Stop (DELETE) ───────────────────────────────────────────────────────
 
 func TestUnit_FleetAPI_StopCallsServiceAndReturns200(t *testing.T) {
 	f := &fakeFleet{}
@@ -326,8 +304,6 @@ func TestUnit_FleetAPI_StopPropagatesServiceError(t *testing.T) {
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 }
-
-// ─── Cancel ──────────────────────────────────────────────────────────────
 
 func cancelPost(t *testing.T, url, instanceID string, body []byte) *http.Response {
 	t.Helper()

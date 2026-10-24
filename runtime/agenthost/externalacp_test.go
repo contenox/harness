@@ -13,12 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// buildStubAgent compiles libacp/cmd/acp-stub-agent — the hermetic,
-// in-memory ACP Agent this repo already uses to exercise libacp's wire
-// dispatch without any LLM backend — into t.TempDir() and returns its path.
-// It gives this package's host test a real ACP agent subprocess to spawn and
-// drive without depending on any external binary (contrast the
-// ACP_TESTY_BIN-gated e2e tests in libacp/acpexec).
 func buildStubAgent(t *testing.T) string {
 	t.Helper()
 	binPath := filepath.Join(t.TempDir(), "acp-stub-agent")
@@ -30,14 +24,6 @@ func buildStubAgent(t *testing.T) string {
 	return binPath
 }
 
-// TestHost_ExternalACPAgent_ConnectAndInitialize is the core assertion this
-// package exists for: given an ExternalACPConfig pointing at a real ACP
-// agent binary, ExternalACPAgent.Connect spawns it, wires a live
-// ClientSideConnection to it over stdio, and a client-side "initialize" call
-// through that connection succeeds against the real subprocess — proving
-// the host seam (harness supplied by the caller, transport wired
-// underneath) actually works end to end, not just in mocks. Close then
-// tears the whole thing down cleanly.
 func TestHost_ExternalACPAgent_ConnectAndInitialize(t *testing.T) {
 	requireSandboxable(t)
 	agentBin := buildStubAgent(t)
@@ -45,17 +31,12 @@ func TestHost_ExternalACPAgent_ConnectAndInitialize(t *testing.T) {
 	host := agenthost.NewExternalACPAgent(runtimetypes.ExternalACPConfig{
 		Transport: runtimetypes.ExternalACPTransportStdio,
 		Command:   agentBin,
-		// The sandbox is the only spawn path and needs a workspace; Connect
-		// (unlike DriveTurn) has no session cwd to default from, so it is set here.
-		Cwd: t.TempDir(),
+		Cwd:       t.TempDir(),
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// libacp.UnimplementedClient{} is the minimal/no-op harness the task
-	// calls for: agenthost never assembles a harness itself, it only takes
-	// whatever libacp.Client the caller passes.
 	handle, err := host.Connect(ctx, libacp.UnimplementedClient{})
 	require.NoError(t, err)
 	require.NotNil(t, handle)
@@ -83,9 +64,6 @@ func TestHost_ExternalACPAgent_ConnectAndInitialize(t *testing.T) {
 	}
 }
 
-// TestHost_ExternalACPAgent_CloseIsIdempotent drives a second, independent
-// full connect/initialize/close cycle and asserts calling Close twice is
-// safe and returns the same result both times.
 func TestHost_ExternalACPAgent_CloseIsIdempotent(t *testing.T) {
 	requireSandboxable(t)
 	agentBin := buildStubAgent(t)
@@ -121,17 +99,12 @@ func TestHost_ExternalACPAgent_Connect_RejectsNilHarness(t *testing.T) {
 func TestHost_ExternalACPAgent_Connect_RejectsInvalidConfig(t *testing.T) {
 	host := agenthost.NewExternalACPAgent(runtimetypes.ExternalACPConfig{
 		Transport: runtimetypes.ExternalACPTransportStdio,
-		// Command deliberately omitted: invalid for stdio transport.
 	})
 
 	_, err := host.Connect(context.Background(), libacp.UnimplementedClient{})
 	require.Error(t, err)
 }
 
-// TestHost_ExternalACPAgent_Connect_EndpointNotImplemented locks in that the
-// endpoint transport returns a clear, immediate error instead of hanging or
-// silently no-op'ing — this task's scope stops at stdio; endpoint is a
-// stubbed seam for later.
 func TestHost_ExternalACPAgent_Connect_EndpointNotImplemented(t *testing.T) {
 	host := agenthost.NewExternalACPAgent(runtimetypes.ExternalACPConfig{
 		Transport: runtimetypes.ExternalACPTransportEndpoint,

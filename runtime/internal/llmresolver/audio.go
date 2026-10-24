@@ -8,12 +8,8 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// ErrNoAudioCapableModel is returned when an audio-bearing request has no
-// audio-capable candidate; it wraps ErrNoSatisfactoryModel.
 var ErrNoAudioCapableModel = fmt.Errorf("%w: no available model supports audio input", ErrNoSatisfactoryModel)
 
-// ErrPinnedModelLacksAudio is returned when an audio-bearing request pins a
-// model that cannot accept audio; it does not wrap ErrNoSatisfactoryModel.
 var ErrPinnedModelLacksAudio = errors.New("explicitly requested model lacks audio capability")
 
 func audioCapCheck(req Request, base func(modelrepo.Provider) bool) func(modelrepo.Provider) bool {
@@ -36,7 +32,7 @@ func refusePinnedNonAudio(
 	}
 	providers, err := getModels(ctx, req.ProviderTypes...)
 	if err != nil {
-		return nil // let filterCandidates surface the lookup failure
+		return nil
 	}
 	for _, name := range req.ModelNames {
 		matched := false

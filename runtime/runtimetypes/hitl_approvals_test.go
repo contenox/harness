@@ -14,10 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// setupHITLApprovalsStore opens a fresh SQLite-backed Store (the production
-// "Contenox Local" backend, and the one runtime/hitlservice's own tests use)
-// rather than the Postgres-testcontainer SetupStore other _test.go files in
-// this package use, so this file's tests need no Docker.
 func setupHITLApprovalsStore(t *testing.T) (context.Context, runtimetypes.Store) {
 	t.Helper()
 	ctx := context.Background()
@@ -78,7 +74,7 @@ func TestUnit_HITLApprovals_CreateDefaultsEmptyStateToPending(t *testing.T) {
 	ctx, s := setupHITLApprovalsStore(t)
 
 	a := newPendingApproval()
-	a.State = "" // deliberately unset
+	a.State = ""
 	require.NoError(t, s.CreateHITLApproval(ctx, a))
 
 	got, err := s.GetHITLApproval(ctx, a.ID)
@@ -94,8 +90,6 @@ func TestUnit_HITLApprovals_GetUnknownReturnsNotFound(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, libdb.ErrNotFound))
 }
-
-// ─── ResolveHITLApproval: the compare-and-swap ─────────────────────────────
 
 func TestUnit_ResolveHITLApproval_TransitionsPendingRow(t *testing.T) {
 	t.Parallel()
@@ -139,11 +133,6 @@ func TestUnit_ResolveHITLApproval_UnknownIDReturnsNotFound(t *testing.T) {
 	require.True(t, errors.Is(err, libdb.ErrNotFound))
 }
 
-// TestUnit_ResolveHITLApproval_AlreadyResolvedIsRejected is the compare-and-
-// swap guarantee itself: a second resolve attempt against a row that is no
-// longer 'pending' must not succeed and must not change the row — this is
-// what lets hitlservice's sweeper and Respond race safely against each
-// other, whichever gets there first wins and the other sees ErrNotFound.
 func TestUnit_ResolveHITLApproval_AlreadyResolvedIsRejected(t *testing.T) {
 	t.Parallel()
 	ctx, s := setupHITLApprovalsStore(t)
@@ -158,15 +147,12 @@ func TestUnit_ResolveHITLApproval_AlreadyResolvedIsRejected(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, libdb.ErrNotFound))
 
-	// The first resolution must stand, untouched by the rejected second call.
 	got, err := s.GetHITLApproval(ctx, a.ID)
 	require.NoError(t, err)
 	require.Equal(t, runtimetypes.HITLApprovalApproved, got.State)
 	require.JSONEq(t, `{"approved":true}`, string(got.Resolution))
 	require.WithinDuration(t, firstResolvedAt, *got.ResolvedAt, time.Second)
 }
-
-// ─── ListExpiredHITLApprovals ───────────────────────────────────────────────
 
 func TestUnit_ListExpiredHITLApprovals_ReturnsOnlyPastDeadlinePendingRows(t *testing.T) {
 	t.Parallel()
@@ -202,8 +188,6 @@ func TestUnit_ListExpiredHITLApprovals_EmptyIsNonNil(t *testing.T) {
 	require.Empty(t, got)
 }
 
-// ─── ListHITLApprovals ──────────────────────────────────────────────────────
-
 func TestUnit_ListHITLApprovals_FiltersByStateNewestFirst(t *testing.T) {
 	t.Parallel()
 	ctx, s := setupHITLApprovalsStore(t)
@@ -223,7 +207,6 @@ func TestUnit_ListHITLApprovals_FiltersByStateNewestFirst(t *testing.T) {
 	got, err := s.ListHITLApprovals(ctx, runtimetypes.HITLApprovalPending, nil, 100)
 	require.NoError(t, err)
 	require.Len(t, got, 3)
-	// newest first
 	require.Equal(t, pendingIDs[2], got[0].ID)
 	require.Equal(t, pendingIDs[0], got[2].ID)
 
@@ -246,13 +229,6 @@ func TestUnit_EstimateHITLApprovalCount(t *testing.T) {
 	require.Equal(t, int64(3), count)
 }
 
-// ─── restart durability at the store layer ─────────────────────────────────
-
-// TestUnit_HITLApprovals_RowSurvivesReopeningTheDatabase is the store-layer
-// half of slice C1's central durability requirement: a pending row written by
-// one DBManager instance is visible, unchanged, to a completely separate
-// DBManager instance opened later against the same on-disk file — simulating
-// a `contenox serve` restart with no in-memory state carried over.
 func TestUnit_HITLApprovals_RowSurvivesReopeningTheDatabase(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "restart.db")
@@ -276,20 +252,11 @@ func TestUnit_HITLApprovals_RowSurvivesReopeningTheDatabase(t *testing.T) {
 	require.Equal(t, a.ToolsName, got.ToolsName)
 	require.Equal(t, a.ToolName, got.ToolName)
 
-	// And it is resolvable from the "restarted" instance.
 	require.NoError(t, store2.ResolveHITLApproval(ctx, a.ID, runtimetypes.HITLApprovalApproved, json.RawMessage(`{"approved":true}`), time.Now().UTC()))
 	resolved, err := store2.GetHITLApproval(ctx, a.ID)
 	require.NoError(t, err)
 	require.Equal(t, runtimetypes.HITLApprovalApproved, resolved.State)
 }
-
-// ─── attribution ───────────────────────────────────────────────────────────
-//
-// The attribution columns are what make an inbox usable past one unit: they
-// name WHO is asking, not just which tool was called. These pin that they
-// round-trip through every read path, and that the nullable one stays nullable
-// — an ask with no mission must be distinguishable from one whose mission is
-// unknown, which an empty string would not be.
 
 func TestUnit_HITLApprovals_AttributionRoundTrips(t *testing.T) {
 	t.Parallel()
@@ -311,8 +278,6 @@ func TestUnit_HITLApprovals_AttributionRoundTrips(t *testing.T) {
 	require.NotNil(t, got.MissionID)
 	require.Equal(t, missionID, *got.MissionID)
 
-	// The LIST paths project the same columns — the inbox reads through these,
-	// not through Get.
 	listed, err := s.ListHITLApprovals(ctx, runtimetypes.HITLApprovalPending, nil, 10)
 	require.NoError(t, err)
 	require.Len(t, listed, 1)
@@ -332,9 +297,6 @@ func TestUnit_HITLApprovals_UnattributedRowIsEmptyNotNull(t *testing.T) {
 	t.Parallel()
 	ctx, s := setupHITLApprovalsStore(t)
 
-	// An ask raised by a native chain turn with no fleet unit behind it: no
-	// attribution at all, which must store and read back cleanly rather than
-	// failing a NOT NULL constraint or scanning into a nil string.
 	a := newPendingApproval()
 	require.NoError(t, s.CreateHITLApproval(ctx, a))
 

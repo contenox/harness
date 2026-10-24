@@ -79,7 +79,6 @@ describe('SearchTabView — results and click-through', () => {
     const html = render({ status: 'done', truncated: false, matchCount: 2, groups });
     expect(html).toContain('<mark');
     expect(html).toContain('needle');
-    // the line number is shown
     expect(html).toContain('12');
   });
 
@@ -91,7 +90,6 @@ describe('SearchTabView — results and click-through', () => {
       { status: 'done', truncated: false, matchCount: 2, groups },
       { changedFiles, root: { path: '/repo', default: true } },
     );
-    // src/app.ts is a changed file → the affordance appears exactly once.
     expect(html.match(/Open in Changes/g)?.length).toBe(1);
   });
 });

@@ -42,10 +42,6 @@ func (p *catalogProvider) Type() string {
 	return "vllm"
 }
 
-// vllmModelCard is the model entry the vendor's /v1/models publishes. The
-// extension members at the end are this repository's additions: the vendor
-// defines none of them, and a server that does not publish them leaves the
-// model's completion and edit profiles unset rather than guessed.
 type vllmModelCard struct {
 	ID          string `json:"id"`
 	Object      string `json:"object"`
@@ -82,10 +78,6 @@ func (p *catalogProvider) get(ctx context.Context, path string) (int, []byte, er
 	return resp.StatusCode, body, nil
 }
 
-// checkHealth reads the vendor's own readiness answer. A deployment whose
-// engine is dead still lists its models, and reporting those models would be a
-// claim the deployment cannot serve. A server that mounts no health route
-// answers 404 and states nothing about its engine, so its model list decides.
 func (p *catalogProvider) checkHealth(ctx context.Context) error {
 	status, body, err := p.get(ctx, healthPath)
 	if err != nil {
@@ -100,13 +92,6 @@ func (p *catalogProvider) checkHealth(ctx context.Context) error {
 	return nil
 }
 
-// servedRoutes reads the route table the server publishes as its OpenAPI
-// document. vLLM mounts the generation and pooling routes conditionally on the
-// task the deployment was started for, so the mounted paths are the only
-// statement of what a model served by it can be asked to do. A deployment run
-// with `--disable-fastapi-docs` mounts no route document and yields a nil table,
-// which its caller reads as the adapter's unaided operations — the same claim
-// the runtime makes when it probes an adapter without a declared model.
 func (p *catalogProvider) servedRoutes(ctx context.Context) (map[string]bool, error) {
 	status, body, err := p.get(ctx, openAPIPath)
 	if err != nil {
@@ -129,7 +114,6 @@ func (p *catalogProvider) servedRoutes(ctx context.Context) (map[string]bool, er
 }
 
 func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedModel, error) {
-	// Catalog listing is a non-streaming call: bound it end-to-end.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 
@@ -175,13 +159,6 @@ func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedM
 	return models, nil
 }
 
-// applyServedRoutes states what the deployment mounted. A nil route table is a
-// server that published none, and the adapter then reports the operations it
-// performs unaided: chat, prompting and streaming. A deployment served under a
-// root path publishes it with the routes, so each route is matched on its own
-// tail. vLLM's model list reports no modality, so vision and audio input are
-// never derived here; they are operator-declared through the capability
-// override.
 func applyServedRoutes(model *modelrepo.ObservedModel, routes map[string]bool) {
 	if routes == nil {
 		model.CanChat = true

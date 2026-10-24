@@ -6,12 +6,6 @@ import { api } from '../../../lib/api';
 import { AuthContext } from '../../../lib/authContext';
 import { authKeys } from '../../../lib/queryKeys';
 
-/**
- * Remote-access controls. Rendered only when the server requires a login token
- * (authRequired) — locally there is nothing to log out of. Logging out clears
- * the HttpOnly session cookie server-side, then re-queries /ui/auth-status so
- * App.tsx's AuthGate swaps back to the login page.
- */
 export function AccessSettingsSection() {
   const { t } = useTranslation();
   const { authRequired, refresh } = useContext(AuthContext);

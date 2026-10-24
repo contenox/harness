@@ -49,9 +49,6 @@ type ToolCallContent struct {
 	Meta       json.RawMessage     `json:"_meta,omitempty"`
 }
 
-// MarshalJSON forces path/newText onto the wire for the "diff" variant even
-// when empty — newText:"" is the correct shape for a diff clearing a file's
-// content, which plain omitempty can't distinguish from absent.
 func (c ToolCallContent) MarshalJSON() ([]byte, error) {
 	w := struct {
 		Type       ToolCallContentKind `json:"type"`

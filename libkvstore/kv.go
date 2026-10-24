@@ -25,13 +25,11 @@ type KeyValue struct {
 	TTL   time.Time
 }
 
-// KVManager obtains non-transactional KVExecutors.
 type KVManager interface {
 	Executor(ctx context.Context) (KVExecutor, error)
 	Close() error
 }
 
-// KVExecutor is a non-transactional key-value backend.
 type KVExecutor interface {
 	Get(ctx context.Context, key Key) (json.RawMessage, error)
 	Set(ctx context.Context, key Key, value json.RawMessage) error
@@ -40,14 +38,12 @@ type KVExecutor interface {
 	Exists(ctx context.Context, key Key) (bool, error)
 	Keys(ctx context.Context, pattern string) ([]Key, error)
 
-	// List operations
 	ListPush(ctx context.Context, key Key, value json.RawMessage) error
 	ListRange(ctx context.Context, key Key, start, stop int64) ([]json.RawMessage, error)
 	ListTrim(ctx context.Context, key Key, start, stop int64) error
 	ListLength(ctx context.Context, key Key) (int64, error)
 	ListRPop(ctx context.Context, key Key) (json.RawMessage, error)
 
-	// Set operations
 	SetAdd(ctx context.Context, key Key, member json.RawMessage) error
 	SetMembers(ctx context.Context, key Key) ([]json.RawMessage, error)
 	SetRemove(ctx context.Context, key Key, member json.RawMessage) error

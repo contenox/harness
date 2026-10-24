@@ -57,7 +57,6 @@ func TestChatCompletions_Streaming(t *testing.T) {
 		}
 	}
 
-	// Expect: role-init chunk, content chunk, stop+usage chunk, [DONE]
 	if len(dataLines) != 4 {
 		t.Fatalf("expected 4 data lines, got %d: %v", len(dataLines), dataLines)
 	}
@@ -65,7 +64,6 @@ func TestChatCompletions_Streaming(t *testing.T) {
 		t.Errorf("expected last data line [DONE], got %q", dataLines[3])
 	}
 
-	// Content chunk should contain the reply.
 	var contentChunk struct {
 		Choices []struct {
 			Delta struct{ Content string } `json:"delta"`
@@ -407,7 +405,6 @@ func TestRootRoutes_GETChatCompletionsIsMethodNotAllowed(t *testing.T) {
 	}
 }
 
-// stubAgent is a minimal agentservice.Agent for testing.
 type stubAgent struct {
 	reply   string
 	lastReq agentservice.PromptRequest
@@ -440,7 +437,6 @@ func (s *stubAgent) Prompt(_ context.Context, req agentservice.PromptRequest) (*
 	}, nil
 }
 
-// stubChains is a minimal taskchainservice.Service for testing.
 type stubChains struct {
 	lastRef string
 	chain   *taskengine.TaskChainDefinition

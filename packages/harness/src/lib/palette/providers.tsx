@@ -17,17 +17,9 @@ import { externalAgentFromMeta } from '../acp';
 import { meaningfulTitle } from '../../pages/chat/lib/sessionLabel';
 import type { PaletteItem, PaletteProvider, PaletteProviderContext } from './types';
 
-/**
- * The built-in palette sources. Each is a pure `(ctx) => PaletteItem[]`; the
- * registry is just the array below, so a NEW source is one function appended
- * here — nothing else changes. Providers read only the snapshot data on `ctx`
- * (never fetch) and fold every non-title match term into `keywords`, in both
- * English and German, so the German UI matches German words too.
- */
 
 const icon = (i: LucideIcon) => createElement(i, { className: 'h-4 w-4', 'aria-hidden': true });
 
-/** Static navigation + verbs: every admin destination plus "fire a mission" / "new chat". */
 const NAV_TARGETS: { path: string; labelKey: TranslationKey; icon: LucideIcon; keywords: string[] }[] = [
   { path: '/chat', labelKey: 'navbar.chat', icon: MessageSquare, keywords: ['chat', 'session', 'sitzung', 'beam'] },
   { path: '/fleet', labelKey: 'navbar.fleet', icon: Radar, keywords: ['fleet', 'flotte', 'board', 'instances', 'instanzen'] },
@@ -95,8 +87,6 @@ export const fleetProvider: PaletteProvider = (ctx): PaletteItem[] => {
     for (const inst of entry.instances ?? []) {
       const stateLabel = ctx.t(`fleet.state.${inst.state}` as TranslationKey);
       const sessionId = inst.sessionIds?.[0];
-      // "Open session" only makes sense against a running instance with a live
-      // downstream to adopt; otherwise the item just lands on the board.
       const canAdopt = inst.state === 'running' && !!sessionId;
       items.push({
         id: `fleet:${inst.id}`,
@@ -126,8 +116,6 @@ export const agentsProvider: PaletteProvider = (ctx): PaletteItem[] =>
       subtitle: ctx.t('palette.subtitle_dispatch'),
       icon: icon(Bot),
       keywords: [a.kind, a.id, 'mission', 'dispatch', 'starten'].filter(Boolean),
-      // Prefills the dispatch form's agent field via the query param
-      // MissionDispatchPage reads on mount.
       action: () => ctx.navigate(`/missions/new?agent=${encodeURIComponent(a.name)}`),
     }));
 
@@ -148,8 +136,6 @@ export const sessionsProvider: PaletteProvider = (ctx): PaletteItem[] =>
   });
 
 export const workspaceProvider: PaletteProvider = (ctx): PaletteItem[] =>
-  // When the workspace-roots API is absent (older serve 404) the snapshot is an
-  // empty array, so this source simply yields nothing — never an error row.
   ctx.workspaceRoots.map(root => ({
     id: `workspace:${root.path}`,
     type: 'workspace',
@@ -176,11 +162,6 @@ export const inboxProvider: PaletteProvider = (ctx): PaletteItem[] =>
     };
   });
 
-/**
- * The provider registry. Order is irrelevant to ranking (fuzzy score + frecency
- * decide everything once a query is typed); it only affects the stable tie-break
- * for equally-scored items and the empty-query recents fallback.
- */
 export const paletteProviders: PaletteProvider[] = [
   actionsProvider,
   inboxProvider,
@@ -191,7 +172,6 @@ export const paletteProviders: PaletteProvider[] = [
   workspaceProvider,
 ];
 
-/** Runs every provider over the context and concatenates their items. */
 export function buildPaletteItems(ctx: PaletteProviderContext): PaletteItem[] {
   return paletteProviders.flatMap(provider => provider(ctx));
 }

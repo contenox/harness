@@ -3,12 +3,6 @@ import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenLoading } from '../../saas/ScreenState';
 import type { AcpWorkspaceState } from '../state/acpWorkspaceState';
 
-/**
- * Renders whatever the connection is doing instead of the screen's content, or null when it is doing nothing worth interrupting for.
- */
-/**
- * isConnectionBlocked reports whether [ConnectionState] renders anything for a status, and is the ONLY way a caller may ask.
- */
 export function isConnectionBlocked(status: AcpWorkspaceState['status']): boolean {
   switch (status) {
     case 'connecting':

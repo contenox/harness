@@ -6,9 +6,6 @@ import (
 	"github.com/contenox/harness/libbus"
 )
 
-// SubscribeMessenger triggers r every time a message is published to subject on
-// bus. The subscription is torn down when ctx is done, or earlier via the
-// returned Subscription.
 func (r *Runner) SubscribeMessenger(ctx context.Context, bus libbus.Messenger, subject string) (libbus.Subscription, error) {
 	ch := make(chan []byte, 1)
 	sub, err := bus.Stream(ctx, subject, ch)

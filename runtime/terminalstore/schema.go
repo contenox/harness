@@ -6,7 +6,6 @@ import (
 	libdb "github.com/contenox/harness/libdbexec"
 )
 
-// InitSchema creates the local terminal session metadata table if it is missing.
 func InitSchema(ctx context.Context, exec libdb.Exec) error {
 	_, err := exec.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS terminal_sessions (

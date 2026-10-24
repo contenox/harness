@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The spec requires `used` and `size` on usage_update — zero values must reach
-// the wire — while every other update kind must omit them.
 func TestUnit_UsageUpdate_EmitsRequiredZeroFields(t *testing.T) {
 	raw, err := json.Marshal(libacp.SessionUpdate{
 		SessionUpdate: libacp.SessionUpdateUsageUpdate,
@@ -32,8 +30,6 @@ func TestUnit_UsageUpdate_EmitsRequiredZeroFields(t *testing.T) {
 	assert.False(t, hasSize, "non-usage updates must not carry size: %s", chunk)
 }
 
-// `modes` in session/new responses is a SessionModeState object per spec, not
-// a bare array of modes.
 func TestUnit_SessionModes_WireShape(t *testing.T) {
 	raw, err := json.Marshal(libacp.NewSessionResponse{
 		SessionID: "s1",

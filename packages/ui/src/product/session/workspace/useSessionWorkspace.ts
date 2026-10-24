@@ -16,7 +16,6 @@ import { useFileCanvas, type UseFileCanvasResult } from './fileCanvasState';
 import type { SelectedRegion } from './monacoViewShared';
 import { makeQuote, selectionBlockText } from './selectionQuote';
 
-/** The composer events that move the caret; spread into the textarea's props. */
 export interface CaretTextareaProps {
   onSelect: (e: ReactSyntheticEvent<HTMLTextAreaElement>) => void;
   onKeyUp: (e: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
@@ -24,29 +23,18 @@ export interface CaretTextareaProps {
   onInput: (e: ReactFormEvent<HTMLTextAreaElement>) => void;
 }
 
-/** Everything a session screen needs to show the workspace beside its conversation and to mention its files. */
 export interface SessionWorkspace {
   canvas: UseFileCanvasResult;
   files: SessionWorkspaceFiles;
   mentionMenu: UseMentionMenuResult;
-  /** Keeps the caret current; an `@` is a mention only where the caret is. */
   caretProps: CaretTextareaProps;
-  /** The picked mentions whose token is still in `text`. */
   mentionsIn: (text: string) => WorkspaceFileRef[];
-  /** Forgets the picked mentions and the caret after a prompt is sent. */
   afterSend: () => void;
-  /** Appends a file selection to the draft and returns to the conversation. */
   askAboutSelection: (path: string, region: SelectedRegion) => void;
-  /** Reads one directory of the session's workspace, for the tree's quick-find. */
   listDir: (dir: string) => Promise<{ path: string; name: string; isDirectory: boolean }[]>;
-  /** Persists an edited file and updates its open tab. */
   saveFile: (path: string, content: string) => Promise<void>;
 }
 
-/**
- * The per-directory listing cache the composer's `@` picker and the tree share.
- * Its owner is the app, because it is fed by the app's workspace-files hook.
- */
 export interface SessionWorkspaceFiles {
   cache: DirCache;
   isLoading: (dir: string) => boolean;
@@ -57,11 +45,6 @@ export interface SessionWorkspaceFiles {
   reloadLoaded?: () => void;
 }
 
-/**
- * What the app hands the workbench: the ACP file extension of the attached
- * session, plus the listing cache. The library does not import the app's
- * workspace hooks; it renders and drives them through this seam.
- */
 export interface SessionWorkspaceSource {
   listWorkspace: (path?: string) => Promise<WorkspaceListing>;
   readFile: (path: string) => Promise<{ content: string; isDir: boolean }>;
@@ -70,14 +53,6 @@ export interface SessionWorkspaceSource {
   files: SessionWorkspaceFiles;
 }
 
-/**
- * The workspace half of a session screen: the file canvas, the per-directory
- * listing cache, and the composer's `@` mention state, all over the ACP file
- * extension the attached session serves.
- *
- * The draft belongs to the screen; this reads it and writes it only to insert
- * a mention or a selection quote.
- */
 export function useSessionWorkspace(
   source: SessionWorkspaceSource,
   draft: string,

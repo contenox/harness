@@ -9,15 +9,12 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// EchoTools is a simple tools that echoes back the input arguments.
 type EchoTools struct{}
 
-// NewEchoTools creates a new instance of EchoTools.
 func NewEchoTools() taskengine.ToolsRepo {
 	return &EchoTools{}
 }
 
-// Exec handles execution by echoing the input arguments.
 func (e *EchoTools) Exec(ctx context.Context, startTime time.Time, input any, debug bool, toolsCall *taskengine.ToolsCall) (any, taskengine.DataType, error) {
 	switch v := input.(type) {
 	case map[string]any:
@@ -57,18 +54,14 @@ func (e *EchoTools) Exec(ctx context.Context, startTime time.Time, input any, de
 	}
 }
 
-// Supports returns the tools types supported by this tools.
 func (e *EchoTools) Supports(ctx context.Context) ([]string, error) {
 	return []string{"echo"}, nil
 }
 
-// GetSchemasForSupportedTools returns OpenAPI schemas for supported tools.
 func (e *EchoTools) GetSchemasForSupportedTools(ctx context.Context) (map[string]*openapi3.T, error) {
-	// Echo tools doesn't have a schema
 	return map[string]*openapi3.T{}, nil
 }
 
-// GetToolsForToolsByName returns tools exposed by this tools.
 func (e *EchoTools) GetToolsForToolsByName(ctx context.Context, name string) ([]taskengine.Tool, error) {
 	if name != "echo" {
 		return nil, fmt.Errorf("unknown tools: %s", name)

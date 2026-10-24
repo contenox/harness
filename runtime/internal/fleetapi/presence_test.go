@@ -83,8 +83,6 @@ func TestUnit_FleetAPI_PresenceListReturnsObservedInstances(t *testing.T) {
 	require.True(t, got[1].Stale, "an aged editor must surface stale:true")
 }
 
-// The presence entry's wire shape is what the Beam follow-up consumes; pin the
-// exact JSON keys so a rename here is caught, not discovered downstream.
 func TestUnit_FleetAPI_PresenceEntryWireShape(t *testing.T) {
 	started := time.Date(2026, 7, 21, 9, 0, 0, 0, time.UTC)
 	reader := &fakePresence{entries: []presence.Entry{{
@@ -121,8 +119,6 @@ func TestUnit_FleetAPI_PresenceListError(t *testing.T) {
 	resp, err := http.Get(srv.URL + "/fleet/presence")
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	// A reader failure is surfaced as an error status (mapped by apiframework),
-	// never a misleading 200 with an empty board.
 	require.GreaterOrEqual(t, resp.StatusCode, 400)
 	require.NotEqual(t, http.StatusOK, resp.StatusCode)
 }

@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// GET /models defines no pagination envelope, so a body carrying has_more and
-// last_id must not send the runtime after a second page.
 func TestUnit_CatalogProvider_ListModelsIgnoresUndefinedPagination(t *testing.T) {
 	calls := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +90,6 @@ func TestUnit_CatalogProvider_ListModels(t *testing.T) {
 	require.True(t, provider.CanVision(), "gpt-5 vision flows through to the provider")
 }
 
-// Base gpt-4 and *-mini reasoning models are text-only; gpt-4o/o4-mini have vision; audio models never claim it.
 func TestUnit_CatalogProvider_VisionLandmines(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

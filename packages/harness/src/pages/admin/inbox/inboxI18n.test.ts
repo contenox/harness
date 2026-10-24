@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '../../../i18n';
 
-/**
- * The inbox namespace gained new keys today (the operator-inbox merge's
- * "supervisor session ended" marker — see inboxPresentation.ts /
- * mergeOperatorInboxReports). Pin the house rule for the WHOLE namespace, not
- * just the new keys: every key ships in both languages with an identical key
- * set and no blank German strings, so a German operator never falls through
- * to English or a raw key on the inbox — the primary overnight-batch surface.
- */
 type Bundle = Record<string, Record<string, unknown>>;
 
 describe('inbox i18n — en/de parity', () => {

@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from './i18n';
 
-/**
- * The Beam Tier-1 slices add three namespaces (workspace-root picker, mission
- * inspector tabs, host terminal); the Tier-2/3 flagship slices add four more
- * (changed-files review, scope surfacing, workspace search, plan-revision feed).
- * This pins the house rule that every key ships in BOTH languages: each new
- * namespace must exist in en and de with an identical key set, so a German
- * operator never falls through to an English string (or a raw key).
- */
 const NEW_NAMESPACES = [
   'roots',
   'projects',

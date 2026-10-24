@@ -9,9 +9,6 @@ import { useProductPorts } from '../ports';
 import { subscribedAgents, subscribesToNothing } from '../lib/asks';
 import { AskList } from './AskList';
 
-/**
- * Everything waiting for this person, newest first.
- */
 export function AskInbox({ accountID }: { accountID: string }) {
   const { routes, useAskBoard, useAskSubscriptions } = useProductPorts();
   const { board, stream, isPending, error, refetch, isFetching } = useAskBoard();
@@ -22,11 +19,7 @@ export function AskInbox({ accountID }: { accountID: string }) {
   return (
 
     <ScreenBody width="narrow" padded={false}>
-      {/*
-        Said only when it is not true. A stream that is redialing is a normal
-        few seconds of a phone changing network, and a standing "live" badge
-        would be chrome on the one screen that cannot afford any.
-      */}
+
       {stream === 'reconnecting' && (
         <Small className="text-text-muted dark:text-dark-text-muted">
           Reconnecting for live updates. This list is what the relay last answered.

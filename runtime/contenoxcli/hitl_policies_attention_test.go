@@ -13,15 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_SeededPolicies_StateWhoMayAnswer pins the governance stance every
-// shipped preset takes on a unit's question — including, deliberately, the two
-// that refuse.
-//
-// It exists because this is the one setting where a silent edit changes who is
-// allowed to decide: flipping `allowAgentAnswers` on in `strict` or `acpx` would
-// let a model answer an escalation those presets exist to route to a person, and
-// nothing else in the test suite would notice. The values are asserted through
-// the REAL policy loader, so a preset that stops parsing fails here too.
 func TestUnit_SeededPolicies_StateWhoMayAnswer(t *testing.T) {
 	dir := t.TempDir()
 	for _, p := range HITLPolicyPresets {
@@ -50,9 +41,6 @@ func TestUnit_SeededPolicies_StateWhoMayAnswer(t *testing.T) {
 	}
 }
 
-// TestUnit_SeededPolicies_DeclareAttentionExplicitly guards the legibility half:
-// every preset SAYS its stance rather than inheriting the default, so an operator
-// reading one file knows the knob exists.
 func TestUnit_SeededPolicies_DeclareAttentionExplicitly(t *testing.T) {
 	for _, p := range HITLPolicyPresets {
 		var doc map[string]any

@@ -14,16 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_Discover_SurvivesControlPlaneDeny pins the regression the carveout
-// slice shipped: discovery walks the .contenox dirs, which ARE the control
-// plane, and the day the deny landed, serve boot logged "chainagents: list
-// chains in …/.contenox: path is inside the runtime control plane" and
-// declared NO chain agents — the primary fleet flow lost its agents. The fix
-// is the privileged lane (localfileservice.NewPrivileged over
-// vfs.OpenPrivilegedView): the runtime reading its OWN governing state is not
-// the threat the invariant targets. This test registers the chain root as
-// control-plane-denied and asserts discovery still declares the agent —
-// while the agent-facing guarded path keeps refusing the same directory.
 func TestUnit_Discover_SurvivesControlPlaneDeny(t *testing.T) {
 	contenoxDir := t.TempDir()
 	chain := map[string]any{
@@ -39,8 +29,6 @@ func TestUnit_Discover_SurvivesControlPlaneDeny(t *testing.T) {
 	require.NoError(t, vfs.SetControlPlaneDenied(contenoxDir))
 	t.Cleanup(func() { require.NoError(t, vfs.SetControlPlaneDenied()) })
 
-	// The agent-facing guard still refuses this directory — privilege is the
-	// internal lane, not a hole.
 	view, err := vfs.OpenView(filepath.Dir(contenoxDir))
 	require.NoError(t, err)
 	_, err = view.Resolve(filepath.Base(contenoxDir))

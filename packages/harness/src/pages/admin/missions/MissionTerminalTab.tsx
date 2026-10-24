@@ -4,19 +4,9 @@ import { TerminalView } from '../../../components/terminal/TerminalView';
 import { useHostTerminalSession } from '../../../hooks/useHostTerminalSession';
 
 export interface MissionTerminalTabProps {
-  /** Owner key for the memoized session — the mission id keeps one PTY per mission. */
   missionId: string;
 }
 
-/**
- * The mission inspector's Terminal tab body. Lazily code-split (see
- * MissionDetailPage) so xterm never enters the page's static bundle — the tab
- * pays for itself only when opened. Opens a PTY under the default workspace root
- * (the mission record carries no cwd), degrading to a graceful "unavailable"
- * state when serve does not expose the terminal feature (404), and surfacing a
- * real refusal (e.g. too many sessions) with a retry. The view itself is
- * read-only until an explicit take-over (see TerminalView).
- */
 export default function MissionTerminalTab({ missionId }: MissionTerminalTabProps) {
   const { t } = useTranslation();
   const { session, isAbsent, isLoading, error, retry } = useHostTerminalSession(missionId, {

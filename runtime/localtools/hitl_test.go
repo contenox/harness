@@ -15,8 +15,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// ── mocks ─────────────────────────────────────────────────────────────────────
-
 type mockPolicyEval struct {
 	result hitlservice.EvaluationResult
 	err    error
@@ -81,8 +79,6 @@ func alwaysApprove(_ context.Context, _ hitlservice.ApprovalRequest) (bool, erro
 func alwaysDeny(_ context.Context, _ hitlservice.ApprovalRequest) (bool, error) {
 	return false, nil
 }
-
-// ── HITLWrapper.Exec ──────────────────────────────────────────────────────────
 
 func TestUnit_HITLWrapper_Allow_PassesThrough(t *testing.T) {
 	inner := &mockInnerTools{}
@@ -182,7 +178,6 @@ func TestUnit_HITLWrapper_Approve_HumanApproves_CallsInner(t *testing.T) {
 	if res != "ok" {
 		t.Errorf("expected ok, got %v", res)
 	}
-	// inner called twice: once for read_file (diff), once for write_file (actual)
 	if len(inner.calls) < 1 || inner.calls[len(inner.calls)-1] != "write_file" {
 		t.Errorf("expected write_file as last inner call, got %v", inner.calls)
 	}
@@ -202,7 +197,6 @@ func TestUnit_HITLWrapper_Approve_HumanDenies_BlocksInner(t *testing.T) {
 	if res != localtools.DenyMessage {
 		t.Errorf("expected deny message, got %v", res)
 	}
-	// inner may have been called for read_file (diff) but not for write_file
 	for _, c := range inner.calls {
 		if c == "write_file" {
 			t.Errorf("inner must not be called for write_file on human deny, calls: %v", inner.calls)
@@ -234,7 +228,6 @@ func TestUnit_HITLWrapper_NonMapInput_ReportsAndContinues(t *testing.T) {
 	inner := &mockInnerTools{}
 	w := localtools.NewHITLWrapper(inner, alwaysApprove, allowPolicy(), nil)
 
-	// non-map input: policy evaluates with empty args, allow passes through
 	_, _, err := w.Exec(context.Background(), time.Now(),
 		"not-a-map", false,
 		&taskengine.ToolsCall{Name: "echo", ToolName: "echo"})
@@ -318,8 +311,6 @@ func TestUnit_HITLWrapper_ParentCancellation_ReturnsError(t *testing.T) {
 	}
 }
 
-// ── diff via inner tools ────────────────────────────────────────────────────────
-
 func TestUnit_HITLWrapper_DiffWriteFile_ExistingFile(t *testing.T) {
 	oldContent := "line1\nline2\nline3\n"
 	newContent := "line1\nchanged\nline3\n"
@@ -378,7 +369,6 @@ func TestUnit_HITLWrapper_DiffWriteFile_NewFile(t *testing.T) {
 				toolName = tools.Name
 			}
 			if toolName == "read_file" {
-				// Simulate file not existing.
 				return nil, taskengine.DataTypeAny, fmt.Errorf("local_fs: failed to read file: %w", os.ErrNotExist)
 			}
 			return "ok", taskengine.DataTypeString, nil
@@ -456,7 +446,6 @@ func TestUnit_HITLWrapper_DiffReadError_ApprovalStillShown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	// Diff is empty but the approval request was still sent.
 	if capturedReq.ToolsName != "local_fs" {
 		t.Errorf("approval request was not sent, got toolsName=%q", capturedReq.ToolsName)
 	}

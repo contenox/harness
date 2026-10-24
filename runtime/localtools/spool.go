@@ -1,20 +1,5 @@
 package localtools
 
-// spool.go implements Rec 4 of docs/development/blueprints/tool-hardening.md
-// ("never truncate silently") for ephemeral SHELL output: the full stdout/stderr
-// of a command whose inline result was size-capped is written to a durable spool
-// file, and the truncated inline result names that file concretely
-// ("full output: <path> (N KiB)"). File READS do not spool — the file on disk is
-// its own durable copy, so read_file names the exact resume line instead (see
-// fs.go); spooling a read would be a redundant, possibly huge copy.
-//
-// Spool location: $CONTENOX_TOOL_OUTPUT_DIR when set, else ~/.contenox-harness/tool_output
-// (the opencode `.opencode/tool_output/` pattern, rehomed under the runtime's
-// ~/.contenox-harness data root). Output is bucketed per session (or per calendar day
-// when no session id is in scope). Retention is bounded (pruneToolOutput):
-// anything older than maxSpoolAge is removed, and the newest maxSpoolFiles are
-// kept, oldest-first eviction beyond that. Both caps are documented constants.
-
 import (
 	"bytes"
 	"context"
@@ -29,27 +14,15 @@ import (
 )
 
 const (
-	// toolOutputEnvVar overrides the spool root. Useful for tests (hermetic temp
-	// dir) and for deployments whose data dir is not ~/.contenox-harness.
 	toolOutputEnvVar = "CONTENOX_TOOL_OUTPUT_DIR"
 
-	// maxSpoolFiles bounds how many spool files are retained across all buckets.
-	// Past this, the oldest are evicted before a new one is written.
 	maxSpoolFiles = 256
 
-	// maxSpoolAge bounds how long a spool file survives regardless of the count
-	// cap. A week is long enough to inspect a derailment after the fact, short
-	// enough that the directory does not grow without bound.
 	maxSpoolAge = 7 * 24 * time.Hour
 
-	// maxShellSpoolBytes caps how much of a single command's output is written to
-	// its spool file, so one runaway command cannot fill the disk. Output beyond
-	// this is dropped and the notice says so. Kept well above the typical inline
-	// budget so the spool always holds far more than the truncated inline result.
 	maxShellSpoolBytes = 8 * 1024 * 1024
 )
 
-// toolOutputRoot returns the spool root directory (not yet created).
 func toolOutputRoot() string {
 	if v := strings.TrimSpace(os.Getenv(toolOutputEnvVar)); v != "" {
 		return v
@@ -57,13 +30,9 @@ func toolOutputRoot() string {
 	if dir, err := homedir.Dir(); err == nil {
 		return filepath.Join(dir, "tool_output")
 	}
-	// Last resort: OS temp dir, so spooling never becomes a hard dependency on a
-	// resolvable home directory.
 	return filepath.Join(os.TempDir(), "contenox-tool-output")
 }
 
-// spoolBucket resolves the per-run subdirectory name: the session id when one is
-// bound (the true run boundary a dispatched unit holds), else the calendar day.
 func spoolBucket(ctx context.Context) string {
 	if sid := strings.TrimSpace(sessionIDFromContext(ctx)); sid != "" {
 		return "session-" + sanitizeBucket(sid)
@@ -71,7 +40,6 @@ func spoolBucket(ctx context.Context) string {
 	return "day-" + time.Now().UTC().Format("2006-01-02")
 }
 
-// sanitizeBucket keeps a bucket name filesystem-safe.
 func sanitizeBucket(s string) string {
 	var b strings.Builder
 	for _, r := range s {
@@ -92,14 +60,8 @@ func sanitizeBucket(s string) string {
 	return out
 }
 
-// newSpoolFile creates (and returns an open handle to) a fresh spool file for
-// `tool` under the resolved root+bucket, pruning stale files first. The returned
-// error is fatal-flavored: a spool it cannot open means the environment is
-// broken, not the model's call. Caller closes the file.
 func newSpoolFile(ctx context.Context, tool string) (*os.File, string, error) {
 	root := toolOutputRoot()
-	// Prune BEFORE creating this run's bucket, so retention (which removes empty
-	// bucket dirs) can never delete the fresh directory out from under the open.
 	pruneToolOutput(root, maxSpoolFiles, maxSpoolAge)
 	bucket := filepath.Join(root, spoolBucket(ctx))
 	if err := os.MkdirAll(bucket, 0o755); err != nil {
@@ -114,10 +76,6 @@ func newSpoolFile(ctx context.Context, tool string) (*os.File, string, error) {
 	return f, path, nil
 }
 
-// pruneToolOutput enforces the retention policy over every spool file under root:
-// remove anything older than maxAge, then evict oldest-first until at most
-// maxFiles remain, then drop any bucket directories left empty. Best-effort: any
-// individual failure is skipped, since retention must never break a live call.
 func pruneToolOutput(root string, maxFiles int, maxAge time.Duration) {
 	type spooled struct {
 		path string
@@ -161,63 +119,49 @@ func pruneToolOutput(root string, maxFiles int, maxAge time.Duration) {
 		}
 	}
 
-	// Drop now-empty bucket dirs (deepest first).
 	dirList := make([]string, 0, len(dirs))
 	for d := range dirs {
 		dirList = append(dirList, d)
 	}
 	sort.Slice(dirList, func(i, j int) bool { return len(dirList[i]) > len(dirList[j]) })
 	for _, d := range dirList {
-		_ = os.Remove(d) // removes only if empty
+		_ = os.Remove(d)
 	}
 }
 
-// spoolWriter is the io.Writer handed to a command's stdout/stderr. It:
-//   - counts every byte (total),
-//   - retains a bounded head (first headCap bytes) and tail (last tailCap bytes)
-//     for the 20%/80% inline split,
-//   - spills the FULL stream to a spool file once total exceeds the inline budget
-//     (lazily, so a small command never touches disk), up to maxShellSpoolBytes.
-//
-// It never returns a short write until the spool cap is hit, so the command runs
-// to completion and the spool captures the whole stream — the opposite of the old
-// capWriter, which stopped the command at the inline budget and lost the tail.
 type spoolWriter struct {
 	tool   string
 	ctx    context.Context
-	budget int64 // inline budget; total>budget means "truncated"
+	budget int64
 
 	total int64
 
 	head    bytes.Buffer
 	headCap int64
 
-	tail    []byte // ring: last tailCap bytes
+	tail    []byte
 	tailCap int64
 
-	pre bytes.Buffer // buffers bytes until the budget is first exceeded
+	pre bytes.Buffer
 
 	file     *os.File
 	path     string
 	spooled  int64
 	spoolCap int64
-	spoolErr error // fatal: spool unwritable / disk full
-	overCap  bool  // spool cap reached; stream stopped
+	spoolErr error
+	overCap  bool
 	spilled  bool
 }
 
-// newSpoolWriter builds a spoolWriter for the given inline budget. The head gets
-// 20% of the budget, the tail 80% — gemini-cli's finding that command errors
-// cluster at the tail.
 func newSpoolWriter(ctx context.Context, tool string, budget int64) *spoolWriter {
 	if budget < 2 {
 		budget = 2
 	}
-	head := budget / 5 // 20%
+	head := budget / 5
 	if head < 1 {
 		head = 1
 	}
-	tail := budget - head // 80%
+	tail := budget - head
 	if tail < 1 {
 		tail = 1
 	}
@@ -235,7 +179,6 @@ func (w *spoolWriter) Write(p []byte) (int, error) {
 	n := len(p)
 	w.total += int64(n)
 
-	// Head: first headCap bytes.
 	if int64(w.head.Len()) < w.headCap {
 		room := w.headCap - int64(w.head.Len())
 		if room > int64(len(p)) {
@@ -244,10 +187,8 @@ func (w *spoolWriter) Write(p []byte) (int, error) {
 		w.head.Write(p[:room])
 	}
 
-	// Tail ring: keep the last tailCap bytes.
 	w.appendTail(p)
 
-	// Spool: buffer until the budget is first exceeded, then spill everything.
 	if !w.spilled {
 		if w.total <= w.budget {
 			w.pre.Write(p)
@@ -260,8 +201,6 @@ func (w *spoolWriter) Write(p []byte) (int, error) {
 	}
 
 	if w.overCap {
-		// Stop the command: the spool cap is reached, so further output would be
-		// discarded anyway. run() treats this as a truncation, not a failure.
 		return n, io.ErrShortWrite
 	}
 	return n, nil
@@ -287,7 +226,6 @@ func (w *spoolWriter) startSpill() {
 	}
 	w.file = f
 	w.path = path
-	// Flush the pre-budget bytes first so the spool holds the whole stream.
 	w.spillBytes(w.pre.Bytes())
 	w.pre.Reset()
 }
@@ -314,9 +252,6 @@ func (w *spoolWriter) spillBytes(p []byte) {
 
 func (w *spoolWriter) truncated() bool { return w.total > w.budget }
 
-// inlineOutput returns what goes into the model-facing result field: the full
-// stream when it fit the budget (held whole in `pre`), or the 20/80 split with a
-// spool pointer when it did not.
 func (w *spoolWriter) inlineOutput() string {
 	if w.truncated() {
 		return w.splitText()
@@ -324,8 +259,6 @@ func (w *spoolWriter) inlineOutput() string {
 	return w.pre.String()
 }
 
-// close flushes and closes the spool file, returning its path (or "" if nothing
-// was spilled).
 func (w *spoolWriter) close() string {
 	if w.file != nil {
 		_ = w.file.Close()
@@ -333,8 +266,6 @@ func (w *spoolWriter) close() string {
 	return w.path
 }
 
-// discard closes and removes the spool file — used when the captured output is
-// poisoned (a backend-signalled mid-stream truncation) and must not be surfaced.
 func (w *spoolWriter) discard() {
 	if w.file != nil {
 		_ = w.file.Close()
@@ -344,8 +275,6 @@ func (w *spoolWriter) discard() {
 	}
 }
 
-// splitText renders the 20%-head/80%-tail inline view with a middle marker that
-// names the spool file, per Rec 4. Called only when truncated().
 func (w *spoolWriter) splitText() string {
 	headBytes := w.head.Bytes()
 	tailBytes := w.tail

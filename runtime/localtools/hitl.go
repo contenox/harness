@@ -1,4 +1,3 @@
-// Package localtools provides tools that fire around chain execution: approval gates and host-side helpers.
 package localtools
 
 import (
@@ -16,29 +15,14 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// approvalPending counts in-flight HITL approval prompts. Set by HITLWrapper.Exec
-// before invoking the ask callback and cleared after it returns. Read by UI
-// renderers (e.g. the CLI idle-hint suppressor) so they don't print noise while
-// the user is being asked to decide.
 var approvalPending atomic.Int32
 
-// IsApprovalPending reports whether at least one HITL approval is awaiting a
-// human response. UI layers can poll this to suppress activity indicators.
 func IsApprovalPending() bool {
 	return approvalPending.Load() > 0
 }
 
-// AskApproval is the callback the HITLWrapper calls to request human review.
-// Implementations must block until the human decides, then return (true, nil) to
-// approve or (false, nil) to deny. Returning an error propagates it to the chain.
 type AskApproval func(ctx context.Context, req hitlservice.ApprovalRequest) (bool, error)
 
-// HITLWrapper is a decorator around any ToolsRepo that intercepts configured tool
-// calls and requests human approval before delegating to the inner tools.
-//
-// Tool calls whose policy action is ActionAllow pass through instantly.
-// ActionDeny returns a soft denial string so the LLM can propose an alternative.
-// ActionApprove calls Ask and blocks until the human decides.
 type HITLWrapper struct {
 	inner     taskengine.ToolsRepo
 	ask       AskApproval
@@ -66,7 +50,6 @@ func NewHITLWrapper(inner taskengine.ToolsRepo, ask AskApproval, policy hitlserv
 
 const DenyMessage = "User denied the operation. Please ask for clarification or try a different, less destructive approach."
 
-// Exec implements taskengine.ToolsRepo.
 func (h *HITLWrapper) Exec(
 	ctx context.Context,
 	startTime time.Time,
@@ -122,16 +105,13 @@ func (h *HITLWrapper) Exec(
 		}
 		toolCallID, _ := ctx.Value(taskengine.ContextKeyToolCallID).(string)
 		req := hitlservice.ApprovalRequest{
-			ToolCallID: toolCallID,
-			ToolsName:  tools.Name,
-			ToolName:   toolName,
-			Args:       args,
-			Diff:       rendered,
-			DiffOld:    oldContent,
-			DiffNew:    newContent,
-			// Carry the policy verdict along so a durable-store implementation
-			// of AskApproval (hitlservice.RequestApproval) can record which
-			// rule gated this and how long to wait; see ApprovalRequest's doc.
+			ToolCallID:  toolCallID,
+			ToolsName:   tools.Name,
+			ToolName:    toolName,
+			Args:        args,
+			Diff:        rendered,
+			DiffOld:     oldContent,
+			DiffNew:     newContent,
 			PolicyName:  result.PolicyName,
 			MatchedRule: result.MatchedRule,
 			TimeoutS:    result.TimeoutS,
@@ -150,8 +130,6 @@ func (h *HITLWrapper) Exec(
 		approved, err := h.ask(askCtx, req)
 		approvalPending.Add(-1)
 		if err != nil {
-			// Only treat as HITL timeout when our deadline fired, not when the parent
-			// context was already cancelled (which also surfaces as DeadlineExceeded).
 			if result.TimeoutS > 0 &&
 				errors.Is(askCtx.Err(), context.DeadlineExceeded) &&
 				ctx.Err() == nil {
@@ -223,25 +201,19 @@ func boolPtr(v bool) *bool {
 	return &v
 }
 
-// Supports delegates to the inner repo.
 func (h *HITLWrapper) Supports(ctx context.Context) ([]string, error) {
 	return h.inner.Supports(ctx)
 }
 
-// GetSchemasForSupportedTools delegates to the inner repo.
 func (h *HITLWrapper) GetSchemasForSupportedTools(ctx context.Context) (map[string]*openapi3.T, error) {
 	return h.inner.GetSchemasForSupportedTools(ctx)
 }
 
-// GetToolsForToolsByName delegates to the inner repo.
 func (h *HITLWrapper) GetToolsForToolsByName(ctx context.Context, name string) ([]taskengine.Tool, error) {
 	return h.inner.GetToolsForToolsByName(ctx, name)
 }
 
-// Compile-time assertion.
 var _ taskengine.ToolsRepo = (*HITLWrapper)(nil)
-
-// ─── diff helpers ─────────────────────────────────────────────────────────────
 
 func (h *HITLWrapper) buildDiff(ctx context.Context, tools *taskengine.ToolsCall, toolName string, args map[string]any) (string, string, error) {
 	switch {
@@ -274,9 +246,6 @@ func (h *HITLWrapper) buildDiff(ctx context.Context, tools *taskengine.ToolsCall
 	return "", "", nil
 }
 
-// readViaTools calls the inner tools's read_file tool so path resolution,
-// symlink checks, and sandbox enforcement are handled by the tools itself.
-// Returns ("", nil) when the file does not yet exist.
 func (h *HITLWrapper) readViaTools(ctx context.Context, tools *taskengine.ToolsCall, path string) (string, error) {
 	readCall := &taskengine.ToolsCall{Name: tools.Name, ToolName: "read_file"}
 	result, _, err := h.inner.Exec(ctx, time.Now(), map[string]any{"path": path}, false, readCall)
@@ -290,8 +259,6 @@ func (h *HITLWrapper) readViaTools(ctx context.Context, tools *taskengine.ToolsC
 	return s, nil
 }
 
-// ─── LCS unified diff ─────────────────────────────────────────────────────────
-
 const (
 	diffMaxFileLines   = 500
 	diffContext        = 3
@@ -299,12 +266,10 @@ const (
 )
 
 type editOp struct {
-	kind byte // ' ' unchanged, '+' added, '-' removed
+	kind byte
 	text string
 }
 
-// lcsEditScript returns the minimal edit script between old and new using a
-// standard LCS backtrack. O(m×n) time and space — callers cap inputs first.
 func lcsEditScript(old, new []string) []editOp {
 	m, n := len(old), len(new)
 	dp := make([][]int, m+1)
@@ -356,9 +321,6 @@ func splitLines(s string) []string {
 	return lines
 }
 
-// unifiedDiff returns a unified-diff style summary of oldStr→newStr with ±3
-// context lines around each changed hunk. Uses LCS so insertions and deletions
-// at any position produce correct output.
 func unifiedDiff(filename, oldStr, newStr string) string {
 	if oldStr == newStr {
 		return "(no changes)"
@@ -379,7 +341,6 @@ func unifiedDiff(filename, oldStr, newStr string) string {
 
 	ops := lcsEditScript(oldLines, newLines)
 
-	// Mark which ops to include: changed lines and their ±context neighbours.
 	include := make([]bool, len(ops))
 	for i, op := range ops {
 		if op.kind != ' ' {
@@ -414,7 +375,6 @@ func unifiedDiff(filename, oldStr, newStr string) string {
 
 	for i, op := range ops {
 		if !include[i] {
-			// Gaps between hunks: op.kind is always ' ' here by construction.
 			flushHunk()
 			oldN++
 			newN++

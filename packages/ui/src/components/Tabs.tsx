@@ -18,16 +18,10 @@ export interface TabsProps<T extends string = string> {
   tabs: readonly Tab<T>[];
   activeTab: T;
   onTabChange: (tabId: T) => void;
-  /**
-   * Called when a `closable` tab's ✕ is activated.
-   */
   onClose?: (tabId: T) => void;
   className?: string;
 }
 
-/**
- * Modern, accessible Tabs component - Keyboard navigation (← → Home End) - Uses TabTrigger for styling - Optional per-tab close ✕ (`closable` + `onClose`), rendered as its own button beside the trigger (a real sibling, not a nested <button>) so it can stop propagation and close without switching tabs.
- */
 export function Tabs<T extends string = string>({
   tabs,
   activeTab,

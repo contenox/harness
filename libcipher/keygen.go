@@ -14,7 +14,6 @@ func (e KeyGenerationError) Error() string {
 	return "libcipher/cipher: " + (string)(e)
 }
 
-// GenerateKey generates a cryptographically random key with the specified length.
 func GenerateKey(keyLength int) (string, error) {
 	if keyLength <= 0 {
 		return "", KeyGenerationError("key length must be positive")

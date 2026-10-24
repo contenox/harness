@@ -8,32 +8,16 @@ import {
 } from '../../lib/workspaceRoots';
 
 export interface WorkspaceBoundaryNoticeProps {
-  /** The listing error message from the `/files` fetch. */
   message: string;
-  /** The allowlisted roots, to name what IS permitted; empty is fine. */
   roots: readonly WorkspaceRoot[];
   onRetry: () => void;
 }
 
-/**
- * The file explorer's error surface, redesigned per the component roadmap: when
- * the failure is the workspace-root refusal (a path outside the allowlist), it
- * replaces the raw 422 wire string with a legible statement of the boundary —
- * "this folder is outside the permitted roots" plus the roots that ARE allowed
- * — so an operator learns the boundary instead of decoding an error. Any other
- * error keeps the plain retry notice. Detection is a pure string match
- * (isWorkspaceRootRefusal) so it needs no status code from the fetch layer.
- */
 export function WorkspaceBoundaryNotice({ message, roots, onRetry }: WorkspaceBoundaryNoticeProps) {
   const { t } = useTranslation();
   const refused = isWorkspaceRootRefusal(message);
 
   if (!refused) {
-    // Unrecognized error: never clip it to a one-line sliver in the narrow
-    // sidebar. Wrap (breaking mid-token for long paths/URLs), cap the height so
-    // a pathological wire string can't eat the panel, and stack the retry button
-    // below so it doesn't fight the text on any width. Full text stays available
-    // via the title tooltip.
     return (
       <InlineNotice variant="error" className="mb-2">
         <div className="flex flex-col gap-2">

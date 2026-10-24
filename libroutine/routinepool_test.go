@@ -44,7 +44,6 @@ func TestUnit_GroupAffinityStartLoop(t *testing.T) {
 			},
 		})
 
-		// Allow some time for the loop to execute.
 		time.Sleep(25 * time.Millisecond)
 
 		mu.Lock()
@@ -53,7 +52,6 @@ func TestUnit_GroupAffinityStartLoop(t *testing.T) {
 		}
 		mu.Unlock()
 
-		// Verify loop tracking using the public accessor.
 		if !group.IsLoopActive(key) {
 			t.Error("Loop should be tracked as active")
 		}
@@ -64,7 +62,6 @@ func TestUnit_GroupAffinityStartLoop(t *testing.T) {
 		var callCount int
 		var mu sync.Mutex
 
-		// Start first loop.
 		group.StartLoop(ctx, &libroutine.LoopConfig{
 			Key:          key,
 			Threshold:    1,
@@ -78,7 +75,6 @@ func TestUnit_GroupAffinityStartLoop(t *testing.T) {
 			},
 		})
 
-		// Try to start duplicate loop.
 		group.StartLoop(ctx, &libroutine.LoopConfig{
 			Key:          key,
 			Threshold:    1,
@@ -98,8 +94,7 @@ func TestUnit_GroupAffinityStartLoop(t *testing.T) {
 		if callCount < 1 {
 			t.Errorf("Expected at least 1 call, got %d", callCount)
 		}
-		// We expect only 1 instance running, so call count should be reasonable
-		if callCount > 3 { // Allow some margin for timing variations
+		if callCount > 3 {
 			t.Errorf("Expected approximately 2-3 calls, got %d (too many, duplicate loop might be running)", callCount)
 		}
 		mu.Unlock()
@@ -122,8 +117,7 @@ func TestUnit_GroupAffinityStartLoop(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		localCancel()
 
-		// Wait for cleanup.
-		time.Sleep(50 * time.Millisecond) // Increased to ensure cleanup completes
+		time.Sleep(50 * time.Millisecond)
 
 		if group.IsLoopActive(key) {
 			t.Error("Loop should be removed from active tracking")
@@ -161,8 +155,7 @@ func TestUnit_GroupAffinityStartLoop(t *testing.T) {
 		if callCount < 1 {
 			t.Errorf("Expected at least 1 call, got %d", callCount)
 		}
-		// We expect only one instance running, so call count should be reasonable
-		if callCount > 6 { // Allow some margin but not excessive
+		if callCount > 6 {
 			t.Errorf("Expected approximately 5-6 calls, got %d (too many, concurrency issue)", callCount)
 		}
 		mu.Unlock()
@@ -182,7 +175,6 @@ func TestUnit_GroupAffinityCircuitBreaking(t *testing.T) {
 		var failures int
 		var mu sync.Mutex
 
-		// Use a function that always fails to ensure circuit stays open
 		group.StartLoop(ctx, &libroutine.LoopConfig{
 			Key:          key,
 			Threshold:    failureThreshold,
@@ -196,7 +188,6 @@ func TestUnit_GroupAffinityCircuitBreaking(t *testing.T) {
 			},
 		})
 
-		// Wait for failures to accumulate and circuit to open
 		time.Sleep(50 * time.Millisecond)
 
 		manager := group.GetManager(key)
@@ -204,12 +195,10 @@ func TestUnit_GroupAffinityCircuitBreaking(t *testing.T) {
 			t.Fatal("Manager not created")
 		}
 
-		// Check if circuit is open
 		if manager.GetState() != libroutine.Open {
 			t.Errorf("Expected circuit to be open after failures, got state %v", manager.GetState())
 		}
 
-		// After reset window, a probe Execute may run (HalfOpen is transient — GetState often shows Open before/after).
 		time.Sleep(resetTimeout)
 		err := manager.Execute(ctx, func(ctx context.Context) error {
 			return fmt.Errorf("simulated failure")
@@ -226,14 +215,13 @@ func TestUnit_GroupAffinityCircuitBreaking(t *testing.T) {
 func TestUnit_GroupAffinityParameterPersistence(t *testing.T) {
 	defer quiet()
 	group := libroutine.GetGroup()
-	ctx := context.Background() // Using Background instead of t.Context() for compatibility
+	ctx := context.Background()
 
 	t.Run("should persist initial parameters", func(t *testing.T) {
 		key := "param-persistence-test"
 		initialThreshold := 2
 		initialTimeout := 100 * time.Millisecond
 
-		// First call with initial parameters.
 		group.StartLoop(ctx, &libroutine.LoopConfig{
 			Key:          key,
 			Threshold:    initialThreshold,
@@ -244,7 +232,6 @@ func TestUnit_GroupAffinityParameterPersistence(t *testing.T) {
 			},
 		})
 
-		// Subsequent call with different parameters.
 		group.StartLoop(ctx, &libroutine.LoopConfig{
 			Key:          key,
 			Threshold:    5,
@@ -269,7 +256,6 @@ func TestUnit_GroupAffinityParameterPersistence(t *testing.T) {
 	})
 }
 
-// TestUnit_GroupAffinityResetRoutine verifies we can reset the circuit breaker state
 func TestUnit_GroupAffinityResetRoutine(t *testing.T) {
 	defer quiet()
 	group := libroutine.GetGroup()
@@ -281,7 +267,6 @@ func TestUnit_GroupAffinityResetRoutine(t *testing.T) {
 		var mu sync.Mutex
 		failureOccurred := make(chan bool, 1)
 
-		// Start a loop that fails once then succeeds
 		group.StartLoop(ctx, &libroutine.LoopConfig{
 			Key:          key,
 			Threshold:    1,
@@ -293,7 +278,6 @@ func TestUnit_GroupAffinityResetRoutine(t *testing.T) {
 				currentCount := runCount
 				mu.Unlock()
 
-				// Fail only on first execution
 				if currentCount == 1 {
 					select {
 					case failureOccurred <- true:
@@ -316,7 +300,6 @@ func TestUnit_GroupAffinityResetRoutine(t *testing.T) {
 			t.Fatalf("Expected circuit to be open after failure, got %v", manager.GetState())
 		}
 
-		// Background loop fails once then succeeds — eventually Closed (HalfOpen is not observable here).
 		for range 50000 {
 			if manager.GetState() == libroutine.Closed {
 				return

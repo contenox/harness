@@ -14,8 +14,6 @@ import (
 	"github.com/contenox/harness/runtime/runtimetypes"
 )
 
-// missionGatingMux builds the product mux the way serve does, with or without the
-// mission service dependency.
 func missionGatingMux(t *testing.T, withMissions bool) *http.ServeMux {
 	t.Helper()
 	ctx := context.Background()
@@ -41,8 +39,6 @@ func missionGatingMux(t *testing.T, withMissions bool) *http.ServeMux {
 	return mux
 }
 
-// TestServe_MissionRoutesGatedOnMissions proves /missions is registered only when
-// serve passes its mission service, mirroring the other nil-gated route groups.
 func TestServe_MissionRoutesGatedOnMissions(t *testing.T) {
 	withMissions := missionGatingMux(t, true)
 	rr := httptest.NewRecorder()

@@ -175,10 +175,6 @@ func TestGetCLIConfigReturnsFullSnapshot(t *testing.T) {
 	require.Equal(t, "true", got.UpdateCheck)
 }
 
-// TestPutCLIConfigAcceptsMissionDefaults pins the wire names of the mission pair
-// (kebab-case in, camelCase out) and that either key ALONE satisfies the
-// "provide at least one key" guard — the settings page saves this section on its
-// own, without resending the model defaults.
 func TestPutCLIConfigAcceptsMissionDefaults(t *testing.T) {
 	svc := &fakeStateService{
 		setSnapshot: stateservice.CLIConfigSnapshot{

@@ -7,15 +7,8 @@ import (
 	"strings"
 )
 
-// ErrStreamTruncated means a stream ended without a finish reason and without
-// the provider's end-of-stream marker, so the assembled turn is a prefix of what
-// the model was producing.
 var ErrStreamTruncated = errors.New("stream ended before the provider's terminal marker")
 
-// StreamAssembler is the one place streamed deltas become a completed response;
-// providers must never assemble their own streams. Fragments group by
-// ToolCallDelta.Index, and a conflicting second value for ID, Type or Name of
-// one index is a hard error.
 type StreamAssembler struct {
 	providerType string
 	modelName    string
@@ -37,27 +30,17 @@ type streamToolAcc struct {
 	providerMeta map[string]string
 }
 
-// StreamResult is the assembled outcome of one stream.
 type StreamResult struct {
 	Continuation *Continuation
 	Content      string
 	Thinking     string
 	ToolCalls    []ToolCall
-	// FinishReason is the provider's verbatim finish reason from the Terminal
-	// parcel, including length/content_filter class values.
 	FinishReason string
-	// Refusal is the provider's own refusal detail when the finish reason is a
-	// refusal; the provider turns a terminal that carries one into ErrRefused.
-	Refusal string
-	// StopSequence is the caller's stop sequence the model matched.
+	Refusal      string
 	StopSequence string
-	// Usage merges mid-stream Usage parcels with the Terminal usage; nil
-	// when the provider reported none.
-	Usage *TokenUsage
+	Usage        *TokenUsage
 }
 
-// NewStreamAssembler returns an assembler whose errors name the provider and
-// model, so a contract violation is attributable without a debugger.
 func NewStreamAssembler(providerType, modelName string) *StreamAssembler {
 	return &StreamAssembler{
 		providerType: providerType,
@@ -71,8 +54,6 @@ func (a *StreamAssembler) violation(format string, args ...any) error {
 		append([]any{a.providerType, a.modelName}, args...)...)
 }
 
-// Consume folds one parcel into the assembly. The first error — a provider
-// Error parcel or a contract violation — is sticky and re-returned.
 func (a *StreamAssembler) Consume(p *StreamParcel) error {
 	if a.err != nil {
 		return a.err
@@ -150,13 +131,6 @@ func (a *StreamAssembler) mergeUsage(u TokenUsage) {
 	a.usage.Merge(&u)
 }
 
-// Result finalizes the assembly. It fails when the stream errored, when a
-// fragment group is unusable (no name), when the stream ended without a
-// Terminal parcel, and when that terminal carried neither the provider's finish
-// reason nor its end-of-stream marker. A turn that reports a finish reason is
-// complete whatever the transport did afterwards — length and content_filter
-// are completed turns the caller acts on — while a connection that simply
-// stopped is reported as truncation rather than as an empty successful answer.
 func (a *StreamAssembler) Result() (StreamResult, error) {
 	if a.err != nil {
 		return StreamResult{}, a.err

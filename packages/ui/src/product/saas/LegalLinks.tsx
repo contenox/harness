@@ -1,9 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useProductPorts } from '../ports';
 
-/**
- * § 5 DDG requires the imprint to be reachable from every page, so this sits in the shell and on every signed-out screen rather than behind the account menu.
- */
 export function LegalLinks() {
   const { routes } = useProductPorts();
   const links = [

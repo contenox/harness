@@ -80,9 +80,6 @@ func (c *vertexChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 					Arguments: string(argsJSON),
 				},
 			}
-			// A signature belongs to the part the API returned it on: the
-			// first of a parallel group carries one and the rest carry none, so
-			// one call's signature is never replayed as another's.
 			if p.ThoughtSignature != "" {
 				tc.ProviderMeta = map[string]string{thoughtSignatureMetaKey: p.ThoughtSignature}
 			}
@@ -91,10 +88,6 @@ func (c *vertexChatClient) Chat(ctx context.Context, messages []modelrepo.Messag
 	}
 
 	if outText == "" && len(toolCalls) == 0 {
-		// A turn that carries only thoughts or a thought signature is a legal
-		// end-of-turn the vendor documents, so it is reported as one; a broken
-		// tool-call turn is not, because reported as success it lands in
-		// history as a completed reply and the caller's retry never fires.
 		if cand.FinishReason == "MALFORMED_FUNCTION_CALL" {
 			err := fmt.Errorf("empty content from Vertex AI model %s: finish reason (%s)", c.modelName, cand.FinishReason)
 			reportErr(err)

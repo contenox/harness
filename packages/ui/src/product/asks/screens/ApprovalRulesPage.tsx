@@ -32,9 +32,6 @@ const FIELDS = ['agent_name', 'approvals_required', 'approver_role'] as const;
 
 const INHERIT = 'inherit';
 
-/**
- * How many people an agent's asks need, and which role counts as a person.
- */
 export default function ApprovalRulesPage() {
   const { routes, useApprovalRules, useAskBoard, useAskSubscriptions, useAuth, useConsumers } =
     useProductPorts();
@@ -91,9 +88,7 @@ export default function ApprovalRulesPage() {
               ) : (
                 agents.map(agent => <AgentRuleForm key={agent} agent={agent} set={set} />)
               )}
-              {/* Said once, under the list, because it is a property of every
-                  row above rather than of any one of them. The relay's rule is
-                  keyed (account, agent name) and carries no machine. */}
+
               <InlineNotice variant="info">
                 A rule names an agent, not a machine — it covers that name on every machine this
                 team owns.
@@ -123,10 +118,7 @@ function DefaultRuleForm({ set }: { set: RuleSet }) {
       inherit={null}
       note={
         <Small className="text-text-muted dark:text-dark-text-muted">
-          {/* NOT [ruleSourceSentence]. Its `default` arm says "inherited from
-              the team default", which is the sentence a per-agent row needs and
-              a nonsense on the default itself — the two contexts read the same
-              `source` value and mean opposite things by it. */}
+
           {rule.source === 'built-in'
             ? 'Nothing is set, so the built-in rule applies. '
             : 'This is what an agent needs unless it has a rule of its own. '}

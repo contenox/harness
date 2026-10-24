@@ -59,9 +59,6 @@ func TestUnit_GoogleCatalog_ListModels(t *testing.T) {
 	require.Equal(t, "gemini-2.5-pro", pro.Name)
 	require.True(t, pro.CanChat)
 	require.False(t, pro.CanEmbed)
-	// The publisher list publishes no capability metadata, so thinking is
-	// declared from the vendor's own page for the family: Gemini 2.5 Pro takes
-	// a caller-set thinking budget and cannot turn thinking off.
 	require.True(t, pro.CanThink)
 	require.NotNil(t, pro.ThinkingTypes)
 	require.True(t, pro.ThinkingTypes.Enabled)
@@ -79,7 +76,6 @@ func TestUnit_GoogleCatalog_ListModels(t *testing.T) {
 	require.Equal(t, 0, provider.GetContextLength())
 }
 
-// bearerInjectTransport provides a fake bearer token and redirects to the test server.
 type bearerInjectTransport struct {
 	inner     http.RoundTripper
 	serverURL string

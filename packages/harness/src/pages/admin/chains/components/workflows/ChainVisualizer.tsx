@@ -93,9 +93,6 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
     composeConfig?: BranchCompose;
   } | null>(null);
 
-  // Lint diagnostics — recomputed when the chain changes. Pure function so
-  // there's no async / loading state to manage. Surfaces as per-node badges
-  // (via metadata.diagnostics) plus a chain-level summary above the canvas.
   const diagnostics = useMemo(() => lintChain(chain), [chain]);
   const diagnosticsByTaskId = useMemo(() => diagnosticsByTask(diagnostics), [diagnostics]);
   const counts = useMemo(() => diagnosticCounts(diagnostics), [diagnostics]);
@@ -108,14 +105,9 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
     return () => media.removeEventListener('change', handleChange);
   }, []);
 
-  // NODES - including virtual end nodes
   const { nodes, endNodeMappings } = useMemo(() => {
     const taskNodes = chain.tasks.map(task => {
       const taskDiagnostics: Diagnostic[] = diagnosticsByTaskId.get(task.id) ?? [];
-      // Diagnostic severity wins over the structural status from statusFor:
-      // a missing local_shell allowlist is more useful to surface than
-      // "task has on_failure handler". WorkflowNode renders this as the
-      // node's stroke color (warning = orange).
       const worstSeverity: 'default' | 'success' | 'error' | 'warning' = taskDiagnostics.find(
         d => d.severity === 'warning',
       )
@@ -133,7 +125,6 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
       };
     });
 
-    // Create virtual end nodes and track mappings
     const endNodeMappings: Record<string, string> = {};
     const endNodes: Array<{
       id: string;
@@ -161,7 +152,6 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
     return { nodes: [...taskNodes, ...endNodes], endNodeMappings };
   }, [chain.tasks]);
 
-  // EDGES (including edges to end nodes)
   const calcEdges = useMemo(() => {
     const edges: Array<{
       from: string;
@@ -172,7 +162,6 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
     }> = [];
 
     chain.tasks.forEach(task => {
-      // Add failure edge if it exists and doesn't go to "end"
       if (task.transition.on_failure && task.transition.on_failure !== 'end') {
         edges.push({
           from: task.id,
@@ -183,12 +172,10 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
         });
       }
 
-      // Add all branch edges including those to "end"
       task.transition.branches.forEach(branch => {
         if (branch.goto) {
           let targetId = branch.goto;
 
-          // For transitions to "end", use the virtual end node
           if (branch.goto === 'end' && endNodeMappings[task.id]) {
             targetId = endNodeMappings[task.id];
           }
@@ -234,7 +221,7 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
   };
 
   const handleNodeSelect = (nodeId: string) => {
-    if (nodeId.startsWith('end-')) return; // ignore virtual end nodes
+    if (nodeId.startsWith('end-')) return;
     const task = chain.tasks.find(t => t.id === nodeId);
     if (task) onTaskSelect(task);
   };
@@ -309,13 +296,9 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
 
   return (
     <div className="flex h-full min-h-0">
-      {/* MAIN CANVAS */}
+
       <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
-        {/*
-         * Lint summary above the canvas — soft signal only. Hidden when the
-         * chain is clean. Click an item to focus the offending task in the
-         * graph (selection drives the right-side TaskForm).
-         */}
+
         {diagnostics.length > 0 && (
           <div className="border-surface-300 dark:border-dark-surface-400 bg-surface-100 dark:bg-dark-surface-200 shrink-0 border-b px-3 py-2">
             <div className="mb-1 flex items-center gap-3 text-xs">
@@ -374,12 +357,12 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
             contentBounds={contentBounds}
             initialZoom={1}
             scrollOnOverflow={useScrollCanvas}>
-            {/* EDGES */}
+
             {edges.map((e, i) => {
               const src = nodePositions[e.from];
               const dst = nodePositions[e.to];
               if (!src || !dst) return null;
-              if (e.to === 'end') return null; // skip literal 'end' edges
+              if (e.to === 'end') return null;
 
               const sourceTask = chain.tasks.find(task => task.id === e.from);
               const actualTargetId = e.to.startsWith('end-') ? 'end' : e.to;
@@ -399,13 +382,13 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
                     addButtonPositions={filteredAddButtons.map(b => ({ x: b.x, y: b.y }))}
                     hasCompose={hasCompose}
                     composeStrategy={composeStrategy}
-                    onComposeClick={() => handleComposeEdit(e.from, e.to)} // click label → open compose
+                    onComposeClick={() => handleComposeEdit(e.from, e.to)}
                   />
                 </g>
               );
             })}
 
-            {/* "+" ADD BUTTONS */}
+
             {onAddTask &&
               filteredAddButtons.map((b, i) => (
                 <AddNodeButton
@@ -416,7 +399,7 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
                 />
               ))}
 
-            {/* NODES (incl. virtual end nodes) */}
+
             {nodes.map(n => {
               const pos = nodePositions[n.id];
               if (!pos) return null;
@@ -453,7 +436,7 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
         )}
       </div>
 
-      {/* SIDE PANEL */}
+
       {(showChainConfig || editingTask || selectedTask || editingCompose) && (
         <div className="bg-surface-50/95 dark:bg-dark-surface-50/95 border-surface-300 dark:border-dark-surface-400 md:backdrop-blur-0 absolute inset-0 z-30 flex min-h-0 flex-col overflow-hidden border-l shadow-xl backdrop-blur-sm md:relative md:inset-auto md:z-auto md:w-[420px] md:min-w-[420px] md:shadow-none">
           {showChainConfig && (
@@ -637,7 +620,7 @@ const ChainVisualizer: React.FC<ChainVisualizerProps> = ({
         </div>
       )}
 
-      {/* CONFIG BUTTON */}
+
       {!showChainConfig && !editingTask && !editingCompose && (
         <div className="absolute right-6 bottom-6">
           <Button

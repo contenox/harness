@@ -11,15 +11,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// jobScanner is the common Scan surface of *sql.Row and *sql.Rows.
 type jobScanner interface {
 	Scan(dest ...any) error
 }
 
-// scanJob reads one job row. The payload column is scanned as bytes and then
-// wrapped: drivers disagree on whether a TEXT value arrives as string (modernc
-// sqlite) or []byte (lib/pq), and scanning straight into json.RawMessage only
-// accepts the latter.
 func scanJob(row jobScanner) (*Job, error) {
 	var job Job
 	var payload []byte
@@ -30,7 +25,6 @@ func scanJob(row jobScanner) (*Job, error) {
 	return &job, nil
 }
 
-// AppendJobs inserts a list of jobs into the job_queue table.
 func (s *store) AppendJob(ctx context.Context, job Job) error {
 	if job.ID == "" {
 		job.ID = uuid.New().String()
@@ -66,7 +60,6 @@ func (s *store) AppendJobs(ctx context.Context, jobs ...*Job) error {
 	for i, job := range jobs {
 		job.CreatedAt = now
 
-		// Build placeholders like ($1, $2, ..., $7)
 		startIdx := i*7 + 1
 		placeholders := make([]string, 7)
 		for j := 0; j < 7; j++ {
@@ -74,7 +67,6 @@ func (s *store) AppendJobs(ctx context.Context, jobs ...*Job) error {
 		}
 		valueStrings = append(valueStrings, "("+strings.Join(placeholders, ", ")+")")
 
-		// Append values in the same order as columns
 		valueArgs = append(valueArgs,
 			job.ID,
 			job.TaskType,
@@ -97,7 +89,6 @@ func (s *store) AppendJobs(ctx context.Context, jobs ...*Job) error {
 	return err
 }
 
-// PopAllJobs removes and returns every job in the job_queue.
 func (s *store) PopAllJobs(ctx context.Context) ([]*Job, error) {
 	query := `
 	DELETE FROM job_queue_v2
@@ -120,7 +111,6 @@ func (s *store) PopAllJobs(ctx context.Context) ([]*Job, error) {
 	return jobs, nil
 }
 
-// PopJobsForType removes and returns all jobs matching a specific task type.
 func (s *store) PopJobsForType(ctx context.Context, taskType string) ([]*Job, error) {
 	query := `
 	DELETE FROM job_queue_v2

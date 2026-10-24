@@ -18,17 +18,15 @@ func newFindMux(t *testing.T, root string) *http.ServeMux {
 	factory, err := vfs.NewFactory(root)
 	require.NoError(t, err)
 	mux := http.NewServeMux()
-	AddWorkspaceFindRoutes(mux, factory, nil) // nil hitlFor: agent filter unavailable
+	AddWorkspaceFindRoutes(mux, factory, nil)
 	return mux
 }
 
-// findFrame is one parsed SSE frame from the find stream.
 type findFrame struct {
 	event string
 	data  string
 }
 
-// parseFindStream splits an SSE response body into (match entries, done frame).
 func parseFindStream(t *testing.T, body string) ([]Entry, *findDone) {
 	t.Helper()
 	var matches []Entry
@@ -104,7 +102,7 @@ func TestUnit_Find_MissingGlobRefused(t *testing.T) {
 
 func TestUnit_Find_BadGlobRefused(t *testing.T) {
 	mux := newFindMux(t, t.TempDir())
-	req := httptest.NewRequest(http.MethodGet, "/workspace/find?glob=%5B", nil) // "["
+	req := httptest.NewRequest(http.MethodGet, "/workspace/find?glob=%5B", nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusUnprocessableEntity, rec.Code, "a malformed pattern is refused pre-stream")
@@ -123,7 +121,7 @@ func TestUnit_Find_DisallowedRootRefused(t *testing.T) {
 func TestUnit_Find_AgentFilterUnavailableWithoutHITL(t *testing.T) {
 	root := t.TempDir()
 	seedFindTree(t, root)
-	mux := newFindMux(t, root) // registered with nil hitlFor
+	mux := newFindMux(t, root)
 	req := httptest.NewRequest(http.MethodGet, "/workspace/find?glob=*.md&filter=agent", nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -147,9 +145,6 @@ func TestUnit_Find_LimitTruncates(t *testing.T) {
 	require.True(t, done.Truncated)
 }
 
-// TestUnit_Find_ExcludesControlPlaneRecursion mirrors the search control-plane
-// test: a denied dir can never BE the root (the Factory refuses it), but the walk
-// recurses, so the per-node re-resolution in localfileservice.Find must prune it.
 func TestUnit_Find_ExcludesControlPlaneRecursion(t *testing.T) {
 	root := t.TempDir()
 	cpDir := filepath.Join(root, "cp")

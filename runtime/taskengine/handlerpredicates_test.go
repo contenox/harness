@@ -15,7 +15,6 @@ var allHandlers = []TaskHandler{
 	HandleTools,
 }
 
-// TestUnit_IsAssistantProseHandler_CoversEveryHandler pins which handlers' streamed chunks are user-visible assistant narration (only chat_completion).
 func TestUnit_IsAssistantProseHandler_CoversEveryHandler(t *testing.T) {
 	prose := map[TaskHandler]bool{
 		HandleChatCompletion: true,
@@ -29,7 +28,6 @@ func TestUnit_IsAssistantProseHandler_CoversEveryHandler(t *testing.T) {
 	require.False(t, IsAssistantProseHandler(""))
 }
 
-// TestUnit_IsToolBearingHandler_CoversEveryHandler pins which handlers already report their own work through tool-call events, suppressing the generic step-lifecycle card for them.
 func TestUnit_IsToolBearingHandler_CoversEveryHandler(t *testing.T) {
 	toolBearing := map[TaskHandler]bool{
 		HandleChatCompletion:   true,

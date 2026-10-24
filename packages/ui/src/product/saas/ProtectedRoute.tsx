@@ -9,9 +9,6 @@ import { useProductPorts } from '../ports';
 import { TextField } from '../../components/forms/Fields';
 import { ScreenError, ScreenLoading } from './ScreenState';
 
-/**
- * The gate.
- */
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { routes, useAuth } = useProductPorts();
   const { user, accountID, isLoading } = useAuth();

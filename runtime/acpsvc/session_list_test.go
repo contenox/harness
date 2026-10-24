@@ -9,10 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_ParseDBTime_SQLiteDriverFormat pins the layout the sqlite driver
-// actually stores for a bound time.Time (Go's time.Time.String() output).
-// Before this layout was handled, every session/list row lost its updatedAt
-// and the sidebar sort silently collapsed to random-UUID order.
 func TestUnit_ParseDBTime_SQLiteDriverFormat(t *testing.T) {
 	for _, tc := range []struct {
 		in   string
@@ -45,16 +41,13 @@ func listRow(id string, at string) sessionListRow {
 	return r
 }
 
-// TestUnit_SessionListOrder_FreshestFirst pins the roster order: most recent
-// activity first, never-messaged sessions after all sessions with activity,
-// ties broken deterministically.
 func TestUnit_SessionListOrder_FreshestFirst(t *testing.T) {
 	rows := []sessionListRow{
 		listRow("aaa", ""),
 		listRow("bbb", "2026-07-16T05:00:00Z"),
 		listRow("ccc", "2026-07-16T12:00:00Z"),
 		listRow("ddd", "2026-07-15T22:00:00Z"),
-		listRow("eee", "2026-07-16T12:00:00Z"), // tie with ccc
+		listRow("eee", "2026-07-16T12:00:00Z"),
 		listRow("fff", ""),
 	}
 	sort.Slice(rows, func(i, j int) bool { return sessionListRowLess(rows[i], rows[j]) })
@@ -63,14 +56,9 @@ func TestUnit_SessionListOrder_FreshestFirst(t *testing.T) {
 	for _, r := range rows {
 		order = append(order, r.internalID)
 	}
-	// eee before ccc on the id tie-break (descending); no-time rows last,
-	// also id-descending.
 	assert.Equal(t, []string{"eee", "ccc", "bbb", "ddd", "fff", "aaa"}, order)
 }
 
-// TestUnit_SessionListCursor_ResumesWithoutSkipOrDup walks a sorted roster
-// page by page through the cursor codec and requires every row to appear
-// exactly once, including when the boundary row vanished between pages.
 func TestUnit_SessionListCursor_ResumesWithoutSkipOrDup(t *testing.T) {
 	rows := []sessionListRow{
 		listRow("eee", "2026-07-16T12:00:00Z"),
@@ -103,8 +91,7 @@ func TestUnit_SessionListCursor_ResumesWithoutSkipOrDup(t *testing.T) {
 	}
 	assert.Equal(t, []string{"eee", "ccc", "bbb", "ddd", "fff", "aaa"}, seen)
 
-	// A boundary row deleted between pages must not skip its successors.
-	cursor = listSessionsCursor(rows[1]) // ccc
+	cursor = listSessionsCursor(rows[1])
 	remaining := append(append([]sessionListRow{}, rows[:1]...), rows[2:]...)
 	resume := listSessionsResume(remaining, cursor)
 	require.Less(t, resume, len(remaining))

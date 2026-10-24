@@ -14,7 +14,6 @@ type nextEditClient struct {
 	format string
 }
 
-// GetNextEditConnection binds the explicit edit profile to the OpenAI-compatible completion endpoint.
 func (p *OpenAIProvider) GetNextEditConnection(_ context.Context, backend string) (modelrepo.LLMNextEditClient, error) {
 	if !p.CanNextEdit() {
 		return nil, modelrepo.ErrNextEditUnsupported
@@ -22,7 +21,6 @@ func (p *OpenAIProvider) GetNextEditConnection(_ context.Context, backend string
 	return &nextEditClient{openAIClient: openAIClient{baseURL: backend, httpClient: p.httpClient, modelName: p.modelName, maxOutputTokens: p.maxOutputTokens, apiKey: p.apiKey, tracker: p.tracker}, format: p.nextEditFormat}, nil
 }
 
-// NextEdit executes the profile's raw completion prompt and validates its replacements.
 func (p *nextEditClient) NextEdit(ctx context.Context, input modelrepo.NextEditRequest) (modelrepo.NextEditResult, error) {
 	if err := input.Validate(); err != nil {
 		return modelrepo.NextEditResult{}, err

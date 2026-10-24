@@ -13,9 +13,6 @@ type FieldProps = Omit<ComponentProps<typeof Input>, 'error'> & {
   hint?: string;
 };
 
-/**
- * Label, control, hint and error as one unit.
- */
 export function TextField({ label, error, hint, required, ...props }: FieldProps) {
   return (
     <FormField label={label} required={required} error={error} description={hint}>
@@ -24,9 +21,6 @@ export function TextField({ label, error, hint, required, ...props }: FieldProps
   );
 }
 
-/**
- * An address field with the phone-keyboard defaults that let a typed address survive.
- */
 export function EmailField(props: FieldProps) {
   return (
     <TextField
@@ -40,9 +34,6 @@ export function EmailField(props: FieldProps) {
   );
 }
 
-/**
- * A password field.
- */
 export function PasswordField({ label, error, hint, required, ...props }: FieldProps) {
   return (
     <FormField label={label} required={required} error={error} description={hint}>
@@ -57,9 +48,6 @@ type TextAreaFieldProps = Omit<ComponentProps<typeof Textarea>, 'error'> & {
   hint?: string;
 };
 
-/**
- * A sentence or two, labelled the same way every other field here is.
- */
 export function TextAreaField({ label, error, hint, required, ...props }: TextAreaFieldProps) {
   return (
     <FormField label={label} required={required} error={error} description={hint}>
@@ -74,9 +62,6 @@ type SelectFieldProps = Omit<ComponentProps<typeof Select>, 'error'> & {
   hint?: string;
 };
 
-/**
- * A choice from a closed set.
- */
 export function SelectField({ label, error, hint, required, ...props }: SelectFieldProps) {
   return (
     <FormField label={label} required={required} error={error} description={hint}>
@@ -85,9 +70,6 @@ export function SelectField({ label, error, hint, required, ...props }: SelectFi
   );
 }
 
-/**
- * One thing to agree to.
- */
 export function CheckboxField({
   label,
   checked,

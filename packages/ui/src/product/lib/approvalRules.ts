@@ -7,32 +7,17 @@ import { byteLength, hasControlCharacter } from './askAgents';
 
 export const ALL_AGENTS_RULE = '*';
 
-/**
- * Where the rule governing one agent came from.
- */
 export type RuleSource = 'agent' | 'default' | 'built-in';
 
-/**
- * The rule that actually governs an agent's asks, and which of the three levels produced it.
- */
 export interface EffectiveRule {
   approvalsRequired: number;
-  /**
-   * The least role that may answer, or '' when any active member may.
-   */
   approverRole: string;
   source: RuleSource;
 }
 
-/**
- * One account's rules, keyed for resolution.
- */
 export interface RuleSet {
   fallback: ApprovalRule | null;
   agents: Map<string, ApprovalRule>;
-  /**
-   * The ceiling the relay refuses `approvals_required` above, as it served it.
-   */
   max: number;
 }
 
@@ -53,9 +38,6 @@ export function ruleSet(rules: ApprovalRule[], max: number): RuleSet {
   return { fallback, agents, max };
 }
 
-/**
- * The account's own default, or the built-in one when it has never set one.
- */
 export function defaultRule(set: RuleSet): EffectiveRule {
   if (set.fallback === null) return BUILT_IN_RULE;
   return {
@@ -65,9 +47,6 @@ export function defaultRule(set: RuleSet): EffectiveRule {
   };
 }
 
-/**
- * The rule governing one named agent, resolved the way the relay resolves it.
- */
 export function effectiveRule(set: RuleSet, agentName: string): EffectiveRule {
   const own = set.agents.get(agentName.trim());
   if (own === undefined) return defaultRule(set);
@@ -78,9 +57,6 @@ export function effectiveRule(set: RuleSet, agentName: string): EffectiveRule {
   };
 }
 
-/**
- * Every agent the account has written a rule for, by name — the default excluded.
- */
 export function ruledAgents(set: RuleSet): string[] {
   return [...set.agents.keys()].sort((a, b) => a.localeCompare(b));
 }
@@ -92,17 +68,11 @@ export const APPROVER_ROLE_CHOICES: { value: string; label: string }[] = [
   { value: 'tenant_owner', label: 'Owners only' },
 ];
 
-/**
- * A stored role as one of the offered values.
- */
 export function normalisedRole(role: string | undefined): string {
   const value = (role ?? '').trim();
   return value === 'tenant_user' ? '' : value;
 }
 
-/**
- * What a rule demands, in one sentence about people rather than about fields.
- */
 export function ruleSentence(rule: EffectiveRule): string {
   const people =
     rule.approvalsRequired === 1 ? 'One person' : `${rule.approvalsRequired} different people`;
@@ -118,9 +88,6 @@ export function ruleSentence(rule: EffectiveRule): string {
   return `${people} must approve, and only ${approverRoleLabel(rule.approverRole)} may.`;
 }
 
-/**
- * Where a resolved rule came from, said to somebody deciding whether to change it.
- */
 export function ruleSourceSentence(source: RuleSource): string {
   switch (source) {
     case 'agent':
@@ -132,9 +99,6 @@ export function ruleSourceSentence(source: RuleSource): string {
   }
 }
 
-/**
- * Why a typed agent name cannot be given a rule, or null when it can.
- */
 export function ruleAgentNameRefusal(raw: string): string | null {
   const name = raw.trim();
   if (name === '') return null;
@@ -144,9 +108,6 @@ export function ruleAgentNameRefusal(raw: string): string | null {
   return null;
 }
 
-/**
- * A typed name the relay would accept, or null while there is nothing usable in the field.
- */
 export function ruleAgentName(raw: string): string | null {
   const name = raw.trim();
   if (name === '' || ruleAgentNameRefusal(name) !== null) return null;

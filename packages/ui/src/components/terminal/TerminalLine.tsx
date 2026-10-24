@@ -1,9 +1,6 @@
 import { forwardRef } from "react";
 import { cn } from "../../utils";
 
-/**
- * Semantic tone for a terminal line's text or glyph.
- */
 export type TerminalTone = "default" | "muted" | "accent" | "error" | "success";
 
 const toneClass: Record<TerminalTone, string> = {
@@ -15,21 +12,9 @@ const toneClass: Record<TerminalTone, string> = {
 };
 
 export interface TerminalLineProps extends React.HTMLAttributes<HTMLDivElement> {
-  /**
-   * Leading glyph (e.g. ❯, ⏺, ⎿).
-   */
   glyph?: React.ReactNode;
-  /**
-   * Tone of the glyph.
-   */
   glyphTone?: TerminalTone;
-  /**
-   * Tone of the line content.
-   */
   tone?: TerminalTone;
-  /**
-   * Left indent in grid steps (each ≈ one glyph column).
-   */
   indent?: 0 | 1 | 2 | 3;
 }
 
@@ -67,9 +52,6 @@ export const TerminalLine = forwardRef<HTMLDivElement, TerminalLineProps>(
 );
 
 export interface TerminalMetaProps extends React.HTMLAttributes<HTMLDivElement> {
-  /**
-   * Indent in grid steps.
-   */
   indent?: 0 | 1 | 2 | 3;
 }
 

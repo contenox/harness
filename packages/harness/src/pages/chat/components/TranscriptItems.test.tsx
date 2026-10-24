@@ -6,17 +6,10 @@ import i18n from '../../../i18n';
 import { ThemeProvider } from '../../../lib/ThemeProvider';
 import { TranscriptItems } from './TranscriptItems';
 
-// Pin the language so labels are deterministic (the app default is German).
 beforeAll(async () => {
   await i18n.changeLanguage('en');
 });
 
-/**
- * Static-markup render (no `@testing-library/react` in this package — see
- * PermissionCard.test.tsx). `ThemeProvider` is required by the assistant
- * avatar hook and renders fine server-side (its `useSyncExternalStore` has a
- * server snapshot).
- */
 function render(session: AcpSessionState): string {
   return renderToStaticMarkup(
     createElement(
@@ -49,7 +42,6 @@ describe('TranscriptItems: image parts', () => {
     const html = render(session);
     expect(html).toContain('what is on this screenshot?');
     expect(html).toContain('src="data:image/png;base64,aGVsbG8="');
-    // Localized labels flow into the shared image attachment renderer.
     expect(html).toContain('alt="Attached image"');
     expect(html).toContain('aria-label="Show image full size"');
   });
@@ -112,8 +104,6 @@ describe('TranscriptItems: failed-turn cards', () => {
     };
     const html = render(session);
     expect(html).toContain('This agent needs a workspace');
-    // The raw wire string stays available, just tucked behind the collapsed
-    // detail toggle rather than dumped as the headline.
     expect(html).toContain('cwd is required to confine the agent');
   });
 
@@ -132,8 +122,8 @@ describe('TranscriptItems: failed-turn cards', () => {
       error: CWD_REQUIRED_MESSAGE,
     };
     const html = render(session);
-    expect(html).toContain('This request failed'); // generic headline for error-0
-    expect(html).not.toContain('This agent needs a workspace'); // error-1 deduped against the banner
+    expect(html).toContain('This request failed');
+    expect(html).not.toContain('This agent needs a workspace');
   });
 });
 
@@ -154,7 +144,7 @@ describe('TranscriptItems: turn-grouped step trail', () => {
       messages: { a1: { id: 'a1', role: 'assistant', text: 'Here is the answer.' } },
     };
     const html = render(session);
-    expect(html).toContain('2 steps'); // turn_steps_toggle
+    expect(html).toContain('2 steps');
     expect(html.indexOf('2 steps')).toBeLessThan(html.indexOf('Here is the answer.'));
     expect(html.indexOf('ls')).toBeLessThan(html.indexOf('Here is the answer.'));
   });

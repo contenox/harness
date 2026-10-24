@@ -70,7 +70,7 @@ export const ComposeEditorPanel: React.FC<ComposeEditorPanelProps> = ({
   }));
 
   const variableOptions = availableVariables
-    .filter(variable => variable !== sourceTaskId) // Can't compose with self
+    .filter(variable => variable !== sourceTaskId)
     .map(variable => ({
       value: variable,
       label: variable,
@@ -126,7 +126,7 @@ export const ComposeEditorPanel: React.FC<ComposeEditorPanelProps> = ({
           />
         </FormField>
 
-        {/* Strategy Description */}
+
         {getCurrentStrategy() && (
           <Panel variant="info">
             <H3 className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export const ComposeEditorPanel: React.FC<ComposeEditorPanelProps> = ({
           </Panel>
         )}
 
-        {/* Usage Notes */}
+
         <Panel variant="warning">
           <H3>Important Notes</H3>
           <ul className="space-y-1 text-xs">

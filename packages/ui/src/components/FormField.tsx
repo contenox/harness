@@ -20,9 +20,6 @@ export type FormFieldProps = {
 
 type IdentifiableControlProps = { id?: string };
 
-/**
- * A label, a control, and whatever has to be said about it.
- */
 export function FormField({
   label,
   required,

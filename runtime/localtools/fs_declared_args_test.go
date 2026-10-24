@@ -11,9 +11,6 @@ import (
 	"github.com/contenox/harness/runtime/taskengine"
 )
 
-// Declarative `tools` chain tasks carry their arguments on the ToolsCall;
-// local_fs must honor them when the chain input isn't an args map (parity
-// with local_shell).
 func TestUnit_LocalFSTools_FallsBackToDeclaredArgs(t *testing.T) {
 	tempDir := t.TempDir()
 	h := localtools.NewLocalFSTools(tempDir, nil)
@@ -22,7 +19,6 @@ func TestUnit_LocalFSTools_FallsBackToDeclaredArgs(t *testing.T) {
 		ToolName: "write_file",
 		Args:     map[string]string{"path": "declared.txt", "content": "from declared args"},
 	}
-	// Input is chat history (not a map) — the declared args must be used.
 	input := taskengine.ChatHistory{Messages: []taskengine.Message{{Role: "user", Content: "go"}}}
 
 	res, dataType, err := h.Exec(context.Background(), time.Now(), input, false, toolsCall)

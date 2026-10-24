@@ -1,4 +1,3 @@
-// Package sessionservice stores CLI chat sessions so conversations persist across terminal restarts.
 package sessionservice
 
 import (
@@ -18,7 +17,6 @@ import (
 
 const kvActiveSession = "contenox.session.active"
 
-// SessionInfo summarises a session for listing purposes.
 type SessionInfo struct {
 	ID           string
 	Name         string
@@ -27,32 +25,19 @@ type SessionInfo struct {
 	UpdatedAt    time.Time
 }
 
-// Service is the session management interface.
 type Service interface {
-	// New creates a new named session and makes it active.
-	// If name is empty, a UUID-based name is generated.
 	New(ctx context.Context, identity, name string) (id string, err error)
 
-	// List returns all sessions for the given identity with message counts.
-	// The currently active session is marked IsActive = true.
 	List(ctx context.Context, identity string) ([]*SessionInfo, error)
 
-	// Switch changes the active session pointer to the session with the given name.
 	Switch(ctx context.Context, identity, name string) error
 
-	// Delete removes a session and its messages. Reports whether the session
-	// that was deleted was the currently active one.
 	Delete(ctx context.Context, identity, name string) (wasActive bool, err error)
 
-	// GetActiveID reads the active session ID from the KV store.
-	// Returns ("", nil) when no session is active.
 	GetActiveID(ctx context.Context) (string, error)
 
-	// SetActiveID persists an active session ID to the KV store.
 	SetActiveID(ctx context.Context, id string) error
 
-	// EnsureDefault creates (or reuses) a "default" session, sets it active,
-	// and returns its ID. Idempotent.
 	EnsureDefault(ctx context.Context, identity string) (string, error)
 }
 
@@ -152,7 +137,7 @@ func (s *service) Delete(ctx context.Context, identity, name string) (bool, erro
 		return false, fmt.Errorf("failed to delete session: %w", err)
 	}
 	if wasActive {
-		_ = s.setKV(ctx, txExec, "") // clear active pointer; best-effort
+		_ = s.setKV(ctx, txExec, "")
 	}
 	if err := commit(ctx); err != nil {
 		return false, fmt.Errorf("failed to commit: %w", err)
@@ -191,14 +176,13 @@ func (s *service) EnsureDefault(ctx context.Context, identity string) (string, e
 		if err == nil {
 			for _, sess := range sessions {
 				if sess.ID == activeID {
-					return activeID, nil // active session exists and is valid
+					return activeID, nil
 				}
 			}
 		}
 		reportChange("recreate_default", activeID)
 	}
 
-	// Re-use an existing "default" session if present.
 	if existing, err := messagestore.New(exec, s.workspaceID).GetSessionByName(ctx, identity, defaultName); err == nil {
 		if setErr := s.setKV(ctx, exec, existing.ID); setErr != nil {
 			reportErr(fmt.Errorf("set active session: %w", setErr))
@@ -206,7 +190,6 @@ func (s *service) EnsureDefault(ctx context.Context, identity string) (string, e
 		return existing.ID, nil
 	}
 
-	// Create a fresh default session.
 	newID := uuid.New().String()
 	txExec, commit, release, txErr := s.db.WithTransaction(ctx)
 	if txErr != nil {
@@ -226,7 +209,6 @@ func (s *service) EnsureDefault(ctx context.Context, identity string) (string, e
 	return newID, nil
 }
 
-// setKV writes id as a JSON string to the KV table using the given executor.
 func (s *service) setKV(ctx context.Context, exec libdb.Exec, id string) error {
 	raw, err := json.Marshal(id)
 	if err != nil {

@@ -9,9 +9,6 @@ const BADGE_VARIANTS: Record<HostState, 'success' | 'default' | 'outline'> = {
   revoked: 'outline',
 };
 
-/**
- * One machine's state, in the words `lib/hostState.ts` owns.
- */
 export function HostStateBadge({ host }: { host: Instance }) {
   const state = hostState(host);
   return (

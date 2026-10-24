@@ -10,8 +10,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// OllamaInsertFIMFormat is the declared contract of a server that renders the
-// fill-in-the-middle request itself from a prompt and a suffix.
 const OllamaInsertFIMFormat = "ollama-insert"
 
 type autocompleteClient struct {
@@ -19,21 +17,9 @@ type autocompleteClient struct {
 	model     string
 	format    string
 	maxTokens int
-	// insert reports that the server renders the fill-in-the-middle request
-	// itself. The runtime's declaration vocabulary requires an explicit FIM
-	// format whenever a client-side token contract applies, so an
-	// autocomplete-capable model that declares none is one whose own template
-	// fills the prompt in from `suffix`.
-	insert bool
+	insert    bool
 }
 
-// GetAutocompleteConnection binds a model's native FIM request to Ollama
-// generation. Which of the two vendor routes applies is the model's own
-// declaration: a model whose capability list carries `insert` is filled in by
-// the server from prefix and suffix, so its request carries the source verbatim
-// with raw mode off — raw would bypass the template that is the whole point of
-// the capability — and any other model is rendered locally from the format the
-// operator declared.
 func (p *OllamaProvider) GetAutocompleteConnection(_ context.Context, backend string) (modelrepo.LLMAutocompleteClient, error) {
 	if !p.CanAutocomplete() {
 		return nil, modelrepo.ErrAutocompleteUnsupported

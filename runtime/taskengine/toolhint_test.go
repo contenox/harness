@@ -16,9 +16,6 @@ func toolContext(names ...string) *ChainContext {
 	return &ChainContext{Tools: tools}
 }
 
-// TestUnit_ToolNotFoundSuggestion_LeafMatchWins pins the recovery a weak model
-// needs: a call that mixed two namespaces (local_fs.browse.stat_file, observed in a
-// live beam session) must point at the tool that exists, not just say "not found".
 func TestUnit_ToolNotFoundSuggestion_LeafMatchWins(t *testing.T) {
 	ctx := toolContext(
 		"local_fs.read_file",
@@ -33,8 +30,6 @@ func TestUnit_ToolNotFoundSuggestion_LeafMatchWins(t *testing.T) {
 	}
 }
 
-// TestUnit_ToolNotFoundSuggestion_SharedNamespaceToken covers the namespace-only
-// miss: local_fs.browse shares "browse" with local_fs, so its tools lead.
 func TestUnit_ToolNotFoundSuggestion_SharedNamespaceToken(t *testing.T) {
 	ctx := toolContext(
 		"local_fs.list_dir",
@@ -49,8 +44,6 @@ func TestUnit_ToolNotFoundSuggestion_SharedNamespaceToken(t *testing.T) {
 	}
 }
 
-// TestUnit_ToolNotFoundSuggestion_UnrelatedNameListsToolsets is the fallback: no
-// candidate is close, so the error at least names what does exist.
 func TestUnit_ToolNotFoundSuggestion_UnrelatedNameListsToolsets(t *testing.T) {
 	ctx := toolContext("native-git.git_status", "webtools.fetch")
 
@@ -60,9 +53,6 @@ func TestUnit_ToolNotFoundSuggestion_UnrelatedNameListsToolsets(t *testing.T) {
 	}
 }
 
-// TestUnit_ToolNotFoundSuggestion_NeverSuggestsHiddenOrItself pins the two ways a
-// suggestion would mislead: naming a tool the task withholds, or echoing the name
-// that already failed.
 func TestUnit_ToolNotFoundSuggestion_NeverSuggestsHiddenOrItself(t *testing.T) {
 	ctx := toolContext("local_fs.stat_file", "local_fs.list_dir")
 	hidden := map[string]struct{}{"local_fs.list_dir": {}}
@@ -76,8 +66,6 @@ func TestUnit_ToolNotFoundSuggestion_NeverSuggestsHiddenOrItself(t *testing.T) {
 	}
 }
 
-// TestUnit_ToolNotFoundSuggestion_EmptyContextStaysQuiet keeps the error message
-// unchanged when there is nothing to suggest.
 func TestUnit_ToolNotFoundSuggestion_EmptyContextStaysQuiet(t *testing.T) {
 	if got := toolNotFoundSuggestion(nil, nil, "anything"); got != "" {
 		t.Fatalf("suggestion = %q, want empty", got)

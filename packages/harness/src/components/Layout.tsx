@@ -27,7 +27,6 @@ function isDesktopViewport(): boolean {
 type Props = {
   defaultOpen?: boolean;
   mainContent: React.ReactNode;
-  /** Left rail content (e.g. chat sessions). */
   sidebarContent:
     | React.ReactNode
     | ((props: { isOpen: boolean; setIsOpen: (open: boolean) => void }) => React.ReactNode);
@@ -54,35 +53,21 @@ export function Layout({ defaultOpen = true, mainContent, sidebarContent, classN
     return !hasErrors && setupData.reachableBackendCount > 0;
   }, [setupData]);
 
-  // Completing setup clears a stale dismissal record — otherwise, if setup
-  // later regresses, the wizard would compare against a fingerprint that was
-  // never meant to survive completion.
   useEffect(() => {
     if (setupComplete && dismissalRecord !== null) {
       clearWizardDismissal();
     }
   }, [setupComplete, dismissalRecord]);
 
-  // Dismissed only "for the state it was dismissed under": if setup regresses
-  // to a different set of error issues, or backends go unreachable again, the
-  // fingerprint no longer matches and the wizard re-arms automatically.
   const isDismissedForCurrentState =
     dismissalRecord !== null && dismissalRecord.fingerprint === computeSetupFingerprint(setupData);
 
-  // manualOpen (Settings' "Run setup wizard") forces the wizard open even when
-  // setup is already complete — the wizard is also a reconfiguration flow, not
-  // just a recovery-from-broken one.
   const showWizard =
     !!user &&
     !setupLoading &&
     (wizardManuallyOpened || (!setupComplete && !isDismissedForCurrentState));
-  // Persistent escape hatch: setup is still incomplete but the wizard is
-  // dismissed for this exact state — surface a slim banner instead of nothing.
   const showIncompleteBanner = !!user && !setupLoading && !setupComplete && !showWizard;
   const logoUrl = theme === 'dark' ? logoMarkDarkUrl : logoMarkLightUrl;
-  // A routed page can project one piece of chrome into the navbar center (today
-  // the chat connection badge) rather than spending body height on its own
-  // header strip — see components/NavbarSlot.tsx.
   const navbarSlot = useNavbarSlotValue();
   const renderedSidebarContent =
     typeof sidebarContent === 'function'
@@ -90,8 +75,6 @@ export function Layout({ defaultOpen = true, mainContent, sidebarContent, classN
       : sidebarContent;
 
   const headerTitle = useMemo(() => {
-    // The harness is the product name of the chat surface (same in every language) —
-    // it replaces the old in-body "Chat" H2, which moved up into this navbar.
     if (location.pathname.startsWith('/chat')) return 'Beam';
     if (location.pathname.startsWith('/fleet')) return t('navbar.fleet');
     if (location.pathname.startsWith('/missions')) return t('navbar.missions');
@@ -123,9 +106,7 @@ export function Layout({ defaultOpen = true, mainContent, sidebarContent, classN
       variant="bordered"
       className="flex h-16 shrink-0 items-center justify-between gap-4 backdrop-blur-md bg-surface-50/80 dark:bg-dark-surface-100/80 border-b border-surface-200 dark:border-dark-surface-400/50 shadow-sm px-4 z-40">
       <div className="flex shrink-0 items-center gap-4">
-        {/* The wizard replaces the whole main area (see showWizard below) and
-            never renders <Sidebar>, so toggling it here would do nothing
-            visible — hide it instead of shipping a dead button. */}
+
         {!sidebarDisabled && !showWizard ? (
           <SidebarToggle isOpen={isSidebarOpen} onToggle={() => setSidebarIsOpen(!isSidebarOpen)} />
         ) : (
@@ -139,10 +120,7 @@ export function Layout({ defaultOpen = true, mainContent, sidebarContent, classN
         </div>
       </div>
 
-      {/* The page-supplied navbar slot (chat connection badge), right-aligned
-          next to the edge controls. Allowed to shrink and truncate so it never
-          pushes them off-screen at narrow widths; empty (and inert) on routes
-          that don't fill it. */}
+
       <div className="flex min-w-0 flex-1 items-center justify-end gap-2 px-2">{navbarSlot}</div>
 
       <div className="flex shrink-0 items-center gap-2">

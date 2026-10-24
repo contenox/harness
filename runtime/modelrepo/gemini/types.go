@@ -80,37 +80,21 @@ func (u *geminiUsageMetadata) neutralUsage() *modelrepo.TokenUsage {
 }
 
 type geminiFunctionDeclaration struct {
-	Name string `json:"name"`
-	// Description is the vendor's required human-readable description.
-	Description string `json:"description,omitempty"`
-	// ParametersJsonSchema is the caller's JSON Schema verbatim. The vendor
-	// documents it as the full JSON Schema form and as mutually exclusive with
-	// the OpenAPI-subset `parameters` member, so a schema this adapter would
-	// have had to trim is sent whole instead.
+	Name                 string          `json:"name"`
+	Description          string          `json:"description,omitempty"`
 	ParametersJsonSchema json.RawMessage `json:"parametersJsonSchema,omitempty"`
 }
 
-// geminiContinuation is the response content this adapter replays on the next
-// turn: a Gemini thought signature lives inside the part it was returned on
-// (a text part as much as a functionCall part), so the parts are kept verbatim
-// rather than rebuilt from the neutral message.
 type geminiContinuation struct {
 	Parts []geminiPart `json:"parts"`
 }
 
-// continuationProvider identifies content this adapter stored for replay.
 const continuationProvider = "gemini"
 
-// thoughtSignatureMetaKey is the ToolCall.ProviderMeta key a response part's
-// thought signature round-trips under.
 const thoughtSignatureMetaKey = "thought_signature"
 
-// skipThoughtSignatureValidator is the vendor's documented thought_signature
-// value for a functionCall part the API did not generate and that therefore has
-// no signature to return, such as history carried over from another model.
 const skipThoughtSignatureValidator = "skip_thought_signature_validator"
 
-// replayContinuation decodes a stored turn for this provider and model.
 func replayContinuation(continuation *modelrepo.Continuation, modelName string) ([]geminiPart, bool) {
 	if continuation == nil || continuation.Provider != continuationProvider || continuation.Model != modelName {
 		return nil, false
@@ -125,7 +109,6 @@ func replayContinuation(continuation *modelrepo.Continuation, modelName string) 
 	return stored.Parts, true
 }
 
-// responseContinuation stores a response's parts for verbatim replay.
 func responseContinuation(modelName string, parts []geminiPart) *modelrepo.Continuation {
 	if len(parts) == 0 {
 		return nil

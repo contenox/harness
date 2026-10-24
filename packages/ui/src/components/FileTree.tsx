@@ -2,65 +2,23 @@ import { forwardRef, useCallback, useState, type ReactNode } from "react";
 import { ChevronRight, File, Folder, FolderOpen } from "lucide-react";
 import { cn } from "../utils";
 
-/**
- * Severity of a single {@link FileTreeIndicator}, which tints its icon.
- */
 export type FileTreeIndicatorStatus = "allow" | "approve" | "deny" | "unreachable";
 
-/**
- * A small trailing status icon on a row (e.g. a read or write access marker).
- */
 export interface FileTreeIndicator {
-  /**
-   * Stable id within a node's indicator list (used as the React key).
-   */
   key: string;
-  /**
-   * Icon element to render, e.g. a lucide `<Eye />`.
-   */
   icon: ReactNode;
-  /**
-   * Severity that tints the icon.
-   */
   status: FileTreeIndicatorStatus;
-  /**
-   * Per-indicator tooltip and accessible label (e.g. the localized policy reason).
-   */
   title?: string;
 }
 
 export interface FileTreeNode {
-  /**
-   * Unique id for this node.
-   */
   id: string;
-  /**
-   * Display name.
-   */
   name: string;
-  /**
-   * Full path (used for context, not rendering).
-   */
   path?: string;
-  /**
-   * Whether this node is a directory.
-   */
   isDirectory?: boolean;
-  /**
-   * Nested children (only for directories).
-   */
   children?: FileTreeNode[];
-  /**
-   * Trailing status indicators (e.g. read + write access), rendered after the name.
-   */
   indicators?: FileTreeIndicator[];
-  /**
-   * Dims the row to half opacity (e.g. an out-of-boundary / unreachable path).
-   */
   dimmed?: boolean;
-  /**
-   * Optional row tooltip.
-   */
   title?: string;
 }
 
@@ -93,29 +51,11 @@ function IndicatorRow({ indicators }: { indicators: FileTreeIndicator[] }) {
 }
 
 export interface FileTreeProps extends React.HTMLAttributes<HTMLDivElement> {
-  /**
-   * The tree data.
-   */
   nodes: FileTreeNode[];
-  /**
-   * Currently selected node id.
-   */
   selectedId?: string | null;
-  /**
-   * Called when a file or folder is clicked.
-   */
   onNodeSelect?: (node: FileTreeNode) => void;
-  /**
-   * `expand` (default): directory row toggles open/closed and fires `onNodeSelect`.
-   */
   directoryClickMode?: "expand" | "navigate";
-  /**
-   * Set of node ids that are initially expanded.
-   */
   defaultExpanded?: Set<string>;
-  /**
-   * Depth indentation in px.
-   */
   indent?: number;
   initialDepth?: number;
   renderChildren?: (node: FileTreeNode, depth: number) => ReactNode;

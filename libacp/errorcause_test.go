@@ -34,8 +34,6 @@ func TestUnit_AsErrorLeavesCancellationNonRetryable(t *testing.T) {
 	assert.False(t, libacp.IsRetryableError(err), "an explicit cancellation is a decision, not a fault")
 }
 
-// Invariant: the wire contract is code/message/data only; a cause carried for
-// local matching must never leak into the serialized form.
 func TestUnit_ErrorWireFormatUnchangedByCause(t *testing.T) {
 	raw, err := json.Marshal(libacp.AsError(context.DeadlineExceeded))
 	require.NoError(t, err)
@@ -48,7 +46,6 @@ func TestUnit_ErrorWireFormatUnchangedByCause(t *testing.T) {
 	require.JSONEq(t, `{"code":-32602,"message":"bad"}`, string(raw))
 }
 
-// Invariant: after a real serialize/parse only the code carries the verdict.
 func TestUnit_TimeoutSurvivesSerializationRoundTrip(t *testing.T) {
 	raw, err := json.Marshal(libacp.AsError(context.DeadlineExceeded))
 	require.NoError(t, err)
@@ -81,8 +78,6 @@ func (a *timingOutAgent) Prompt(ctx context.Context, _ libacp.PromptRequest) (li
 	return libacp.PromptResponse{}, own.Err()
 }
 
-// Invariant: only a client-cancelled prompt resolves as StopReasonCancelled;
-// one that times out on the agent's own deadline is a retryable error instead.
 func TestUnit_PromptOwnDeadlineIsRetryableErrorNotCancelledStop(t *testing.T) {
 	agent := &timingOutAgent{started: make(chan struct{})}
 	h := newCancelHarness(t, agent)

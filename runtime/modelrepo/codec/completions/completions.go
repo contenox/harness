@@ -1,4 +1,3 @@
-// Package completions encodes native FIM for raw completion endpoints.
 package completions
 
 import (
@@ -9,7 +8,6 @@ import (
 	"github.com/contenox/harness/runtime/modelrepo"
 )
 
-// Request is a raw completion request without chat-template processing.
 type Request struct {
 	Model       string   `json:"model"`
 	Prompt      string   `json:"prompt"`
@@ -22,7 +20,6 @@ type Request struct {
 	Echo        bool     `json:"echo"`
 }
 
-// NewRequest encodes the explicitly selected FIM contract without changing output settings.
 func NewRequest(model, format string, limit int, input modelrepo.AutocompleteRequest) (Request, error) {
 	if err := input.Validate(); err != nil {
 		return Request{}, err
@@ -40,7 +37,6 @@ func NewRequest(model, format string, limit int, input modelrepo.AutocompleteReq
 	return Request{Model: model, Prompt: contract.Render(input.Prefix, input.Suffix), MaxTokens: input.MaxTokens, Temperature: input.Temperature, TopP: input.TopP, Seed: input.Seed, Stop: contract.Stops}, nil
 }
 
-// Response carries the raw completion choice and usage.
 type Response struct {
 	Choices []struct {
 		Text         string `json:"text"`
@@ -56,7 +52,6 @@ type Response struct {
 	} `json:"usage"`
 }
 
-// Result validates a terminal response and preserves insertion whitespace.
 func (r Response) Result() (modelrepo.AutocompleteResult, error) {
 	if len(r.Choices) != 1 {
 		return modelrepo.AutocompleteResult{}, errors.New("autocomplete requires exactly one completion choice")

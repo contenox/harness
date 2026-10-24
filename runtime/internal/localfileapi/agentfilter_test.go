@@ -19,7 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// nopKV forces the hitlservice to use its constructor fallback policy.
 type nopKV struct{}
 
 func (nopKV) GetKV(context.Context, string, interface{}) error { return os.ErrNotExist }
@@ -35,8 +34,6 @@ const testPolicy = `{
   ]
 }`
 
-// annotatedEntry mirrors the /files response element (the service Entry fields
-// are promoted; `access` is the agent-view annotation).
 type annotatedEntry struct {
 	Path        string             `json:"path"`
 	Name        string             `json:"name"`
@@ -51,7 +48,6 @@ func TestUnit_WorkspaceRoutes_AgentFilter(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(root, "main.go"), []byte("package main"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(root, "secret", "keep"), []byte("s"), 0o644))
 
-	// A symlink escaping the root, which must list as reachable:false.
 	outside := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(outside, "t.txt"), []byte("x"), 0o644))
 	require.NoError(t, os.Symlink(filepath.Join(outside, "t.txt"), filepath.Join(root, "escape.txt")))
@@ -87,17 +83,14 @@ func TestUnit_WorkspaceRoutes_AgentFilter(t *testing.T) {
 		return resp, buf
 	}
 
-	// 1. Unfiltered /files is unchanged: no `access` field anywhere.
 	resp, raw := get("path=.")
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.NotContains(t, string(raw), "\"access\"", "the unfiltered tree must not carry access annotations")
 
-	// 1b. filter=full is byte-identical to the default.
 	respFull, rawFull := get("path=.&filter=full")
 	require.Equal(t, http.StatusOK, respFull.StatusCode)
 	assert.Equal(t, string(raw), string(rawFull), "filter=full must match the default response byte-for-byte")
 
-	// 2. filter=agent annotates every entry with a verdict.
 	resp, raw = get("path=.&filter=agent&policy=" + url.QueryEscape("hitl-policy-test.json"))
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	var entries []annotatedEntry
@@ -110,19 +103,15 @@ func TestUnit_WorkspaceRoutes_AgentFilter(t *testing.T) {
 		byName[e.Name] = e
 	}
 
-	// main.go: reachable, read allow, write approve.
 	require.Contains(t, byName, "main.go")
 	assert.True(t, byName["main.go"].Access.Reachable)
 	assert.Equal(t, hitlservice.ActionAllow, byName["main.go"].Access.Read)
 	assert.Equal(t, hitlservice.ActionApprove, byName["main.go"].Access.Write)
 
-	// secret dir: reachable, list_dir allowed, write (create-inside) denied.
 	require.Contains(t, byName, "secret")
 	assert.True(t, byName["secret"].Access.Reachable)
 	assert.Equal(t, hitlservice.ActionDeny, byName["secret"].Access.Write)
 
-	// escape.txt: the symlink escapes the root, so it is annotated
-	// reachable:false with empty actions (returned, not omitted).
 	require.Contains(t, byName, "escape.txt")
 	assert.False(t, byName["escape.txt"].Access.Reachable)
 	assert.Empty(t, string(byName["escape.txt"].Access.Read))
@@ -135,7 +124,6 @@ func TestUnit_WorkspaceRoutes_AgentFilter_Unavailable(t *testing.T) {
 	require.NoError(t, err)
 
 	mux := http.NewServeMux()
-	// nil hitlFor => agent filter is not available.
 	require.NoError(t, localfileapi.AddWorkspaceRoutes(mux, factory, nil))
 	srv := httptest.NewServer(mux)
 	defer srv.Close()

@@ -48,8 +48,6 @@ type OpenAICompatibleModelList struct {
 	Data   []OpenAIModel `json:"data"`
 }
 
-// listModels returns the models observed across the runtime's backends in the
-// OpenAI-compatible model-list shape.
 func (s *service) listModels(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	limitStr := apiframework.GetQueryParam(r, "limit", "100", "The maximum number of items to return per page.")
@@ -77,11 +75,9 @@ func (s *service) listModels(w http.ResponseWriter, r *http.Request) {
 		Data:   openAIModels,
 	}
 
-	_ = apiframework.Encode(w, r, http.StatusOK, response) // @response backendapi.OpenAICompatibleModelList
+	_ = apiframework.Encode(w, r, http.StatusOK, response)
 }
 
-// listInternal returns the models currently observed on the runtime's
-// backends, with per-model capability flags.
 func (s *service) listInternal(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	limitStr := apiframework.GetQueryParam(r, "limit", "100", "The maximum number of items to return per page.")
@@ -102,7 +98,7 @@ func (s *service) listInternal(w http.ResponseWriter, r *http.Request) {
 		models = models[:limit]
 	}
 
-	_ = apiframework.Encode(w, r, http.StatusOK, models) // @response []backendapi.ObservedModel
+	_ = apiframework.Encode(w, r, http.StatusOK, models)
 }
 
 func parseObservedModelLimit(limitStr string) (int, error) {

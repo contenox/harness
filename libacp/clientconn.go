@@ -11,9 +11,6 @@ import (
 	"time"
 )
 
-// ClientSideConnection is the editor-side mirror of AgentSideConnection: it
-// dispatches agent->client requests to a Client and exposes the client->agent
-// methods as outbound calls.
 type ClientSideConnection struct {
 	reader *ndjsonReader
 	writer *ndjsonWriter
@@ -107,14 +104,10 @@ func NewClientSideConnection(rw io.ReadWriteCloser, factory ClientFactory) *Clie
 	return c
 }
 
-// SetExtRequestHandler installs h to handle inbound extension requests; nil
-// answers them with MethodNotFound. Call it from the ClientFactory.
 func (c *ClientSideConnection) SetExtRequestHandler(h ExtRequestHandler) {
 	c.extRequest = h
 }
 
-// SetExtNotificationHandler installs h to handle inbound extension
-// notifications; nil ignores them. Call it from the ClientFactory.
 func (c *ClientSideConnection) SetExtNotificationHandler(h ExtNotificationHandler) {
 	c.extNotification = h
 }
@@ -138,8 +131,6 @@ func (c *ClientSideConnection) Run(ctx context.Context) (err error) {
 	for {
 		line, err := c.reader.Next()
 		if err != nil {
-			// A canceled ctx closes the transport under the reader; report the
-			// cancellation, not the read error.
 			if ctxErr := ctx.Err(); ctxErr != nil {
 				c.shutdown(ctxErr)
 				return ctxErr
@@ -227,13 +218,9 @@ func (c *ClientSideConnection) dispatch(ctx context.Context, line []byte) {
 			release()
 		}
 	case IncomingKindNotification:
-		// Applied inline on the read loop so a cancel observes its request's
-		// registration in wire order.
 		if msg.Notification.Method == MethodCancelRequest {
 			c.applyCancelRequest(msg.Notification.Params)
 		}
-		// Handled inline: session/update chunks must reach Client.SessionUpdate
-		// in the order sent.
 		c.handleNotification(ctx, msg.Notification)
 	}
 }
@@ -375,7 +362,6 @@ func (c *ClientSideConnection) safeCallMethod(ctx context.Context, req Request) 
 func (c *ClientSideConnection) callMethod(ctx context.Context, req Request) (any, *Error) {
 	params := req.Params
 	if len(params) == 0 {
-		// Treat omitted params as {} so all-optional-params methods still unmarshal.
 		params = []byte("{}")
 	}
 	switch req.Method {
@@ -485,8 +471,6 @@ func (c *ClientSideConnection) callMethod(ctx context.Context, req Request) (any
 		return resp, nil
 
 	default:
-		// req.Params, not the {} default above: extension methods own their
-		// params schema.
 		if IsExtensionMethod(req.Method) && c.extRequest != nil {
 			result, extErr := c.extRequest(ctx, req.Method, req.Params)
 			if extErr != nil {
@@ -594,8 +578,6 @@ func (c *ClientSideConnection) Authenticate(ctx context.Context, req Authenticat
 	return resp, nil
 }
 
-// Logout is only meaningful when the agent advertised
-// AgentCapabilities.Auth.Logout during initialize.
 func (c *ClientSideConnection) Logout(ctx context.Context, req LogoutRequest) (LogoutResponse, error) {
 	var resp LogoutResponse
 	if err := c.call(ctx, MethodLogout, req, &resp); err != nil {
@@ -652,8 +634,6 @@ func (c *ClientSideConnection) ListSessions(ctx context.Context, req ListSession
 	return resp, nil
 }
 
-// SetSessionMode switches a session to a different SessionMode.ID, one of the
-// ids the session's SessionModeState.AvailableModes advertised.
 func (c *ClientSideConnection) SetSessionMode(ctx context.Context, req SetSessionModeRequest) (SetSessionModeResponse, error) {
 	var resp SetSessionModeResponse
 	if err := c.call(ctx, MethodSessionSetMode, req, &resp); err != nil {
@@ -662,8 +642,6 @@ func (c *ClientSideConnection) SetSessionMode(ctx context.Context, req SetSessio
 	return resp, nil
 }
 
-// SetSessionModel switches a session to a different ModelInfo.ID via the
-// unstable Zed model-picker method (session/set_model).
 func (c *ClientSideConnection) SetSessionModel(ctx context.Context, req SetSessionModelRequest) (SetSessionModelResponse, error) {
 	var resp SetSessionModelResponse
 	if err := c.call(ctx, MethodSessionSetModel, req, &resp); err != nil {
@@ -680,8 +658,6 @@ func (c *ClientSideConnection) SetSessionConfigOption(ctx context.Context, req S
 	return resp, nil
 }
 
-// Prompt sends "session/prompt" and registers the session's turn for the call's
-// duration so CancelPrompt can find it.
 func (c *ClientSideConnection) Prompt(ctx context.Context, req PromptRequest) (PromptResponse, error) {
 	pt := &clientPromptTurn{}
 	c.turnMu.Lock()
@@ -702,17 +678,10 @@ func (c *ClientSideConnection) Prompt(ctx context.Context, req PromptRequest) (P
 	return resp, nil
 }
 
-// CancelSession sends the "session/cancel" notification; the agent resolves the
-// in-flight session/prompt call itself with stop reason "cancelled". Use
-// CancelPrompt for the pending-permission auto-cancel rule.
 func (c *ClientSideConnection) CancelSession(req CancelNotification) error {
 	return c.notify(MethodSessionCancel, req)
 }
 
-// CancelPrompt cancels sessionID's in-flight prompt turn: it sends
-// "session/cancel" and auto-resolves every pending session/request_permission
-// for that session as "cancelled". With no outstanding Prompt call it behaves
-// like CancelSession.
 func (c *ClientSideConnection) CancelPrompt(sessionID SessionID) error {
 	c.turnMu.Lock()
 	pt, ok := c.promptTurns[sessionID]
@@ -727,8 +696,6 @@ func (c *ClientSideConnection) CancelPrompt(sessionID SessionID) error {
 	return c.CancelSession(CancelNotification{SessionID: sessionID})
 }
 
-// CallExtMethod sends a custom extension request (method must satisfy
-// IsExtensionMethod) to the agent and returns its raw result.
 func (c *ClientSideConnection) CallExtMethod(ctx context.Context, method string, params json.RawMessage) (json.RawMessage, error) {
 	if !IsExtensionMethod(method) {
 		return nil, fmt.Errorf("libacp: %q is not an extension method (must start with %q)", method, ExtensionMethodPrefix)
@@ -744,8 +711,6 @@ func (c *ClientSideConnection) CallExtMethod(ctx context.Context, method string,
 	return result, nil
 }
 
-// SendExtNotification sends a custom, fire-and-forget extension notification
-// (method must satisfy IsExtensionMethod) to the agent.
 func (c *ClientSideConnection) SendExtNotification(method string, params json.RawMessage) error {
 	if !IsExtensionMethod(method) {
 		return fmt.Errorf("libacp: %q is not an extension method (must start with %q)", method, ExtensionMethodPrefix)

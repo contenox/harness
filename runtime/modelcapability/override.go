@@ -15,7 +15,6 @@ import (
 const KeyPrefix = "model-capability:"
 
 type Override struct {
-	// CompletionMode is the operator-declared code-completion execution contract.
 	CompletionMode *string `json:"completionMode,omitempty"`
 	Provider       string  `json:"provider"`
 	Model          string  `json:"model"`
@@ -57,7 +56,6 @@ func (s Service) SetVision(ctx context.Context, provider, model string, canVisio
 	return s.set(ctx, provider, model, func(v *storedOverride) { v.CanVision = &canVision })
 }
 
-// SetCompletion declares an explicit chat-chain or prompt completion operation, or disables completion with an empty mode.
 func (s Service) SetCompletion(ctx context.Context, provider, model, mode string) (*Override, error) {
 	if mode != "" && mode != "instruct" && mode != "prompt" {
 		return nil, fmt.Errorf("unsupported code-completion mode %q", mode)
@@ -88,7 +86,6 @@ func (s Service) set(ctx context.Context, provider, model string, apply func(*st
 	return &Override{Provider: p, Model: m, CanThink: v.CanThink, CanVision: v.CanVision, CompletionMode: v.CompletionMode}, nil
 }
 
-// Get returns the override stored for a model under either spelling of its id.
 func (s Service) Get(ctx context.Context, provider, model string) (*Override, bool, error) {
 	if s.store == nil {
 		return nil, false, fmt.Errorf("store is required")
@@ -104,7 +101,6 @@ func (s Service) Get(ctx context.Context, provider, model string) (*Override, bo
 	return &Override{Provider: p, Model: m, CanThink: v.CanThink, CanVision: v.CanVision, CompletionMode: v.CompletionMode}, true, nil
 }
 
-// Unset removes the override stored for a model under either spelling of its id and reports whether one existed.
 func (s Service) Unset(ctx context.Context, provider, model string) (bool, error) {
 	if s.store == nil {
 		return false, fmt.Errorf("store is required")

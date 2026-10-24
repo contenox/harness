@@ -79,8 +79,6 @@ func TestUnit_FormatTraceUnit_Cancelled(t *testing.T) {
 	assert.Contains(t, got, "CANCELLED")
 }
 
-// syncBuffer guards a bytes.Buffer so the renderer goroutine's writes and the
-// test's Eventually reads don't race.
 type syncBuffer struct {
 	mu  sync.Mutex
 	buf bytes.Buffer

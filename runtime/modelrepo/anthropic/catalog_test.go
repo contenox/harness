@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// CanVision must derive solely from capabilities.image_input.supported, never from the model name.
 func TestUnit_CatalogProvider_VisionFromImageInputCapability(t *testing.T) {
 	const body = `{
 		"data": [
@@ -68,7 +67,6 @@ func TestUnit_CatalogProvider_VisionFromImageInputCapability(t *testing.T) {
 	require.False(t, catalog.ProviderFor(byName["claude-haiku-text-only"]).CanVision())
 }
 
-// Context window comes from max_input_tokens, output ceiling from max_tokens (there is no max_output_tokens field); pagination uses after_id/has_more/last_id.
 func TestUnit_CatalogProvider_DocumentedListModelsShape(t *testing.T) {
 	const page1 = `{
 		"data": [

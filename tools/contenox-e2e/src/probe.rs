@@ -64,7 +64,6 @@ pub struct BackendRow {
     pub url: String,
 }
 
-/// One step of a captured chain run, as `contenox-cli state show` prints it.
 #[derive(Debug, Clone)]
 pub struct StateStep {
     pub task: String,
@@ -170,8 +169,6 @@ impl Instance {
         self.sessions_in(self.work())
     }
 
-    /// `contenox-cli session list` run from `dir`, which is what fixes the
-    /// workspace the listing is scoped to.
     pub fn sessions_in(&self, dir: impl AsRef<Path>) -> Result<Vec<SessionRow>> {
         let out = self
             .cmd(["session", "list"])
@@ -275,7 +272,6 @@ impl Instance {
             .collect())
     }
 
-    /// The steps of the one captured run, for a case that made exactly one.
     pub fn executed_tasks(&self) -> Result<Vec<StateStep>> {
         let requests = self.state_requests()?;
         match requests.as_slice() {
@@ -285,10 +281,6 @@ impl Instance {
         }
     }
 
-    /// Every system prompt the one captured run actually sent a model, macros
-    /// already expanded. `contenox-cli state show --raw` is where an operator reads
-    /// what the model was told, which is the only way from outside to see what
-    /// `{{tools}}` rendered to.
     pub fn captured_system_prompts(&self) -> Result<Vec<String>> {
         let requests = self.state_requests()?;
         let [only] = requests.as_slice() else {
@@ -378,8 +370,6 @@ fn labelled_fields(text: &str) -> BTreeMap<String, String> {
     fields
 }
 
-/// Walk a captured unit for the messages it holds; the shape nests differently
-/// per handler, so the role is what a system prompt is found by.
 fn collect_system_prompts(value: &serde_json::Value, into: &mut Vec<String>) {
     match value {
         serde_json::Value::Array(items) => {

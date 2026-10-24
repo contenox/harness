@@ -92,8 +92,6 @@ func SetupOllamaLocalInstance(ctx context.Context, tag string) (string, testcont
 	return uri, container, cleanup, nil
 }
 
-// ollamaHeartbeat reports whether the server answers, matching what the ollama
-// CLI probes: HEAD on the root path, any non-error status.
 func ollamaHeartbeat(ctx context.Context, baseURL string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, strings.TrimSuffix(baseURL, "/")+"/", nil)
 	if err != nil {

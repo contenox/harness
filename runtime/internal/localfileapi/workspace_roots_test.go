@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// workspaceRootsResponse mirrors the unexported wire shape localfileapi
-// encodes, so the test can decode without reaching into the package.
 type workspaceRootsResponse struct {
 	Roots []struct {
 		Path    string `json:"path"`
@@ -35,8 +33,6 @@ func getWorkspaceRoots(t *testing.T, mux *http.ServeMux) (*http.Response, worksp
 	return resp, body
 }
 
-// TestUnit_WorkspaceRootsRoutes_SingleRoot proves the single-root case reports
-// exactly one entry, marked default.
 func TestUnit_WorkspaceRootsRoutes_SingleRoot(t *testing.T) {
 	root := t.TempDir()
 	factory, err := vfs.NewFactory(root)
@@ -55,8 +51,6 @@ func TestUnit_WorkspaceRootsRoutes_SingleRoot(t *testing.T) {
 	require.True(t, body.Roots[0].Default, "the sole configured root must be marked default")
 }
 
-// TestUnit_WorkspaceRootsRoutes_MultiRoot proves a multi-root allowlist
-// reports every root, with exactly the first (configured default) marked.
 func TestUnit_WorkspaceRootsRoutes_MultiRoot(t *testing.T) {
 	rootA := t.TempDir()
 	rootB := t.TempDir()
@@ -93,14 +87,9 @@ func TestUnit_WorkspaceRootsRoutes_MultiRoot(t *testing.T) {
 	require.True(t, paths[resolvedC])
 }
 
-// TestUnit_WorkspaceRootsRoutes_ExcludesControlPlanePath proves a directory
-// never handed to vfs.NewFactory (standing in for the control-plane
-// ContenoxDir, which serve wires separately and never passes into
-// buildWorkspaceFactory) does not appear in the response — the allowlist is
-// exactly what was configured, nothing implied or scanned in.
 func TestUnit_WorkspaceRootsRoutes_ExcludesControlPlanePath(t *testing.T) {
 	root := t.TempDir()
-	controlPlaneDir := t.TempDir() // never passed to NewFactory
+	controlPlaneDir := t.TempDir()
 	factory, err := vfs.NewFactory(root)
 	require.NoError(t, err)
 
@@ -117,14 +106,6 @@ func TestUnit_WorkspaceRootsRoutes_ExcludesControlPlanePath(t *testing.T) {
 	}
 }
 
-// TestUnit_WorkspaceRootsRoutes_NilFactoryRegistersNothing proves the nil
-// factory case (no workspace-root allowlist configured) registers no route at
-// all, so the mux's own not-found handling applies — mirroring
-// AddWorkspaceRoutes's own non-nil requirement, and the other nil-gated route
-// groups in serverapi. This stands in for the "empty roots" configuration:
-// vfs.NewFactory itself refuses to build a Factory with zero roots (see
-// vfs.TestUnit_Factory_EmptyIsError), so nil-factory is the only way an empty
-// allowlist can reach this handler.
 func TestUnit_WorkspaceRootsRoutes_NilFactoryRegistersNothing(t *testing.T) {
 	mux := http.NewServeMux()
 	localfileapi.AddWorkspaceRootsRoutes(mux, nil, nil)
@@ -134,9 +115,6 @@ func TestUnit_WorkspaceRootsRoutes_NilFactoryRegistersNothing(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, rr.Code)
 }
 
-// TestUnit_WorkspaceRootsRoutes_PathsAreAbsolute is a light shape check: every
-// reported root must be an absolute, cleaned filesystem path (what a folder
-// picker can use as-is), not the operator-typed string verbatim.
 func TestUnit_WorkspaceRootsRoutes_PathsAreAbsolute(t *testing.T) {
 	root := t.TempDir()
 	factory, err := vfs.NewFactory(root)
@@ -151,8 +129,6 @@ func TestUnit_WorkspaceRootsRoutes_PathsAreAbsolute(t *testing.T) {
 	require.Equal(t, filepath.Clean(body.Roots[0].Path), body.Roots[0].Path)
 }
 
-// TestUnit_WorkspaceRootsRoutes_MethodAndPath proves the route is registered
-// under exactly GET /workspace/roots (not, say, matched by an unrelated verb).
 func TestUnit_WorkspaceRootsRoutes_MethodAndPath(t *testing.T) {
 	root := t.TempDir()
 	factory, err := vfs.NewFactory(root)

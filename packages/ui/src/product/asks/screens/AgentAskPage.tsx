@@ -21,9 +21,6 @@ import {
 import { connectionWord, sessionModeLabel, sourceLabel } from '../../saas/account/lib/consumers';
 import { targetSentence } from '../../saas/account/lib/consumers';
 
-/**
- * One agent: what it is waiting on, where it runs, what starts it, and the one control that decides whether it may interrupt this person again.
- */
 export default function AgentAskPage({ agentName }: { agentName: string }) {
   const {
     routes,
@@ -69,10 +66,7 @@ export default function AgentAskPage({ agentName }: { agentName: string }) {
                 ? 'You are subscribed to every agent on this team, which already covers this one.'
                 : 'Subscribing decides what you are shown. Whether you may answer is decided by your role when you answer.'}
             </CheckboxField>
-            {/* The one thing a per-agent control cannot do, said where somebody
-                would otherwise assume it can. The relay's subscription is
-                (account, member, agent name) and carries no machine, so this
-                covers the name on every machine the team owns. */}
+
             <Small className="text-text-muted dark:text-dark-text-muted">
               This covers {agentName} on every machine this team owns. Asks cannot be subscribed to
               per machine.

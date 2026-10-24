@@ -15,9 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// runWorkspaceWithDataDir mirrors runWorkspace but also carries the persistent
-// --data-dir flag, so ResolveContenoxDir (and thus the CLI control-plane guard)
-// resolves deterministically to dataDir instead of walking up from cwd.
 func runWorkspaceWithDataDir(t *testing.T, dbPath, dataDir string, args ...string) (string, error) {
 	t.Helper()
 	sub := &cobra.Command{Use: "workspace"}
@@ -35,14 +32,9 @@ func runWorkspaceWithDataDir(t *testing.T, dbPath, dataDir string, args ...strin
 	return buf.String(), err
 }
 
-// TestUnit_WorkspaceCLI_AddControlPlaneRefused pins the CLI grant-verb guard: the
-// `contenox workspace add` runs in a SEPARATE process from serve (no global
-// denylist set), so it computes the control-plane dirs from ResolveContenoxDir and
-// refuses granting the control-plane dir itself — or anything under it — with a
-// teaching error, while its non-control-plane PARENT still grants normally.
 func TestUnit_WorkspaceCLI_AddControlPlaneRefused(t *testing.T) {
 	parent := t.TempDir()
-	dataDir := filepath.Join(parent, ".contenox") // the control plane (via --data-dir)
+	dataDir := filepath.Join(parent, ".contenox")
 	require.NoError(t, os.MkdirAll(dataDir, 0o700))
 	dbPath := filepath.Join(t.TempDir(), "workspace-cli.db")
 
@@ -69,11 +61,6 @@ func TestUnit_WorkspaceCLI_AddControlPlaneRefused(t *testing.T) {
 	})
 }
 
-// TestUnit_WorkspaceREST_AddControlPlaneRefused pins the REST grant-verb guard in
-// the reloader's mutators: inside serve the global denylist IS set, so POST
-// /workspace/roots refuses a control-plane path via IsControlPlanePath — wrapping
-// ErrInvalidGrant (which the localfileapi register maps to 422) — WITHOUT touching
-// the durable store.
 func TestUnit_WorkspaceREST_AddControlPlaneRefused(t *testing.T) {
 	base := t.TempDir()
 	controlPlane := filepath.Join(base, ".contenox")
@@ -94,6 +81,5 @@ func TestUnit_WorkspaceREST_AddControlPlaneRefused(t *testing.T) {
 	assert.True(t, errors.Is(err, workspacegrants.ErrInvalidGrant), "REST control-plane grant is a client fault, got %v", err)
 	assert.Contains(t, strings.ToLower(err.Error()), "control plane")
 
-	// The durable store was never written.
 	assert.Empty(t, workspacegrants.ReadGrants(ctx, store), "a refused grant must not be persisted")
 }

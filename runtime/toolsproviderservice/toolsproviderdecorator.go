@@ -10,7 +10,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// activityTrackerDecorator implementation
 type activityTrackerDecorator struct {
 	service Service
 	tracker libtracker.ActivityTracker
@@ -167,7 +166,6 @@ func (d *activityTrackerDecorator) List(ctx context.Context, createdAtCursor *ti
 	return d.service.List(ctx, createdAtCursor, limit)
 }
 
-// WithActivityTracker wraps a Service with activity tracking functionality.
 func WithActivityTracker(service Service, tracker libtracker.ActivityTracker) Service {
 	return &activityTrackerDecorator{
 		service: service,

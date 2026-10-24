@@ -34,25 +34,10 @@ import {
   REPORT_KIND_LABEL_KEY,
 } from './missionPresentation';
 
-// Lazily code-split so xterm (Arc 3) never enters the mission-detail bundle
-// unless the Terminal tab is actually opened.
 const MissionTerminalTab = lazy(() => import('./MissionTerminalTab'));
-// Lazily code-split so Monaco (Arc 1's diff view) never enters the
-// mission-detail bundle unless the Changes tab is actually opened.
 const MissionChangesTab = lazy(() => import('./MissionChangesTab'));
 const MissionSearchTab = lazy(() => import('./MissionSearchTab'));
 
-/**
- * Mission mode's detail surface (docs/development/blueprints/acp/
- * fleet-consolidation.md, "Mission mode", slice M2): the mission's facts plus
- * its reports newest-first. The status line under the intent is the one
- * composed truth (`UnitStatus`) — process state (joined from the fleet),
- * verdict, liveness, and blocker — the same picture the board and the list
- * show, so nothing here contradicts them. Reports are the record of unattended
- * work; a `blocker` report is styled to be unmistakable next to a `progress`
- * one, and Detail / Refs are rendered plainly rather than as something
- * clickable into a document the board cannot actually resolve.
- */
 export default function MissionDetailPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -61,14 +46,8 @@ export default function MissionDetailPage() {
   const missionQuery = useMission(id ?? '');
   const reportsQuery = useMissionReports(id ?? '');
   const fleetQuery = useFleet();
-  // The attention layer's changes/scope — fetched at the page level so the
-  // scope + anomaly chips surface beside the status regardless of the active
-  // tab (async enhancement that never blocks the header), and so the Search
-  // tab's click-through knows the changed-files set. Shared by cache key with
-  // the Changes tab, so opening it reuses this fetch.
   const changes = useMissionChanges(id ?? '');
   const [activeTab, setActiveTab] = useInspectorTab();
-  // A search hit routed into the Changes tab focuses its file.
   const [focusChangePath, setFocusChangePath] = useState<string | null>(null);
 
   const absoluteTime = (iso?: string) => {
@@ -103,9 +82,6 @@ export default function MissionDetailPage() {
   const m = missionQuery.data;
   const reports = reportsQuery.data ?? [];
 
-  // Process state for THIS mission's instance, when it is still live on the
-  // board; blocker state from THIS mission's own reports (its latest report is
-  // a blocker). Both fold into the one composed status.
   let instanceState: FleetInstanceState | undefined;
   for (const entry of fleetQuery.data ?? []) {
     for (const inst of entry.instances ?? []) {
@@ -113,17 +89,12 @@ export default function MissionDetailPage() {
     }
   }
   const blocked = blockedMissionIds(reports).has(m.id);
-  // Present only when serve exposes change tracking and the fetch has resolved;
-  // absent/loading simply shows no scope chips (never a placeholder).
   const scope = changes.data?.scope;
   const changedFiles = changes.data?.files ?? [];
   const openInChanges = (absolutePath: string) => {
     setFocusChangePath(absolutePath);
     setActiveTab('changes');
   };
-  // "Open session" adopts the running dispatch into the chat surface. It needs a
-  // live instance and a bound downstream session; the runtime rejects adopting a
-  // stopped one, so the affordance is gated on the joined process state.
   const canAdopt = instanceState === 'running' && !!m.sessionId && !!m.instanceId;
   const openSession = () => {
     if (!m.instanceId || !m.sessionId) return;
@@ -142,14 +113,11 @@ export default function MissionDetailPage() {
             className="text-text-muted dark:text-dark-text-muted text-sm hover:underline">
             {t('missions.back_to_list')}
           </Link>
-          {/* Intent as the primary fact, per the blueprint's mission-first
-              framing — it is the H1, not a KeyValue row among many. */}
+
           <H1 variant="page" className="mt-2">
             {m.intent}
           </H1>
-          {/* The composed status, with the attention layer's scope surfacing
-              beside it — loudest-first, chip-adjacent, matching how PlanProgress
-              is placed. The anomaly chip is ADVICE, not a verdict. */}
+
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <UnitStatus
               facts={{
@@ -162,8 +130,7 @@ export default function MissionDetailPage() {
             {scope && <ScopeAnomalyChip scope={scope} />}
             {scope && <ScopeBadge scope={scope} />}
           </div>
-          {/* The scope-anomaly detail: an early-warning ADVICE notice naming the
-              paths the unit touched outside its expected scope. */}
+
           {scope?.anomaly && (
             <InlineNotice variant="warning" className="mt-3">
               <p className="font-medium">{t('scope.anomaly_title')}</p>
@@ -227,11 +194,7 @@ export default function MissionDetailPage() {
             <Section title={t('missions.facts_title')}>
               <div className="mt-2 space-y-1">
                 <KeyValue label={t('missions.facts_agent')} value={m.agentName} />
-                {/* The runtime's one line about WHY a mission came to rest where it did
-                (missionservice.StatusReason, attached by Finish). Only a terminal
-                status carries one, and for `stuck` it is the whole point of the
-                status — "it hit a boundary" is unactionable without which boundary —
-                so it is rendered right at the top of the facts, not buried. */}
+
                 {m.statusReason && (
                   <KeyValue label={t('missions.facts_status_reason')} value={m.statusReason} />
                 )}
@@ -267,12 +230,10 @@ export default function MissionDetailPage() {
               </div>
             </Section>
 
-            {/* The living plan — rendered only when the mission has one (an unplanned
-            mission carries the zero Plan, which shows no panel). */}
+
             <MissionPlanPanel plan={m.plan} />
 
-            {/* The plan-revision history — the "+2/−1 — why" feed, newest first.
-            Renders nothing on a legacy/never-planned mission. */}
+
             <MissionRevisionFeed revisions={m.planRevisions} />
 
             <Section

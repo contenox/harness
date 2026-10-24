@@ -13,18 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// nopKV is a KVReader whose lookups always miss, so the hitlservice under test
-// uses its constructor fallback policy (the seeded test policy) rather than any
-// active-policy KV key.
 type nopKV struct{}
 
 func (nopKV) GetKV(context.Context, string, interface{}) error { return os.ErrNotExist }
 
 const testTenant = "tenant-accessview"
 
-// seededEvaluator writes policyJSON as policyName into a fresh policy dir and
-// returns an Evaluator bound to root's view + a hitlservice pinned to that
-// policy, plus the policy's file name (for asserting EvaluateResponse.PolicyName).
 func seededEvaluator(t *testing.T, root, policyName, policyJSON string) *accessview.Evaluator {
 	t.Helper()
 	policyDir := t.TempDir()
@@ -36,10 +30,6 @@ func seededEvaluator(t *testing.T, root, policyName, policyJSON string) *accessv
 	return accessview.NewEvaluator(view, svc)
 }
 
-// secretDenyPolicy denies read/write under .ssh/** with an explicit rule (so a
-// matched-rule index is observable), allows read_file/list_dir elsewhere, and
-// requires approval for write_file elsewhere (the default action, exercised via
-// no matching rule).
 const secretDenyPolicy = `{
   "default_action": "approve",
   "rules": [
@@ -125,10 +115,6 @@ func TestEvaluate_Directory_ReadUsesListDir(t *testing.T) {
 	v := verdicts[0]
 	require.True(t, v.Reachable)
 	require.NotNil(t, v.Read)
-	// list_dir is allowed unconditionally by the seeded policy; read_file's
-	// deny-glob for .ssh/** does not apply to "src", and there is no
-	// unconditional read_file allow rule that would also match, so the ONLY
-	// way this comes back "allow" is if list_dir (not read_file) was queried.
 	require.Equal(t, string(hitlservice.ActionAllow), v.Read.Action)
 }
 
@@ -139,9 +125,6 @@ func TestEvaluate_NonExistentPath_TreatedAsFile(t *testing.T) {
 
 	require.Len(t, verdicts, 1)
 	v := verdicts[0]
-	// The path resolves within root (vfs.Contain tolerates a missing leaf) but
-	// does not exist on disk: reachable, treated as a file (read_file, which the
-	// seeded policy allows unconditionally).
 	require.True(t, v.Reachable)
 	require.NotNil(t, v.Read)
 	require.Equal(t, string(hitlservice.ActionAllow), v.Read.Action)

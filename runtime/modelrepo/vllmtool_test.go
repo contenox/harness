@@ -12,15 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// focuses only on the integration flow not breaking, bigger models would be required for more proper testing
 func TestSystem_VLLM_Tools(t *testing.T) {
 	requireVLLMContainerTests(t)
 
 	ctx := context.Background()
 
-	// Qwen2.5-Instruct ships Hermes-style tool-use in its chat template, so vLLM
-	// serves tool calls with --tool-call-parser hermes; the 0.5B variant is the
-	// smallest ungated model that supports tool calling on CPU.
 	model := "Qwen/Qwen2.5-0.5B-Instruct"
 	tag := "latest"
 
@@ -40,7 +36,7 @@ func TestSystem_VLLM_Tools(t *testing.T) {
 			[]string{apiBase},
 			http.DefaultClient,
 			caps,
-			"", // No auth token for local testing
+			"",
 			nil,
 		)
 
@@ -86,8 +82,6 @@ func TestSystem_VLLM_Tools(t *testing.T) {
 		resp, err := chatClient.Chat(ctx, messages, modelrepo.WithTools(tools...))
 		require.NoError(t, err)
 		assert.Equal(t, "assistant", resp.Message.Role)
-		// A small model may not always choose to call; either content or a tool
-		// call means the integration flow is healthy.
 		assert.True(t, resp.Message.Content != "" || len(resp.ToolCalls) > 0,
 			"response must contain either content or tool calls")
 
@@ -118,7 +112,7 @@ func TestSystem_VLLM_Tools(t *testing.T) {
 			[]string{apiBase},
 			http.DefaultClient,
 			caps,
-			"", // No auth token for local testing
+			"",
 			nil,
 		)
 

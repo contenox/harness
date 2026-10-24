@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnit_BuildVertexRequest_AudioInputAddsInlineDataPart checks audio attachments become inlineData parts with base64 payload and mime type on the wire.
 func TestUnit_BuildVertexRequest_AudioInputAddsInlineDataPart(t *testing.T) {
 	t.Parallel()
 
@@ -51,7 +50,6 @@ func TestUnit_BuildVertexRequest_AudioInputAddsInlineDataPart(t *testing.T) {
 	require.NotContains(t, string(textRaw), "inlineData")
 }
 
-// TestUnit_BuildVertexRequest_AudioOrderedAfterImages pins part ordering: text, then images, then audio.
 func TestUnit_BuildVertexRequest_AudioOrderedAfterImages(t *testing.T) {
 	t.Parallel()
 
@@ -74,7 +72,6 @@ func TestUnit_BuildVertexRequest_AudioOrderedAfterImages(t *testing.T) {
 	require.Equal(t, "audio/mpeg", parts[2].InlineData.MimeType)
 }
 
-// TestUnit_BuildVertexRequest_AudioRefusals checks the accepted media-type set and the inline size cap.
 func TestUnit_BuildVertexRequest_AudioRefusals(t *testing.T) {
 	t.Parallel()
 

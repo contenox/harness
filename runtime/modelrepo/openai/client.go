@@ -24,18 +24,10 @@ type openAIClient struct {
 	maxOutputTokens int
 	tracker         libtracker.ActivityTracker
 	supportsThink   bool
-	// thinking is the model's declared thinking controls; nil leaves the request
-	// with the vendor's own literal for the level the caller asked for.
-	thinking *modelrepo.ThinkingTypes
-	// dialect restates the request body in a vendor's own spelling of the
-	// OpenAI-compatible wire format; nil keeps the OpenAI defaults.
-	dialect modelrepo.ChatDialect
+	thinking        *modelrepo.ThinkingTypes
+	dialect         modelrepo.ChatDialect
 }
 
-// newDialectRequest is what a dialect sees of the neutral request when it
-// restates the body and decides how a reasoning trace comes back. A model the
-// catalog does not declare able to think carries no level, so a dialect sends
-// no reasoning member for it, the same as the OpenAI mapping.
 func newDialectRequest(cfg *modelrepo.ChatConfig, thinking *modelrepo.ThinkingTypes, supportsThink bool) modelrepo.DialectRequest {
 	req := modelrepo.DialectRequest{Thinking: thinking, Tools: len(cfg.Tools) > 0, CacheHints: cfg.CacheHints}
 	if supportsThink {
@@ -44,9 +36,6 @@ func newDialectRequest(cfg *modelrepo.ChatConfig, thinking *modelrepo.ThinkingTy
 	return req
 }
 
-// vendorLabel names the vendor whose endpoint answered a request, so a
-// diagnostic names the vendor the operator configured rather than the shared
-// OpenAI-compatible client that happens to carry the dialect.
 func (c *openAIClient) vendorLabel() string {
 	if c.dialect != nil {
 		return c.dialect.Name()
@@ -62,46 +51,30 @@ func (c *openAIClient) providerType() string {
 }
 
 type openAIChatRequest struct {
-	Model               string           `json:"model"`
-	Messages            []apiChatMessage `json:"messages"`
-	Temperature         *float64         `json:"temperature,omitempty"`
-	MaxCompletionTokens *int             `json:"max_completion_tokens,omitempty"`
-	TopP                *float64         `json:"top_p,omitempty"`
-	Seed                *int             `json:"seed,omitempty"`
-	Stream              bool             `json:"stream,omitempty"`
-	// StreamOptions requests the trailing usage chunk; only set when Stream is true.
-	StreamOptions *openAIStreamOptions `json:"stream_options,omitempty"`
-	Tools         []openAITool         `json:"tools,omitempty"`
-	// Stop bounds generation at the provider; chat completions accepts a string
-	// or at most four sequences, and a longer list is refused before the wire.
-	Stop []string `json:"stop,omitempty"`
-	// ToolChoice is the documented union: the string form (auto, none, required)
-	// or the named-function object, which no single Go member can carry.
-	ToolChoice        any   `json:"tool_choice,omitempty"`
-	ParallelToolCalls *bool `json:"parallel_tool_calls,omitempty"`
-	ResponseFormat    any   `json:"response_format,omitempty"`
-	// ReasoningEffort maps modelrepo.WithThink onto OpenAI's chat-completions
-	// `reasoning_effort` parameter; the literals are model-dependent.
-	ReasoningEffort string `json:"reasoning_effort,omitempty"`
-	// PromptCacheKey routes requests with the same key to the same cache shard
-	// (OpenAI's documented alternative to the deprecated `user` field). Cache
-	// metadata only, never model-visible.
-	PromptCacheKey string `json:"prompt_cache_key,omitempty"`
-	// PromptCacheRetention is the documented cache lifetime policy: 24h keeps a
-	// cached prefix active for up to a day, in_memory lets the organisation's
-	// default evict it sooner. Sent only when a cache hint asks for one.
-	PromptCacheRetention string `json:"prompt_cache_retention,omitempty"`
+	Model                string               `json:"model"`
+	Messages             []apiChatMessage     `json:"messages"`
+	Temperature          *float64             `json:"temperature,omitempty"`
+	MaxCompletionTokens  *int                 `json:"max_completion_tokens,omitempty"`
+	TopP                 *float64             `json:"top_p,omitempty"`
+	Seed                 *int                 `json:"seed,omitempty"`
+	Stream               bool                 `json:"stream,omitempty"`
+	StreamOptions        *openAIStreamOptions `json:"stream_options,omitempty"`
+	Tools                []openAITool         `json:"tools,omitempty"`
+	Stop                 []string             `json:"stop,omitempty"`
+	ToolChoice           any                  `json:"tool_choice,omitempty"`
+	ParallelToolCalls    *bool                `json:"parallel_tool_calls,omitempty"`
+	ResponseFormat       any                  `json:"response_format,omitempty"`
+	ReasoningEffort      string               `json:"reasoning_effort,omitempty"`
+	PromptCacheKey       string               `json:"prompt_cache_key,omitempty"`
+	PromptCacheRetention string               `json:"prompt_cache_retention,omitempty"`
 }
 
 type apiChatMessage struct {
-	Role       string           `json:"role"`
-	Content    any              `json:"content"`
-	ToolCallID string           `json:"tool_call_id,omitempty"`
-	ToolCalls  []apiToolCallReq `json:"tool_calls,omitempty"`
-	// ReasoningContent replays a reasoning model's own trace when the vendor's
-	// request reference documents that member and requires it back; empty on
-	// every dialect where replaying it would be invention.
-	ReasoningContent string `json:"reasoning_content,omitempty"`
+	Role             string           `json:"role"`
+	Content          any              `json:"content"`
+	ToolCallID       string           `json:"tool_call_id,omitempty"`
+	ToolCalls        []apiToolCallReq `json:"tool_calls,omitempty"`
+	ReasoningContent string           `json:"reasoning_content,omitempty"`
 }
 
 type apiContentPart struct {
@@ -130,18 +103,16 @@ type openAIStreamOptions struct {
 }
 
 type openAITool struct {
-	Type     string         `json:"type"` // must be "function"
+	Type     string         `json:"type"`
 	Function openAIFunction `json:"function"`
 }
 
 type openAIFunction struct {
-	Name        string `json:"name"` // ^[a-zA-Z0-9_-]+$
+	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	Parameters  any    `json:"parameters,omitempty"` // JSON Schema
+	Parameters  any    `json:"parameters,omitempty"`
 }
 
-// chatRequestBody serialises a chat request and lets the model's wire dialect
-// restate it in the vendor's own spelling before it reaches the wire.
 func (c *openAIClient) chatRequestBody(req openAIChatRequest, args []modelrepo.ChatArgument) ([]byte, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -164,7 +135,6 @@ func (c *openAIClient) sendRequest(ctx context.Context, endpoint string, request
 	url := c.baseURL + endpoint
 
 	tracker := c.tracker
-	// Never log API key material in activity telemetry; trace logs are not secret-safe.
 	auth := "none"
 	if c.apiKey != "" {
 		auth = "bearer_set"
@@ -195,7 +165,6 @@ func (c *openAIClient) sendRequest(ctx context.Context, endpoint string, request
 		}
 	}
 
-	// Bounded end-to-end; retried on 429/529/5xx with Retry-After honored.
 	ctx, cancel := modelrepo.NonStreamingContext(ctx)
 	defer cancel()
 
@@ -275,9 +244,6 @@ func buildOpenAIRequestWithCapabilities(modelName string, messages []modelrepo.M
 	return req, nameMap
 }
 
-// chatArgsHaveTools reports whether a request carries a tool list, which is what
-// decides the endpoint for a model whose function-calling guide serves tools from
-// the Responses API alone.
 func chatArgsHaveTools(args []modelrepo.ChatArgument) bool {
 	cfg := &modelrepo.ChatConfig{}
 	for _, a := range args {
@@ -314,8 +280,7 @@ func buildOpenAIRequestForDialect(dialect modelrepo.ChatDialect, modelName strin
 		return openAIChatRequest{}, nil, err
 	}
 
-	// Convert tools to OpenAI tools with sanitized/unique function names.
-	nameMap := make(map[string]string) // sanitized -> original
+	nameMap := make(map[string]string)
 	seen := map[string]int{}
 	if len(cfg.Tools) > 0 {
 		tools := make([]openAITool, 0, len(cfg.Tools))
@@ -344,13 +309,10 @@ func buildOpenAIRequestForDialect(dialect modelrepo.ChatDialect, modelName strin
 		}
 	}
 
-	// Reverse map: original tool name -> sanitized name, for rewriting history.
 	origToSanitized := make(map[string]string, len(nameMap))
 	for san, orig := range nameMap {
 		origToSanitized[orig] = san
 	}
-	// A named tool selection resolves after the list, so it names the sanitized
-	// function the request actually declares.
 	req.ToolChoice = chatToolChoice(cfg.ToolChoice, origToSanitized)
 
 	apiMsgs := make([]apiChatMessage, 0, len(messages))
@@ -361,10 +323,8 @@ func buildOpenAIRequestForDialect(dialect modelrepo.ChatDialect, modelName strin
 		}
 		switch {
 		case len(msg.Images) > 0:
-			// Image attachments force the content-parts array form.
 			apiMsg.Content = openAIImageContent(msg)
 		case msg.Content == "" && len(msg.ToolCalls) > 0:
-			// Assistant messages that only carry tool calls send null content.
 			apiMsg.Content = nil
 		default:
 			apiMsg.Content = msg.Content
@@ -409,10 +369,6 @@ func buildOpenAIRequestForDialect(dialect modelrepo.ChatDialect, modelName strin
 	return req, nameMap, nil
 }
 
-// dialectOwnsReasoning reports whether a dialect restates the reasoning
-// controls itself. The shared builder maps the runtime's level through a
-// model-family table, which is another vendor's vocabulary; a dialect that
-// speaks its own would otherwise send a level its reference does not list.
 func dialectOwnsReasoning(dialect modelrepo.ChatDialect) bool {
 	return dialect != nil && dialect.OwnsReasoning()
 }

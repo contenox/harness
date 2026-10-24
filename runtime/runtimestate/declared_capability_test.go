@@ -24,7 +24,6 @@ func newDeclaredCapabilityTestDB(t *testing.T) (context.Context, libdb.DBManager
 	return ctx, db, runtimetypes.New(db.WithoutTransaction())
 }
 
-// A hand-declared gpt-4o must keep the CanVision the catalog observed for it, since the declared row cannot express vision/think itself.
 func TestUnit_RunBackendCycle_DeclaredModelKeepsObservedVision(t *testing.T) {
 	ctx, db, store := newDeclaredCapabilityTestDB(t)
 
@@ -72,7 +71,6 @@ func TestUnit_RunBackendCycle_DeclaredModelKeepsObservedVision(t *testing.T) {
 	require.True(t, pm.CanStream)
 }
 
-// The vLLM reconcile path must read the configured bearer token, send it on the catalog request, and store it on the backend state.
 func TestUnit_RunBackendCycle_VLLMPassesConfiguredAuthToken(t *testing.T) {
 	ctx, db, store := newDeclaredCapabilityTestDB(t)
 
@@ -117,7 +115,6 @@ func TestUnit_RunBackendCycle_VLLMPassesConfiguredAuthToken(t *testing.T) {
 	require.Len(t, bs.PulledModels, 1)
 }
 
-// In the vLLM declared-model merge, observed capabilities are the base and declared trues add on top, so a bare declaration never strips them.
 func TestUnit_RunBackendCycle_VLLMDeclaredModelKeepsObservedCaps(t *testing.T) {
 	ctx, db, store := newDeclaredCapabilityTestDB(t)
 
@@ -139,7 +136,6 @@ func TestUnit_RunBackendCycle_VLLMDeclaredModelKeepsObservedCaps(t *testing.T) {
 		Type:    "vllm",
 		BaseURL: server.URL,
 	}))
-	// Declared with chat only; the store requires at least one capability.
 	require.NoError(t, store.AppendModel(ctx, &runtimetypes.Model{
 		ID:      "declared-qwen",
 		Model:   "Qwen/Qwen3-32B",

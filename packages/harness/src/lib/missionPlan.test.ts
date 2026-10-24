@@ -17,7 +17,6 @@ describe('planProgress — the one shared progress helper', () => {
   });
 
   it('is null for the zero Plan a never-planned mission carries (null or empty entries)', () => {
-    // Go marshals a nil slice as null; a fresh Plan is also revision 0 empty.
     expect(planProgress(plan(null, { revision: 0 }))).toBeNull();
     expect(planProgress(plan([], { revision: 0 }))).toBeNull();
   });

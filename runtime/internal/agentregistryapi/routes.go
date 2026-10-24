@@ -1,12 +1,3 @@
-// Package agentregistryapi exposes the declared-agents registry
-// (runtime/agentregistryservice) over REST. It is deliberately read-only in
-// this slice: listing and looking up registered agents is served here, while
-// registration (create/update/delete) stays with the `contenox agent` CLI.
-//
-// The route/handler shape mirrors runtime/internal/mcpserverapi so the two
-// declared-resource registries stay easy to compare, and the `// @request` /
-// `// @response` / param-description annotations are what the OpenAPI generator
-// (tools/openapi-gen) scans for.
 package agentregistryapi
 
 import (
@@ -16,7 +7,6 @@ import (
 	"github.com/contenox/harness/runtime/agentregistryservice"
 )
 
-// AddAgentRegistryRoutes registers the read-only agent registry routes on mux.
 func AddAgentRegistryRoutes(mux *http.ServeMux, svc agentregistryservice.Service) {
 	h := &agentHandler{svc: svc}
 
@@ -29,7 +19,6 @@ type agentHandler struct {
 	svc agentregistryservice.Service
 }
 
-// list returns the declared agents in the registry, paginated by cursor.
 func (h *agentHandler) list(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -44,10 +33,9 @@ func (h *agentHandler) list(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.ListOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, items) // @response []*runtimetypes.Agent
+	_ = apiframework.Encode(w, r, http.StatusOK, items)
 }
 
-// get returns one declared agent by ID.
 func (h *agentHandler) get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := apiframework.GetPathParam(r, "id", "The unique ID of the agent.")
@@ -56,10 +44,9 @@ func (h *agentHandler) get(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.GetOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, agent) // @response runtimetypes.Agent
+	_ = apiframework.Encode(w, r, http.StatusOK, agent)
 }
 
-// getByName returns one declared agent by its unique name.
 func (h *agentHandler) getByName(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	name := apiframework.GetPathParam(r, "name", "The unique name of the agent.")
@@ -68,5 +55,5 @@ func (h *agentHandler) getByName(w http.ResponseWriter, r *http.Request) {
 		_ = apiframework.Error(w, r, err, apiframework.GetOperation)
 		return
 	}
-	_ = apiframework.Encode(w, r, http.StatusOK, agent) // @response runtimetypes.Agent
+	_ = apiframework.Encode(w, r, http.StatusOK, agent)
 }

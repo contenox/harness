@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Pins the Vertex text-embedding wire shape: POST .../models/{model}:predict
-// with instances[].content; values read from predictions[0].embeddings.values.
 func TestUnit_VertexEmbedClient_Embed(t *testing.T) {
 	t.Parallel()
 
@@ -47,8 +45,6 @@ func TestUnit_VertexEmbedClient_Embed(t *testing.T) {
 	require.Equal(t, "hello world", got.Instances[0].Content)
 }
 
-// TestUnit_VertexEmbedClient_NoValues asserts a teaching error when the model
-// returns no embedding values (e.g. a chat model was addressed with :predict).
 func TestUnit_VertexEmbedClient_NoValues(t *testing.T) {
 	t.Parallel()
 
@@ -74,8 +70,6 @@ func TestUnit_VertexEmbedClient_NoValues(t *testing.T) {
 	require.Contains(t, err.Error(), "gemini-embedding-001", "error must teach which kind of model to use")
 }
 
-// Advertised models connect; others refuse with a teaching error instead of
-// failing at request time.
 func TestUnit_VertexProvider_EmbedConnectionGate(t *testing.T) {
 	t.Parallel()
 

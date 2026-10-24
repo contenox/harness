@@ -20,14 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// accessTestPolicy is a small, self-contained HITL policy (independent of the
-// shipped hitl-policy-strict.json preset, so this test does not break if that
-// preset's rules change): a path-glob rule denies anything under .ssh/ for
-// every local_fs tool (so both the read and write dimension hit the SAME
-// rule, matching how the real presets gate secret directories), read_file and
-// list_dir are otherwise allowed, and everything else (write_file on a
-// non-.ssh path) falls through to default_action: "approve" — giving one
-// test fixture that exercises matched_rule AND default_action.
 const accessTestPolicyName = "hitl-policy-access-test.json"
 
 const accessTestPolicy = `{
@@ -39,23 +31,12 @@ const accessTestPolicy = `{
   ]
 }`
 
-// emptyKVReaderStub always misses, forcing hitlservice to fall back to the
-// constructor's named policy rather than an active-policy KV key — mirrors
-// serverapi.emptyKVReader (unexported there), reproduced here so this test
-// pins an explicit policy the same way an explicit ?policy= query param does.
 type emptyKVReaderStub struct{}
 
 func (emptyKVReaderStub) GetKV(context.Context, string, interface{}) error {
 	return os.ErrNotExist
 }
 
-// setupAccessTestServer mounts a real vfs.Factory + accessapi.AddRoutes
-// behind httptest, under "/api" exactly like `contenox serve` mounts it
-// (server.go's registerProductRoutes + serve_cmd.go's rootMux.Handle("/api/",
-// http.StripPrefix("/api", apiMux))) — the same discipline
-// setupApprovalsTestServer (approvals_cmd_test.go) uses, so this exercises
-// serveClient against the real wire contract without spawning a `contenox
-// serve` process.
 func setupAccessTestServer(t *testing.T, root, policyDir string) (*vfs.Factory, *httptest.Server) {
 	t.Helper()
 	factory, err := vfs.NewFactory(root)
@@ -87,10 +68,6 @@ func newWorkspaceAccessTestCmd() *cobra.Command {
 	return c
 }
 
-// accessTestWorkspace builds a temp workspace root with a normal file and a
-// fake secret under .ssh/, plus a sibling directory OUTSIDE the root, for the
-// unreachable-path case. Returns the root and the sibling (for an
-// out-of-root path).
 func accessTestWorkspace(t *testing.T) (root, outsideSibling string) {
 	t.Helper()
 	parent := t.TempDir()
@@ -115,13 +92,6 @@ func runWorkspaceAccessCmd(t *testing.T, srv *httptest.Server, args ...string) (
 	return buf.String(), err
 }
 
-// ─── access ─────────────────────────────────────────────────────────────
-
-// TestUnit_WorkspaceAccess_NormalFileAllowsReadApprovesWrite is the "routine
-// file" case: no rule denies it, so read_file falls to the explicit allow
-// rule (matched_rule, omitted from REASON since the dimension is "allow") and
-// write_file falls through to default_action: approve (surfaced in REASON,
-// since it is NOT allow).
 func TestUnit_WorkspaceAccess_NormalFileAllowsReadApprovesWrite(t *testing.T) {
 	root, _ := accessTestWorkspace(t)
 	policyDir := t.TempDir()
@@ -139,9 +109,6 @@ func TestUnit_WorkspaceAccess_NormalFileAllowsReadApprovesWrite(t *testing.T) {
 	require.NotContains(t, out, "read:", "an allow dimension must not appear in the REASON column")
 }
 
-// TestUnit_WorkspaceAccess_SecretPathDeniesBothDimensionsWithMatchedRule is
-// the "fake secret" case: the .ssh/ glob rule (index 0) denies BOTH read and
-// write, and both dimensions must name the SAME matched rule index.
 func TestUnit_WorkspaceAccess_SecretPathDeniesBothDimensionsWithMatchedRule(t *testing.T) {
 	root, _ := accessTestWorkspace(t)
 	policyDir := t.TempDir()
@@ -166,10 +133,6 @@ func TestUnit_WorkspaceAccess_SecretPathDeniesBothDimensionsWithMatchedRule(t *t
 	require.NotContains(t, row, "allow", "a denied path's row must not also show allow")
 }
 
-// TestUnit_WorkspaceAccess_UnreachablePathHasNoVerdict proves a path outside
-// the workspace root (an ../escape-shaped traversal) comes back
-// reachable:false with blank read/write and a dashed REASON — no policy is
-// evaluated for a path that is not really inside the root.
 func TestUnit_WorkspaceAccess_UnreachablePathHasNoVerdict(t *testing.T) {
 	root, _ := accessTestWorkspace(t)
 	policyDir := t.TempDir()
@@ -192,10 +155,6 @@ func TestUnit_WorkspaceAccess_UnreachablePathHasNoVerdict(t *testing.T) {
 	require.Contains(t, row, "false")
 }
 
-// TestUnit_WorkspaceAccess_AllThreeCasesInOneBatch runs the normal file, the
-// secret, and the escape path in a single invocation (as one request batch,
-// exactly like a real `contenox workspace access a b c` call), proving the
-// three documented outcomes all come back correctly in the SAME response.
 func TestUnit_WorkspaceAccess_AllThreeCasesInOneBatch(t *testing.T) {
 	root, _ := accessTestWorkspace(t)
 	policyDir := t.TempDir()
@@ -227,10 +186,6 @@ func TestUnit_WorkspaceAccess_AllThreeCasesInOneBatch(t *testing.T) {
 	require.Contains(t, escape, "false")
 }
 
-// TestUnit_WorkspaceAccess_RootFlagSelectsAllowlistedRoot proves --root is
-// actually threaded onto the request (a request against a root NOT in the
-// factory's allowlist is refused by the server), by using a second granted
-// root distinct from the factory's default.
 func TestUnit_WorkspaceAccess_RootFlagSelectsAllowlistedRoot(t *testing.T) {
 	root, _ := accessTestWorkspace(t)
 	secondRoot := t.TempDir()
@@ -263,9 +218,6 @@ func TestUnit_WorkspaceAccess_RootFlagSelectsAllowlistedRoot(t *testing.T) {
 	require.Contains(t, out, "true")
 }
 
-// TestUnit_WorkspaceAccess_UnreachableServerFailsWithNonZeroExit mirrors
-// TestUnit_ApprovalsList_UnreachableServerFailsWithNonZeroExit: a serve that
-// is not there must fail the command, not print an empty table.
 func TestUnit_WorkspaceAccess_UnreachableServerFailsWithNonZeroExit(t *testing.T) {
 	cmd := newWorkspaceAccessTestCmd()
 	var buf bytes.Buffer
@@ -276,10 +228,6 @@ func TestUnit_WorkspaceAccess_UnreachableServerFailsWithNonZeroExit(t *testing.T
 	require.Error(t, err)
 }
 
-// TestUnit_WorkspaceAccess_BadRootSurfacesServeErrorMessage proves the
-// apiframework error envelope (a root outside every allowlisted root, 422)
-// reaches the CLI caller as a non-zero exit carrying serve's own message,
-// same contract as every other serveClient-backed verb.
 func TestUnit_WorkspaceAccess_BadRootSurfacesServeErrorMessage(t *testing.T) {
 	root, _ := accessTestWorkspace(t)
 	policyDir := t.TempDir()
@@ -291,8 +239,6 @@ func TestUnit_WorkspaceAccess_BadRootSurfacesServeErrorMessage(t *testing.T) {
 	require.Contains(t, err.Error(), "not under any configured workspace root")
 	_ = out
 }
-
-// ─── table helpers ──────────────────────────────────────────────────────
 
 func TestUnit_AccessTableHelpers(t *testing.T) {
 	allow := &accessview.DimensionVerdict{Action: "allow", Reason: "matched_rule", Rule: intPtr(4)}

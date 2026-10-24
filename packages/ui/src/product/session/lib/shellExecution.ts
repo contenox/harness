@@ -1,10 +1,4 @@
-/**
- * Shared formatting for `execute`-kind tool calls (`local_shell`, `run`/`exec` tools — see `runtime/acpsvc/events.go` `toolKindFor`).
- */
 
-/**
- * Best-effort `$ command arg1 arg2` line from a raw input `{command, args}` (see `summarizeToolCallArgs` on the backend).
- */
 export function shellCommandLine(rawInput: unknown): string | null {
   if (rawInput == null || typeof rawInput !== 'object') return null;
   const obj = rawInput as Record<string, unknown>;
@@ -14,9 +8,6 @@ export function shellCommandLine(rawInput: unknown): string | null {
   return ['$', command, ...args].join(' ');
 }
 
-/**
- * Shell tool output is a plain string (`json.RawMessage(jsonString(ev.Content))` on the backend); split into terminal lines.
- */
 export function shellOutputLines(rawOutput: unknown): string[] | null {
   return typeof rawOutput === 'string' ? rawOutput.split('\n') : null;
 }

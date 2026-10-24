@@ -3,12 +3,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLogin } from '../../../hooks/useLogin';
 
-/**
- * Single "Access token" field. The token is a secret, so it uses a
- * PasswordInput (masked) rather than a plain text input; it is POSTed to
- * /ui/login and never stored client-side — the server keeps the session in an
- * HttpOnly cookie the browser cannot read.
- */
 export function LoginForm() {
   const { t } = useTranslation();
   const [token, setToken] = useState('');
@@ -43,9 +37,7 @@ export function LoginForm() {
           {isPending ? t('login.loading') : t('login.submit')}
         </Button>
       }>
-      {/* Intro line under the title. FormField's `description` prop is an inline,
-          right-aligned hint meant for a few words; a full sentence belongs on its
-          own line, so it renders as a muted paragraph here instead. */}
+
       <p className="text-text-muted dark:text-dark-text-muted text-sm">
         {t('login.description', 'Enter the access token to reach this runtime.')}
       </p>

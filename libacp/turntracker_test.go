@@ -138,8 +138,6 @@ func TestUnit_TurnTracker_Reset(t *testing.T) {
 }
 
 func TestUnit_TurnTracker_ObserveIgnoresSessionID(t *testing.T) {
-	// TurnTracker deliberately does not filter by session id (that is
-	// FilterSessionUpdates' job); it observes whatever it is handed.
 	var tr libacp.TurnTracker
 	tr.Observe(note("other-session", libacp.NewAgentMessageChunk("leaked")))
 	assert.True(t, tr.SawDisplayableOutput())

@@ -18,12 +18,9 @@ type OpenAIStreamClient struct {
 	openAIClient
 }
 
-// Stream emits raw StreamParcel deltas as they arrive, ending in exactly one terminal parcel.
 func (c *OpenAIStreamClient) Stream(ctx context.Context, messages []modelrepo.Message, args ...modelrepo.ChatArgument) (<-chan *modelrepo.StreamParcel, error) {
 	reportErr, reportChange, end := c.tracker.Start(ctx, "stream", c.providerType(), "model", c.modelName)
-	// end() is not deferred here; ownership passes to the goroutine below since the stream is asynchronous.
 
-	// No audio encoding on this wire format; refuse instead of dropping silently.
 	if err := modelrepo.RefuseAudioInput(c.providerType(), c.modelName, messages); err != nil {
 		reportErr(err)
 		end()

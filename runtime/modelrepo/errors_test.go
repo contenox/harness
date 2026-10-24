@@ -78,7 +78,6 @@ func TestUnit_ClassifyProviderError(t *testing.T) {
 	}
 }
 
-// TestUnit_DoWithRetry_HonorsRetryAfter pins that a 429 with Retry-After-Ms is retried and succeeds.
 func TestUnit_DoWithRetry_HonorsRetryAfter(t *testing.T) {
 	var calls atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -106,7 +105,6 @@ func TestUnit_DoWithRetry_HonorsRetryAfter(t *testing.T) {
 	}
 }
 
-// TestUnit_DoWithRetry_GivesUp pins that retries are bounded and the final response returns unconsumed.
 func TestUnit_DoWithRetry_GivesUp(t *testing.T) {
 	var calls atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -147,7 +145,6 @@ func TestUnit_RetryAfterDelay(t *testing.T) {
 	}
 }
 
-// TestUnit_ProviderSentinels_AreDistinct guards against wrapping one sentinel in the other.
 func TestUnit_ProviderSentinels_AreDistinct(t *testing.T) {
 	wrapped := fmt.Errorf("%w: detail", ErrContextLengthExceeded)
 	if errors.Is(wrapped, ErrRateLimited) {

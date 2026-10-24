@@ -16,7 +16,6 @@ import (
 
 const defaultBaseURL = "https://api.deepseek.com"
 
-// imageModality is the input modality that marks a model as accepting images.
 const imageModality = "image"
 
 type catalogProvider struct {
@@ -44,10 +43,6 @@ func (p *catalogProvider) baseURL() string {
 	return defaultBaseURL
 }
 
-// modelCard is what DeepSeek's own model list publishes about one model: the
-// display name, the two token bounds, the input modalities it accepts and the
-// effort levels its thinking mode carries. Every capability below is a field of
-// that response, never an inference from the model id.
 type modelCard struct {
 	ID              string   `json:"id"`
 	Name            string   `json:"name"`
@@ -102,11 +97,6 @@ func (p *catalogProvider) ListModels(ctx context.Context) ([]modelrepo.ObservedM
 	return models, nil
 }
 
-// capabilityFor restates one model card as the capabilities the runtime routes
-// on: the list declares every model as a chat model, the input modalities
-// decide vision, and the effort declaration decides whether thinking is
-// reachable at all. A model whose list declares no effort level accepts no
-// thinking control, so thinking stays undeclared rather than claimed.
 func capabilityFor(item modelCard) modelrepo.CapabilityConfig {
 	caps := modelrepo.CapabilityConfig{
 		Dialect:         dialectName,
@@ -123,10 +113,6 @@ func capabilityFor(item modelCard) modelrepo.CapabilityConfig {
 	return caps
 }
 
-// thinkingTypes restates the list's effort declaration in the runtime's own
-// level vocabulary. The toggle that turns thinking off is the vendor's
-// documented one, and a level the runtime does not know is left out so the
-// declaration never claims an effort the runtime cannot ask for.
 func thinkingTypes(item modelCard) *modelrepo.ThinkingTypes {
 	if item.Effort == nil || len(item.Effort.SupportedLevels) == 0 {
 		return nil
@@ -150,9 +136,6 @@ func thinkingTypes(item modelCard) *modelrepo.ThinkingTypes {
 	return declared
 }
 
-// modelFacts carries what the vendor publishes about a model beyond the
-// runtime's capability list, so a picker shows the vendor's display name
-// instead of the request identifier.
 func modelFacts(item modelCard) map[string]string {
 	display := strings.TrimSpace(item.Name)
 	if display == "" {

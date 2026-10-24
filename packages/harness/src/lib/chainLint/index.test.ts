@@ -53,7 +53,7 @@ describe('lintChain', () => {
   it('warns when wildcard tools expose local_shell without allowlist', () => {
     const t = chatTask({ id: 'wild' });
     t.execute_config!.tools = ['*'];
-    t.execute_config!.tools_policies = {}; // wipe both policies
+    t.execute_config!.tools_policies = {};
     const result = lintChain(chain(t));
     const ruleIds = result.map((d) => d.ruleId);
     expect(ruleIds).toContain('hook_policies_missing_for_local_shell');
@@ -155,7 +155,6 @@ describe('diagnosticCounts', () => {
   it('separates warnings from infos', () => {
     const t = chatTask();
     delete t.execute_config!.retry_policy;
-    // Wipe local_shell only; keep local_fs valid so we get exactly 1 warning.
     t.execute_config!.tools_policies = {
       local_shell: {},
       local_fs: { _allowed_dir: '.' },

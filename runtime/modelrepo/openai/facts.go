@@ -10,46 +10,18 @@ import (
 	"github.com/contenox/harness/runtime/reasoning"
 )
 
-// reasoningOffLiteral is the vendor's reasoning.effort literal that turns
-// reasoning off; the runtime spells the same level "off".
 const reasoningOffLiteral = "none"
 
-// openAIModelFact is what OpenAI's own model page publishes about one model
-// family: the reasoning.effort literals it accepts, its max output tokens, its
-// input modalities, and the endpoints it serves. GET /v1/models reports none of
-// it, so the runtime reads the vendor's pages once, here, instead of inferring a
-// member from a model id at each point of use.
-//
-// Sources: https://developers.openai.com/api/docs/models/<model> for the effort
-// literals, output ceiling and input modalities; .../guides/reasoning for the
-// effort support the model pages leave unstated and for the one model that
-// rejects none; .../guides/function-calling for the models whose tool calling
-// the Responses API alone serves.
 type openAIModelFact struct {
-	// Reasoning marks a model whose page documents reasoning token support.
-	Reasoning bool
-	// Efforts are the reasoning.effort literals the page names for the model,
-	// empty when the page names none. A named level is one the model accepts; a
-	// request for a level outside the list is refused rather than downgraded.
-	Efforts []string
-	// MaxOutputTokens is the page's max output tokens; 0 means the page states none.
-	MaxOutputTokens int
-	// Vision marks a model whose page lists image among the input modalities.
-	Vision bool
-	// ResponsesOnly marks a model whose page reports Chat Completions as unsupported.
-	ResponsesOnly bool
-	// ChatOnly marks a model whose page reports the Responses endpoint as
-	// unsupported, so a reasoning model with no Responses route stays on Chat
-	// Completions instead of being sent to an endpoint the vendor rejects.
-	ChatOnly bool
-	// ToolsRequireResponses marks a model the function-calling guide reports as
-	// unable to call functions on Chat Completions.
+	Reasoning             bool
+	Efforts               []string
+	MaxOutputTokens       int
+	Vision                bool
+	ResponsesOnly         bool
+	ChatOnly              bool
 	ToolsRequireResponses bool
 }
 
-// openAIModelFacts is the documented facts of every OpenAI model family the
-// runtime routes. A family is keyed by the model id prefix the vendor publishes,
-// including its snapshot prefix, so gpt-5.5-2026-04-23 is read as gpt-5.5.
 var openAIModelFacts = map[string]openAIModelFact{
 	"gpt-6-astra": {
 		Reasoning:             true,
@@ -250,8 +222,6 @@ var openAIModelFacts = map[string]openAIModelFact{
 	},
 }
 
-// openAIModelFactKeys is the fact table's keys longest first, so a lookup reads
-// gpt-5.1-codex-max as itself and not as gpt-5.1.
 var openAIModelFactKeys = func() []string {
 	keys := make([]string, 0, len(openAIModelFacts))
 	for key := range openAIModelFacts {
@@ -266,9 +236,6 @@ var openAIModelFactKeys = func() []string {
 	return keys
 }()
 
-// openAIModelFactFor returns the documented facts of a model id. The second
-// result is false for a model no page covers, which every caller treats as
-// nothing documented rather than as another family's facts.
 func openAIModelFactFor(model string) (openAIModelFact, bool) {
 	base := openAIAPIBaseModelID(model)
 	if fact, ok := openAIModelFacts[base]; ok {
@@ -282,23 +249,16 @@ func openAIModelFactFor(model string) (openAIModelFact, bool) {
 	return openAIModelFact{}, false
 }
 
-// openAIToolCount reports whether a request carries tools, which is what decides
-// the endpoint for a model whose tool calling Chat Completions does not serve.
 func openAIToolsRequireResponses(model string) bool {
 	fact, ok := openAIModelFactFor(model)
 	return ok && fact.ToolsRequireResponses
 }
 
-// openAIModelReasons reports whether the vendor's pages document reasoning token
-// support for a model id; an unknown model is not read as a reasoning model.
 func openAIModelReasons(model string) bool {
 	fact, ok := openAIModelFactFor(model)
 	return ok && fact.Reasoning
 }
 
-// openAIUsesResponsesEndpoint reports the endpoint a chat request for this model
-// takes. The codex catalog always streams from the Responses API, so its caller
-// decides that separately.
 func openAIUsesResponsesEndpoint(model string, withTools bool) bool {
 	fact, ok := openAIModelFactFor(model)
 	if !ok {
@@ -316,12 +276,6 @@ func openAIUsesResponsesEndpoint(model string, withTools bool) bool {
 	return fact.Reasoning
 }
 
-// openAIReasoningEffort renders a think level as the reasoning_effort literal
-// this model accepts. A level the model's page does not name is refused, naming
-// the literals it does, so a request never silently asks for a different effort
-// than the operator selected. Off is the exception: a model that cannot turn
-// reasoning off (its page names no none) carries no effort member at all, which
-// is how every chat dialect expresses an inexpressible thinking control.
 func openAIReasoningEffort(model string, think *string, declared *modelrepo.ThinkingTypes) (string, error) {
 	if think == nil {
 		return "", nil
@@ -367,7 +321,6 @@ func openAIReasoningEffort(model string, think *string, declared *modelrepo.Thin
 	return wireEffort(level), nil
 }
 
-// wireEffort is the vendor's literal for a runtime level; off is spelled none.
 func wireEffort(level string) string {
 	if level == reasoning.Off {
 		return reasoningOffLiteral
@@ -375,13 +328,6 @@ func wireEffort(level string) string {
 	return level
 }
 
-// openAIShouldOmitSamplingParams reports whether temperature and top_p must be
-// left off a reasoning model's request. A reasoning model accepts them only
-// while it is not reasoning: with none named among its efforts and no effort
-// requested the model's own default is none, and every other reasoning request
-// drops them. A reasoning model whose page names no effort literal cannot turn
-// reasoning off, and the vendor rejects temperature on it even when no effort
-// is sent, so it never carries sampling.
 func openAIShouldOmitSamplingParams(model, reasoningEffort string) bool {
 	fact, ok := openAIModelFactFor(model)
 	if !ok || !fact.Reasoning {
@@ -396,15 +342,11 @@ func openAIShouldOmitSamplingParams(model, reasoningEffort string) bool {
 	return reasoningEffort != reasoningOffLiteral
 }
 
-// openAIModelSupportsVision reports whether the vendor's pages list image input
-// for a model id; an unknown model declares no vision.
 func openAIModelSupportsVision(model string) bool {
 	fact, ok := openAIModelFactFor(model)
 	return ok && fact.Vision
 }
 
-// openAIMaxOutputTokens is the page's output ceiling for a model id, 0 when no
-// page states one, which leaves the request unclamped.
 func openAIMaxOutputTokens(model string) int {
 	fact, ok := openAIModelFactFor(model)
 	if !ok {
@@ -413,11 +355,6 @@ func openAIMaxOutputTokens(model string) int {
 	return fact.MaxOutputTokens
 }
 
-// openAIThinkingDeclaration is the thinking controls a request may use: the
-// model page's own declaration when the vendor publishes one, otherwise the
-// controls the catalogue declared for the model. Neither is inferred from a
-// model name, and a declaration naming a level the runtime does not know yields
-// none rather than a request the vendor rejects.
 func openAIThinkingDeclaration(model string, declared *modelrepo.ThinkingTypes) *modelrepo.ThinkingTypes {
 	if documented := openAIThinkingTypes(model); documented != nil {
 		return documented
@@ -431,10 +368,6 @@ func openAIThinkingDeclaration(model string, declared *modelrepo.ThinkingTypes) 
 	return declared
 }
 
-// openAIThinkingTypes declares the thinking controls a model's page names, in
-// the shared declaration's vocabulary. It returns nil when the page names no
-// control the declaration can carry, so an undeclared model is never read as one
-// whose controls are known.
 func openAIThinkingTypes(model string) *modelrepo.ThinkingTypes {
 	fact, ok := openAIModelFactFor(model)
 	if !ok || !fact.Reasoning {

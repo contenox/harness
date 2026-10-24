@@ -8,24 +8,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// ---------------------------------------------------------------------------
-// Tool schemas
-//
-// Descriptions are terse by default. The long-form versions previously shipped
-// here ran to ~200 words each across nine tools — plausibly 1,500-2,500 tokens
-// serialised, or 8-13% of a 20k-token context window consumed before a single
-// byte of file content. That is paid on every single turn.
-//
-// Almost everything the long form taught (truncation semantics, did-you-mean
-// suggestions, severity markers, the read-before-write contract) is re-taught
-// by the corresponding error message at the moment it fires, with the concrete
-// path and line number filled in. Teaching in the error costs tokens once,
-// when relevant; teaching in the schema costs them always.
-//
-// Set _verbose_tool_descriptions=true in tools_policies.local_fs to restore the
-// long form for large-context models.
-// ---------------------------------------------------------------------------
-
 type fsToolDoc struct {
 	terse   string
 	verbose string
