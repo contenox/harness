@@ -56,8 +56,30 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update -qq && sudo apt-get install -y rpm
 
+      - name: Import release signing key
+        if: runner.os == 'Linux'
+        env:
+          RELEASE_GPG_PRIVATE_KEY: ${{ secrets.RELEASE_GPG_PRIVATE_KEY }}
+          RELEASE_GPG_FINGERPRINT: ${{ vars.RELEASE_GPG_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$RUNNER_TEMP/gnupg"
+          printf '%s\n' "$RELEASE_GPG_PRIVATE_KEY" | gpg --batch --homedir "$RUNNER_TEMP/gnupg" --import
+          FPR=$(gpg --batch --homedir "$RUNNER_TEMP/gnupg" --with-colons --list-secret-keys | awk -F: '/^fpr:/ {print $10; exit}')
+          test "$FPR" = "$RELEASE_GPG_FINGERPRINT"
+          echo "GNUPGHOME=$RUNNER_TEMP/gnupg" >> "$GITHUB_ENV"
+          echo "RELEASE_GPG_FINGERPRINT=$FPR" >> "$GITHUB_ENV"
+
       - run: make install-web
       - run: make desktop-package
+
+      - name: Sign RPM
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          rpm=$(find desktop/dist -maxdepth 1 -name '*.rpm' -print -quit)
+          test -n "$rpm"
+          rpmsign --define "_gpg_name $RELEASE_GPG_FINGERPRINT" --define "_gpg_path $GNUPGHOME" --addsign "$rpm"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -82,9 +104,23 @@ jobs:
           merge-multiple: true
           path: artifacts
 
+      - name: Import release signing key
+        env:
+          RELEASE_GPG_PRIVATE_KEY: ${{ secrets.RELEASE_GPG_PRIVATE_KEY }}
+          RELEASE_GPG_FINGERPRINT: ${{ vars.RELEASE_GPG_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$RUNNER_TEMP/gnupg"
+          printf '%s\n' "$RELEASE_GPG_PRIVATE_KEY" | gpg --batch --homedir "$RUNNER_TEMP/gnupg" --import
+          FPR=$(gpg --batch --homedir "$RUNNER_TEMP/gnupg" --with-colons --list-secret-keys | awk -F: '/^fpr:/ {print $10; exit}')
+          test "$FPR" = "$RELEASE_GPG_FINGERPRINT"
+          echo "GNUPGHOME=$RUNNER_TEMP/gnupg" >> "$GITHUB_ENV"
+          echo "RELEASE_GPG_FINGERPRINT=$FPR" >> "$GITHUB_ENV"
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_GPG_PUBLIC_KEY: ${{ vars.RELEASE_GPG_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           VERSION=$(node -p "require('./desktop/package.json').version")
@@ -92,6 +128,11 @@ jobs:
           cd artifacts
           find . -name SHA256SUMS -delete
           sha256sum Contenox-* > SHA256SUMS
+          gpg --batch --homedir "$GNUPGHOME" --local-user "$RELEASE_GPG_FINGERPRINT" --armor --detach-sign --output SHA256SUMS.asc SHA256SUMS
+          for artifact in Contenox-*; do
+            gpg --batch --homedir "$GNUPGHOME" --local-user "$RELEASE_GPG_FINGERPRINT" --armor --detach-sign --output "$artifact.asc" "$artifact"
+          done
+          printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > contenox-release.asc
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" ./* --clobber
           else

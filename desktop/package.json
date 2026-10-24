@@ -8,8 +8,8 @@
     "dev": "node src/dev.mjs",
     "start": "electron .",
     "stage": "node scripts/stage.mjs",
-    "package:dir": "npm run stage && electron-builder --dir",
-    "package": "npm run stage && electron-builder",
+    "package:dir": "npm run stage && electron-builder --dir --publish never",
+    "package": "npm run stage && electron-builder --publish never",
     "verify:package": "node scripts/verify-package.mjs",
     "checksums": "node scripts/package-checksums.mjs"
   },
