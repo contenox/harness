@@ -143,7 +143,9 @@ jobs:
           test -n "$rpm"
           signed="$RUNNER_TEMP/$(basename "$rpm")"
           cp "$rpm" "$signed"
+          rpm --delsign "$signed"
           rpmsign --define "_gpg_name $RELEASE_GPG_FINGERPRINT" --define "_gpg_path $GNUPGHOME" --addsign "$signed"
+          test "$(rpm -qp --qf '%{RSAHEADER:pgpsig}' "$signed")" != "(none)"
           printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
           rpm --dbpath "$RUNNER_TEMP/rpmdb" --initdb
           rpm --dbpath "$RUNNER_TEMP/rpmdb" --import "$RUNNER_TEMP/release.asc"
@@ -219,6 +221,7 @@ jobs:
           printf '%s\n' "$RELEASE_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/release.asc"
           rpm --dbpath "$RUNNER_TEMP/verifydb" --initdb
           rpm --dbpath "$RUNNER_TEMP/verifydb" --import "$RUNNER_TEMP/release.asc"
+          test "$(rpm -qp --qf '%{RSAHEADER:pgpsig}' verify/uploaded.rpm)" != "(none)"
           rpmkeys --dbpath "$RUNNER_TEMP/verifydb" --checksig verify/uploaded.rpm | tee "$RUNNER_TEMP/uploaded-rpmcheck.txt"
           grep -q 'signatures OK' "$RUNNER_TEMP/uploaded-rpmcheck.txt"
 
