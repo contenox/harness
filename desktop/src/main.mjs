@@ -1,8 +1,9 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { startUiServer } from './server.mjs';
 
 let runtime;
@@ -54,6 +55,13 @@ async function startRuntime() {
   return `http://127.0.0.1:${port}`;
 }
 
+ipcMain.handle('contenox:select-directory', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return result.canceled ? null : (result.filePaths[0] ?? null);
+});
+
 function createWindow(url) {
   window = new BrowserWindow({
     width: 1440,
@@ -67,6 +75,7 @@ function createWindow(url) {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(path.dirname(fileURLToPath(import.meta.url)), 'preload.cjs'),
     },
   });
   window.loadURL(url);

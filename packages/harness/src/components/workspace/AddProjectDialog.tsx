@@ -71,6 +71,19 @@ function AddProjectBody({
         ? joinRootRelative(browseRoot, selectedRel)
         : '';
 
+  const nativePicker = typeof window !== 'undefined' ? window.contenoxDesktop : undefined;
+
+  const chooseNativeFolder = async () => {
+    if (!nativePicker) return;
+    const selected = await nativePicker.selectDirectory();
+    if (!selected) return;
+    setMode('manual');
+    setManualPath(selected);
+    setName(folderBasename(selected));
+    setNameEdited(false);
+    addMutation.reset();
+  };
+
   useEffect(() => {
     if (nameEdited) return;
     setName(selectedAbsolute ? folderBasename(selectedAbsolute) : '');
@@ -149,6 +162,19 @@ function AddProjectBody({
             </FormField>
           )}
 
+          {nativePicker && (
+            <Button
+              type="button"
+              variant="outline"
+              palette="neutral"
+              size="sm"
+              onClick={chooseNativeFolder}
+              className="self-start">
+              <FolderSearch className="h-4 w-4" aria-hidden />
+              {t('projects.browse_open')}
+            </Button>
+          )}
+
           <div className="border-surface-200 dark:border-dark-surface-600 max-h-72 min-h-[11rem] overflow-y-auto rounded-lg border p-2">
             {files.error ? (
               <div className="flex flex-col items-start gap-2 px-1 py-2">
@@ -216,6 +242,18 @@ function AddProjectBody({
               required
             />
           </FormField>
+          {nativePicker && (
+            <Button
+              type="button"
+              variant="outline"
+              palette="neutral"
+              size="sm"
+              onClick={chooseNativeFolder}
+              className="self-start">
+              <FolderSearch className="h-4 w-4" aria-hidden />
+              {t('projects.browse_open')}
+            </Button>
+          )}
           {hasRoots && (
             <button
               type="button"
