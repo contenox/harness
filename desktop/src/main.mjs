@@ -6,6 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startUiServer } from './server.mjs';
 
+app.setPath('userData', path.join(app.getPath('appData'), 'ContenoxHarness'));
+
 let runtime;
 let ui;
 let window;
@@ -32,16 +34,15 @@ async function waitFor(url) {
   throw new Error(`runtime did not become ready at ${url}`);
 }
 
-async function startRuntime() {
+async function startRuntime(workspace) {
   const suffix = process.platform === 'win32' ? '.exe' : '';
   const binary = path.join(process.resourcesPath, 'runtime', `contenox-runtime${suffix}`);
   if (!fs.existsSync(binary)) throw new Error(`bundled runtime missing: ${binary}`);
+  if (!fs.existsSync(workspace)) throw new Error(`workspace folder missing: ${workspace}`);
   const home = app.getPath('home');
   const data = path.join(app.getPath('userData'), 'data');
   const db = path.join(app.getPath('userData'), 'local.db');
-  const workspace = path.join(home, 'Contenox');
   fs.mkdirSync(data, { recursive: true });
-  fs.mkdirSync(workspace, { recursive: true });
   if (!fs.existsSync(db)) {
     execFileSync(binary, ['--data-dir', data, '--db', db, 'init', '--force'], { env: { ...process.env, HOME: home }, stdio: 'ignore' });
   }
@@ -55,12 +56,98 @@ async function startRuntime() {
   return `http://127.0.0.1:${port}`;
 }
 
+const workspaceConfigPath = path.join(app.getPath('userData'), 'workspace.json');
+
+function readWorkspaceConfig() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(workspaceConfigPath, 'utf8'));
+    const current = typeof parsed.current === 'string' ? parsed.current : '';
+    const recent = Array.isArray(parsed.recent) ? parsed.recent.filter(p => typeof p === 'string') : [];
+    return { current, recent };
+  } catch {
+    return { current: '', recent: [] };
+  }
+}
+
+function persistWorkspace(workspace) {
+  const previous = readWorkspaceConfig();
+  const recent = [workspace, ...previous.recent.filter(p => p !== workspace)].slice(0, 10);
+  fs.mkdirSync(path.dirname(workspaceConfigPath), { recursive: true });
+  fs.writeFileSync(workspaceConfigPath, JSON.stringify({ current: workspace, recent }, null, 2));
+}
+
+function existingWorkspace(candidate) {
+  if (!candidate) return null;
+  try {
+    return fs.statSync(candidate).isDirectory() ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
+async function chooseWorkspaceFolder() {
+  const options = {
+    title: 'Choose a workspace folder',
+    buttonLabel: 'Use this folder',
+    properties: ['openDirectory', 'createDirectory'],
+  };
+  const result = window
+    ? await dialog.showOpenDialog(window, options)
+    : await dialog.showOpenDialog(options);
+  if (result.canceled) return null;
+  return result.filePaths[0] ?? null;
+}
+
+async function pickWorkspaceAtStartup() {
+  const fromEnv = existingWorkspace(process.env.CONTENOX_WORKSPACE);
+  if (fromEnv) return fromEnv;
+  const current = existingWorkspace(readWorkspaceConfig().current);
+  if (current) return current;
+  const selected = await chooseWorkspaceFolder();
+  if (selected) persistWorkspace(selected);
+  return selected;
+}
+
+async function openWorkspaceFromUi() {
+  if (!window) return false;
+  const selected = await chooseWorkspaceFolder();
+  if (!selected) return false;
+  persistWorkspace(selected);
+  await restartWithWorkspace(selected);
+  return true;
+}
+
+let restarting = false;
+
+async function restartWithWorkspace(workspace) {
+  if (restarting) return;
+  restarting = true;
+  try {
+    if (runtime) {
+      runtime.kill();
+      runtime = null;
+    }
+    if (ui) {
+      await ui.close();
+      ui = null;
+    }
+    const origin = await startRuntime(workspace);
+    ui = await startUiServer({ uiDir: path.join(process.resourcesPath, 'ui'), runtimeOrigin: origin });
+    if (window) await window.loadURL(`http://127.0.0.1:${ui.port}/`);
+  } finally {
+    restarting = false;
+  }
+}
+
 ipcMain.handle('contenox:select-directory', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory', 'createDirectory'],
   });
   return result.canceled ? null : (result.filePaths[0] ?? null);
 });
+
+ipcMain.handle('contenox:open-workspace', () => openWorkspaceFromUi());
+ipcMain.handle('contenox:recent-workspaces', () => readWorkspaceConfig().recent);
 
 function createWindow(url) {
   window = new BrowserWindow({
@@ -81,15 +168,19 @@ function createWindow(url) {
   window.loadURL(url);
 }
 
-app.setPath('userData', path.join(app.getPath('appData'), 'ContenoxHarness'));
-
 app.whenReady().then(async () => {
   try {
     if (process.env.CONTENOX_DEV_URL) {
       createWindow(process.env.CONTENOX_DEV_URL);
       return;
     }
-    const origin = await startRuntime();
+    const workspace = await pickWorkspaceAtStartup();
+    if (!workspace) {
+      dialog.showErrorBox('Contenox needs a workspace', 'Choose a folder Contenox may open. Nothing was created.');
+      app.quit();
+      return;
+    }
+    const origin = await startRuntime(workspace);
     ui = await startUiServer({ uiDir: path.join(process.resourcesPath, 'ui'), runtimeOrigin: origin });
     createWindow(`http://127.0.0.1:${ui.port}/`);
   } catch (error) {

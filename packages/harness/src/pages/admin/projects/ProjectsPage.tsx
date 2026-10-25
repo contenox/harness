@@ -40,6 +40,11 @@ export default function ProjectsPage() {
   const forgetMutation = useForgetWorkspaceRoot();
 
   const [addOpen, setAddOpen] = useState(false);
+  const desktop = typeof window !== 'undefined' ? window.contenoxDesktop : undefined;
+
+  const handleOpenWorkspace = () => {
+    void desktop?.openWorkspace();
+  };
 
   const sessionCountForRoot = (root: WorkspaceRoot): number =>
     workspace.sessions.filter(s => projectForCwd(s.cwd, roots)?.path === root.path).length;
@@ -172,10 +177,18 @@ export default function ProjectsPage() {
         )}
 
         <Section title={t('projects.add_title')} description={t('projects.add_description')}>
-          <Button type="button" onClick={() => setAddOpen(true)}>
-            <FolderPlus className="h-4 w-4" aria-hidden />
-            {t('projects.browse_open')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={() => setAddOpen(true)}>
+              <FolderPlus className="h-4 w-4" aria-hidden />
+              {t('projects.browse_open')}
+            </Button>
+            {desktop && (
+              <Button type="button" variant="outline" palette="neutral" onClick={handleOpenWorkspace}>
+                <FolderPlus className="h-4 w-4" aria-hidden />
+                {t('projects.open_workspace')}
+              </Button>
+            )}
+          </div>
         </Section>
       </div>
 

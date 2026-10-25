@@ -2144,6 +2144,7 @@ const resources = {
         add_submitting: 'Adding…',
         add_error_fallback: 'Could not add this folder.',
         browse_open: 'Browse for a folder…',
+        open_workspace: 'Open workspace…',
         dialog_title: 'Add a project',
         browse_hint: 'Open folders to look inside, then select the one to register as a project.',
         browse_start_label: 'Start from',
@@ -4057,6 +4058,7 @@ const resources = {
         add_submitting: 'Wird hinzugefügt…',
         add_error_fallback: 'Dieser Ordner konnte nicht hinzugefügt werden.',
         browse_open: 'Ordner auswählen…',
+        open_workspace: 'Arbeitsbereich öffnen…',
         dialog_title: 'Projekt hinzufügen',
         browse_hint:
           'Öffne Ordner, um hineinzusehen, und wähle dann den Ordner, der als Projekt registriert werden soll.',
