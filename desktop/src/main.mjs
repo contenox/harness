@@ -38,12 +38,15 @@ async function startRuntime() {
   const home = app.getPath('home');
   const data = path.join(app.getPath('userData'), 'data');
   const db = path.join(app.getPath('userData'), 'local.db');
+  const workspace = path.join(home, 'Contenox');
   fs.mkdirSync(data, { recursive: true });
+  fs.mkdirSync(workspace, { recursive: true });
   if (!fs.existsSync(db)) {
     execFileSync(binary, ['--data-dir', data, '--db', db, 'init', '--force'], { env: { ...process.env, HOME: home }, stdio: 'ignore' });
   }
   const port = await freePort();
-  runtime = spawn(binary, ['--data-dir', data, '--db', db, 'serve'], {
+  runtime = spawn(binary, ['--data-dir', data, '--db', db, 'serve', workspace], {
+    cwd: workspace,
     env: { ...process.env, HOME: home, ADDR: '127.0.0.1', PORT: String(port) },
     stdio: 'ignore',
   });
