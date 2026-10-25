@@ -11,6 +11,7 @@ app.setPath('userData', path.join(app.getPath('appData'), 'ContenoxHarness'));
 let runtime;
 let ui;
 let window;
+let pickerWindow;
 
 function freePort() {
   return new Promise((resolve, reject) => {
@@ -85,32 +86,41 @@ function existingWorkspace(candidate) {
   }
 }
 
-async function chooseWorkspaceFolder() {
+async function chooseWorkspaceFolder(parent = window) {
   const options = {
     title: 'Choose a workspace folder',
     buttonLabel: 'Use this folder',
     properties: ['openDirectory', 'createDirectory'],
   };
-  const result = window
-    ? await dialog.showOpenDialog(window, options)
+  const result = parent && !parent.isDestroyed()
+    ? await dialog.showOpenDialog(parent, options)
     : await dialog.showOpenDialog(options);
   if (result.canceled) return null;
   return result.filePaths[0] ?? null;
 }
 
-async function pickWorkspaceAtStartup() {
-  const fromEnv = existingWorkspace(process.env.CONTENOX_WORKSPACE);
-  if (fromEnv) return fromEnv;
-  const current = existingWorkspace(readWorkspaceConfig().current);
-  if (current) return current;
-  const selected = await chooseWorkspaceFolder();
-  if (selected) persistWorkspace(selected);
-  return selected;
+function startupWorkspace() {
+  return existingWorkspace(process.env.CONTENOX_WORKSPACE)
+    ?? existingWorkspace(readWorkspaceConfig().current);
+}
+
+async function launchWorkspace(workspace) {
+  const origin = await startRuntime(workspace);
+  ui = await startUiServer({ uiDir: path.join(process.resourcesPath, 'ui'), runtimeOrigin: origin });
+  if (!window) {
+    createWindow(`http://127.0.0.1:${ui.port}/`);
+  } else {
+    await window.loadURL(`http://127.0.0.1:${ui.port}/`);
+  }
+  if (pickerWindow && !pickerWindow.isDestroyed()) {
+    pickerWindow.close();
+    pickerWindow = null;
+  }
 }
 
 async function openWorkspaceFromUi() {
   if (!window) return false;
-  const selected = await chooseWorkspaceFolder();
+  const selected = await chooseWorkspaceFolder(window);
   if (!selected) return false;
   persistWorkspace(selected);
   await restartWithWorkspace(selected);
@@ -146,8 +156,42 @@ ipcMain.handle('contenox:select-directory', async () => {
   return result.canceled ? null : (result.filePaths[0] ?? null);
 });
 
+ipcMain.handle('contenox:pick-workspace', () => chooseWorkspaceFolder(pickerWindow ?? window));
+ipcMain.handle('contenox:use-workspace', async (_event, workspace) => {
+  const valid = existingWorkspace(workspace);
+  if (!valid) return { ok: false, error: 'That folder does not exist.' };
+  try {
+    persistWorkspace(valid);
+    await launchWorkspace(valid);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
 ipcMain.handle('contenox:open-workspace', () => openWorkspaceFromUi());
 ipcMain.handle('contenox:recent-workspaces', () => readWorkspaceConfig().recent);
+
+function createPickerWindow() {
+  pickerWindow = new BrowserWindow({
+    width: 920,
+    height: 620,
+    minWidth: 760,
+    minHeight: 520,
+    title: 'Contenox',
+    autoHideMenuBar: true,
+    backgroundColor: '#0a0a0a',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: path.join(path.dirname(fileURLToPath(import.meta.url)), 'preload.cjs'),
+    },
+  });
+  pickerWindow.loadFile(path.join(path.dirname(fileURLToPath(import.meta.url)), 'workspace.html'));
+  pickerWindow.on('closed', () => {
+    pickerWindow = null;
+  });
+}
 
 function createWindow(url) {
   window = new BrowserWindow({
@@ -174,15 +218,12 @@ app.whenReady().then(async () => {
       createWindow(process.env.CONTENOX_DEV_URL);
       return;
     }
-    const workspace = await pickWorkspaceAtStartup();
-    if (!workspace) {
-      dialog.showErrorBox('Contenox needs a workspace', 'Choose a folder Contenox may open. Nothing was created.');
-      app.quit();
-      return;
+    const workspace = startupWorkspace();
+    if (workspace) {
+      await launchWorkspace(workspace);
+    } else {
+      createPickerWindow();
     }
-    const origin = await startRuntime(workspace);
-    ui = await startUiServer({ uiDir: path.join(process.resourcesPath, 'ui'), runtimeOrigin: origin });
-    createWindow(`http://127.0.0.1:${ui.port}/`);
   } catch (error) {
     dialog.showErrorBox('Contenox failed to start', error.message);
     app.quit();
