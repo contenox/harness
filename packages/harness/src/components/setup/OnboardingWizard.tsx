@@ -126,15 +126,15 @@ export function OnboardingWizard({ data, onDismiss }: Props) {
               {t('onboarding.finish')}
             </Button>
           )}
-          {step < TOTAL_STEPS - 1 ? (
+          {step < TOTAL_STEPS - 1 && step !== 2 ? (
             <Button variant="primary" size="sm" onClick={() => setStep(s => s + 1)}>
               {t('onboarding.continue')}
             </Button>
-          ) : (
+          ) : step === TOTAL_STEPS - 1 ? (
             <Button variant="primary" size="sm" onClick={onDismiss}>
               {t('onboarding.finish')}
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
