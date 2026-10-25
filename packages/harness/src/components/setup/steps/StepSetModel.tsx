@@ -48,6 +48,11 @@ export default function StepSetModel({ data, onRefreshStatus, onSaved }: Props) 
   }, [allModels, model]);
 
   useEffect(() => {
+    if (provider !== '' || providerOptions.length !== 1) return;
+    setProvider(providerOptions[0]);
+  }, [provider, providerOptions]);
+
+  useEffect(() => {
     if (putConfig.isSuccess) {
       onRefreshStatus();
       onSaved?.();

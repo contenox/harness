@@ -40,9 +40,12 @@ export function OnboardingWizard({ data, onDismiss }: Props) {
     if (data.defaultProvider) {
       setProvider(detectProvider(data.defaultProvider));
     }
-    if (data.backendCount > 0) {
+    const defaultsMissing = !data.defaultModel || !data.defaultProvider;
+    if (defaultsMissing) {
+      setStep(data.backendCount > 0 ? 2 : 0);
+    } else if (data.backendCount > 0) {
       setStep(3);
-    } else if (data.defaultProvider || data.defaultModel) {
+    } else {
       setStep(1);
     }
   }, [data, initialized]);
