@@ -59,3 +59,18 @@ describe('toFolderNodes', () => {
     expect(toFolderNodes(cache, 'nope')).toEqual([]);
   });
 });
+
+describe('Windows paths', () => {
+  it('joins with backslashes and drops trailing separators', () => {
+    expect(joinRootRelative('C:\\Users\\me\\', 'src/app')).toBe('C:\\Users\\me\\src\\app');
+    expect(joinRootRelative('C:\\Users\\me', '')).toBe('C:\\Users\\me');
+    expect(joinRootRelative('C:\\', 'src')).toBe('C:\\src');
+    expect(joinRootRelative('C:\\', '')).toBe('C:\\');
+  });
+
+  it('takes the basename after the last backslash', () => {
+    expect(folderBasename('C:\\Users\\me\\runtime')).toBe('runtime');
+    expect(folderBasename('C:\\Users\\me\\runtime\\')).toBe('runtime');
+    expect(folderBasename('C:\\')).toBe('C:');
+  });
+});

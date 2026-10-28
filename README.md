@@ -58,16 +58,22 @@ sh install.sh
 
 ## Quick Start
 
+Contenox installs two commands:
+
+- `contenox` — the desktop app. `contenox .` opens the folder you are standing in; `Ctrl/Cmd+O` switches workspace at any time.
+- `contenox-runtime` — the runtime CLI: chat, sessions, backends, `serve`, and ACP.
+
 <!-- TAG=v0.36.0 -->
 
 ```bash
-contenox setup                    # Choose a provider/model for this machine
-contenox "say hello world in python"    # Query directly from the CLI
-contenox chat -e                         # Open $EDITOR to compose a rich prompt
+contenox .                        # Open this folder in the desktop app
+contenox-runtime setup                    # Choose a provider/model for this machine
+contenox-runtime "say hello world in python"    # Query directly from the CLI
+contenox-runtime chat -e                         # Open $EDITOR to compose a rich prompt
 
 ```
 
-Manage past contexts effortlessly using `contenox session list` and `contenox session switch <name>`.
+Manage past contexts effortlessly using `contenox-runtime session list` and `contenox-runtime session switch <name>`.
 
 ### Smart Dual-Model Routing
 
@@ -75,12 +81,12 @@ Inline autocomplete runs on a dedicated model separate from the main chat. This 
 
 ```bash
 # Rich chat routed to a hosted model
-contenox config set default-provider          openai
-contenox config set default-model             gpt-5-mini
+contenox-runtime config set default-provider          openai
+contenox-runtime config set default-model             gpt-5-mini
 
 # Ghost text routed to a small, fast model
-contenox config set default-autocomplete-provider ollama
-contenox config set default-autocomplete-model    qwen2.5-coder:7b
+contenox-runtime config set default-autocomplete-provider ollama
+contenox-runtime config set default-autocomplete-model    qwen2.5-coder:7b
 
 ```
 
@@ -135,15 +141,15 @@ Any asset accessible via an OpenAPI spec, a shell command, or an MCP server can 
 
 ```bash
 # Connect any Model Context Protocol (MCP) server
-contenox mcp add notion https://mcp.notion.com/mcp --auth-type oauth
+contenox-runtime mcp add notion https://mcp.notion.com/mcp --auth-type oauth
 
 # Wrap an internal HTTP API using its OpenAPI specification
-contenox tools add erp_billing \
+contenox-runtime tools add erp_billing \
   --url https://erp.internal.example.com \
   --spec ./billing-subset.yaml
 
 # Bind the local shell under a strictly defined Chain policy
-contenox --shell "check Proxmox and flag anything red"
+contenox-runtime --shell "check Proxmox and flag anything red"
 
 ```
 
@@ -174,7 +180,7 @@ Tool invocations render dynamically as interactive UI cards showing the underlyi
 
 ### Other Environments
 
-* **Web Interface:** Running `contenox serve` mounts your active sessions, chains, and backends locally inside **Beam**, the bundled web UI.
+* **Web Interface:** Running `contenox-runtime serve` mounts your active sessions, chains, and backends locally inside **Beam**, the bundled web UI.
 
 *Step-by-step guides:* [Zed](https://contenox.com/docs/integrations/editors/zed/) | [JetBrains](https://contenox.com/docs/integrations/editors/jetbrains/) | [AionUi](https://contenox.com/docs/integrations/editors/aionui/).
 
@@ -186,19 +192,26 @@ Routing rules are treated as system configuration, not application logic. Add ho
 
 ```bash
 # Private infrastructure & local inference
-contenox backend add ollama --type ollama
-contenox backend add myvllm --type vllm --url http://gpu-host:8000
+contenox-runtime backend add ollama --type ollama
+contenox-runtime backend add myvllm --type vllm --url http://gpu-host:8000
 
 # Commercial cloud providers
-contenox backend add openai    --type openai    --api-key-env OPENAI_API_KEY
-contenox backend add anthropic --type anthropic --api-key-env ANTHROPIC_API_KEY
-contenox backend add gemini    --type gemini    --api-key-env GEMINI_API_KEY
+contenox-runtime backend add openai    --type openai    --api-key-env OPENAI_API_KEY
+contenox-runtime backend add deepseek  --type deepseek  --api-key-env DEEPSEEK_API_KEY
+contenox-runtime backend add anthropic --type anthropic --api-key-env ANTHROPIC_API_KEY
+contenox-runtime backend add gemini    --type gemini    --api-key-env GEMINI_API_KEY
+
+# ChatGPT subscription: device login, no API key
+contenox-runtime backend add chatgpt --type openai-codex
+contenox-runtime backend login chatgpt
 
 # Set global operational routing defaults
-contenox config set default-model     qwen2.5:7b
-contenox config set default-provider  ollama
+contenox-runtime config set default-model     qwen2.5:7b
+contenox-runtime config set default-provider  ollama
 
 ```
+
+The same providers appear in the app's Setup wizard and in Backends → Cloud Providers, where the ChatGPT subscription signs in with a device code and DeepSeek takes an API key.
 
 ---
 

@@ -566,6 +566,22 @@ describe('acpSessionReducer: permission gate', () => {
   });
 });
 
+describe('acpSessionReducer: prompt_end and permission', () => {
+  it('prompt_end clears a pending permission left open by cancel or turn end', () => {
+    const waiting = run(
+      { type: 'session_reset', sessionId: 's1' },
+      { type: 'prompt_start' },
+      {
+        type: 'permission_request',
+        request: { sessionId: 's1', toolCall: { toolCallId: 'tc-1' }, options: [] },
+      },
+    );
+    expect(waiting.pendingPermission).not.toBeNull();
+    const ended = acpSessionReducer(waiting, { type: 'prompt_end', stopReason: 'cancelled' });
+    expect(ended.pendingPermission).toBeNull();
+  });
+});
+
 describe('acpSessionReducer: connection banner', () => {
   it('connection_lost sets the disconnected banner and interrupts an in-flight turn', () => {
     const prompting = run(

@@ -11,7 +11,8 @@
     "package:dir": "npm run stage && electron-builder --dir --publish never",
     "package": "npm run stage && electron-builder --publish never",
     "verify:package": "node scripts/verify-package.mjs",
-    "checksums": "node scripts/package-checksums.mjs"
+    "checksums": "node scripts/package-checksums.mjs",
+    "test": "node --test"
   },
   "devDependencies": {
     "electron": "42.8.1",

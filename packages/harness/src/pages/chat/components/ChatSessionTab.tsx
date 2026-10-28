@@ -7,6 +7,12 @@ import {
   InlineNotice,
   useChatScroll,
 } from '@contenox/ui';
+import {
+  AttachAudioButtons,
+  AudioAttachmentNoticeView,
+  ComposerAudioAttachments,
+  useAudioAttachments,
+} from '@contenox/ui/session-ui';
 import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import {
   useCallback,
@@ -31,6 +37,7 @@ import { useStagedRoot } from '../../../lib/stagedRoot';
 import { useSetupStatus } from '../../../hooks/useSetupStatus';
 import { usePersistentToggle } from '../../../hooks/usePersistentToggle';
 import { classifyAcpExecutionError } from '../../../lib/acpFailureKind';
+import { canAttachAudio } from '../lib/audioAttachments';
 import { canAttachImages } from '../lib/imageAttachments';
 import { activeMentions, mentionPreviewPath, type WorkspaceFileRef } from '../lib/mentions';
 import { resolveWorkspaceRoot } from '../lib/workspaceRoot';
@@ -172,6 +179,10 @@ export function ChatSessionTab({ sessionId, onSessionCreated, onNewSession }: Ch
   const imagesSupported = canAttachImages(workspace.promptCapabilities);
   const imageAttachments = useImageAttachments(imagesSupported);
   const { takeImages, restoreImages } = imageAttachments;
+  const audioSupported = canAttachAudio(workspace.promptCapabilities);
+  const audioAttachments = useAudioAttachments(audioSupported, imageAttachments.images);
+  const { takeForSend: takeAudio, approveForSend: approveAudio } = audioAttachments;
+  const audioClipCount = audioAttachments.clips.length;
 
   const [mentions, setMentions] = useState<WorkspaceFileRef[]>([]);
   const [caret, setCaret] = useState(0);
@@ -258,6 +269,8 @@ export function ChatSessionTab({ sessionId, onSessionCreated, onNewSession }: Ch
         return;
       }
 
+      if (audioClipCount > 0 && !approveAudio(text)) return;
+
       const turnMentions = activeMentions(draft, mentions);
       const turnImages = takeImages();
       setDraft('');
@@ -292,7 +305,7 @@ export function ChatSessionTab({ sessionId, onSessionCreated, onNewSession }: Ch
         if (stagedExternalAgent) setStagedAgent(null);
         onSessionCreated(sid);
       }
-      sendPrompt(text, turnMentions, turnImages);
+      sendPrompt(text, turnMentions, turnImages, takeAudio());
     },
     [
       slashMenu.open,
@@ -302,6 +315,9 @@ export function ChatSessionTab({ sessionId, onSessionCreated, onNewSession }: Ch
       mentions,
       takeImages,
       restoreImages,
+      takeAudio,
+      approveAudio,
+      audioClipCount,
       stagedRoot,
       stagedExternalAgent,
       setStagedAgent,
@@ -471,6 +487,7 @@ export function ChatSessionTab({ sessionId, onSessionCreated, onNewSession }: Ch
             ) : null}
             <div className="shrink-0">
               <ImageAttachmentNoticeView notice={imageAttachments.notice} />
+              <AudioAttachmentNoticeView notice={audioAttachments.notice} />
               <ChatComposer
                 value={draft}
                 onChange={setDraft}
@@ -482,14 +499,31 @@ export function ChatSessionTab({ sessionId, onSessionCreated, onNewSession }: Ch
                 submitLabel={session.isPrompting ? t('acp_chat.composer_stop') : t('acp_chat.composer_send')}
                 placeholder={workspace.status === 'ready' ? t('acp_chat.composer_placeholder') : t('acp_chat.composer_placeholder_connecting')}
                 attachments={
-                  <ComposerImageAttachments images={imageAttachments.images} onRemove={imageAttachments.removeImage} />
+                  <>
+                    <ComposerImageAttachments images={imageAttachments.images} onRemove={imageAttachments.removeImage} />
+                    <ComposerAudioAttachments clips={audioAttachments.clips} onRemove={audioAttachments.removeClip} />
+                  </>
                 }
                 footerStart={
-                  imagesSupported ? (
-                    <AttachImageButton
-                      onFiles={files => void imageAttachments.addFiles(files)}
-                      disabled={composerDisabled}
-                    />
+                  imagesSupported || audioSupported ? (
+                    <>
+                      {imagesSupported && (
+                        <AttachImageButton
+                          onFiles={files => void imageAttachments.addFiles(files)}
+                          disabled={composerDisabled}
+                        />
+                      )}
+                      {audioSupported && (
+                        <AttachAudioButtons
+                          onFiles={files => void audioAttachments.addFiles(files)}
+                          disabled={composerDisabled}
+                          recording={audioAttachments.recording}
+                          onStartRecording={() => void audioAttachments.startRecording()}
+                          onStopRecording={audioAttachments.stopRecording}
+                          onCancelRecording={audioAttachments.cancelRecording}
+                        />
+                      )}
+                    </>
                   ) : undefined
                 }
                 textareaProps={{

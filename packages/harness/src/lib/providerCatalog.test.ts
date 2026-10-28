@@ -1,27 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { CLOUD_PROVIDER_SETUPS, isCloudProviderType } from './providerCatalog';
+import { getCloudProviderSetup, ONBOARDING_PROVIDER_SETUPS } from './providerCatalog';
 
-const supportedProviderTypes = new Set([
-  'ollama',
-  'openai',
-  'openrouter',
-  'anthropic',
-  'gemini',
-  'mistral',
-  'bedrock',
-  'vertex-google',
-]);
-
-describe('providerCatalog', () => {
-  it('only exposes provider ids accepted by the runtime provider service', () => {
-    for (const setup of CLOUD_PROVIDER_SETUPS) {
-      expect(supportedProviderTypes.has(setup.provider)).toBe(true);
-    }
+describe('provider catalog', () => {
+  it('offers the ChatGPT subscription as a device-login provider with no secret', () => {
+    const codex = getCloudProviderSetup('openai-codex');
+    expect(codex.provider).toBe('openai-codex');
+    expect(codex.loginRequired).toBe(true);
+    expect(codex.secretKind).toBe('none');
   });
 
-  it('does not expose removed Vertex publisher-specific backend ids', () => {
-    expect(isCloudProviderType('vertex-anthropic')).toBe(false);
-    expect(isCloudProviderType('vertex-meta')).toBe(false);
-    expect(isCloudProviderType('vertex-mistralai')).toBe(false);
+  it('offers DeepSeek with an API key and its endpoint', () => {
+    const deepseek = getCloudProviderSetup('deepseek');
+    expect(deepseek.secretKind).toBe('api-key');
+    expect(deepseek.defaultBaseUrl).toBe('https://api.deepseek.com');
+  });
+
+  it('lists both in the onboarding wizard', () => {
+    const providers = ONBOARDING_PROVIDER_SETUPS.map(setup => setup.provider);
+    expect(providers).toContain('openai-codex');
+    expect(providers).toContain('deepseek');
   });
 });

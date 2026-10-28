@@ -1,4 +1,5 @@
 import { Select } from '../../../components/Select';
+import { flattenGroups, type SelectControlOption } from '../lib/configOptions';
 import type {
   SessionConfigOption,
   SessionConfigOptionValue,
@@ -14,13 +15,15 @@ function isFlat(
 }
 
 
-function selectRows(option: SessionConfigOption): SessionConfigValue[] {
-  if (isFlat(option.options)) return option.options;
-  const rows: SessionConfigValue[] = [];
-  for (const group of option.options as SessionConfigGroup[]) {
-    for (const row of group.options) rows.push(row);
-  }
-  return rows;
+export function selectRows(option: SessionConfigOption): SelectControlOption[] {
+  if (isFlat(option.options)) return option.options.map(r => ({ value: r.value, label: r.name }));
+  return flattenGroups(
+    (option.options as SessionConfigGroup[]).map(group => ({
+      group: group.group,
+      label: group.name,
+      options: (group.options ?? []).map(r => ({ value: r.value, label: r.name })),
+    })),
+  );
 }
 
 
@@ -70,7 +73,7 @@ export function SessionConfigBar({ options, onSet, disabled }: SessionConfigBarP
               disabled={disabled}
               value={option.currentValue}
               onChange={e => onSet(option.id, e.currentTarget.value)}
-              options={rows.map(r => ({ value: r.value, label: r.name }))}
+              options={rows}
             />
           </label>
         );

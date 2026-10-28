@@ -6,4 +6,6 @@ contextBridge.exposeInMainWorld('contenoxDesktop', {
   useWorkspace: workspace => ipcRenderer.invoke('contenox:use-workspace', workspace),
   openWorkspace: () => ipcRenderer.invoke('contenox:open-workspace'),
   recentWorkspaces: () => ipcRenderer.invoke('contenox:recent-workspaces'),
+  currentWorkspace: () => ipcRenderer.invoke('contenox:current-workspace'),
+  forgetRecent: workspace => ipcRenderer.invoke('contenox:forget-recent', workspace),
 });

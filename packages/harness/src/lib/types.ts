@@ -189,12 +189,16 @@ export type StatusResponse = {
   defaultProvider?: string;
   defaultModel?: string;
   updatedAt?: string;
+  authState?: string;
+  loginRequired?: boolean;
 };
 
 export type CloudProviderType =
   | 'ollama'
   | 'openai'
+  | 'openai-codex'
   | 'openrouter'
+  | 'deepseek'
   | 'anthropic'
   | 'gemini'
   | 'mistral'
@@ -215,7 +219,20 @@ export type SupportedProvider = {
   defaultBaseUrl?: string;
   requiresBaseUrl: boolean;
   requiresSecretConfig: boolean;
+  requiresLogin?: boolean;
   recommendedApiKeyEnv?: string;
+};
+
+export type ProviderLoginStart = {
+  provider: string;
+  state: 'authenticated' | 'login_pending' | string;
+  url?: string;
+  code?: string;
+  expiresAt?: string;
+};
+
+export type ProviderLoginStatus = ProviderLoginStart & {
+  error?: string;
 };
 
 export type ModelJob = {
@@ -1038,4 +1055,30 @@ export type TerminalSessionRequest = {
 export type TerminalSession = {
   id: string;
   wsPath: string;
+};
+
+export type AgentPreset = {
+  name: string;
+  title: string;
+  description: string;
+  installed: boolean;
+  path?: string;
+};
+
+export type AgentRecord = {
+  id: string;
+  name: string;
+  kind: string;
+  enabled: boolean;
+  configJson?: unknown;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AgentPresetInstallResult = {
+  preset: string;
+  path: string;
+  installed: boolean;
+  reason?: string;
+  agent?: { id: string; name: string; kind: string; enabled: boolean } | null;
 };

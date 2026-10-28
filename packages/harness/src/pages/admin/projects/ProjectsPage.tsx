@@ -40,10 +40,16 @@ export default function ProjectsPage() {
   const forgetMutation = useForgetWorkspaceRoot();
 
   const [addOpen, setAddOpen] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
   const desktop = typeof window !== 'undefined' ? window.contenoxDesktop : undefined;
 
-  const handleOpenWorkspace = () => {
-    void desktop?.openWorkspace();
+  const handleOpenWorkspace = async () => {
+    if (!desktop) return;
+    setSwitchError(null);
+    const result = await desktop.openWorkspace();
+    if (result && result.ok === false && !result.cancelled) {
+      setSwitchError(result.error ?? t('projects.open_workspace_error'));
+    }
   };
 
   const sessionCountForRoot = (root: WorkspaceRoot): number =>
@@ -183,12 +189,21 @@ export default function ProjectsPage() {
               {t('projects.browse_open')}
             </Button>
             {desktop && (
-              <Button type="button" variant="outline" palette="neutral" onClick={handleOpenWorkspace}>
+              <Button
+                type="button"
+                variant="outline"
+                palette="neutral"
+                onClick={() => void handleOpenWorkspace()}>
                 <FolderPlus className="h-4 w-4" aria-hidden />
                 {t('projects.open_workspace')}
               </Button>
             )}
           </div>
+          {switchError && (
+            <InlineNotice variant="error" role="alert" className="mt-3">
+              {switchError}
+            </InlineNotice>
+          )}
         </Section>
       </div>
 

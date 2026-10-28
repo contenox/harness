@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   activeWorkspaceRoot,
+  displayRootForPath,
   extractRefusedRoot,
   isWorkspaceRootRefusal,
   projectForCwd,
@@ -29,6 +30,40 @@ describe('activeWorkspaceRoot', () => {
 
   it('is undefined for an empty allowlist', () => {
     expect(activeWorkspaceRoot([])).toBeUndefined();
+  });
+});
+
+describe('displayRootForPath', () => {
+  const roots: WorkspaceRoot[] = [
+    { path: '/srv/work', default: true },
+    { path: '/srv/other', default: false },
+  ];
+
+  it('shows the exact allowlisted root when present', () => {
+    expect(displayRootForPath('/srv/other', roots)).toEqual(roots[1]);
+  });
+
+  it('maps the "/" sentinel to the default root, as the runtime does', () => {
+    expect(displayRootForPath('/', roots)).toEqual(roots[0]);
+  });
+
+  it('falls back to the first root for "/" when none is flagged default', () => {
+    const noDefault: WorkspaceRoot[] = [
+      { path: '/srv/work', default: false },
+      { path: '/srv/other', default: false },
+    ];
+    expect(displayRootForPath('/', noDefault)).toEqual(noDefault[0]);
+  });
+
+  it('falls back to a bare "/" entry when the allowlist is empty', () => {
+    expect(displayRootForPath('/', [])).toEqual({ path: '/', default: false });
+  });
+
+  it('falls back to a bare entry for an unallowlisted concrete path', () => {
+    expect(displayRootForPath('/srv/unknown', roots)).toEqual({
+      path: '/srv/unknown',
+      default: false,
+    });
   });
 });
 
@@ -187,5 +222,31 @@ describe('extractRefusedRoot', () => {
   it('returns null when there is no quoted path', () => {
     expect(extractRefusedRoot('workspace root is not permitted')).toBeNull();
     expect(extractRefusedRoot(undefined)).toBeNull();
+  });
+});
+
+describe('Windows paths', () => {
+  const roots: WorkspaceRoot[] = [
+    { path: 'C:\\Users\\me\\proj', default: true },
+    { path: 'C:\\Users\\me', default: false },
+  ];
+
+  it('names a project after the last backslash segment', () => {
+    expect(projectName({ path: 'C:\\Users\\me\\proj\\', default: false })).toBe('proj');
+  });
+
+  it('shortens with backslashes and tolerates a trailing separator', () => {
+    expect(shortenRootPath('C:\\a\\b\\c\\d\\')).toBe('…\\b\\c\\d');
+    expect(shortenRootPath('C:\\Users\\me')).toBe('C:\\Users\\me');
+  });
+
+  it('matches a cwd under a root, preferring the longest root', () => {
+    expect(projectForCwd('C:\\Users\\me\\proj\\src', roots)?.path).toBe('C:\\Users\\me\\proj');
+    expect(projectForCwd('C:\\Users\\me\\proj\\', roots)?.path).toBe('C:\\Users\\me\\proj');
+    expect(projectForCwd('C:\\Users\\me\\other', roots)?.path).toBe('C:\\Users\\me');
+  });
+
+  it('does not match a sibling that merely shares a prefix', () => {
+    expect(projectForCwd('C:\\Users\\me\\proj2', roots)?.path).toBe('C:\\Users\\me');
   });
 });

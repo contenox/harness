@@ -15,6 +15,7 @@ import {
   type Transport,
 } from '../lib/acp';
 import { adoptMeta, type AdoptRef } from '../lib/adoptMeta';
+import type { PendingAudioAttachment } from '../pages/chat/lib/audioAttachments';
 import type { PendingImageAttachment } from '../pages/chat/lib/imageAttachments';
 import { promptBlocksFromDraft, type WorkspaceFileRef } from '../pages/chat/lib/mentions';
 import type { AcpSessionAction } from './acpSessionState';
@@ -46,7 +47,12 @@ export interface AcpWorkspaceController {
   focusEmptyTab(): void;
   deleteSession(id: SessionId): Promise<void>;
   clearActiveSession(): void;
-  sendPrompt(text: string, mentions?: WorkspaceFileRef[], images?: PendingImageAttachment[]): void;
+  sendPrompt(
+    text: string,
+    mentions?: WorkspaceFileRef[],
+    images?: PendingImageAttachment[],
+    audio?: PendingAudioAttachment[],
+  ): void;
   runTerminal(command: string): Promise<void>;
   respondPermission(optionId: string): void;
   cancel(): void;
@@ -613,6 +619,7 @@ export function createAcpWorkspaceController(
     text: string,
     mentions: WorkspaceFileRef[] = [],
     images: PendingImageAttachment[] = [],
+    audio: PendingAudioAttachment[] = [],
   ): void {
     if (disposed || !client || !focusedSessionId || !text.trim()) return;
     const sid = focusedSessionId;
@@ -621,7 +628,7 @@ export function createAcpWorkspaceController(
     const c = client;
     entry.currentTurnId = nextId('assistant');
 
-    const blocks = promptBlocksFromDraft(text, mentions, images);
+    const blocks = promptBlocksFromDraft(text, mentions, images, audio);
 
     const echoId = nextId('user');
     sessionDispatch(sid, { type: 'user_message_chunk', id: echoId, text });
@@ -631,6 +638,14 @@ export function createAcpWorkspaceController(
         id: echoId,
         text: '',
         image: { data: image.data, mimeType: image.mimeType },
+      });
+    }
+    for (const clip of audio) {
+      sessionDispatch(sid, {
+        type: 'user_message_chunk',
+        id: echoId,
+        text: '',
+        audio: { data: clip.data, mimeType: clip.mimeType },
       });
     }
     sessionDispatch(sid, { type: 'prompt_start' });
@@ -646,6 +661,8 @@ export function createAcpWorkspaceController(
         if (e.turnSettled) return;
         e.turnSettled = true;
         e.promptInFlight = false;
+        e.permissionResolve = null;
+        e.permissionReject = null;
         sessionDispatch(sid, { type: 'prompt_end', stopReason });
       })
       .catch((err: unknown) => {

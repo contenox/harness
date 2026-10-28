@@ -22,6 +22,7 @@ export const githubKeys = {
 
 export const providerKeys = {
   status: (provider: string) => ['providers', provider, 'status'] as const,
+  login: (provider: string) => ['providers', provider, 'login'] as const,
 };
 
 export const stateKeys = {

@@ -110,6 +110,19 @@ describe('promptBlocksFromDraft', () => {
     ]);
     expect(blocks.some(b => 'id' in b || ('name' in b && b.type === 'image'))).toBe(false);
   });
+  it('appends one audio block per clip after images — standard ACP audio block (raw base64 data + mimeType)', () => {
+    const blocks = promptBlocksFromDraft(
+      'transcribe this',
+      [],
+      [{ id: 'img-1', name: 'shot.png', data: 'aGVsbG8=', mimeType: 'image/png' }],
+      [{ id: 'aud-1', name: 'Voice note', data: 'UklGRg==', mimeType: 'audio/wav' }],
+    );
+    expect(blocks).toEqual([
+      { type: 'text', text: 'transcribe this' },
+      { type: 'image', data: 'aGVsbG8=', mimeType: 'image/png' },
+      { type: 'audio', data: 'UklGRg==', mimeType: 'audio/wav' },
+    ]);
+  });
   it('emits no image blocks when there are no attachments (default arg — existing callers unchanged)', () => {
     const blocks = promptBlocksFromDraft('hi', []);
     expect(blocks).toEqual([{ type: 'text', text: 'hi' }]);

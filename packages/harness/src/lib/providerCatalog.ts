@@ -15,6 +15,7 @@ export type CloudProviderSetup = {
   baseUrlPlaceholder?: string;
   baseUrlRequired?: boolean;
   defaultBaseUrl?: string;
+  loginRequired?: boolean;
 };
 
 export const CLOUD_PROVIDER_SETUPS: CloudProviderSetup[] = [
@@ -43,6 +44,14 @@ export const CLOUD_PROVIDER_SETUPS: CloudProviderSetup[] = [
     defaultBaseUrl: 'https://api.openai.com/v1',
   },
   {
+    provider: 'openai-codex',
+    titleKey: 'cloud_providers.codex.title',
+    descriptionKey: 'cloud_providers.codex.description',
+    secretKind: 'none',
+    secretRequired: false,
+    loginRequired: true,
+  },
+  {
     provider: 'openrouter',
     titleKey: 'cloud_providers.openrouter.title',
     descriptionKey: 'cloud_providers.openrouter.description',
@@ -53,6 +62,18 @@ export const CLOUD_PROVIDER_SETUPS: CloudProviderSetup[] = [
     baseUrlLabelKey: 'cloud_providers.base_url_optional',
     baseUrlPlaceholder: 'https://openrouter.ai/api/v1',
     defaultBaseUrl: 'https://openrouter.ai/api/v1',
+  },
+  {
+    provider: 'deepseek',
+    titleKey: 'cloud_providers.deepseek.title',
+    descriptionKey: 'cloud_providers.deepseek.description',
+    secretKind: 'api-key',
+    secretRequired: true,
+    secretLabelKey: 'cloud_providers.api_key',
+    secretPlaceholderKey: 'cloud_providers.api_key_placeholder',
+    baseUrlLabelKey: 'cloud_providers.base_url_optional',
+    baseUrlPlaceholder: 'https://api.deepseek.com',
+    defaultBaseUrl: 'https://api.deepseek.com',
   },
   {
     provider: 'anthropic',

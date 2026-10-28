@@ -2,7 +2,7 @@
 
 Thanks for helping improve Contenox. This repository centers on the V1 runtime
 surface: local CLI usage, ACP over stdio, the VS Code extension that embeds
-the same Go runtime, and `contenox serve` hosting the HTTP API and the bundled
+the same Go runtime, and `contenox-runtime serve` hosting the HTTP API and the bundled
 Beam web UI.
 
 ## Code of Conduct
@@ -34,8 +34,8 @@ chain semantics in TypeScript or a separate UI server.
 The V1 public surface is:
 
 - `contenox` CLI
-- `contenox acp` for ACP clients such as Zed, JetBrains, and AionUi
-- `contenox serve`, which hosts Beam (the bundled web UI) and the HTTP API
+- `contenox-runtime acp` for ACP clients such as Zed, JetBrains, and AionUi
+- `contenox-runtime serve`, which hosts Beam (the bundled web UI) and the HTTP API
   under `/api`, including the OpenAI-compatible and Ollama-compatible inbound
   endpoints and the generated OpenAPI docs (`/api/docs`)
 
@@ -88,7 +88,7 @@ The `contenox` binary is the main entrypoint. Current commands include `setup`,
 `init`, `chat`, `run`, `tools`, `mcp`, `backend`, `agent`, `cache`, `config`,
 `model`, `state`, `doctor`, `session`, `acp`, `acpx`, `serve`, `approvals`,
 `fleet`, `mission`, `workspace`, `update`, and `version`. (`fleet`, `mission`,
-and `approvals` are REST clients to a running `contenox serve`; `workspace`
+and `approvals` are REST clients to a running `contenox-runtime serve`; `workspace`
 grants or revokes the workspace roots a session may run in, written to the
 shared config and applied to a running serve live via a reload doorbell;
 `acp` and `acpx` speak stdio protocols for editors; most of the rest work
@@ -173,11 +173,11 @@ On Windows you can centralize GOPATH, caches, and PATH on a secondary drive usin
 Unix / Git Bash:
 
 ```bash
-# Build the binary into ./bin/contenox
+# Build the binary into ./bin/contenox-runtime
 make build-contenox
 
 # Run an example
-./bin/contenox "list files in this repository"
+./bin/contenox-runtime "list files in this repository"
 ```
 
 PowerShell (native Windows checkout):
@@ -189,7 +189,7 @@ make build-contenox-windows
 .\bin\contenox.exe "list files in this repository"
 ```
 
-Optional (Unix): `make dev-install` symlinks `contenox` to `~/.local/bin/contenox`.
+Optional (Unix): `make dev-install` symlinks `contenox` to `~/.local/bin/contenox-runtime`.
 
 On Windows you can add the output directory or use the environment setup script to put the binary on your PATH.
 

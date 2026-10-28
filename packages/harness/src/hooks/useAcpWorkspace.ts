@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import type { SessionConfigOptionValue } from '../lib/acp';
 import type { AdoptRef } from '../lib/adoptMeta';
+import type { PendingAudioAttachment } from '../pages/chat/lib/audioAttachments';
 import type { PendingImageAttachment } from '../pages/chat/lib/imageAttachments';
 import type { WorkspaceFileRef } from '../pages/chat/lib/mentions';
 import { useAcpWorkspaceContext } from '../lib/acp/AcpWorkspaceProvider';
@@ -22,7 +23,12 @@ export interface UseAcpWorkspaceResult {
   focusEmptyTab: () => void;
   deleteSession: (id: string) => void;
   clearActiveSession: () => void;
-  sendPrompt: (text: string, mentions?: WorkspaceFileRef[], images?: PendingImageAttachment[]) => void;
+  sendPrompt: (
+    text: string,
+    mentions?: WorkspaceFileRef[],
+    images?: PendingImageAttachment[],
+    audio?: PendingAudioAttachment[],
+  ) => void;
   runTerminal: (command: string) => Promise<void>;
   respondPermission: (optionId: string) => void;
   cancel: () => void;
@@ -93,8 +99,13 @@ export function useAcpWorkspace(): UseAcpWorkspaceResult {
   }, [controller]);
 
   const sendPrompt = useCallback(
-    (text: string, mentions?: WorkspaceFileRef[], images?: PendingImageAttachment[]) => {
-      controller.sendPrompt(text, mentions, images);
+    (
+      text: string,
+      mentions?: WorkspaceFileRef[],
+      images?: PendingImageAttachment[],
+      audio?: PendingAudioAttachment[],
+    ) => {
+      controller.sendPrompt(text, mentions, images, audio);
     },
     [controller],
   );

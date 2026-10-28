@@ -114,7 +114,7 @@ makes an agent chat usable in practice:
       `useChatScroll`) so a user scrolled up isn't yanked to the bottom by
       incoming chunks. REMAINING: this was verified via `tsc`/`vitest`/`build`
       only — live end-to-end verification against a real streaming session
-      (actual modeld + contenox serve) is pending; this slice was explicitly
+      (actual modeld + contenox-runtime serve) is pending; this slice was explicitly
       told not to drive the live app.
 - [ ] **Waiting/elapsed feedback.** No "agent is responding…" state, no
       elapsed-time indicator ("responding for 12s"), no distinction between
@@ -151,7 +151,7 @@ makes an agent chat usable in practice:
       content is currently produced) and remain unaddressed.
 
 Deferred design issues observed while live-testing beam chat against a real
-modeld + contenox serve. Infra/plumbing issues are NOT listed here — they are
+modeld + contenox-runtime serve. Infra/plumbing issues are NOT listed here — they are
 being fixed directly.
 
 ## Error handling / recovery UX
@@ -218,7 +218,7 @@ being fixed directly.
         `clikv.ReadHITLPolicy`) — already applies immediately, no fix needed.
       - `default-model`/`-provider`/`-alt-model`/`-alt-provider`/`-max-tokens`/
         `-think` are seeded into `acpsvc.Transport` once from `Deps` at
-        `contenox serve` startup (`runtime/acpsvc/transport.go:92` "seed from
+        `contenox-runtime serve` startup (`runtime/acpsvc/transport.go:92` "seed from
         Deps at construction; not read again") — genuinely frozen for the
         life of the beam/ACP chat connection. RESOLUTION: surfaced this
         explicitly instead of silence — a restart notice on
@@ -227,7 +227,7 @@ being fixed directly.
         the OpenAI-compatible API / VS Code / task-chain runs (all read them
         live per-request via `stateservice.ResolveRuntimeDefaults`,
         confirmed in `runtime/internal/compatapi/openai_chat.go:33`) but need
-        `contenox serve` restarted to reach the beam chat window.
+        `contenox-runtime serve` restarted to reach the beam chat window.
       - `default-chain` (Workspace-Standards) doesn't affect beam/ACP chat
         *at all*, restart or not: the ACP chain is loaded once from
         `~/.contenox-harness/default-acp-chain.json` (`runtime/acpsvc/chain.go`),
@@ -247,7 +247,7 @@ being fixed directly.
       on local GPUs; `default-alt-model`/`-provider`'s tooltip explains the
       chain router/recovery-step usage. "Inherit"/"Not set" options are
       labeled and explained inline.
-- [x] **Settings page only covered 4 of 12 `contenox config` keys.** Added
+- [x] **Settings page only covered 4 of 12 `contenox-runtime config` keys.** Added
       the missing 8: `default-alt-model`/`-alt-provider` (GlobalSettingsSection),
       `default-max-tokens`/`-think` (new ResponseSettingsSection),
       `default-autocomplete-model`/`-provider` (new AutocompleteSettingsSection),

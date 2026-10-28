@@ -11,6 +11,7 @@ import { useWorkspaceRoots } from '../../../hooks/useWorkspaceRoots';
 import { type UseWorkspaceFilesResult } from '../../../hooks/useWorkspaceFiles';
 import { useWorkspaceFind } from '../../../hooks/useWorkspaceFind';
 import { workspaceAccessKeys } from '../../../lib/queryKeys';
+import { displayRootForPath } from '../../../lib/workspaceRoots';
 import type { WorkspaceRoot } from '../../../lib/types';
 import { availableFilterTypes, buildTreeFromMatches, type WorkspaceFilterType } from '../lib/workspaceFilter';
 import {
@@ -163,7 +164,7 @@ export function WorkspacePanel({ root, files, onOpenFile, selectedFilePath }: Wo
   if (!root) return null;
 
   const isEmptyRoot = !files.rootLoading && !files.error && baseNodes.length === 0;
-  const activeRoot: WorkspaceRoot = roots.find(r => r.path === root) ?? { path: root, default: false };
+  const activeRoot: WorkspaceRoot = displayRootForPath(root, roots);
 
   return (
     <div className="border-surface-200 bg-surface-50 dark:border-dark-surface-600 dark:bg-dark-surface-100 flex h-full w-64 min-w-0 shrink-0 flex-col border-r sm:w-72">

@@ -443,7 +443,28 @@ const resources = {
         timeout: 'Timeout',
         headers_count: '{{count}} header(s)',
       },
-      navbar: {
+       agents: {
+        title: 'Agents',
+        description: 'Install a preset agent or manage the agents this runtime can spawn.',
+        presets_title: 'Presets',
+        presets_description: 'Hardened roles installed as ordinary chain agents. After install, edit them through the chains API or UI.',
+        installed_title: 'Installed agents',
+        installed_description: 'Agents registered with this runtime. Disabled agents are kept but cannot be spawned.',
+        install: 'Install',
+        installed: 'Installed',
+        not_installed: 'Not installed',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        enable: 'Enable',
+        disable: 'Disable',
+        remove: 'Remove',
+        empty: 'No agents yet',
+        empty_description: 'Install a preset above, or declare a chain agent file.',
+        empty_presets: 'No presets shipped with this build.',
+        load_error: 'Could not load agents.',
+      },
+
+     navbar: {
         title: 'Contenox',
         hooks: 'Hooks',
         remote_hooks: 'Remote Hooks',
@@ -473,6 +494,7 @@ const resources = {
         missions: 'Missions',
         inbox: 'Inbox',
         projects: 'Projects',
+        agents: 'Agents',
         console: 'Console',
       },
       model_registry: {
@@ -1011,6 +1033,22 @@ const resources = {
         select_resource: 'Select Resource',
       },
       cloud_providers: {
+        codex: {
+          title: 'ChatGPT subscription (Codex)',
+          description: 'Sign in with ChatGPT using a device code. No API key is stored.',
+        },
+        deepseek: {
+          title: 'DeepSeek',
+          description: 'DeepSeek API at api.deepseek.com; needs a DeepSeek API key.',
+        },
+        login_hint: 'Enable device-code login in ChatGPT Settings → Security, then sign in here.',
+        login_button: 'Sign in with ChatGPT',
+        login_pending: 'Waiting for authorization…',
+        login_code: 'Code',
+        login_copy: 'Copy code',
+        login_open: 'Open the sign-in page',
+        login_signed_in: 'Signed in',
+        login_sign_out: 'Sign out',
         title: 'Cloud Providers',
         ollama: {
           title: 'Ollama / Ollama Cloud',
@@ -2145,6 +2183,7 @@ const resources = {
         add_error_fallback: 'Could not add this folder.',
         browse_open: 'Browse for a folder…',
         open_workspace: 'Open workspace…',
+        open_workspace_error: 'Could not switch workspace.',
         dialog_title: 'Add a project',
         browse_hint: 'Open folders to look inside, then select the one to register as a project.',
         browse_start_label: 'Start from',
@@ -2681,7 +2720,26 @@ const resources = {
         inject_value_placeholder: 'Wert',
         add_inject: 'Inject-Parameter hinzufügen',
       },
-      navbar: {
+      agents: {
+        title: 'Agenten',
+        description: 'Einen vorgefertigten Agenten installieren oder die Agenten dieses Runtimes verwalten.',
+        presets_title: 'Vorlagen',
+        presets_description: 'Gehärtete Rollen, installiert als gewöhnliche Chain-Agenten. Nach der Installation über die Chains-API oder -UI bearbeitbar.',
+        installed_title: 'Installierte Agenten',
+        installed_description: 'Bei diesem Runtime registrierte Agenten. Deaktivierte Agenten bleiben erhalten, können aber nicht gestartet werden.',
+        install: 'Installieren',
+        installed: 'Installiert',
+        not_installed: 'Nicht installiert',
+        enabled: 'Aktiv',
+        disabled: 'Deaktiviert',
+        enable: 'Aktivieren',
+        disable: 'Deaktivieren',
+        remove: 'Entfernen',
+        empty: 'Noch keine Agenten',
+        empty_description: 'Installiere oben eine Vorlage oder lege eine Chain-Agent-Datei an.',
+        empty_presets: 'Dieser Build bringt keine Vorlagen mit.',
+        load_error: 'Agenten konnten nicht geladen werden.',
+      },      navbar: {
         title: 'Contenox',
         hooks: 'Hooks',
         telegram: 'Telegram',
@@ -2707,6 +2765,7 @@ const resources = {
         missions: 'Missionen',
         inbox: 'Eingang',
         projects: 'Projekte',
+        agents: 'Agenten',
         console: 'Konsole',
       },
       model_registry: {
@@ -3200,6 +3259,23 @@ const resources = {
         select_resource: 'Ressource auswählen',
       },
       cloud_providers: {
+        codex: {
+          title: 'ChatGPT-Abo (Codex)',
+          description: 'Mit ChatGPT per Gerätecode anmelden. Es wird kein API-Schlüssel gespeichert.',
+        },
+        deepseek: {
+          title: 'DeepSeek',
+          description: 'DeepSeek-API unter api.deepseek.com; benötigt einen DeepSeek-API-Schlüssel.',
+        },
+        login_hint:
+          'Aktiviere die Gerätecode-Anmeldung in den ChatGPT-Einstellungen → Sicherheit und melde dich dann hier an.',
+        login_button: 'Mit ChatGPT anmelden',
+        login_pending: 'Warte auf die Freigabe…',
+        login_code: 'Code',
+        login_copy: 'Code kopieren',
+        login_open: 'Anmeldeseite öffnen',
+        login_signed_in: 'Angemeldet',
+        login_sign_out: 'Abmelden',
         title: 'Cloud-Anbieter',
         ollama: {
           title: 'Ollama / Ollama Cloud',
@@ -4059,6 +4135,7 @@ const resources = {
         add_error_fallback: 'Dieser Ordner konnte nicht hinzugefügt werden.',
         browse_open: 'Ordner auswählen…',
         open_workspace: 'Arbeitsbereich öffnen…',
+        open_workspace_error: 'Arbeitsbereich konnte nicht gewechselt werden.',
         dialog_title: 'Projekt hinzufügen',
         browse_hint:
           'Öffne Ordner, um hineinzusehen, und wähle dann den Ordner, der als Projekt registriert werden soll.',

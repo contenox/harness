@@ -46,18 +46,37 @@
         border: 1px solid #3f3f46; background: #18181b; color: #f4f4f5;
         padding: 10px 14px;
       }
-      button:hover { background: #27272a; }
+      button:hover:not(:disabled) { background: #27272a; }
+      button:disabled { opacity: 0.55; cursor: default; }
       button.primary { background: #f97316; border-color: #f97316; color: #0a0a0a; font-weight: 700; }
-      button.primary:hover { background: #fb923c; }
+      button.primary:hover:not(:disabled) { background: #fb923c; }
       .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
       .hint { color: #71717a; font-size: 12px; margin-top: 14px; }
+      .hint code {
+        background: #18181b; border: 1px solid #27272a; border-radius: 5px;
+        padding: 1px 5px; font-size: 11px; color: #d4d4d8;
+      }
       .recent { margin-top: 28px; border-top: 1px solid #27272a; padding-top: 20px; }
       .recent h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: #71717a; margin: 0 0 10px; }
       .recent-list { display: grid; gap: 6px; }
-      .recent-list button { text-align: left; width: 100%; overflow: hidden; }
-      .recent-list strong { display: block; font-size: 13px; }
-      .recent-list span { display: block; color: #71717a; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      #status { min-height: 20px; margin-top: 14px; color: #fca5a5; font-size: 12px; }
+      .row { display: flex; gap: 6px; align-items: stretch; }
+      .entry {
+        flex: 1; min-width: 0; text-align: left; overflow: hidden;
+        display: flex; flex-direction: column; gap: 2px; padding: 9px 12px;
+      }
+      .entry strong { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+      .entry span { display: block; color: #71717a; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .badge {
+        font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+        color: #fdba74; border: 1px solid #7c2d12; background: #1c1310;
+        border-radius: 999px; padding: 1px 7px; font-weight: 600;
+      }
+      .remove {
+        width: 38px; display: grid; place-items: center; color: #a1a1aa;
+        font-size: 16px; line-height: 1; padding: 0;
+      }
+      .remove:hover:not(:disabled) { color: #fca5a5; border-color: #7f1d1d; }
+      #status { min-height: 20px; margin-top: 14px; color: #fca5a5; font-size: 12px; white-space: pre-wrap; }
       .empty { color: #71717a; font-size: 12px; }
     </style>
   </head>
@@ -71,10 +90,10 @@
         <h1 id="title">Choose a workspace</h1>
         <p class="lead">Pick the folder Contenox may open and work in. The folder is used in place; nothing is created or moved.</p>
         <div class="actions">
-          <button class="primary" id="open-folder" type="button">Open folder…</button>
+          <button class="primary" id="open-folder" type="button">Open Folder…</button>
           <button id="quit" type="button">Quit</button>
         </div>
-        <p class="hint">You can change the workspace later from Projects → Open workspace.</p>
+        <p class="hint">Tip: run <code>contenox .</code> in any folder to open it here. Switch again at any time with <code>Ctrl/Cmd+O</code>.</p>
         <div id="status" role="status"></div>
         <section class="recent" aria-labelledby="recent-title">
           <h2 id="recent-title">Recent workspaces</h2>
@@ -86,48 +105,114 @@
       const api = window.contenoxDesktop;
       const status = document.getElementById('status');
       const recentList = document.getElementById('recent-list');
+      const openFolderButton = document.getElementById('open-folder');
+      const quitButton = document.getElementById('quit');
 
-      function showError(error) {
-        status.textContent = error || 'Could not open that workspace.';
+      let current = null;
+      let recent = [];
+      let busy = false;
+
+      function showError(text) {
+        status.textContent = text || 'Could not open that workspace.';
+      }
+
+      function setBusy(value) {
+        busy = value;
+        openFolderButton.disabled = value;
+        for (const button of recentList.querySelectorAll('button')) button.disabled = value;
       }
 
       async function useWorkspace(workspace) {
+        if (busy) return;
+        setBusy(true);
         status.textContent = 'Opening ' + workspace + '…';
         const result = await api.useWorkspace(workspace);
-        if (!result.ok) showError(result.error);
+        if (!result.ok) {
+          showError(result.error);
+          setBusy(false);
+        }
       }
 
       async function openFolder() {
+        if (busy) return;
         status.textContent = '';
         const workspace = await api.pickWorkspace();
         if (workspace) await useWorkspace(workspace);
       }
 
-      function renderRecent(paths) {
+      async function removeRecent(workspace) {
+        if (busy) return;
+        const name = workspace.split(/[\\/]/).filter(Boolean).pop() || workspace;
+        if (!window.confirm(`Remove ${name} from recent workspaces?\n\nThe folder itself is not touched.`)) return;
+        const result = await api.forgetRecent(workspace);
+        if (!result.ok) {
+          showError(result.error);
+          return;
+        }
+        recent = result.recent;
+        renderRecent();
+      }
+
+      function renderRecent() {
         recentList.replaceChildren();
-        if (!paths.length) {
+        if (!recent.length) {
           const empty = document.createElement('p');
           empty.className = 'empty';
           empty.textContent = 'No recent workspaces yet.';
           recentList.append(empty);
           return;
         }
-        for (const workspace of paths) {
-          const button = document.createElement('button');
-          button.type = 'button';
+        for (const workspace of recent) {
+          const row = document.createElement('div');
+          row.className = 'row';
+
+          const entry = document.createElement('button');
+          entry.type = 'button';
+          entry.className = 'entry';
+          entry.disabled = busy;
+
           const name = document.createElement('strong');
           name.textContent = workspace.split(/[\\/]/).filter(Boolean).pop() || workspace;
+          if (workspace === current) {
+            const badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.textContent = 'current';
+            name.append(badge);
+          }
+
           const pathLabel = document.createElement('span');
           pathLabel.textContent = workspace;
-          button.append(name, pathLabel);
-          button.addEventListener('click', () => void useWorkspace(workspace));
-          recentList.append(button);
+          entry.append(name, pathLabel);
+          entry.addEventListener('click', () => void useWorkspace(workspace));
+
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'remove';
+          remove.title = 'Remove from recent workspaces';
+          remove.setAttribute('aria-label', `Remove ${workspace} from recent workspaces`);
+          remove.textContent = '×';
+          remove.disabled = busy;
+          remove.addEventListener('click', () => void removeRecent(workspace));
+
+          row.append(entry, remove);
+          recentList.append(row);
         }
       }
 
-      document.getElementById('open-folder').addEventListener('click', () => void openFolder());
-      document.getElementById('quit').addEventListener('click', () => window.close());
-      api?.recentWorkspaces?.().then(renderRecent).catch(() => renderRecent([]));
+      async function load() {
+        const [paths, active] = await Promise.all([api.recentWorkspaces(), api.currentWorkspace()]);
+        recent = Array.isArray(paths) ? paths : [];
+        current = active && active.ok ? active.workspace : null;
+        renderRecent();
+      }
+
+      openFolderButton.addEventListener('click', () => void openFolder());
+      quitButton.addEventListener('click', () => window.close());
+
+      const error = new URLSearchParams(location.search).get('error');
+      if (error) showError(error);
+
+      load().catch(error => showError(error && error.message ? error.message : String(error)));
     </script>
   </body>
 </html>

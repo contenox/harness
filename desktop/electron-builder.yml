@@ -34,6 +34,9 @@ deb:
     - libsecret-1-0
     - libgbm1
     - libasound2
+  fpm:
+    - --deb-compression-level=6
+    - packaging/launchers/contenox-runtime=/usr/bin/contenox-runtime
 rpm:
   depends:
     - gtk3
@@ -47,6 +50,9 @@ rpm:
     - libgbm.so.1()(64bit)
     - libasound.so.2()(64bit)
     - libsecret-1.so.0()(64bit)
+  fpm:
+    - --rpm-compression-level=6
+    - packaging/launchers/contenox-runtime=/usr/bin/contenox-runtime
 win:
   icon: build/icons/contenox.ico
   target:

@@ -1,5 +1,6 @@
-import { imageContent, textContent, type ContentBlock } from '../../../lib/acp';
+import { audioContent, imageContent, textContent, type ContentBlock } from '../../../lib/acp';
 import type { PendingImageAttachment } from './imageAttachments';
+import type { PendingAudioAttachment } from './audioAttachments';
 
 export interface WorkspaceFileRef {
   path: string;
@@ -162,6 +163,7 @@ export function promptBlocksFromDraft(
   text: string,
   mentions: WorkspaceFileRef[],
   images: PendingImageAttachment[] = [],
+  audio: PendingAudioAttachment[] = [],
 ): ContentBlock[] {
   const blocks: ContentBlock[] = [];
   if (text.trim() !== '') blocks.push(textContent(text));
@@ -173,6 +175,9 @@ export function promptBlocksFromDraft(
   }
   for (const img of images) {
     blocks.push(imageContent(img.data, img.mimeType));
+  }
+  for (const clip of audio) {
+    blocks.push(audioContent(clip.data, clip.mimeType));
   }
   return blocks;
 }

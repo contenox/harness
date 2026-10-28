@@ -457,6 +457,7 @@ export function acpSessionReducer(
         ...state,
         isPrompting: false,
         stopReason: action.stopReason,
+        pendingPermission: null,
         messages: endStreaming(state.messages),
       };
 

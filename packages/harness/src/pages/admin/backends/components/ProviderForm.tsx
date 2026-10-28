@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfigureProvider, useProviderStatus } from '../../../../hooks/useProviders';
 import { getCloudProviderSetup, type CloudProviderSetup } from '../../../../lib/providerCatalog';
+import ProviderLogin from './ProviderLogin';
 import type { CloudProviderType } from '../../../../lib/types';
 
 type ProviderFormProps = {
@@ -57,6 +58,10 @@ export default function ProviderForm({ provider, setup: setupProp, onSaved }: Pr
     }
     return t('cloud_providers.status_configured');
   }, [status, t]);
+
+  if (setup.loginRequired) {
+    return <ProviderLogin setup={setup} onSaved={onSaved} />;
+  }
 
   const handleSubmit = () => {
     const trimmedSecret = secret.trim();

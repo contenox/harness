@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Build the harness UI and the CLI, serve the SPA from the real binary, and
+# Build the harness UI, serve it (desktop/src/server.mjs) in front of the pinned
+# contenox-runtime binary, and
 # capture review screenshots with Playwright. Screenshots land in
 # e2e/screenshots/ (gitignored) and are never committed.
 #
@@ -12,18 +13,24 @@ HARNESS_DIR=$(cd "$E2E_DIR/.." && pwd)
 ROOT=$(cd "$HARNESS_DIR/../.." && pwd)
 PORT=${HARNESS_PORT:-32123}
 BASE_URL="http://127.0.0.1:${PORT}"
-BIN="$ROOT/bin/contenox"
+RUNTIME_PORT=${HARNESS_RUNTIME_PORT:-32124}
+RUNTIME_URL="http://127.0.0.1:${RUNTIME_PORT}"
+case "$(uname -s)" in Linux) OS=linux;; Darwin) OS=darwin;; *) OS=windows;; esac
+case "$(uname -m)" in x86_64|amd64) ARCH=amd64;; *) ARCH=arm64;; esac
+VERSION=$(node -p "require('$ROOT/runtime.lock.json').version")
+BIN="$ROOT/.runtime/$VERSION/contenox-runtime-$OS-$ARCH"
 
 echo "==> building @contenox/ui"
 [ -d "$ROOT/packages/ui/node_modules" ] || (cd "$ROOT/packages/ui" && npm ci --no-audit --no-fund >/dev/null)
 (cd "$ROOT/packages/ui" && npm run build >/dev/null)
 
-echo "==> building harness UI (writes runtime/internal/web/harness/dist)"
+echo "==> building harness UI (writes packages/harness/dist)"
 [ -d "$HARNESS_DIR/node_modules" ] || (cd "$HARNESS_DIR" && npm ci --no-audit --no-fund >/dev/null)
 (cd "$HARNESS_DIR" && npm run build >/dev/null)
 
-echo "==> building contenox"
-(cd "$ROOT" && CGO_ENABLED=0 go build -o "$BIN" ./cmd/contenox)
+echo "==> resolving contenox-runtime $VERSION"
+[ -x "$BIN" ] || (cd "$ROOT" && make runtime-fetch)
+[ -x "$BIN" ] || { echo "missing runtime: $BIN" >&2; exit 1; }
 
 echo "==> seeding a throwaway home with a scripted backend"
 TMP_HOME=$(mktemp -d)
@@ -31,6 +38,7 @@ WORK_DIR="$TMP_HOME/work"
 mkdir -p "$WORK_DIR"
 cleanup() {
   [ -n "${SERVE_PID:-}" ] && kill "$SERVE_PID" 2>/dev/null || true
+  [ -n "${UI_PID:-}" ] && kill "$UI_PID" 2>/dev/null || true
   rm -rf "$TMP_HOME"
 }
 trap cleanup EXIT
@@ -102,31 +110,39 @@ HOME="$TMP_HOME" python3 "$E2E_DIR/seed_acp_session.py" "$BIN" "$WORK_DIR" "$WOR
   echo "warning: could not seed an ACP session; the chat surfaces will render empty" >&2
 }
 
-if curl -fsS --max-time 1 "$BASE_URL/health" >/dev/null 2>&1; then
-  echo "another process already answers at $BASE_URL — refusing to capture against it" >&2
-  exit 1
-fi
+for u in "$BASE_URL" "$RUNTIME_URL"; do
+  if curl -fsS --max-time 1 "$u/health" >/dev/null 2>&1; then
+    echo "another process already answers at $u — refusing to capture against it" >&2
+    exit 1
+  fi
+done
 
-echo "==> starting serve on ${BASE_URL}"
+echo "==> starting runtime on ${RUNTIME_URL}"
 cd "$WORK_DIR"
-HOME="$TMP_HOME" "$BIN" serve >"$TMP_HOME/serve.log" 2>&1 &
+HOME="$TMP_HOME" PORT="$RUNTIME_PORT" "$BIN" serve >"$TMP_HOME/serve.log" 2>&1 &
 SERVE_PID=$!
 cd "$ROOT"
 
-for _ in $(seq 1 60); do
-  if curl -fsS "$BASE_URL/health" >/dev/null 2>&1; then break; fi
-  if ! kill -0 "$SERVE_PID" 2>/dev/null; then
-    echo "serve exited during startup:" >&2
-    tail -20 "$TMP_HOME/serve.log" >&2
-    exit 1
-  fi
-  sleep 0.5
-done
-curl -fsS "$BASE_URL/health" >/dev/null || {
-  echo "serve did not become healthy at $BASE_URL: see the log above" >&2
-  tail -20 "$TMP_HOME/serve.log" >&2
+echo "==> starting UI server on ${BASE_URL}"
+node "$E2E_DIR/serve-ui.mjs" "$HARNESS_DIR/dist" "$RUNTIME_URL" "$PORT" >"$TMP_HOME/ui.log" 2>&1 &
+UI_PID=$!
+
+wait_healthy() { # url pid log
+  for _ in $(seq 1 60); do
+    curl -fsS "$1/health" >/dev/null 2>&1 && return 0
+    if ! kill -0 "$2" 2>/dev/null; then
+      echo "process for $1 exited during startup:" >&2
+      tail -20 "$3" >&2
+      exit 1
+    fi
+    sleep 0.5
+  done
+  echo "$1 did not become healthy:" >&2
+  tail -20 "$3" >&2
   exit 1
 }
+wait_healthy "$RUNTIME_URL" "$SERVE_PID" "$TMP_HOME/serve.log"
+wait_healthy "$BASE_URL" "$UI_PID" "$TMP_HOME/ui.log"
 
 echo "==> capturing screenshots"
 HARNESS_BASE_URL="$BASE_URL" npx --prefix "$HARNESS_DIR" playwright test \

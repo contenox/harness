@@ -24,7 +24,12 @@ import {
   MissionReport,
   ModelDescriptor,
   ModelRegistryEntry,
+  AgentPreset,
+  AgentPresetInstallResult,
+  AgentRecord,
   OperatorInboxItem,
+  ProviderLoginStart,
+  ProviderLoginStatus,
   RemoteHook,
   SetupStatus,
   ShellEnvResponse,
@@ -241,6 +246,25 @@ export const api = {
   getProviderStatus: (provider: CloudProviderType) =>
     apiFetch<StatusResponse>(`/api/providers/${provider}/status`),
   getSupportedProviders: () => apiFetch<SupportedProvider[]>('/api/providers/supported'),
+
+  listAgentPresets: () => apiFetch<AgentPreset[]>('/api/agent-presets'),
+  installAgentPreset: (name: string, force = false) =>
+    apiFetch<AgentPresetInstallResult>(
+      `/api/agent-presets/${encodeURIComponent(name)}${force ? '?force=true' : ''}`,
+      options('POST'),
+    ),
+  listAgents: () => apiFetch<AgentRecord[]>('/api/agents?limit=100'),
+  updateAgent: (agent: AgentRecord) =>
+    apiFetch<AgentRecord>(`/api/agents/${encodeURIComponent(agent.id)}`, options('PUT', agent)),
+  deleteAgent: (id: string) =>
+    apiFetch<string>(`/api/agents/${encodeURIComponent(id)}`, options('DELETE')),
+
+  startProviderLogin: (provider: CloudProviderType) =>
+    apiFetch<ProviderLoginStart>(`/api/providers/${provider}/login`, options('POST')),
+  getProviderLogin: (provider: CloudProviderType) =>
+    apiFetch<ProviderLoginStatus>(`/api/providers/${provider}/login`),
+  logoutProvider: (provider: CloudProviderType) =>
+    apiFetch<string>(`/api/providers/${provider}/login`, options('DELETE')),
 
   getCurrentUser: async (): Promise<AuthenticatedUser> => localAuthenticatedUser,
 

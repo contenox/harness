@@ -1553,6 +1553,32 @@ describe('acpWorkspaceController: image prompt capability + image blocks', () =>
     });
   });
 
+  it('sendPrompt with audio appends an audio content block to session/prompt and echoes it on the local user message', async () => {
+    const h = setup();
+    await connectReady(h);
+    await createSession(h, 'sess-a');
+
+    h.controller.sendPrompt(
+      'transcribe this',
+      [],
+      [],
+      [{ id: 'aud-1', name: 'Voice note', data: 'UklGRg==', mimeType: 'audio/wav' }],
+    );
+
+    const req = h.transports[0].lastSent();
+    expect(req.method).toBe('session/prompt');
+    expect((req.params as Record<string, unknown>).prompt).toEqual([
+      { type: 'text', text: 'transcribe this' },
+      { type: 'audio', data: 'UklGRg==', mimeType: 'audio/wav' },
+    ]);
+
+    const user = Object.values(h.sessStore.state.messages).find(m => m.role === 'user');
+    expect(user).toMatchObject({
+      text: 'transcribe this',
+      audio: [{ data: 'UklGRg==', mimeType: 'audio/wav' }],
+    });
+  });
+
   it('routes an inbound user_message_chunk image (session/load replay of an image prompt) into the slice', async () => {
     const h = setup();
     await connectReady(h);

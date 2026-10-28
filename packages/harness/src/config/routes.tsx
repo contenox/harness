@@ -7,6 +7,7 @@ import {
   Settings,
   SquareTerminal,
   type LucideIcon,
+  Bot,
 } from 'lucide-react';
 import { lazy } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
@@ -23,6 +24,7 @@ const MissionDetailPage = lazy(() => import('../pages/admin/missions/MissionDeta
 const MissionDispatchPage = lazy(() => import('../pages/admin/missions/MissionDispatchPage.tsx'));
 const InboxPage = lazy(() => import('../pages/admin/inbox/InboxPage.tsx'));
 const ProjectsPage = lazy(() => import('../pages/admin/projects/ProjectsPage.tsx'));
+const AgentsPage = lazy(() => import('../pages/admin/agents/AgentsPage.tsx'));
 const ControlPlanePage = lazy(() => import('../pages/admin/control/ControlPlanePage.tsx'));
 const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage.tsx'));
 const ConsolePage = lazy(() => import('../pages/admin/console/ConsolePage.tsx'));
@@ -66,6 +68,7 @@ const adminRouteDefinitions: AdminRouteDefinition[] = [
   { path: '/inbox', element: InboxPage, labelKey: 'navbar.inbox', Icon: Inbox },
   { path: '/backends', element: BackendsPage, labelKey: 'navbar.backends', Icon: Database },
   { path: '/projects', element: ProjectsPage, labelKey: 'navbar.projects', Icon: Folder },
+  { path: '/agents', element: AgentsPage, labelKey: 'navbar.agents', Icon: Bot },
   { path: '/terminal', element: ConsolePage, labelKey: 'navbar.console', Icon: SquareTerminal },
   { path: '/settings', element: SettingsPage, labelKey: 'navbar.settings', Icon: Settings },
 ];

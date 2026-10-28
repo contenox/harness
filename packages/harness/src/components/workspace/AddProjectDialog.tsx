@@ -111,9 +111,9 @@ function AddProjectBody({
     addMutation.reset();
   };
 
-  const normalizedSelected = selectedAbsolute.replace(/\/+$/, '');
+  const normalizedSelected = selectedAbsolute.replace(/[\\/]+$/, '');
   const existingRoot = normalizedSelected
-    ? roots.find(r => r.path.replace(/\/+$/, '') === normalizedSelected)
+    ? roots.find(r => r.path.replace(/[\\/]+$/, '') === normalizedSelected)
     : undefined;
 
   const canSubmit = selectedAbsolute !== '' && !addMutation.isPending;
