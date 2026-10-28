@@ -164,3 +164,11 @@ function colorize(rawText: string): React.ReactNode {
 
   return parts.length === 1 ? parts[0] : <>{parts}</>;
 }
+
+/** Last `n` lines of `text`, ignoring trailing blank lines. */
+export function tailLines(text: string | string[], n: number): string[] {
+  const lines = typeof text === "string" ? text.split(/\r?\n/) : [...text];
+  let end = lines.length;
+  while (end > 0 && lines[end - 1].trim() === "") end--;
+  return lines.slice(Math.max(0, end - Math.max(0, n)), end);
+}

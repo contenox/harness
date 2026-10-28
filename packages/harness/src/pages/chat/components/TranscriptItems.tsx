@@ -11,7 +11,10 @@ import {
   InlineAttachments,
   InlineNotice,
   Span,
+  stripAnsi,
   TerminalOutput,
+  tailLines,
+  TOOL_CALL_PREVIEW_LINES,
   ToolCallCard,
   type ToolCallCardProps,
 } from '@contenox/ui';
@@ -53,6 +56,43 @@ function toolCallCardStatus(
     default:
       return 'pending';
   }
+}
+
+function LogTail({ lines }: { lines: string[] }) {
+  return (
+    <pre className="whitespace-pre-wrap break-all">
+      {tailLines(lines.map(stripAnsi), TOOL_CALL_PREVIEW_LINES).join('\n')}
+    </pre>
+  );
+}
+
+function toolCallContentText(toolCall: AcpToolCallState): string {
+  return (toolCall.content ?? [])
+    .map(c => (c.type === 'content' && typeof c.content?.text === 'string' ? c.content.text : ''))
+    .filter(Boolean)
+    .join('\n');
+}
+
+/** Collapsed-card log tail; derived from state on every render so streamed chunks update it. */
+function toolCallPreview(toolCall: AcpToolCallState): ReactNode {
+  const running = toolCall.status === 'in_progress' || toolCall.status === 'pending';
+  const streamed = toolCallContentText(toolCall);
+  let lines: string[] = [];
+  if (toolCall.kind === 'execute') {
+    lines = running ? tailLines(streamed, TOOL_CALL_PREVIEW_LINES) : (shellOutputLines(toolCall.rawOutput) ?? tailLines(streamed, TOOL_CALL_PREVIEW_LINES));
+  } else {
+    lines = tailLines(streamed, TOOL_CALL_PREVIEW_LINES);
+  }
+  if (tailLines(lines, 1).length === 0) {
+    const summary =
+      shellCommandLine(toolCall.rawInput) ??
+      (toolCall.locations?.[0]?.path
+        ? `${toolCall.locations[0].path}${toolCall.locations[0].line ? `:${toolCall.locations[0].line}` : ''}`
+        : null);
+    if (!summary) return undefined;
+    lines = [summary];
+  }
+  return <LogTail lines={lines} />;
 }
 
 function diffKey(path: string | undefined, indexOfKind: number): string {
@@ -254,6 +294,7 @@ function TranscriptToolCall({ toolCall, onOpenFile }: { toolCall: AcpToolCallSta
       }}
       toggleDetailLabel={t('acp_chat.tool_toggle_detail')}
       detail={hasDetail ? <ToolCallDetail toolCall={toolCall} onOpenFile={onOpenFile} /> : undefined}
+      preview={toolCallPreview(toolCall)}
       duration={duration}
     />
   );
@@ -261,10 +302,15 @@ function TranscriptToolCall({ toolCall, onOpenFile }: { toolCall: AcpToolCallSta
 
 function TranscriptTerminal({ card }: { card: AcpTerminalCard }) {
   const { t } = useTranslation();
+  const lines = card.output.split('\n');
   return (
-    <InlineAttachments
-      attachments={[{ kind: 'terminal_excerpt', command: card.command, output: card.output }]}
-      labels={{ terminalOutput: t('terminal.card_label') }}
+    <ToolCallCard
+      tool={t('terminal.card_label')}
+      title={card.command ? stripAnsi(card.command) : t('terminal.card_label')}
+      status="success"
+      toggleDetailLabel={t('acp_chat.tool_toggle_detail')}
+      detail={<TerminalOutput lines={lines} maxHeight="15rem" autoScroll={false} />}
+      preview={tailLines(lines, 1).length > 0 ? <LogTail lines={lines} /> : undefined}
     />
   );
 }

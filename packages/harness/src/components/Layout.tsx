@@ -75,7 +75,7 @@ export function Layout({ defaultOpen = true, mainContent, sidebarContent, classN
       : sidebarContent;
 
   const headerTitle = useMemo(() => {
-    if (location.pathname.startsWith('/chat')) return 'Beam';
+    if (location.pathname.startsWith('/chat')) return t('acp_chat.title');
     if (location.pathname.startsWith('/fleet')) return t('navbar.fleet');
     if (location.pathname.startsWith('/missions')) return t('navbar.missions');
     if (location.pathname.startsWith('/inbox')) return t('navbar.inbox');

@@ -3,7 +3,7 @@
 Thanks for helping improve Contenox. This repository centers on the V1 runtime
 surface: local CLI usage, ACP over stdio, the VS Code extension that embeds
 the same Go runtime, and `contenox-runtime serve` hosting the HTTP API and the bundled
-Beam web UI.
+cockpit UI.
 
 ## Code of Conduct
 
@@ -35,7 +35,7 @@ The V1 public surface is:
 
 - `contenox` CLI
 - `contenox-runtime acp` for ACP clients such as Zed, JetBrains, and AionUi
-- `contenox-runtime serve`, which hosts Beam (the bundled web UI) and the HTTP API
+- `contenox-runtime serve`, which hosts the cockpit UI and the HTTP API
   under `/api`, including the OpenAI-compatible and Ollama-compatible inbound
   endpoints and the generated OpenAPI docs (`/api/docs`)
 
@@ -115,7 +115,7 @@ Run `make help` at the repo root for the full list.
 
 | Prefix | Purpose |
 |--------|---------|
-| `build-*` | CLI and Beam UI builds |
+| `build-*` | CLI and cockpit UI builds |
 | `package-*` | product packaging targets |
 | `test-*` | Go unit tests, explicit integration suites, and CLI help checks |
 | `dev-*` | local binary install helpers |
@@ -141,7 +141,7 @@ Keep these files in sync when changing public surface area:
 - [Go](https://go.dev/doc/install) 1.25+
 - `make` (helpful; individual `go build` / `npm` commands also work)
 - `curl` and `git`
-- Node.js 22+ and npm for the Beam UI
+- Node.js 22+ and npm for the cockpit UI
 - Optional: an LLM provider key or a local server (Ollama, vLLM).
 
 Native Windows development is a first-class supported path. Use Git for Windows (brings Git Bash), the official Go MSI, and Node.js 22+ for the UI. Place tools, GOPATH, caches, and scratch data on a secondary drive (e.g. `D:`) for performance and cleanliness. Git Bash can run the bash-based build scripts.

@@ -287,7 +287,7 @@ export function BeamChat({
   links = defaultLinks,
   readiness,
   embedded = false,
-  productName = 'Beam',
+  productName = 'Contenox',
   productIcon,
   composerAction,
   onComposerActionHandled,

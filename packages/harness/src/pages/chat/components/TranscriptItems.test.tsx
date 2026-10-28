@@ -175,3 +175,28 @@ describe('TranscriptItems: turn-grouped step trail', () => {
     expect(html).not.toContain('turn_steps_toggle');
   });
 });
+
+describe('TranscriptItems: collapsed log tail', () => {
+  it('shows the last lines of a running execute call from streamed content', () => {
+    const session: AcpSessionState = {
+      ...initialAcpSessionState,
+      sessionId: 'sess-1',
+      items: [{ kind: 'tool_call', id: 'tc-1' }],
+      toolCalls: {
+        'tc-1': {
+          toolCallId: 'tc-1',
+          title: 'npm test',
+          kind: 'execute',
+          status: 'in_progress',
+          content: [
+            { type: 'content', content: { type: 'text', text: 'l1\nl2\nl3\nl4\nl5\nl6\n' } },
+          ],
+        },
+      },
+    };
+    const html = render(session);
+    expect(html).toContain('tool-call-preview');
+    expect(html).toContain('l3\nl4\nl5\nl6');
+    expect(html).not.toContain('l2');
+  });
+});

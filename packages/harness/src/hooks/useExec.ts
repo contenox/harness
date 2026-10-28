@@ -11,7 +11,7 @@ type ExecPromptVariables = Exec & {
 
 const promptExecChain: ChainDefinition = {
   id: 'beam-exec-prompt',
-  description: 'One-shot prompt execution for Beam',
+  description: 'One-shot prompt execution for Contenox',
   tasks: [
     {
       id: 'beam_exec_prompt',

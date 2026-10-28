@@ -4,6 +4,9 @@ import { cn } from "../utils";
 import { Badge } from "./Badge";
 import { Span } from "./Typography";
 
+/** Number of log lines a collapsed card shows as a live tail (3-5 reads well). */
+export const TOOL_CALL_PREVIEW_LINES = 4;
+
 export type ToolCallStatus = "pending" | "running" | "success" | "error";
 
 export interface ToolCallCardProps
@@ -14,6 +17,8 @@ export interface ToolCallCardProps
   icon?: React.ReactNode;
   href?: string;
   detail?: React.ReactNode;
+  /** Log tail shown while collapsed; clicking it toggles the detail. */
+  preview?: React.ReactNode;
   duration?: string;
   statusLabels?: Partial<Record<ToolCallStatus, string>>;
   externalLinkLabel?: string;
@@ -37,6 +42,7 @@ export const ToolCallCard = forwardRef<HTMLDivElement, ToolCallCardProps>(
       icon,
       href,
       detail,
+      preview,
       duration,
       statusLabels,
       externalLinkLabel = "Open in external tool",
@@ -125,6 +131,28 @@ export const ToolCallCard = forwardRef<HTMLDivElement, ToolCallCardProps>(
           )}
         </div>
 
+        {!open && preview && (
+          <div
+            data-testid="tool-call-preview"
+            onClick={detail ? () => setOpen(true) : undefined}
+            className={cn(
+              "relative overflow-hidden px-3 pb-2 font-mono text-xs leading-5",
+              "text-text-muted dark:text-dark-text-muted",
+              detail && "cursor-pointer",
+            )}
+            style={{ maxHeight: `${TOOL_CALL_PREVIEW_LINES * 1.25 + 0.5}rem` }}
+          >
+            {preview}
+            <div
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute inset-x-0 top-0 h-3",
+                "bg-gradient-to-b from-surface-50 to-transparent",
+                "dark:from-dark-surface-200",
+              )}
+            />
+          </div>
+        )}
 
         {detail && open && (
           <div

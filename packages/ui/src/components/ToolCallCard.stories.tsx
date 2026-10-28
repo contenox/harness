@@ -79,3 +79,19 @@ src/components/Foo.tsx(12,7): error TS2322: Type 'string' is not assignable to t
     </div>
   ),
 };
+
+export const WithLogTail: Story = {
+  args: { status: "running", title: "npm run build", duration: "12s", detail: "full output" },
+  render: (args) => (
+    <div style={{ width: 540 }}>
+      <ToolCallCard
+        {...args}
+        preview={
+          <pre className="whitespace-pre-wrap break-all">
+            {["vite v5 building", "transforming (212)", "transforming (480)", "rendering chunks"].join("\n")}
+          </pre>
+        }
+      />
+    </div>
+  ),
+};

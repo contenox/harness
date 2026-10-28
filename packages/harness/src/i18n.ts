@@ -790,7 +790,7 @@ const resources = {
         verdict_stuck_title:
           'The mission hit a boundary it could not pass on its own — it is waiting for a human to judge, nudge, or replan it. Not a failure.',
         verdict_unknown_title:
-          'A mission status this Beam build does not know — shown as the runtime reported it. Beam is likely older than the runtime serving it.',
+          'A mission status this build of Contenox does not know — shown as the runtime reported it. The app is likely older than the runtime serving it.',
         verdict_abandoned: 'Abandoned',
         verdict_abandoned_title: 'The mission was given up before it landed.',
         liveness_prefix: 'Heartbeat',
@@ -1587,7 +1587,7 @@ const resources = {
           'Latest snapshot from the runtime backend refresh loop (reachability, observed models, sync errors). This is not a download queue.',
         local_runtime_title: 'Local runtime',
         local_runtime_intro:
-          'Modeld daemon state and slot controls exposed by contenox serve. Beam does not talk to Modeld directly.',
+          'Modeld daemon state and slot controls exposed by contenox-runtime serve. The app does not talk to Modeld directly.',
         local_runtime_refresh: 'Refresh',
         local_runtime_load_error: 'Could not load local runtime state.',
         local_runtime_availability: 'Availability',
@@ -1973,7 +1973,7 @@ const resources = {
         no_response: 'No response received',
       },
       acp_chat: {
-        title: 'Beam',
+        title: 'Chat',
         new_session: 'New session',
         tab_close_label: 'Close tab: {{name}}',
         role_user: 'You',
@@ -3073,7 +3073,7 @@ const resources = {
         verdict_stuck_title:
           'Die Mission stieß an eine Grenze, die sie allein nicht überwinden kann — sie wartet auf eine menschliche Einschätzung, einen Anstoß oder eine Neuplanung. Kein Fehlschlag.',
         verdict_unknown_title:
-          'Ein Missionsstatus, den dieser Beam-Build nicht kennt — angezeigt, wie die Runtime ihn gemeldet hat. Beam ist wahrscheinlich älter als die Runtime, die es ausliefert.',
+          'Ein Missionsstatus, den dieser Contenox-Build nicht kennt — angezeigt, wie die Runtime ihn gemeldet hat. Die App ist wahrscheinlich älter als die Runtime, die sie bedient.',
         verdict_abandoned: 'Aufgegeben',
         verdict_abandoned_title: 'Die Mission wurde aufgegeben, bevor sie landete.',
         liveness_prefix: 'Herzschlag',
@@ -3524,7 +3524,7 @@ const resources = {
           'Aktueller Stand aus der Backend-Aktualisierung der Laufzeit (Erreichbarkeit, beobachtete Modelle, Sync-Fehler). Keine Download-Warteschlange.',
         local_runtime_title: 'Lokale Laufzeit',
         local_runtime_intro:
-          'Modeld-Daemonstatus und Slot-Steuerung aus contenox serve. Beam spricht nicht direkt mit Modeld.',
+          'Modeld-Daemonstatus und Slot-Steuerung aus contenox-runtime serve. Die App spricht nicht direkt mit Modeld.',
         local_runtime_refresh: 'Aktualisieren',
         local_runtime_load_error: 'Lokaler Laufzeitstatus konnte nicht geladen werden.',
         local_runtime_availability: 'Verfügbarkeit',
@@ -3922,7 +3922,7 @@ const resources = {
         no_response: 'Keine Antwort erhalten',
       },
       acp_chat: {
-        title: 'Beam',
+        title: 'Chat',
         new_session: 'Neue Sitzung',
         tab_close_label: 'Tab schließen: {{name}}',
         role_user: 'Du',
