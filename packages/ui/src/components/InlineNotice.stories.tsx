@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { InlineNotice } from "./InlineNotice";
+import { expect, within } from "storybook/test";
 
 const meta: Meta<typeof InlineNotice> = {
   title: "Primitives/InlineNotice",
@@ -47,5 +48,16 @@ export const Dismissible: Story = {
     variant: "info",
     children: "Dismissible notice.",
     onDismiss: () => {},
+  },
+};
+
+export const WithTitle: Story = {
+  args: { variant: "error", title: "Error message", children: "exit code 1" },
+  play: async ({ canvasElement }) => {
+    const alert = within(canvasElement).getByRole("alert");
+    await expect(within(alert).getByText("Error message")).toBeVisible();
+    await expect(within(alert).getByText("exit code 1")).toBeVisible();
+    // Title and message are separate lines, not one run of text.
+    await expect(alert.textContent).not.toContain("\n");
   },
 };

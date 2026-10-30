@@ -191,9 +191,7 @@ function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; 
   const errorText = toolCallError(toolCall);
 
   const errorNotice = errorText ? (
-    <InlineNotice variant="error">
-      <span className="font-medium">{t('acp_chat.tool_error_label')}</span>
-      {'\n'}
+    <InlineNotice variant="error" title={t('acp_chat.tool_error_label')}>
       {errorText}
     </InlineNotice>
   ) : null;

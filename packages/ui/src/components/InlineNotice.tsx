@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { cn } from "../utils";
+import { Span } from "./Typography";
 
 export type InlineNoticeVariant =
   | "warning"
@@ -9,8 +10,10 @@ export type InlineNoticeVariant =
   /** @deprecated same as "error" */
   | "errorSoft";
 
-export type InlineNoticeProps = React.HTMLAttributes<HTMLDivElement> & {
+export type InlineNoticeProps = Omit<React.HTMLAttributes<HTMLDivElement>, "title"> & {
   variant?: InlineNoticeVariant;
+  /** Short heading shown on its own line above the message. */
+  title?: React.ReactNode;
   onDismiss?: () => void;
 };
 
@@ -25,9 +28,17 @@ const variantClasses: Record<InlineNoticeVariant, string> = {
 
 export const InlineNotice = forwardRef<HTMLDivElement, InlineNoticeProps>(
   function InlineNotice(
-    { className, variant = "info", onDismiss, children, ...props },
+    { className, variant = "info", title, onDismiss, children, ...props },
     ref,
   ) {
+    const content = title ? (
+      <>
+        <Span className="block font-medium">{title}</Span>
+        {children}
+      </>
+    ) : (
+      children
+    );
     return (
       <div
         ref={ref}
@@ -41,7 +52,7 @@ export const InlineNotice = forwardRef<HTMLDivElement, InlineNoticeProps>(
       >
         {onDismiss ? (
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">{children}</div>
+            <div className="min-w-0 flex-1">{content}</div>
             <button
               type="button"
               onClick={onDismiss}
@@ -52,7 +63,7 @@ export const InlineNotice = forwardRef<HTMLDivElement, InlineNoticeProps>(
             </button>
           </div>
         ) : (
-          children
+          content
         )}
       </div>
     );

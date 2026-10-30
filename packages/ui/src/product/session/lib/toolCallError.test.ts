@@ -30,6 +30,32 @@ describe('toolCallError', () => {
     expect(toolCallError({ status: 'completed', rawOutput: 'all good' })).toBeNull();
   });
 
+  it.each(['completed', 'in_progress', 'pending'] as const)(
+    'does not treat a text content block on a %s call as an error',
+    status => {
+      expect(
+        toolCallError({
+          status,
+          content: [{ type: 'content', content: { type: 'text', text: 'build output' } }],
+        }),
+      ).toBeNull();
+    },
+  );
+
+  it('does not treat _meta.error on a non-failed call as an error', () => {
+    expect(toolCallError({ status: 'completed', meta: { error: 'stale' } })).toBeNull();
+    expect(toolCallError({ status: 'in_progress', meta: { error: 'stale' } })).toBeNull();
+  });
+
+  it('returns the text of a failed call', () => {
+    expect(
+      toolCallError({
+        status: 'failed',
+        content: [{ type: 'content', content: { type: 'text', text: 'exit code 1' } }],
+      }),
+    ).toBe('exit code 1');
+  });
+
   it('ignores blank and non-string meta values', () => {
     expect(toolCallError({ status: 'failed', meta: { error: '   ' } })).toBeNull();
     expect(toolCallError({ status: 'failed', meta: { error: { code: 1 } } })).toBeNull();
