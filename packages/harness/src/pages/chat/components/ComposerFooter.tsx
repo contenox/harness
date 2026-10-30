@@ -142,6 +142,7 @@ function AttachMenu({
         trigger={
           <IconButton
             size="sm"
+            type="button"
             label={t('acp_chat.attach_menu_label')}
             title={t('acp_chat.attach_menu_label')}
             disabled={disabled}
@@ -188,10 +189,17 @@ export interface ComposerFooterEndProps {
   usage: AcpUsageState | null;
   options: ComposerChipOptions;
   onChange: (configId: string, value: SessionConfigOptionValue) => void;
+  /** Re-reads the provider/model catalog when the model picker opens. */
+  onModelOpen?: () => void;
 }
 
 /** Right side of the composer footer: context usage, mode / model chips, overflow. */
-export const ComposerFooterEnd = memo(function ComposerFooterEnd({ usage, options, onChange }: ComposerFooterEndProps) {
+export const ComposerFooterEnd = memo(function ComposerFooterEnd({
+  usage,
+  options,
+  onChange,
+  onModelOpen,
+}: ComposerFooterEndProps) {
   const [probe, width] = useParentWidth<HTMLSpanElement>();
   const { compactUsage: compact, chipsInOverflow, overflowOptions } = footerEndLayout(width, options);
   return (
@@ -201,7 +209,9 @@ export const ComposerFooterEnd = memo(function ComposerFooterEnd({ usage, option
       <span className="ml-auto flex min-w-0 shrink items-center gap-1">
         <UsageMeter usage={usage} max={usage ? effectiveUsageMax(usage.size, options.rest) : undefined} compact={compact} />
         {!chipsInOverflow && options.mode && <SelectChip option={options.mode} onChange={onChange} />}
-        {!chipsInOverflow && options.model && <SelectChip option={options.model} onChange={onChange} />}
+        {!chipsInOverflow && options.model && (
+          <SelectChip option={options.model} onChange={onChange} onOpen={onModelOpen} />
+        )}
         <OverflowChip options={overflowOptions} onChange={onChange} />
       </span>
     </>

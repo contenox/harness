@@ -187,6 +187,59 @@ export interface AcpClientOptions {
 }
 
 const WORKSPACE_CONFIG_CHANGED = '_contenox/workspaceConfigOptionsChanged';
+const AGENT_DECLARATIONS_CHANGED = '_contenox/agents/changed';
+
+/** One thing the runtime could not do with a declaration (`_contenox/agents/problems`). */
+export interface AgentProblemInfo {
+  source: string;
+  name?: string;
+  action: string;
+  reason?: string;
+  field?: string;
+}
+
+/** One declaration file as the runtime sees it: still shipped, edited, or the user's own. */
+export interface AgentFileInfo {
+  path: string;
+  state: 'shipped' | 'edited' | 'user';
+  problems?: AgentProblemInfo[];
+}
+
+/** The runtime's answer to `_contenox/agents/problems`: the folder the app edits and what is wrong. */
+export interface AgentsProblemsInfo {
+  dir: string;
+  files: AgentFileInfo[];
+  problems: AgentProblemInfo[];
+}
+
+function agentProblemOf(value: unknown): AgentProblemInfo | null {
+  if (!isRecord(value) || typeof value.source !== 'string') return null;
+  return {
+    source: value.source,
+    name: typeof value.name === 'string' ? value.name : undefined,
+    action: typeof value.action === 'string' ? value.action : 'refused',
+    reason: typeof value.reason === 'string' ? value.reason : undefined,
+    field: typeof value.field === 'string' ? value.field : undefined,
+  };
+}
+
+function agentsProblemsOf(value: unknown): AgentsProblemsInfo | null {
+  if (!isRecord(value)) return null;
+  const problems = Array.isArray(value.problems)
+    ? value.problems.map(agentProblemOf).filter((p): p is AgentProblemInfo => p !== null)
+    : [];
+  const files = Array.isArray(value.files)
+    ? value.files.flatMap(entry => {
+        if (!isRecord(entry) || typeof entry.path !== 'string') return [];
+        const state = entry.state === 'shipped' || entry.state === 'edited' ? entry.state : 'user';
+        const fileProblems = Array.isArray(entry.problems)
+          ? entry.problems.map(agentProblemOf).filter((p): p is AgentProblemInfo => p !== null)
+          : [];
+        return [{ path: entry.path, state, problems: fileProblems } as AgentFileInfo];
+      })
+    : [];
+  return { dir: typeof value.dir === 'string' ? value.dir : '', files, problems };
+}
 
 function configOptionsOf(value: unknown): SessionConfigOption[] | null {
   if (!isRecord(value) || !Array.isArray(value.configOptions)) return null;
@@ -202,6 +255,7 @@ export class AcpClient {
   private readonly subscriptions = new Map<SessionId, SessionEventHandlers>();
   private readonly capabilityProvider?: AcpCapabilityProvider;
   private readonly workspaceConfigListeners = new Set<(options: SessionConfigOption[]) => void>();
+  private readonly agentDeclarationsListeners = new Set<() => void>();
   private closed = false;
 
   constructor(transport: Transport, opts: AcpClientOptions = {}) {
@@ -356,6 +410,10 @@ export class AcpClient {
 
 
   private handleNotification(n: JsonRpcNotificationFrame): void {
+    if (n.method === AGENT_DECLARATIONS_CHANGED) {
+      for (const listener of this.agentDeclarationsListeners) listener();
+      return;
+    }
     if (n.method === WORKSPACE_CONFIG_CHANGED) {
       const options = configOptionsOf(n.params);
       if (options) for (const listener of this.workspaceConfigListeners) listener(options);
@@ -538,6 +596,37 @@ export class AcpClient {
   async workspaceConfigOptions(): Promise<SessionConfigOption[] | null> {
     const result = await this.call<unknown>('_contenox/workspaceConfigOptions', {});
     return configOptionsOf(result);
+  }
+
+  /** What the runtime says about the agent declaration folder: its path, file states, problems. */
+  async agentProblems(): Promise<AgentsProblemsInfo | null> {
+    const result = await this.call<unknown>('_contenox/agents/problems', {});
+    return agentsProblemsOf(result);
+  }
+
+  /** The shipped envelope catalog (name + description) from the runtime. */
+  async envelopes(): Promise<Array<{ name: string; description?: string }> | null> {
+    try {
+      const result = await this.call<unknown>('_contenox/envelopes/list', {});
+      if (!isRecord(result) || !Array.isArray(result.envelopes)) return null;
+      return result.envelopes.flatMap(entry => {
+        if (!isRecord(entry) || typeof entry.name !== 'string') return [];
+        return [
+          {
+            name: entry.name,
+            description: typeof entry.description === 'string' ? entry.description : undefined,
+          },
+        ];
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  /** Called after the runtime recompiled the declaration folder. */
+  onAgentDeclarationsChanged(listener: () => void): () => void {
+    this.agentDeclarationsListeners.add(listener);
+    return () => this.agentDeclarationsListeners.delete(listener);
   }
 
   /** Called with the new workspace config options whenever the agent reports a change. */

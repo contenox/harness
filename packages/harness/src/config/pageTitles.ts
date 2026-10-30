@@ -5,7 +5,6 @@ const PAGE_TITLES: Array<[prefix: string, key: TranslationKey]> = [
   ['/missions', 'navbar.missions'],
   ['/fleet', 'navbar.fleet'],
   ['/backends', 'navbar.backends'],
-  ['/agents', 'navbar.agents'],
   ['/settings', 'navbar.settings'],
   ['/control', 'control_plane.hub_title'],
 ];

@@ -15,7 +15,7 @@ import { classifyAcpExecutionError } from '../../../lib/acpFailureKind';
 import { adoptResultFromMeta } from '../../../lib/adoptMeta';
 import { useStagedAgent } from '../../../lib/stagedAgent';
 import { useStagedRoot } from '../../../lib/stagedRoot';
-import { splitComposerOptions, WORKSPACE_ROOT_CONFIG_ID } from '../lib/composerChips';
+import { splitComposerOptions, withLiveModelValues, WORKSPACE_ROOT_CONFIG_ID } from '../lib/composerChips';
 import { canAttachAudio } from '../lib/audioAttachments';
 import { canAttachImages } from '../lib/imageAttachments';
 import { submitChatTurn, type SubmitPayload } from '../lib/submitTurn';
@@ -48,8 +48,17 @@ export function overlayStagedValues(
 export function useChatSession(sessionId: string | null, onSessionCreated: (sessionId: string) => void) {
   const navigate = useNavigate();
   const acp = useAcpWorkspace();
-  const { workspace, sessions, newSession, sendPrompt, runTerminal, cancel, setConfigOption, applyConfigOptions } =
-    acp;
+  const {
+    workspace,
+    sessions,
+    newSession,
+    sendPrompt,
+    runTerminal,
+    cancel,
+    setConfigOption,
+    applyConfigOptions,
+    controller,
+  } = acp;
 
   const sessionKey = sessionId ?? EMPTY_SESSION_KEY;
   const session = sessions.slices[sessionKey] ?? initialAcpSessionState;
@@ -155,11 +164,17 @@ export function useChatSession(sessionId: string | null, onSessionCreated: (sess
     [],
   );
 
+  const refreshCatalog = useCallback(() => {
+    void controller.refreshWorkspaceConfigOptions();
+  }, [controller]);
+
   const sourceOptions = onEmptyChat
     ? stagedExternalAgent
       ? undefined
       : overlayStagedValues(workspace.workspaceConfigOptions, stagedConfig)
-    : session.configOptions;
+    : sessionAgentName == null
+      ? withLiveModelValues(session.configOptions, workspace.workspaceConfigOptions)
+      : session.configOptions;
   const chipOptions = useMemo(() => splitComposerOptions(sourceOptions ?? []), [sourceOptions]);
 
   return {
@@ -183,7 +198,9 @@ export function useChatSession(sessionId: string | null, onSessionCreated: (sess
     submit,
     changeConfig,
     selectProject,
+    refreshCatalog,
     chipOptions,
+    configOptions: sourceOptions ?? [],
     imagesSupported: canAttachImages(workspace.promptCapabilities),
     audioSupported: canAttachAudio(workspace.promptCapabilities),
     availableCommands: selectAvailableCommands(session.availableCommands, workspace.workspaceAvailableCommands),

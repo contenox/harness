@@ -1,4 +1,4 @@
-import { PaneFrame, Tabs, type Tab } from '@contenox/ui';
+import { PaneFrame, ResizablePanel, ResizablePanelGroup, ResizablePanelHandle, Tabs, type Tab } from '@contenox/ui';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UseWorkspaceFilesResult } from '../../../hooks/useWorkspaceFiles';
@@ -34,20 +34,25 @@ export function FilesPane({ root, files, state, dispatch, onClose }: FilesPanePr
     [state.files, t],
   );
 
+  const tree = (
+    <FileTreePanel
+      root={root}
+      files={files}
+      onOpenFile={path => dispatch({ type: 'openFile', path })}
+      selectedFilePath={activeFile}
+    />
+  );
+
   return (
     <PaneFrame flush title={t('panes.files')} onClose={onClose} closeLabel={t('panes.close')} bodyClassName="flex flex-col overflow-hidden">
       {root ? (
-        <>
-          <div className={activeFile != null ? 'flex h-[40%] min-h-0 shrink-0 flex-col border-b border-line' : 'flex min-h-0 flex-1 flex-col'}>
-            <FileTreePanel
-              root={root}
-              files={files}
-              onOpenFile={path => dispatch({ type: 'openFile', path })}
-              selectedFilePath={activeFile}
-            />
-          </div>
-          {activeFile != null && (
-            <div className="flex min-h-0 flex-1 flex-col">
+        activeFile != null ? (
+          <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
+            <ResizablePanel className="flex min-h-0 flex-col" style={{ minHeight: 80 }}>
+              {tree}
+            </ResizablePanel>
+            <ResizablePanelHandle orientation="vertical" aria-label={t('panes.resize_editor')} />
+            <ResizablePanel defaultSize="60%" className="flex min-h-0 flex-col" style={{ minHeight: 160 }}>
               <Tabs
                 tabs={tabs}
                 activeTab={activeFile}
@@ -58,9 +63,11 @@ export function FilesPane({ root, files, state, dispatch, onClose }: FilesPanePr
               <div className="flex min-h-0 flex-1 flex-col p-2">
                 <FileViewTab key={activeFile} path={activeFile} readFile={files.readFile} />
               </div>
-            </div>
-          )}
-        </>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col">{tree}</div>
+        )
       ) : (
         <PaneNotice>{t('panes.no_project')}</PaneNotice>
       )}

@@ -147,17 +147,10 @@ describe('slashMenuKeyFromEvent', () => {
     expect(slashMenuKeyFromEvent('ArrowUp')).toEqual({ type: 'move', delta: -1 });
   });
 
-  it('accepts on Tab and closes on Escape', () => {
+  it('accepts on Tab and Enter and closes on Escape', () => {
     expect(slashMenuKeyFromEvent('Tab')).toEqual({ type: 'accept' });
+    expect(slashMenuKeyFromEvent('Enter')).toEqual({ type: 'accept' });
     expect(slashMenuKeyFromEvent('Escape')).toEqual({ type: 'close' });
-  });
-
-
-
-
-
-  it('leaves Enter to the composer', () => {
-    expect(slashMenuKeyFromEvent('Enter')).toBeNull();
   });
 
   it('leaves every other key alone', () => {
@@ -280,17 +273,11 @@ describe('filterValueDomain', () => {
 });
 
 describe('valueCompletion', () => {
-  it('writes the command and the value', () => {
-    expect(valueCompletion('model', 'claude-sonnet-4')).toBe('/model claude-sonnet-4');
-  });
-
-
-
-  it('is idempotent — completing what it produced produces it again', () => {
+  it('writes the command and the value and ends the menu query', () => {
     const completed = valueCompletion('model', 'claude-sonnet-4');
-    expect(valuesFor(completed)).toEqual(['claude-sonnet-4']);
-    const argument = deriveSlashArgument(completed);
-    expect(valueCompletion(argument!.command, valuesFor(completed)![0])).toBe(completed);
+    expect(completed).toBe('/model claude-sonnet-4 ');
+    expect(deriveSlashArgument(completed)).toBeNull();
+    expect(deriveSlashMenuQuery(completed).open).toBe(false);
   });
 });
 

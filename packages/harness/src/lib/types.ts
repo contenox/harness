@@ -415,6 +415,11 @@ export type MissionReport = {
   createdAt: string;
 };
 
+export type Envelope = {
+  name: string;
+  description: string;
+};
+
 export type DispatchRequest = {
   agentName: string;
   intent: string;

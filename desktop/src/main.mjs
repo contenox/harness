@@ -21,6 +21,9 @@ const runtimeLogPath = path.join(logDir, 'runtime.log');
 const IDLE_STOP_MS = 15 * 60 * 1000;
 const IDLE_CHECK_MS = 60 * 1000;
 const DEFAULT_KEY = 'default';
+const INIT_TIMEOUT_MS = 120 * 1000;
+// `serve` bounds its own startup probes; this is the supervisor's ceiling for the whole start.
+const READY_TIMEOUT_MS = 60 * 1000;
 
 // Supervisor state. One runtime instance per project folder, all sharing one --data-dir/--db.
 // instance: { key, path, child, origin, startingPromise, lastUsed, stopping }
@@ -81,7 +84,7 @@ function freePort() {
   });
 }
 
-async function waitForHealth(url, timeoutMs = 30000) {
+async function waitForHealth(url, timeoutMs = READY_TIMEOUT_MS) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
@@ -140,7 +143,9 @@ function runtimeDirs() {
   return { data: path.join(app.getPath('userData'), 'data'), db: path.join(app.getPath('userData'), 'local.db') };
 }
 
-// Runs "init --force" once (only when the db is missing) before any serve starts.
+// Runs the idempotent "init" once per launch, before any serve starts. It creates missing
+// defaults and the workspace marker and never overwrites a file the user edited, so a
+// half-initialized install heals instead of failing every later start.
 function initRuntimeOnce() {
   if (!runtimeInitPromise) {
     runtimeInitPromise = (async () => {
@@ -149,11 +154,18 @@ function initRuntimeOnce() {
       const { data, db } = runtimeDirs();
       fs.mkdirSync(data, { recursive: true });
       fs.mkdirSync(logDir, { recursive: true });
-      if (!fs.existsSync(db)) {
-        execFileSync(binary, ['--data-dir', data, '--db', db, 'init', '--force'], {
+      try {
+        execFileSync(binary, ['--data-dir', data, '--db', db, 'init'], {
           env: { ...process.env, HOME: os.homedir() },
-          stdio: 'ignore',
+          stdio: ['ignore', 'pipe', 'pipe'],
+          encoding: 'utf8',
+          timeout: INIT_TIMEOUT_MS,
+          windowsHide: true,
         });
+      } catch (error) {
+        const output = [error.stdout, error.stderr].map(text => String(text ?? '').trim()).filter(Boolean).join('\n');
+        appendLog(`=== ${new Date().toISOString()} init failed\n${output || error.message}`);
+        throw new Error(`runtime init failed: ${output || error.message}`);
       }
     })().catch(error => {
       runtimeInitPromise = null;
@@ -174,6 +186,7 @@ async function startInstance(inst) {
     cwd: inst.path,
     env: { ...process.env, HOME: os.homedir(), ADDR: '127.0.0.1', PORT: String(port) },
     stdio: ['ignore', log, log],
+    windowsHide: true,
   });
   fs.closeSync(log);
   inst.child = child;
@@ -625,6 +638,7 @@ ipcMain.on('contenox:set-titlebar-theme', (event, theme) => {
   if (!trusted(event)) return;
   applyTitleBarTheme(BrowserWindow.fromWebContents(event.sender), theme);
 });
+
 handle('contenox:take-launch-folder', () => {
   const folder = pendingLaunchFolder;
   pendingLaunchFolder = null;
@@ -700,7 +714,10 @@ if (hasLock) {
       await startDefaultInstance();
       ui = await openUi();
     } catch (error) {
-      dialog.showErrorBox('Contenox could not start', String(error?.message ?? error));
+      dialog.showErrorBox(
+        'Contenox could not start',
+        `${String(error?.message ?? error)}\n\nLogs: ${runtimeLogPath}`,
+      );
       app.quit();
       return;
     }

@@ -18,6 +18,19 @@ function isModel(o: SessionConfigOption): boolean {
   return o.id === 'model' || o.category === 'model';
 }
 
+/**
+ * Overlays the live model catalog on a session's options, keeping the session's current value.
+ * A session opened before a provider recovered otherwise keeps the catalog it was created with.
+ */
+export function withLiveModelValues(
+  sessionOptions: readonly SessionConfigOption[],
+  liveOptions: readonly SessionConfigOption[] | undefined,
+): readonly SessionConfigOption[] {
+  const liveModel = liveOptions?.find(isModel);
+  if (!liveModel || !sessionOptions.some(isModel)) return sessionOptions;
+  return sessionOptions.map(option => (isModel(option) ? { ...option, options: liveModel.options } : option));
+}
+
 /** Sorts ACP config options into the composer's chips. The workspace root is handled by the project chip. */
 export function splitComposerOptions(options: readonly SessionConfigOption[]): ComposerChipOptions {
   let mode: SessionConfigOption | undefined;

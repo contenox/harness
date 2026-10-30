@@ -1,4 +1,4 @@
-import { Bot, Database, Inbox, Radar, Rocket, Settings, type LucideIcon } from 'lucide-react';
+import { Database, Inbox, Radar, Rocket, Settings, type LucideIcon } from 'lucide-react';
 import type { TranslationKey } from '../i18n';
 
 export interface SidebarNavDefinition {
@@ -13,6 +13,5 @@ export const SIDEBAR_NAV: SidebarNavDefinition[] = [
   { path: '/missions', labelKey: 'navbar.missions', Icon: Rocket },
   { path: '/fleet', labelKey: 'navbar.fleet', Icon: Radar },
   { path: '/backends', labelKey: 'navbar.backends', Icon: Database },
-  { path: '/agents', labelKey: 'navbar.agents', Icon: Bot },
   { path: '/settings', labelKey: 'navbar.settings', Icon: Settings },
 ];

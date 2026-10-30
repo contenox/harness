@@ -17,6 +17,8 @@ export const COMMAND_POLICY = 'policy';
 
 const HITL_POLICY_DEFAULT_VALUE = '__contenox_default__';
 
+const ANY_PROVIDER_GROUP = 'any';
+
 export type CommandValueDomains = ReadonlyMap<string, readonly string[]>;
 
 
@@ -56,17 +58,32 @@ export function commandValueDomains(
 }
 
 /**
- * Generic: the model command offers every selectable value (opaque, inserted as-is); the provider
- * command offers the option's group ids when it is grouped.
+ * Grouped model options carry connection-qualified wire values; a slash command takes the
+ * readable provider/model form, and a group's display name is what matches a backend type or
+ * name. The any-provider group keeps its id because "any" is the selector, not its label.
  */
 function modelCommandDomains(option: SessionConfigOption): {
   models: string[];
   providers: string[];
 } {
-  const models = selectableValues(option).map(value => value.value);
-  const providers = isGroupedOptions(option.options)
-    ? option.options.map(group => text(group.group)).filter(id => id !== '')
-    : [];
+  if (!isGroupedOptions(option.options)) {
+    const models = selectableValues(option)
+      .map(value => text(value.value))
+      .filter(value => value !== '');
+    return { models, providers: [] };
+  }
+  const models: string[] = [];
+  const providers: string[] = [];
+  for (const group of option.options) {
+    const id = text(group.group);
+    const selector = id === ANY_PROVIDER_GROUP ? id : text(group.name) || id;
+    if (selector !== '') providers.push(selector);
+    for (const value of group.options ?? []) {
+      const model = text(value.name) || text(value.value);
+      if (model === '') continue;
+      models.push(selector === '' ? model : `${selector}/${model}`);
+    }
+  }
   return { models, providers };
 }
 

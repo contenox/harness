@@ -1,5 +1,6 @@
 import type { AssetAction, AssetActionResult } from '@contenox/acp-client';
 import { useState, type ReactNode } from 'react';
+import { ResizablePanelHandle } from '../../../components/ResizablePanel';
 import { MentionMenu } from '../composer/MentionMenu';
 import type { AcpSessionState } from '../state/acpSessionState';
 import type { UseMentionMenuResult } from '../hooks/useMentionMenu';
@@ -85,16 +86,23 @@ export function SessionWorkspaceLayout({
               {chat}
             </div>
             {file ? (
-              <div className="flex min-h-0 w-full shrink-0 flex-col overflow-hidden lg:w-[min(560px,46vw)] lg:min-w-[360px] lg:border-l lg:border-surface-200 dark:lg:border-dark-surface-600">
-                <FilePane
-                  tab={file}
-                  onAskSelection={workspace.askAboutSelection}
-                  onWrite={workspace.saveFile}
-                  listAssetActions={assetActions?.list}
-                  runAssetAction={assetActions?.run}
-                  onOpenArtifact={canvas.openFile}
+              <>
+                <ResizablePanelHandle
+                  orientation="horizontal"
+                  aria-label="Resize editor panel"
+                  className="hidden lg:block"
                 />
-              </div>
+                <div className="flex min-h-0 w-full shrink-0 flex-col overflow-hidden lg:w-[min(560px,46vw)] lg:min-w-[360px] lg:max-w-[72vw]">
+                  <FilePane
+                    tab={file}
+                    onAskSelection={workspace.askAboutSelection}
+                    onWrite={workspace.saveFile}
+                    listAssetActions={assetActions?.list}
+                    runAssetAction={assetActions?.run}
+                    onOpenArtifact={canvas.openFile}
+                  />
+                </div>
+              </>
             ) : (
               <div className="hidden w-[min(400px,38vw)] min-w-[320px] shrink-0 flex-col items-center justify-center gap-3 border-l border-surface-200 p-6 dark:border-dark-surface-600 lg:flex">
                 <span className="text-text-muted dark:text-dark-text-muted max-w-60 text-center text-sm">

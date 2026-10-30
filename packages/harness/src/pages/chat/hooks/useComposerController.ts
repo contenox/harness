@@ -1,11 +1,10 @@
-import { useAudioAttachments } from '@contenox/ui/session-ui';
+import { useAudioAttachments, useSlashCommandMenu } from '@contenox/ui/session-ui';
 import { useCallback, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { useFilePreview } from '../../../hooks/useFilePreview';
 import type { UseWorkspaceFilesResult } from '../../../hooks/useWorkspaceFiles';
-import type { AvailableCommand } from '../../../lib/acp';
+import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
 import { useImageAttachments } from '../components/ComposerImageAttachments';
 import { useMentionMenu } from '../components/MentionMenu';
-import { useSlashCommandMenu } from '../components/SlashCommandMenu';
 import { activeMentions, mentionPreviewPath, type WorkspaceFileRef } from '../lib/mentions';
 import type { SubmitPayload } from '../lib/submitTurn';
 import { parseTerminalPassthrough } from '../lib/terminalPassthrough';
@@ -15,6 +14,7 @@ export type ComposerFiles = Pick<UseWorkspaceFilesResult, 'cache' | 'ensureLoade
 export interface UseComposerControllerArgs {
   files: ComposerFiles;
   availableCommands: AvailableCommand[];
+  configOptions: readonly SessionConfigOption[];
   isPrompting: boolean;
   imagesSupported: boolean;
   audioSupported: boolean;
@@ -29,6 +29,7 @@ export interface UseComposerControllerArgs {
 export function useComposerController({
   files,
   availableCommands,
+  configOptions,
   isPrompting,
   imagesSupported,
   audioSupported,
@@ -61,7 +62,7 @@ export function useComposerController({
       setCaret(nextCaret);
     },
   });
-  const slashMenu = useSlashCommandMenu({ draft, onDraftChange: setDraft, availableCommands });
+  const slashMenu = useSlashCommandMenu(draft, setDraft, availableCommands, configOptions);
 
   const previewPath = mentionMenu.open ? mentionPreviewPath(mentionMenu.entries, mentionMenu.activeIndex) : null;
   const filePreview = useFilePreview(previewPath, files.readFile);

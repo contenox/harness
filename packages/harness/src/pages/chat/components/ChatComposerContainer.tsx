@@ -1,18 +1,18 @@
 import { ChatComposer } from '@contenox/ui';
-import { AudioAttachmentNoticeView, ComposerAudioAttachments } from '@contenox/ui/session-ui';
+import { AudioAttachmentNoticeView, ComposerAudioAttachments, SlashCommandMenu } from '@contenox/ui/session-ui';
 import { useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AvailableCommand } from '../../../lib/acp';
+import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
 import { useComposerController, type ComposerFiles } from '../hooks/useComposerController';
 import type { SubmitPayload } from '../lib/submitTurn';
 import { ComposerFooterStart } from './ComposerFooter';
 import { ComposerImageAttachments, ImageAttachmentNoticeView } from './ComposerImageAttachments';
 import { MentionMenu } from './MentionMenu';
-import { SlashCommandMenu } from './SlashCommandMenu';
 
 export interface ChatComposerContainerProps {
   files: ComposerFiles;
   availableCommands: AvailableCommand[];
+  configOptions: readonly SessionConfigOption[];
   isPrompting: boolean;
   /** Composer is blocked (pending permission, or not connected). */
   disabled: boolean;
@@ -33,6 +33,7 @@ export interface ChatComposerContainerProps {
 export function ChatComposerContainer({
   files,
   availableCommands,
+  configOptions,
   isPrompting,
   disabled,
   ready,
@@ -47,6 +48,7 @@ export function ChatComposerContainer({
   const c = useComposerController({
     files,
     availableCommands,
+    configOptions,
     isPrompting,
     imagesSupported,
     audioSupported,
@@ -61,12 +63,7 @@ export function ChatComposerContainer({
   const onStartRecording = useCallback(() => void startRecording(), [startRecording]);
 
   const menu = slashMenu.open ? (
-    <SlashCommandMenu
-      entries={slashMenu.entries}
-      activeIndex={slashMenu.activeIndex}
-      onPick={slashMenu.pick}
-      onHoverIndex={slashMenu.setActiveIndex}
-    />
+    <SlashCommandMenu menu={slashMenu} />
   ) : mentionMenu.open ? (
     <MentionMenu
       entries={mentionMenu.entries}

@@ -21,6 +21,8 @@ import { filterProjects } from '../lib/projectChoices';
 export interface SelectChipProps {
   option: SessionConfigOption;
   onChange: (configId: string, value: SessionConfigOptionValue) => void;
+  /** Called when the list opens, so the owner can refresh the catalog behind it. */
+  onOpen?: () => void;
   align?: 'start' | 'end';
 }
 
@@ -29,7 +31,7 @@ export interface SelectChipProps {
  * runtime order; values are opaque. The chip shows the selected value's name plus its group
  * as a small secondary label.
  */
-export function SelectChip({ option, onChange, align = 'end' }: SelectChipProps) {
+export function SelectChip({ option, onChange, onOpen, align = 'end' }: SelectChipProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -55,7 +57,14 @@ export function SelectChip({ option, onChange, align = 'end' }: SelectChipProps)
       align={align}
       side="top"
       isOpen={open}
-      onToggle={next => (next ? setOpen(true) : close())}
+      onToggle={next => {
+        if (!next) {
+          close();
+          return;
+        }
+        onOpen?.();
+        setOpen(true);
+      }}
       contentClassName="w-72"
       trigger={
         <Chip

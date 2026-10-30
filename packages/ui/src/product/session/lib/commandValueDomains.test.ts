@@ -127,7 +127,7 @@ describe('commandValueDomains', () => {
 
 
 
-  it('treats every group id as an opaque provider (no placeholder special case)', () => {
+  it('qualifies a grouped model with its group display name', () => {
     const domains = commandValueDomains([
       {
         id: 'model',
@@ -143,7 +143,7 @@ describe('commandValueDomains', () => {
         ],
       },
     ]);
-    expect(domains.get(COMMAND_MODEL)).toEqual(['some-model']);
+    expect(domains.get(COMMAND_MODEL)).toEqual(['default/some-model']);
   });
 
 
@@ -202,7 +202,7 @@ describe('commandValueDomains', () => {
     expect(domains.get('__proto__')).toBeUndefined();
   });
 
-  it('offers opaque values from groups without parsing them or special-casing a group', () => {
+  it('builds provider-qualified names from grouped values, keeping the any group id', () => {
     const domains = commandValueDomains([
       {
         id: 'model',
@@ -210,11 +210,12 @@ describe('commandValueDomains', () => {
         type: 'select',
         currentValue: '',
         options: [
-          { group: 'default', name: 'Any provider', options: [{ value: 'a:b/c', name: 'c' }] },
-          { group: 'p1', name: 'P1', options: [{ value: 'p1|x', name: 'x' }] },
+          { group: 'any', name: 'Any provider', options: [{ value: 'any/deepseek-flash', name: 'deepseek-flash' }] },
+          { group: 'conn-uuid', name: 'deepseek', options: [{ value: 'connection:conn-uuid/deepseek-v4-pro', name: 'deepseek-v4-pro' }] },
         ],
       },
     ]);
-    expect(domains.get(COMMAND_MODEL)).toEqual(['a:b/c', 'p1|x']);
+    expect(domains.get(COMMAND_MODEL)).toEqual(['any/deepseek-flash', 'deepseek/deepseek-v4-pro']);
+    expect(domains.get(COMMAND_PROVIDER)).toEqual(['any', 'deepseek']);
   });
 });

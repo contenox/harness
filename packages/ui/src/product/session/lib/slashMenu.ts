@@ -72,7 +72,7 @@ export function filterValueDomain(values: readonly string[], partial: string): s
 }
 
 export function valueCompletion(command: string, value: string): string {
-  return `/${command} ${value}`;
+  return `/${command} ${value} `;
 }
 
 export interface ValueHighlight {
@@ -106,6 +106,8 @@ export function slashMenuKeyFromEvent(key: string): SlashMenuKeyAction | null {
     case 'ArrowUp':
       return { type: 'move', delta: -1 };
     case 'Tab':
+      return { type: 'accept' };
+    case 'Enter':
       return { type: 'accept' };
     case 'Escape':
       return { type: 'close' };

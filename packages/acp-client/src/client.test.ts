@@ -1140,3 +1140,43 @@ describe('AcpClient: workspace config options', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 });
+
+describe('AcpClient: agent declarations', () => {
+  it('requests the declaration problems and maps the folder', async () => {
+    const transport = new MockTransport();
+    const client = new AcpClient(transport);
+    const pending = client.agentProblems();
+    const req = transport.lastSent();
+    expect(req.method).toBe('_contenox/agents/problems');
+    transport.feed({
+      jsonrpc: '2.0',
+      id: req.id,
+      result: {
+        dir: 'C:\\Users\\me\\.contenox-harness\\agents',
+        files: [
+          { path: 'acp/agent.md', state: 'shipped' },
+          { path: 'mine.md', state: 'user', problems: [{ source: 'agents/mine.md', action: 'refused', reason: 'bad frontmatter' }] },
+        ],
+        problems: [{ source: 'agents.toml', action: 'ignored', reason: 'no such agent' }],
+      },
+    });
+    const got = await pending;
+    expect(got?.dir).toBe('C:\\Users\\me\\.contenox-harness\\agents');
+    expect(got?.files.map(f => f.path)).toEqual(['acp/agent.md', 'mine.md']);
+    expect(got?.files[1].problems?.[0].reason).toBe('bad frontmatter');
+    expect(got?.problems[0].action).toBe('ignored');
+  });
+
+  it('notifies listeners after a recompile, until unsubscribed', () => {
+    const transport = new MockTransport();
+    const client = new AcpClient(transport);
+    const listener = vi.fn();
+    const unsubscribe = client.onAgentDeclarationsChanged(listener);
+    const frame = { jsonrpc: '2.0', method: '_contenox/agents/changed' };
+    transport.feed(frame);
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+    transport.feed(frame);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+});

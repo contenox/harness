@@ -54,7 +54,7 @@ const data = path.join(state, 'workspace', '.contenox');
 const db = path.join(home, '.contenox', 'local.db');
 const env = { ...process.env, HOME: home, ADDR: '127.0.0.1', PORT: String(port) };
 
-execFileSync(binary, ['--data-dir', data, '--db', db, 'init', '--force'], { env, stdio: 'ignore' });
+execFileSync(binary, ['--data-dir', data, '--db', db, 'init', '--force'], { env, stdio: 'inherit' });
 console.error(`runtime: ${binary}`);
 const runtime = run(binary, ['--data-dir', data, '--db', db, 'serve'], { env });
 runtime.on('exit', code => {

@@ -35,8 +35,15 @@ export const ChatSessionTab = memo(function ChatSessionTab({ sessionId, onSessio
     [workspaceRoot, chat.onEmptyChat, chat.stagedExternalAgent, chat.selectProject],
   );
   const footerEnd = useMemo(
-    () => <ComposerFooterEnd usage={session.usage} options={chat.chipOptions} onChange={chat.changeConfig} />,
-    [session.usage, chat.chipOptions, chat.changeConfig],
+    () => (
+      <ComposerFooterEnd
+        usage={session.usage}
+        options={chat.chipOptions}
+        onChange={chat.changeConfig}
+        onModelOpen={chat.refreshCatalog}
+      />
+    ),
+    [session.usage, chat.chipOptions, chat.changeConfig, chat.refreshCatalog],
   );
 
   const paneContent =
@@ -81,6 +88,7 @@ export const ChatSessionTab = memo(function ChatSessionTab({ sessionId, onSessio
         <ChatComposerContainer
           files={chat.files}
           availableCommands={chat.availableCommands}
+          configOptions={chat.configOptions}
           isPrompting={session.isPrompting}
           disabled={session.pendingPermission != null || (!session.isPrompting && !ready)}
           ready={ready}

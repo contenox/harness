@@ -20,9 +20,11 @@ export interface MonacoViewProps {
   path?: string;
   className?: string;
   options?: editor.IStandaloneEditorConstructionOptions;
+  /** When set, the editor is writable and reports every change. */
+  onChange?: (value: string) => void;
 }
 
-export default function MonacoView({ value, language, path, className, options }: MonacoViewProps) {
+export default function MonacoView({ value, language, path, className, options, onChange }: MonacoViewProps) {
   const theme = useMonacoAppTheme();
   const resolvedLanguage = language ?? (path ? languageForPath(path) : undefined);
   return (
@@ -33,6 +35,7 @@ export default function MonacoView({ value, language, path, className, options }
         language={resolvedLanguage}
         theme={theme}
         beforeMount={defineBeamMonacoThemes}
+        onChange={onChange ? next => onChange(next ?? '') : undefined}
         options={options ? { ...MONACO_READONLY_OPTIONS, ...options } : MONACO_READONLY_OPTIONS}
       />
     </div>

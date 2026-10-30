@@ -5,8 +5,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RootChip } from '../../../components/workspace/RootChip';
 import { RootSelector } from '../../../components/workspace/RootSelector';
 import { useAgents } from '../../../hooks/useAgents';
+import { useEnvelopes } from '../../../hooks/useEnvelopes';
 import { useDispatchMission } from '../../../hooks/useFleet';
-import { useListPolicies } from '../../../hooks/usePolicies';
 import { useWorkspaceRoots } from '../../../hooks/useWorkspaceRoots';
 import type { TranslationKey } from '../../../i18n';
 import { ApiError } from '../../../lib/fetch';
@@ -23,7 +23,7 @@ export default function MissionDispatchPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: agents } = useAgents();
-  const { data: policies } = useListPolicies();
+  const { data: envelopes } = useEnvelopes();
   const { roots, defaultRoot, isAbsent: rootsAbsent } = useWorkspaceRoots();
   const dispatch = useDispatchMission();
 
@@ -46,10 +46,10 @@ export default function MissionDispatchPage() {
 
   const enabledAgents = (agents ?? []).filter(a => a.enabled);
   const agentOptions = enabledAgents.map(a => ({ value: a.name, label: a.name }));
-  const policyOptions = (policies ?? [])
+  const policyOptions = (envelopes ?? [])
     .slice()
-    .sort((a, b) => a.localeCompare(b))
-    .map(p => ({ value: p, label: p }));
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(envelope => ({ value: envelope.name, label: envelope.name }));
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();

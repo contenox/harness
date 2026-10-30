@@ -13,6 +13,7 @@ import {
   PatchConnectionInput,
   DispatchRequest,
   DispatchResult,
+  Envelope,
   FleetEntry,
   HITLApproval,
   Mission,
@@ -154,13 +155,16 @@ export const api = {
     apiFetch<ShellEnvResponse>('/api/shell-env', options('PUT', body)),
 
   listPolicies: () => apiFetch<string[]>('/api/hitl-policies/list'),
+  listEnvelopes: () => apiFetch<Envelope[]>('/api/envelopes'),
 
   getRuntimeBackendState: () => apiFetch<BackendRuntimeState[]>('/api/state'),
 
   getProviderStatus: (provider: CloudProviderType) =>
     apiFetch<StatusResponse>(`/api/providers/${provider}/status`),
 
+  /** @deprecated the Agents view reads the declaration folder through the desktop bridge. */
   listAgentPresets: () => apiFetch<AgentPreset[]>('/api/agent-presets'),
+  /** @deprecated the Agents view reads the declaration folder through the desktop bridge. */
   installAgentPreset: (name: string, force = false) =>
     apiFetch<AgentPresetInstallResult>(
       `/api/agent-presets/${encodeURIComponent(name)}${force ? '?force=true' : ''}`,

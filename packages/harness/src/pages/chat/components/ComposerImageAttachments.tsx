@@ -152,6 +152,7 @@ export function ComposerImageAttachments({
             <IconButton
               size="xs"
               variant="outline"
+              type="button"
               label={t('acp_chat.attachment_remove_label', { name })}
               noTooltip
               onClick={() => onRemove(img.id)}
@@ -191,6 +192,7 @@ export function AttachImageButton({
       />
       <IconButton
         size="sm"
+        type="button"
         label={t('acp_chat.attach_image_label')}
         title={t('acp_chat.attach_image_tooltip')}
         disabled={disabled}

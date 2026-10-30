@@ -4,11 +4,14 @@ import type { AdoptRef } from '../lib/adoptMeta';
 import type { PendingAudioAttachment } from '../pages/chat/lib/audioAttachments';
 import type { PendingImageAttachment } from '../pages/chat/lib/imageAttachments';
 import type { WorkspaceFileRef } from '../pages/chat/lib/mentions';
+import type { AcpWorkspaceController } from './acpWorkspaceController';
 import { useAcpWorkspaceContext } from '../lib/acp/AcpWorkspaceProvider';
 import type { AcpSessionState } from './acpSessionState';
 import { selectOpenSessionIds, type AcpSessionsState, type AcpWorkspaceState } from './acpWorkspaceState';
 
 export interface UseAcpWorkspaceResult {
+  /** The controller behind this workspace, for extension calls the page needs (agents view). */
+  controller: AcpWorkspaceController;
   workspace: AcpWorkspaceState;
   session: AcpSessionState;
   sessions: AcpSessionsState;
@@ -144,6 +147,7 @@ export function useAcpWorkspace(): UseAcpWorkspaceResult {
   }, [controller]);
 
   return {
+    controller,
     workspace,
     session,
     sessions,

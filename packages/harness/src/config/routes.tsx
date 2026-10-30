@@ -5,7 +5,6 @@ import {
   Rocket,
   Settings,
   type LucideIcon,
-  Bot,
 } from 'lucide-react';
 import { lazy } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
@@ -20,7 +19,6 @@ const MissionListPage = lazy(() => import('../pages/admin/missions/MissionListPa
 const MissionDetailPage = lazy(() => import('../pages/admin/missions/MissionDetailPage.tsx'));
 const MissionDispatchPage = lazy(() => import('../pages/admin/missions/MissionDispatchPage.tsx'));
 const InboxPage = lazy(() => import('../pages/admin/inbox/InboxPage.tsx'));
-const AgentsPage = lazy(() => import('../pages/admin/agents/AgentsPage.tsx'));
 const ControlPlanePage = lazy(() => import('../pages/admin/control/ControlPlanePage.tsx'));
 const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage.tsx'));
 const ByePage = lazy(() => import('../pages/public/bye/Bye.tsx'));
@@ -63,7 +61,6 @@ const adminRouteDefinitions: AdminRouteDefinition[] = [
   { path: '/missions', element: MissionListPage, labelKey: 'navbar.missions', Icon: Rocket },
   { path: '/inbox', element: InboxPage, labelKey: 'navbar.inbox', Icon: Inbox },
   { path: '/backends', element: BackendsPage, labelKey: 'navbar.backends', Icon: Database },
-  { path: '/agents', element: AgentsPage, labelKey: 'navbar.agents', Icon: Bot },
   { path: '/settings', element: SettingsPage, labelKey: 'navbar.settings', Icon: Settings },
 ];
 

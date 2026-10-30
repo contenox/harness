@@ -8,6 +8,8 @@
 #   packages/harness/e2e/run.sh --update-snapshots
 set -euo pipefail
 
+PYTHON=${PYTHON:-python3}
+
 E2E_DIR=$(cd "$(dirname "$0")" && pwd)
 HARNESS_DIR=$(cd "$E2E_DIR/.." && pwd)
 ROOT=$(cd "$HARNESS_DIR/../.." && pwd)
@@ -17,8 +19,16 @@ RUNTIME_PORT=${HARNESS_RUNTIME_PORT:-32124}
 RUNTIME_URL="http://127.0.0.1:${RUNTIME_PORT}"
 case "$(uname -s)" in Linux) OS=linux;; Darwin) OS=darwin;; *) OS=windows;; esac
 case "$(uname -m)" in x86_64|amd64) ARCH=amd64;; *) ARCH=arm64;; esac
-VERSION=$(node -p "require('$ROOT/runtime.lock.json').version")
-BIN="$ROOT/.runtime/$VERSION/contenox-runtime-$OS-$ARCH"
+LOCK="$ROOT/runtime.lock.json"
+if [ "$OS" = "windows" ]; then LOCK=$(cygpath -m "$LOCK"); fi
+VERSION=$(node -p "require('$LOCK').version")
+if [ -n "${CONTENOX_RUNTIME_BIN:-}" ]; then
+  # Visual review of the working tree: exercise the runtime built here, not the
+  # pinned release the suite normally installs.
+  BIN="$CONTENOX_RUNTIME_BIN"
+else
+  BIN="$ROOT/.runtime/$VERSION/contenox-runtime-$OS-$ARCH"
+fi
 
 echo "==> building @contenox/ui"
 [ -d "$ROOT/packages/ui/node_modules" ] || (cd "$ROOT/packages/ui" && npm ci --no-audit --no-fund >/dev/null)
@@ -29,11 +39,19 @@ echo "==> building harness UI (writes packages/harness/dist)"
 (cd "$HARNESS_DIR" && npm run build >/dev/null)
 
 echo "==> resolving contenox-runtime $VERSION"
-[ -x "$BIN" ] || (cd "$ROOT" && make runtime-fetch)
+if [ -z "${CONTENOX_RUNTIME_BIN:-}" ]; then
+  [ -x "$BIN" ] || (cd "$ROOT" && make runtime-fetch)
+fi
 [ -x "$BIN" ] || { echo "missing runtime: $BIN" >&2; exit 1; }
 
 echo "==> seeding a throwaway home with a scripted backend"
 TMP_HOME=$(mktemp -d)
+if [ "$OS" = "windows" ]; then
+  # The runtime resolves its home through USERPROFILE on Windows; HOME alone
+  # would leak the seeded config into the developer's real profile.
+  USERPROFILE=$(cygpath -w "$TMP_HOME")
+  export USERPROFILE
+fi
 WORK_DIR="$TMP_HOME/work"
 mkdir -p "$WORK_DIR"
 cleanup() {
@@ -104,9 +122,9 @@ TS
 # The SPA's session sidebar is fed by the ACP surface (session/list), not by the
 # CLI's own store, so the capture seeds the conversation over ACP the way an
 # editor would; a `contenox "<prompt>"` session would not appear there.
-WORKSPACE_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' \
+WORKSPACE_ID=$("$PYTHON" -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' \
   "$WORK_DIR/.contenox/workspace.id" 2>/dev/null || true)
-HOME="$TMP_HOME" python3 "$E2E_DIR/seed_acp_session.py" "$BIN" "$WORK_DIR" "$WORKSPACE_ID" || {
+HOME="$TMP_HOME" "$PYTHON" "$E2E_DIR/seed_acp_session.py" "$BIN" "$WORK_DIR" "$WORKSPACE_ID" || {
   echo "warning: could not seed an ACP session; the chat surfaces will render empty" >&2
 }
 

@@ -3,7 +3,7 @@ import { FormEvent, useContext, useEffect, useId, useMemo, useState } from 'reac
 import { useTranslation } from 'react-i18next';
 import { useAgents } from '../../../hooks/useAgents';
 import { useCLIConfig } from '../../../hooks/useCLIConfig';
-import { useListPolicies } from '../../../hooks/usePolicies';
+import { useEnvelopes } from '../../../hooks/useEnvelopes';
 import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
 import { AuthContext } from '../../../lib/authContext';
 import type { CLIConfigUpdateRequest } from '../../../lib/types';
@@ -18,7 +18,7 @@ export function MissionSettingsSection() {
   const { user } = useContext(AuthContext);
   const { data: cliConfig } = useCLIConfig(!!user);
   const { data: agents, error: agentsError } = useAgents();
-  const { data: policies, error: policiesError } = useListPolicies();
+  const { data: envelopes, error: envelopesError } = useEnvelopes();
   const putConfig = usePutCLIConfig();
   const formId = useId();
 
@@ -53,14 +53,14 @@ export function MissionSettingsSection() {
   }, [agent, enabledAgentNames, t]);
 
   const policyOptions = useMemo(() => {
-    const values = uniqueSorted(policies ?? []);
+    const values = uniqueSorted((envelopes ?? []).map(envelope => envelope.name));
     const current = policy.trim();
     if (current && !values.includes(current)) values.unshift(current);
     return [
       { value: '', label: t('settings.mission_not_set') },
       ...values.map(value => ({ value, label: value })),
     ];
-  }, [policies, policy, t]);
+  }, [envelopes, policy, t]);
 
   const agentUnresolved = useMemo(() => {
     const current = agent.trim();
@@ -70,9 +70,9 @@ export function MissionSettingsSection() {
 
   const policyUnresolved = useMemo(() => {
     const current = policy.trim();
-    if (!current || !policies) return false;
-    return !(policies ?? []).map(value => value.trim()).includes(current);
-  }, [policies, policy]);
+    if (!current || !envelopes) return false;
+    return !(envelopes ?? []).map(envelope => envelope.name).includes(current);
+  }, [envelopes, policy]);
 
   const incomplete = !agent.trim() || !policy.trim();
 
@@ -145,9 +145,9 @@ export function MissionSettingsSection() {
                 {t('settings.mission_policy_unresolved', { name: policy.trim() })}
               </P>
             )}
-            {policiesError && (
+            {envelopesError && (
               <P className="text-error mt-1 text-xs">
-                {t('settings.policy_options_error', { message: policiesError.message })}
+                {t('settings.policy_options_error', { message: envelopesError.message })}
               </P>
             )}
           </FormField>
