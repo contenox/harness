@@ -5,17 +5,27 @@ type CardLayout = "default" | "space-between";
 
 type StatusBorder = "default" | "success" | "error" | "warning" | "info";
 
+/**
+ * Card: raised surface, 1px border, 12px radius, flat.
+ * Variants: default/filled/surface/bordered all render the raised card
+ * (kept for compatibility); `error` is a tinted card; `dotted` is a quiet
+ * dotted-grid background. `statusBorder` is rendered as a thin tinted left edge.
+ */
 type CardProps = React.HTMLAttributes<HTMLDivElement> & {
   variant?: "default" | "filled" | "surface" | "error" | "bordered" | "dotted";
   layout?: CardLayout;
   statusBorder?: StatusBorder;
-
+  /** Hover treatment for clickable cards (border + overlay only, no motion). */
   interactive?: boolean;
 };
 
-
-const interactiveStyles =
-  "hover:-translate-y-1 hover:border-primary-500/30 hover:shadow-lg hover:shadow-primary-500/10";
+const statusBorderStyles: Record<StatusBorder, string> = {
+  default: "border-l-2 border-l-line-strong",
+  success: "border-l-2 border-l-success",
+  error: "border-l-2 border-l-error",
+  warning: "border-l-2 border-l-warning",
+  info: "border-l-2 border-l-accent",
+};
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   (
@@ -29,43 +39,19 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
     },
     ref,
   ) => {
-    const statusBorderStyles: Record<StatusBorder, string> = {
-      default: "border-l-4 border-l-border dark:border-l-dark-surface-600",
-      success: "border-l-4 border-l-success dark:border-l-dark-success",
-      error: "border-l-4 border-l-error dark:border-l-dark-error",
-      warning: "border-l-4 border-l-warning dark:border-l-dark-warning",
-      info: "border-l-4 border-l-info dark:border-l-dark-info",
-    };
-    const dottedPatternClasses =
-      "[--dot-size:1px] [--dot-gap:18px] " +
-      "[--dot-color:rgba(0,0,0,0.14)] dark:[--dot-color:rgba(255,255,255,0.14)] " +
-      "[background-image:radial-gradient(var(--dot-color)_var(--dot-size),transparent_var(--dot-size))] " +
-      "[background-size:var(--dot-gap)_var(--dot-gap)] " +
-      "bg-surface-100 dark:bg-dark-surface-700 " +
-      "border-surface-300 dark:border-dark-surface-600";
-
     return (
       <div
         ref={ref}
         className={cn(
-          "rounded-xl border p-6 transition-all duration-300 shadow-sm backdrop-blur-sm",
-          interactive && interactiveStyles,
-          {
-            "bg-white/80 border-surface-200/60 dark:bg-dark-surface-100/80 dark:border-dark-surface-700/60":
-              variant === "default",
-            "bg-surface-100/80 border-surface-200/60 dark:bg-dark-surface-300/80 dark:border-dark-surface-400/60":
-              variant === "filled",
-            "bg-surface-200/80 border-surface-300/60 dark:bg-dark-surface-400/80 dark:border-dark-surface-500/60":
-              variant === "surface",
-            "bg-error-50 dark:bg-dark-error-50 text-error dark:text-dark-error-800":
-              variant === "error",
-            "border border-surface-400 dark:border-dark-surface-500":
-              variant === "bordered",
-            [dottedPatternClasses]: variant === "dotted",
-          },
-          {
-            "flex items-center justify-between": layout === "space-between",
-          },
+          "rounded-xl border p-4 text-text transition-colors",
+          variant === "error"
+            ? "border-error/25 bg-error/10"
+            : "border-line bg-raised",
+          variant === "bordered" && "border-line-strong",
+          variant === "dotted" &&
+            "bg-sidebar bg-dot-pattern [--dot-gap:18px]",
+          interactive && "cursor-pointer hover:border-line-strong hover:bg-hover",
+          layout === "space-between" && "flex items-center justify-between",
           statusBorder && statusBorderStyles[statusBorder],
           className,
         )}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { apiFetch } from '../lib/fetch';
+import { cwdApiFetch } from '../lib/projectRuntime';
 import {
   flattenFiles,
   ROOT_DIR,
@@ -72,7 +72,7 @@ export function useWorkspaceFiles(
       requestedRef.current.add(dir);
       setLoading(prev => ({ ...prev, [dir]: true }));
       try {
-        const entries = await apiFetch<FilesListEntry[]>(filesUrl(dir, root));
+        const entries = await cwdApiFetch<FilesListEntry[]>(root, filesUrl(dir, root));
         if (rootRef.current !== root) return;
         const mapped: WorkspaceEntry[] = entries.map(e => ({
           path: e.path,
@@ -118,7 +118,7 @@ export function useWorkspaceFiles(
   const readFile = useCallback(
     async (path: string): Promise<WorkspaceFilePeek> => {
       if (!root) return { path, text: '', isBinary: false };
-      const resp = await apiFetch<FileContentResponse>(contentUrl(path, root));
+      const resp = await cwdApiFetch<FileContentResponse>(root, contentUrl(path, root));
       if (resp.encoding === 'base64') {
         return { path: resp.path, text: '', isBinary: true };
       }

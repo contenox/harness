@@ -55,11 +55,11 @@ binaries, `SHA256SUMS` and a signed manifest; the desktop app pins one of these 
 
 Contenox installs two commands:
 
-- `contenox` — the desktop app. `contenox .` opens the folder you are standing in; `Ctrl/Cmd+O` switches workspace at any time.
+- `contenox` — the desktop app. `contenox .` opens the folder you are standing in as a project; add or switch projects from the sidebar at any time.
 - `contenox-runtime` — the runtime CLI: chat, sessions, backends, `serve`, and ACP.
 
 ```bash
-contenox .                        # Open this folder in the desktop app
+contenox .                        # Open this folder as a project in the desktop app
 contenox-runtime setup                    # Choose a provider/model for this machine
 contenox-runtime "say hello world in python"    # Query directly from the CLI
 contenox-runtime chat -e                         # Open $EDITOR to compose a rich prompt

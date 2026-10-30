@@ -11,6 +11,7 @@ function statusVariant(status: PlanEntryStatus): 'success' | 'primary' | 'second
 
 export function PlanPanel({ entries }: { entries: PlanEntry[] }) {
   const { t } = useTranslation();
+  const tk = t as (key: string) => string;
   const [open, setOpen] = useState(true);
 
   if (entries.length === 0) return null;
@@ -35,9 +36,9 @@ export function PlanPanel({ entries }: { entries: PlanEntry[] }) {
           {entries.map((entry, i) => (
             <li key={`${entry.content}-${i}`} className="flex items-start gap-2">
               <Badge size="sm" variant={statusVariant(entry.status)} className="mt-0.5 shrink-0">
-                {t(`acp_chat.plan_status_${entry.status}`)}
+                {tk(`acp_chat.plan_status_${entry.status}`)}
               </Badge>
-              <span className="text-text dark:text-dark-text">{entry.content}</span>
+              <span className="text-text">{entry.content}</span>
             </li>
           ))}
         </ol>

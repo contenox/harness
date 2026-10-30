@@ -1,11 +1,9 @@
 import {
   Database,
-  Folder,
   Inbox,
   Radar,
   Rocket,
   Settings,
-  SquareTerminal,
   type LucideIcon,
   Bot,
 } from 'lucide-react';
@@ -16,23 +14,21 @@ import HomeRedirect from '../pages/HomeRedirect.tsx';
 import { LOGIN_ROUTE } from './routeConstants.ts';
 
 const AcpChatPage = lazy(() => import('../pages/chat/AcpChatPage.tsx'));
-const WorkbenchPage = lazy(() => import('../pages/workbench/WorkbenchPage.tsx'));
 const BackendsPage = lazy(() => import('../pages/admin/backends/BackendPage.tsx'));
 const FleetPage = lazy(() => import('../pages/admin/fleet/FleetPage.tsx'));
 const MissionListPage = lazy(() => import('../pages/admin/missions/MissionListPage.tsx'));
 const MissionDetailPage = lazy(() => import('../pages/admin/missions/MissionDetailPage.tsx'));
 const MissionDispatchPage = lazy(() => import('../pages/admin/missions/MissionDispatchPage.tsx'));
 const InboxPage = lazy(() => import('../pages/admin/inbox/InboxPage.tsx'));
-const ProjectsPage = lazy(() => import('../pages/admin/projects/ProjectsPage.tsx'));
 const AgentsPage = lazy(() => import('../pages/admin/agents/AgentsPage.tsx'));
 const ControlPlanePage = lazy(() => import('../pages/admin/control/ControlPlanePage.tsx'));
 const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage.tsx'));
-const ConsolePage = lazy(() => import('../pages/admin/console/ConsolePage.tsx'));
 const ByePage = lazy(() => import('../pages/public/bye/Bye.tsx'));
 const AuthPage = lazy(() => import('../pages/public/login/AuthPage.tsx'));
 
 const LegacyChatsRedirect = () => <Navigate to="/chat" replace />;
 const LegacyConsoleRedirect = () => <Navigate to="/chat" replace />;
+const ProjectsRedirect = () => <Navigate to="/chat" replace />;
 const AcpChatSessionRedirect = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   return <Navigate to={`/chat/${sessionId}`} replace />;
@@ -67,9 +63,7 @@ const adminRouteDefinitions: AdminRouteDefinition[] = [
   { path: '/missions', element: MissionListPage, labelKey: 'navbar.missions', Icon: Rocket },
   { path: '/inbox', element: InboxPage, labelKey: 'navbar.inbox', Icon: Inbox },
   { path: '/backends', element: BackendsPage, labelKey: 'navbar.backends', Icon: Database },
-  { path: '/projects', element: ProjectsPage, labelKey: 'navbar.projects', Icon: Folder },
   { path: '/agents', element: AgentsPage, labelKey: 'navbar.agents', Icon: Bot },
-  { path: '/terminal', element: ConsolePage, labelKey: 'navbar.console', Icon: SquareTerminal },
   { path: '/settings', element: SettingsPage, labelKey: 'navbar.settings', Icon: Settings },
 ];
 
@@ -116,7 +110,7 @@ export const routes: RouteConfig[] = [
   },
   {
     path: '/workbench/:sessionId',
-    element: WorkbenchPage,
+    element: AcpChatSessionRedirect,
     label: '',
     showInNav: false,
     protected: true,
@@ -124,7 +118,15 @@ export const routes: RouteConfig[] = [
   },
   {
     path: '/workbench',
-    element: WorkbenchPage,
+    element: LegacyChatsRedirect,
+    label: '',
+    showInNav: false,
+    protected: true,
+    showInShelf: false,
+  },
+  {
+    path: '/terminal',
+    element: LegacyChatsRedirect,
     label: '',
     showInNav: false,
     protected: true,
@@ -157,6 +159,14 @@ export const routes: RouteConfig[] = [
   {
     path: '/chat-legacy/:chatId',
     element: LegacyConsoleRedirect,
+    label: '',
+    showInNav: false,
+    protected: true,
+    showInShelf: false,
+  },
+  {
+    path: '/projects',
+    element: ProjectsRedirect,
     label: '',
     showInNav: false,
     protected: true,

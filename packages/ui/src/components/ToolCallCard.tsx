@@ -143,14 +143,6 @@ export const ToolCallCard = forwardRef<HTMLDivElement, ToolCallCardProps>(
             style={{ maxHeight: `${TOOL_CALL_PREVIEW_LINES * 1.25 + 0.5}rem` }}
           >
             {preview}
-            <div
-              aria-hidden
-              className={cn(
-                "pointer-events-none absolute inset-x-0 top-0 h-3",
-                "bg-gradient-to-b from-surface-50 to-transparent",
-                "dark:from-dark-surface-200",
-              )}
-            />
           </div>
         )}
 

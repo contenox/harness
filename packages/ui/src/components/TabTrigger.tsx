@@ -5,6 +5,7 @@ type TabTriggerProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   active: boolean;
 };
 
+/** Subtle pill tab: selected overlay when active, hover overlay otherwise. */
 export const TabTrigger = forwardRef<HTMLButtonElement, TabTriggerProps>(
   ({ active, className, children, ...props }, ref) => (
     <button
@@ -14,13 +15,11 @@ export const TabTrigger = forwardRef<HTMLButtonElement, TabTriggerProps>(
       type="button"
       {...props}
       className={cn(
-        "group relative px-5 py-2.5 rounded-none transition-colors",
-        "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/20",
-        "hover:bg-white/5",
+        "inline-flex h-7 items-center rounded-lg px-2.5 text-[13px] font-medium whitespace-nowrap transition-colors",
+        "disabled:pointer-events-none disabled:opacity-50",
         active
-          ? "text-primary-500 dark:text-dark-primary-400 after:scale-x-100"
-          : "text-foreground/80 after:scale-x-0 group-hover:after:scale-x-100",
-        "after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-primary-500/60 dark:after:bg-dark-primary-400/60 after:transition-transform after:origin-left",
+          ? "bg-selected text-text"
+          : "text-text-muted hover:bg-hover hover:text-text",
         className,
       )}
     >

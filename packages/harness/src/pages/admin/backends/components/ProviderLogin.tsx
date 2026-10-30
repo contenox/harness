@@ -1,12 +1,7 @@
 import { Button, ButtonGroup, CopyRow, InlineNotice, P, Panel, Span } from '@contenox/ui';
-import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  useProviderLoginStatus,
-  useProviderLogout,
-  useProviderStatus,
-  useStartProviderLogin,
-} from '../../../../hooks/useProviders';
+import { useProviderLoginFlow } from '../../../../hooks/useProviderLoginFlow';
+import { useProviderLogout } from '../../../../hooks/useProviders';
 import type { CloudProviderSetup } from '../../../../lib/providerCatalog';
 
 type Props = {
@@ -16,31 +11,9 @@ type Props = {
 
 export default function ProviderLogin({ setup, onSaved }: Props) {
   const { t } = useTranslation();
-  const statusQuery = useProviderStatus(setup.provider);
-  const loginQuery = useProviderLoginStatus(setup.provider);
-  const startMutation = useStartProviderLogin(setup.provider);
   const logoutMutation = useProviderLogout(setup.provider);
-  const announced = useRef(false);
-
-  const login = loginQuery.data;
-  const started = startMutation.data;
-  const state =
-    login?.state ??
-    started?.state ??
-    (statusQuery.data?.loginRequired ? 'login_required' : statusQuery.data?.authState) ??
-    'login_required';
-  const signedIn = state === 'authenticated';
-  const pending = state === 'login_pending';
-  const deviceUrl = pending ? (login?.url ?? started?.url) : undefined;
-  const deviceCode = pending ? (login?.code ?? started?.code) : undefined;
-
-  useEffect(() => {
-    if (!signedIn || announced.current) return;
-    announced.current = true;
-    onSaved?.();
-  }, [signedIn, onSaved]);
-
-  const error = login?.error ?? startMutation.error?.message ?? statusQuery.error?.message ?? null;
+  const flow = useProviderLoginFlow(setup.provider, onSaved);
+  const { signedIn, pending, deviceUrl, deviceCode, error } = flow;
 
   return (
     <Panel variant="flat" className="space-y-3">
@@ -96,8 +69,8 @@ export default function ProviderLogin({ setup, onSaved }: Props) {
           type="button"
           variant="primary"
           size="sm"
-          isLoading={startMutation.isPending}
-          onClick={() => startMutation.mutate()}>
+          isLoading={flow.starting}
+          onClick={flow.start}>
           {t('cloud_providers.login_button')}
         </Button>
       )}

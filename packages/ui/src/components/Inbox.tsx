@@ -1,18 +1,17 @@
-
 import { forwardRef } from "react";
 import { cn } from "../utils";
 
 type InboxProps = React.InputHTMLAttributes<HTMLInputElement>;
 
+/** Bare styled input. Prefer `Input`; `Inbox` is the low-level building block. */
 export const Inbox = forwardRef<HTMLInputElement, InboxProps>(
   ({ className, ...props }, ref) => {
     return (
       <input
         ref={ref}
         className={cn(
-          "border-secondary-300 bg-surface-50 text-text rounded-lg border px-4 py-2.5",
-          "focus:ring-primary-500 focus:border-transparent focus:ring-2 focus:ring-offset-2",
-          "dark:border-dark-secondary-300 dark:bg-dark-surface-50 dark:text-dark-text dark:focus:ring-dark-primary-500",
+          "h-8 rounded-lg border border-line-strong bg-raised px-3 text-[13px] text-text",
+          "placeholder:text-text-subtle disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         {...props}

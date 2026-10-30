@@ -1,4 +1,4 @@
-import { CodeBlock, InlineNotice } from '@contenox/ui';
+import { CodeBlock, InlineNotice, Span } from '@contenox/ui';
 import { FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { FilePreviewState } from '../lib/filePreview';
@@ -17,9 +17,9 @@ export function MentionFilePreview({ state }: MentionFilePreviewProps) {
     <div
       role="region"
       aria-label={t('workspace.mention_preview_label')}
-      className="border-surface-200 dark:border-dark-surface-600 flex max-h-[40vh] min-h-0 shrink-0 flex-col overflow-hidden border-b">
-      <div className="border-surface-200 dark:border-dark-surface-600 text-text-muted dark:text-dark-text-muted flex shrink-0 items-center gap-1.5 border-b px-3 py-1.5 text-xs">
-        <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      className="border-line flex max-h-[40vh] min-h-0 shrink-0 flex-col overflow-hidden border-b">
+      <div className="border-line text-text-muted flex shrink-0 items-center gap-1.5 border-b px-3 py-1.5 text-xs">
+        <FileText className="size-3.5 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate font-mono">{path}</span>
         {state.status === 'text' && (
           <span className="shrink-0 text-[10px]">
@@ -29,7 +29,9 @@ export function MentionFilePreview({ state }: MentionFilePreviewProps) {
       </div>
 
       {state.status === 'loading' ? (
-        <div className="text-text-muted dark:text-dark-text-muted px-3 py-2 text-xs">{t('workspace.mention_loading')}</div>
+        <Span variant="muted" className="block px-3 py-2 text-xs">
+          {t('workspace.mention_loading')}
+        </Span>
       ) : state.status === 'binary' ? (
         <div className="p-2">
           <InlineNotice variant="info">{t('workspace.binary_file')}</InlineNotice>

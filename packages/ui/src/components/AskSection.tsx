@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 export function AskSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section aria-label={title} className="flex flex-col gap-3">
-      <H2 className="text-text-muted dark:text-dark-text-muted text-xs font-medium tracking-wide uppercase">
+      <H2 className="text-text-muted dark:text-dark-text-muted text-[11px] font-medium tracking-[0.02em]">
         {title}
       </H2>
       {children}

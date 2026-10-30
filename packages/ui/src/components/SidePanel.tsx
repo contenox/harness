@@ -11,7 +11,7 @@ export const SidePanelColumn = forwardRef<HTMLDivElement, SidePanelColumnProps>(
       <div
         ref={ref}
         className={cn(
-          "bg-surface-50 dark:bg-dark-surface-200 flex w-[min(100%,20rem)] flex-shrink-0 flex-col sm:w-80",
+          "flex w-[min(100%,20rem)] flex-shrink-0 flex-col border-line bg-sidebar text-text sm:w-80",
           side === "right" ? "border-l" : "border-r",
           className,
         )}
@@ -29,7 +29,7 @@ export const SidePanelHeader = forwardRef<HTMLDivElement, SidePanelHeaderProps>(
       <div
         ref={ref}
         className={cn(
-          "flex shrink-0 items-center justify-between gap-2 border-b px-2 py-2",
+          "flex h-10 shrink-0 items-center justify-between gap-2 border-b border-line px-3",
           className,
         )}
         {...props}
@@ -73,7 +73,7 @@ export const SidePanelRailButton = forwardRef<
       ref={ref}
       type={type}
       className={cn(
-        "bg-surface-50 dark:bg-dark-surface-200 text-secondary-600 hover:bg-surface-100 dark:text-dark-secondary-400 dark:hover:bg-dark-surface-300 flex h-full min-h-11 w-9 shrink-0 flex-col items-center justify-center",
+        "flex h-full min-h-11 w-9 shrink-0 flex-col items-center justify-center border-line bg-sidebar text-text-muted hover:bg-hover hover:text-text",
         side === "right" ? "border-l" : "border-r",
         className,
       )}

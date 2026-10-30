@@ -4,45 +4,22 @@ import { cn } from "../utils";
 export type InsetPanelTone = "default" | "muted" | "strip" | "section";
 
 export type InsetPanelProps = React.HTMLAttributes<HTMLDivElement> & {
-
   tone?: InsetPanelTone;
 };
 
-export const InsetPanel = forwardRef<HTMLDivElement, InsetPanelProps>(function InsetPanel(
-  { className, tone = "default", ...props },
-  ref,
-) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "border-surface-300 dark:border-dark-surface-400",
-        tone === "default" &&
-          "bg-surface-50 dark:bg-dark-surface-200 flex min-h-0 flex-col overflow-hidden rounded-lg border",
-        tone === "muted" && "bg-surface-100 dark:bg-dark-surface-300 rounded-lg border",
-        tone === "strip" && "bg-surface-100 dark:bg-dark-surface-300 flex shrink-0 flex-col border-b",
-        tone === "section" &&
-          "bg-surface-100 dark:bg-dark-surface-300 flex min-h-0 shrink-0 flex-col border-b",
-        className,
-      )}
-      {...props}
-    />
-  );
-});
-
-export type InsetPanelHeaderProps = React.HTMLAttributes<HTMLDivElement> & {
-
-  density?: "compact" | "comfortable";
-};
-
-export const InsetPanelHeader = forwardRef<HTMLDivElement, InsetPanelHeaderProps>(
-  function InsetPanelHeader({ className, density = "compact", ...props }, ref) {
+export const InsetPanel = forwardRef<HTMLDivElement, InsetPanelProps>(
+  function InsetPanel({ className, tone = "default", ...props }, ref) {
     return (
       <div
         ref={ref}
         className={cn(
-          "border-surface-300 dark:border-dark-surface-400 shrink-0 border-b px-3",
-          density === "compact" ? "py-1.5" : "py-2",
+          "border-line text-text",
+          tone === "default" &&
+            "flex min-h-0 flex-col overflow-hidden rounded-xl border bg-raised",
+          tone === "muted" && "rounded-xl border bg-sidebar",
+          tone === "strip" && "flex shrink-0 flex-col border-b bg-sidebar",
+          tone === "section" &&
+            "flex min-h-0 shrink-0 flex-col border-b bg-sidebar",
           className,
         )}
         {...props}
@@ -50,6 +27,30 @@ export const InsetPanelHeader = forwardRef<HTMLDivElement, InsetPanelHeaderProps
     );
   },
 );
+
+export type InsetPanelHeaderProps = React.HTMLAttributes<HTMLDivElement> & {
+  density?: "compact" | "comfortable";
+};
+
+export const InsetPanelHeader = forwardRef<
+  HTMLDivElement,
+  InsetPanelHeaderProps
+>(function InsetPanelHeader(
+  { className, density = "compact", ...props },
+  ref,
+) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "shrink-0 border-b border-line px-3",
+        density === "compact" ? "py-1.5" : "py-2.5",
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 
 export type InsetPanelBodyProps = React.HTMLAttributes<HTMLDivElement>;
 

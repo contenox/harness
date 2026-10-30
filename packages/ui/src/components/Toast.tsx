@@ -2,17 +2,13 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, X, XCircle } from "lucide-react";
 import { cn } from "../utils";
-import { Span } from "./Typography";
 
 type ToastProps = {
   message: string;
   variant: "success" | "error";
   className?: string;
-
   onDismiss?: () => void;
-
   duration?: number;
-
   dismissLabel?: string;
 };
 
@@ -32,32 +28,28 @@ export function Toast({
 
   return createPortal(
     <div
-
       role={variant === "error" ? "alert" : "status"}
       aria-live={variant === "error" ? "assertive" : "polite"}
       className={cn(
-        "fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-lg p-4 shadow-lg",
-        "flex items-center gap-3",
-        variant === "success"
-          ? "bg-primary-500 text-text-inverted dark:bg-dark-primary-600 dark:text-dark-text-inverted"
-          : "bg-error-500 text-text-inverted dark:bg-dark-error-600 dark:text-dark-text",
+        "fixed bottom-4 left-1/2 z-[60] -translate-x-1/2 rounded-xl border border-line bg-raised px-3 py-2.5 text-text shadow-pop",
+        "flex items-center gap-2.5 text-[13px]",
         className,
       )}
     >
       {variant === "success" ? (
-        <CheckCircle2 className="h-5 w-5" />
+        <CheckCircle2 className="size-4 text-text-success" />
       ) : (
-        <XCircle className="h-5 w-5" />
+        <XCircle className="size-4 text-text-error" />
       )}
-      <Span className="text-sm font-medium">{message}</Span>
+      <span className="font-medium">{message}</span>
       {onDismiss && (
         <button
           type="button"
           onClick={onDismiss}
           aria-label={dismissLabel}
-          className="rounded-sm p-0.5 opacity-80 hover:opacity-100 focus-visible:opacity-100"
+          className="rounded p-0.5 text-text-subtle hover:bg-hover hover:text-text"
         >
-          <X className="h-4 w-4" />
+          <X className="size-3.5" />
         </button>
       )}
     </div>,

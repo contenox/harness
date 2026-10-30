@@ -54,7 +54,7 @@ export function Tabs<T extends string = string>({
       role="tablist"
       aria-orientation="horizontal"
       className={cn(
-        "flex max-w-full flex-wrap gap-1 overflow-x-auto overflow-y-hidden",
+        "flex max-w-full items-center gap-0.5 overflow-x-auto overflow-y-hidden",
         className,
       )}
       onKeyDown={onKeyDown}
@@ -74,7 +74,7 @@ export function Tabs<T extends string = string>({
               aria-controls={`panel-${String(tab.id)}`}
               tabIndex={isActive ? 0 : -1}
               onClick={() => onTabChange(tab.id)}
-              className={cn(closable && "pr-9")}
+              className={cn(closable && "pr-7")}
             >
               {tab.label}
             </TabTrigger>
@@ -84,12 +84,8 @@ export function Tabs<T extends string = string>({
                 aria-label={tab.closeLabel}
                 tabIndex={isActive ? 0 : -1}
                 className={cn(
-
-
-
-                  "absolute top-1/2 right-1 -translate-y-1/2 rounded p-1.5",
-                  "text-foreground/50 hover:text-foreground hover:bg-white/10",
-                  "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/30",
+                  "absolute top-1/2 right-1 -translate-y-1/2 rounded p-0.5",
+                  "text-text-subtle hover:bg-hover hover:text-text",
                 )}
                 onClick={(e) => {
                   e.stopPropagation();

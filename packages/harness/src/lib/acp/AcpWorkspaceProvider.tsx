@@ -14,6 +14,12 @@ import {
   type AcpWorkspaceState,
 } from '../../hooks/acpWorkspaceState';
 import { WebSocketTransport } from '@contenox/acp-client';
+import {
+  acpWsUrl,
+  ensureProjectPrefix,
+  hasProjectBridge,
+  projectPathForCwd,
+} from '../projectRuntime';
 
 export interface AcpWorkspaceContextValue {
   workspace: AcpWorkspaceState;
@@ -42,11 +48,6 @@ export function createDeferredDisposer(dispose: () => void): { armForCleanup: ()
   };
 }
 
-function buildAcpWsUrl(): string {
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${protocol}://${window.location.host}/acp`;
-}
-
 export interface AcpWorkspaceProviderProps {
   children: ReactNode;
 }
@@ -58,7 +59,13 @@ export function AcpWorkspaceProvider({ children }: AcpWorkspaceProviderProps) {
   const controllerRef = useRef<AcpWorkspaceController | null>(null);
   if (!controllerRef.current) {
     controllerRef.current = createAcpWorkspaceController(
-      { createTransport: () => new WebSocketTransport(buildAcpWsUrl()) },
+      {
+        createTransport: async (target, attempt) => {
+          const prefix = target ? await ensureProjectPrefix(target, { force: attempt > 0 }) : '';
+          return new WebSocketTransport(acpWsUrl(prefix));
+        },
+        resolveProject: hasProjectBridge() ? projectPathForCwd : undefined,
+      },
       workspaceDispatch,
       sessionsDispatch,
     );

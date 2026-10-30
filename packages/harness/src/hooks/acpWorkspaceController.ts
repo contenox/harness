@@ -30,7 +30,17 @@ export type WorkspaceDispatch = (action: AcpWorkspaceAction) => void;
 export type SessionsDispatch = (action: AcpSessionsAction) => void;
 
 export interface AcpWorkspaceControllerDeps {
-  createTransport: () => Transport;
+  /**
+   * Builds the transport for a runtime. `target` is '' for the default runtime or a project
+   * folder path for that project's own runtime; `attempt` > 0 means a reconnect (re-ensure the
+   * runtime, it may have idle-stopped).
+   */
+  createTransport: (target: string, attempt: number) => Transport | Promise<Transport>;
+  /**
+   * Maps a session cwd to the project target that owns it ('' = default runtime). Omit when
+   * everything is served by one runtime.
+   */
+  resolveProject?: (cwd: string) => Promise<string>;
   createClient?: (transport: Transport) => AcpClient;
   cwd?: string;
 }
@@ -97,7 +107,15 @@ function classifySessionOpenFailure(err: unknown): 'not_found' | 'error' {
   return 'error';
 }
 
+interface ProjectConn {
+  target: string;
+  client: AcpClient;
+  transport: Transport;
+}
+
 interface OpenSessionEntry {
+  /** '' = default runtime connection, otherwise the project path owning the connection. */
+  target: string;
   unsubscribe: () => void;
   currentTurnId: string;
   promptInFlight: boolean;
@@ -113,6 +131,9 @@ export function createAcpWorkspaceController(
   sessionsDispatch: SessionsDispatch,
 ): AcpWorkspaceController {
   const cwd = deps.cwd ?? '/';
+  // A session's own folder (from session/list or creation). Falling back to '/' breaks on
+  // Windows, where '/' is not an absolute path and load/resume is rejected as invalid.
+  const cwdFor = (id: SessionId): string => sessionCwds.get(id) ?? cwd;
   const buildClient = deps.createClient ?? ((transport: Transport) => createAcpClient(transport));
 
   let disposed = false;
@@ -121,6 +142,10 @@ export function createAcpWorkspaceController(
   let connectPromise: Promise<void> | null = null;
 
   const openSessions = new Map<SessionId, OpenSessionEntry>();
+  const projectConns = new Map<string, ProjectConn>();
+  const projectConnecting = new Map<string, Promise<ProjectConn>>();
+  const projectReconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const sessionCwds = new Map<SessionId, string>();
   let focusedSessionId: SessionId | null = null;
 
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -144,8 +169,122 @@ export function createAcpWorkspaceController(
     workspaceDispatch({ type: 'active_session_changed', sessionId: sid });
   }
 
-  function trackSubscription(sid: SessionId, c: AcpClient): OpenSessionEntry {
+  function entryClient(sid: SessionId | null): AcpClient | null {
+    if (!sid) return null;
+    const target = openSessions.get(sid)?.target ?? '';
+    return target === '' ? client : (projectConns.get(target)?.client ?? null);
+  }
+
+  async function targetForCwd(sessionCwd: string | undefined): Promise<string> {
+    if (!deps.resolveProject || !sessionCwd) return '';
+    try {
+      return (await deps.resolveProject(sessionCwd)) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  async function clientForTarget(target: string): Promise<AcpClient> {
+    if (target === '') {
+      if (!client) throw new Error('acp: workspace controller is not connected');
+      return client;
+    }
+    return (await getProjectConn(target)).client;
+  }
+
+  function getProjectConn(target: string): Promise<ProjectConn> {
+    const existing = projectConns.get(target);
+    if (existing) return Promise.resolve(existing);
+    let pending = projectConnecting.get(target);
+    if (!pending) {
+      pending = (async () => {
+        const established = await establishConnection(target, 0);
+        if (disposed) {
+          established.transport.close();
+          throw new Error('acp: workspace controller disposed');
+        }
+        return adoptProjectConn(target, established.client, established.transport);
+      })().finally(() => projectConnecting.delete(target));
+      projectConnecting.set(target, pending);
+    }
+    return pending;
+  }
+
+  function adoptProjectConn(target: string, c: AcpClient, transport: Transport): ProjectConn {
+    const conn: ProjectConn = { target, client: c, transport };
+    projectConns.set(target, conn);
+    transport.onClose(() => handleProjectClose(conn));
+    return conn;
+  }
+
+  function sessionsOfTarget(target: string): SessionId[] {
+    return [...openSessions.entries()].filter(([, e]) => e.target === target).map(([sid]) => sid);
+  }
+
+  function closeIdleProject(target: string): void {
+    if (target === '' || sessionsOfTarget(target).length > 0) return;
+    const conn = projectConns.get(target);
+    if (!conn) return;
+    projectConns.delete(target);
+    conn.client.close();
+  }
+
+  function handleProjectClose(conn: ProjectConn): void {
+    if (disposed || projectConns.get(conn.target) !== conn) return;
+    projectConns.delete(conn.target);
+    const sids = sessionsOfTarget(conn.target);
+    if (sids.length === 0) return;
+    for (const sid of sids) {
+      const entry = openSessions.get(sid);
+      if (entry) {
+        clearStallTimer(entry);
+        entry.turnSettled = true;
+        entry.promptInFlight = false;
+      }
+      sessionDispatch(sid, { type: 'connection_lost' });
+    }
+    scheduleProjectReconnect(conn.target, 0);
+  }
+
+  function scheduleProjectReconnect(target: string, attemptIndex: number): void {
+    if (disposed) return;
+    const delay = Math.min(RECONNECT_BASE_DELAY_MS * 2 ** attemptIndex, RECONNECT_MAX_DELAY_MS);
+    const timer = setTimeout(() => {
+      projectReconnectTimers.delete(target);
+      void attemptProjectReconnect(target, attemptIndex);
+    }, delay);
+    projectReconnectTimers.set(target, timer);
+  }
+
+  async function attemptProjectReconnect(target: string, attemptIndex: number): Promise<void> {
+    if (disposed || projectConns.has(target)) return;
+    const sids = sessionsOfTarget(target);
+    if (sids.length === 0) return;
+    try {
+      const established = await establishConnection(target, attemptIndex + 1);
+      if (disposed) {
+        established.transport.close();
+        return;
+      }
+      const conn = adoptProjectConn(target, established.client, established.transport);
+      for (const sid of sids) {
+        if (disposed) return;
+        if (openSessions.has(sid)) await restoreOneSession(sid, conn.client);
+      }
+    } catch (err) {
+      if (disposed) return;
+      if (isAuthRequired(err)) {
+        workspaceDispatch({ type: 'setup_required', message: errMessage(err) });
+        return;
+      }
+      const next = attemptIndex + 1;
+      if (next < MAX_RECONNECT_ATTEMPTS) scheduleProjectReconnect(target, next);
+    }
+  }
+
+  function trackSubscription(sid: SessionId, c: AcpClient, target = ''): OpenSessionEntry {
     const entry: OpenSessionEntry = {
+      target,
       unsubscribe: () => {},
       currentTurnId: '',
       promptInFlight: false,
@@ -159,14 +298,16 @@ export function createAcpWorkspaceController(
     return entry;
   }
 
-  function teardownSession(sid: SessionId, c: AcpClient | null): void {
+  function teardownSession(sid: SessionId, fallback: AcpClient | null): void {
     rejectPendingPermission(sid);
     const entry = openSessions.get(sid);
+    const c = entryClient(sid) ?? fallback;
     clearStallTimer(entry);
     entry?.unsubscribe();
     openSessions.delete(sid);
     removeSlice(sid);
     if (c) void c.closeSession(sid).catch(() => {});
+    if (entry) closeIdleProject(entry.target);
   }
 
   function guardAuthRequired(err: unknown): void {
@@ -280,14 +421,14 @@ export function createAcpWorkspaceController(
   }
 
 
-  async function establishConnection(): Promise<{
+  async function establishConnection(target: string, attempt: number): Promise<{
     client: AcpClient;
     transport: Transport;
     agentName: string | null;
     workspaceConfigOptions: SessionConfigOption[];
     promptCapabilities: PromptCapabilities;
   }> {
-    const transport = deps.createTransport();
+    const transport = await deps.createTransport(target, attempt);
     const c = buildClient(transport);
     try {
       const init = await c.initialize();
@@ -320,6 +461,7 @@ export function createAcpWorkspaceController(
       cursor = page.nextCursor;
     }
     if (disposed) return;
+    for (const s of collected) if (s.cwd) sessionCwds.set(s.sessionId, s.cwd);
     workspaceDispatch({ type: 'sessions_replaced', sessions: collected });
   }
 
@@ -334,7 +476,7 @@ export function createAcpWorkspaceController(
   async function doConnect(): Promise<void> {
     workspaceDispatch({ type: 'connecting' });
     try {
-      const established = await establishConnection();
+      const established = await establishConnection('', 0);
       if (disposed) {
         established.transport.close();
         return;
@@ -357,9 +499,10 @@ export function createAcpWorkspaceController(
   }
 
   async function restoreOneSession(sid: SessionId, c: AcpClient): Promise<void> {
+    const target = openSessions.get(sid)?.target ?? '';
     try {
-      const result = await c.resumeSession(sid, cwd);
-      trackSubscription(sid, c);
+      const result = await c.resumeSession(sid, cwdFor(sid));
+      trackSubscription(sid, c, target);
       if (result.configOptions)
         sessionDispatch(sid, { type: 'config_options', configOptions: result.configOptions });
       sessionDispatch(sid, { type: 'connection_resumed' });
@@ -367,9 +510,9 @@ export function createAcpWorkspaceController(
     } catch {
     }
     sessionDispatch(sid, { type: 'session_reset', sessionId: sid });
-    trackSubscription(sid, c);
+    trackSubscription(sid, c, target);
     try {
-      const result = await c.loadSession(sid, cwd);
+      const result = await c.loadSession(sid, cwdFor(sid));
       if (result.configOptions)
         sessionDispatch(sid, { type: 'config_options', configOptions: result.configOptions });
       sessionDispatch(sid, { type: 'connection_resumed' });
@@ -382,7 +525,7 @@ export function createAcpWorkspaceController(
   }
 
   async function restoreOpenSessions(c: AcpClient): Promise<void> {
-    for (const sid of [...openSessions.keys()]) {
+    for (const sid of sessionsOfTarget('')) {
       if (disposed) return;
       await restoreOneSession(sid, c);
     }
@@ -400,7 +543,7 @@ export function createAcpWorkspaceController(
   async function attemptReconnect(attemptIndex: number): Promise<void> {
     if (disposed) return;
     try {
-      const established = await establishConnection();
+      const established = await establishConnection('', 1);
       if (disposed) {
         established.transport.close();
         return;
@@ -437,6 +580,13 @@ export function createAcpWorkspaceController(
       reconnectTimer = null;
     }
     workspaceDispatch({ type: 'reconnecting' });
+    for (const target of new Set([...openSessions.values()].map(e => e.target))) {
+      if (target === '' || projectConns.has(target)) continue;
+      const timer = projectReconnectTimers.get(target);
+      if (timer) clearTimeout(timer);
+      projectReconnectTimers.delete(target);
+      void attemptProjectReconnect(target, 0);
+    }
     return attemptReconnect(0);
   }
 
@@ -444,7 +594,7 @@ export function createAcpWorkspaceController(
     if (disposed) return;
     if (transport !== currentTransport) return;
     workspaceDispatch({ type: 'reconnecting' });
-    for (const sid of openSessions.keys()) {
+    for (const sid of sessionsOfTarget('')) {
       const entry = openSessions.get(sid);
       if (entry) {
         clearStallTimer(entry);
@@ -469,8 +619,12 @@ export function createAcpWorkspaceController(
 
   async function newSession(overrideCwd?: string, agentName?: string | null): Promise<SessionId> {
     if (disposed || !client) throw new Error('acp: workspace controller is not connected');
-    const c = client;
     const sessionCwd = overrideCwd && overrideCwd.trim() !== '' ? overrideCwd : cwd;
+    const target = deps.resolveProject ? await targetForCwd(sessionCwd) : '';
+    const c = await clientForTarget(target).catch(err => {
+      sessionDispatch(focusedSessionId, { type: 'prompt_error', message: errMessage(err) });
+      throw err;
+    });
 
     const meta = agentName && agentName.trim() !== '' ? agentMeta(agentName.trim()) : undefined;
 
@@ -484,9 +638,10 @@ export function createAcpWorkspaceController(
       throw err;
     });
     const sid = result.sessionId;
+    sessionCwds.set(sid, sessionCwd);
 
     sessionDispatch(sid, { type: 'session_reset', sessionId: sid });
-    trackSubscription(sid, c);
+    trackSubscription(sid, c, target);
     if (result.configOptions)
       sessionDispatch(sid, { type: 'config_options', configOptions: result.configOptions });
 
@@ -497,15 +652,16 @@ export function createAcpWorkspaceController(
     setFocus(sid);
     workspaceDispatch({ type: 'session_load_succeeded' });
 
-    if (previousId && previousId !== sid) teardownSession(previousId, c);
+    if (previousId && previousId !== sid) teardownSession(previousId, client);
 
     return sid;
   }
 
   async function adoptSession(ref: AdoptRef, overrideCwd?: string): Promise<SessionId> {
     if (disposed || !client) throw new Error('acp: workspace controller is not connected');
-    const c = client;
     const sessionCwd = overrideCwd && overrideCwd.trim() !== '' ? overrideCwd : cwd;
+    const target = deps.resolveProject ? await targetForCwd(sessionCwd) : '';
+    const c = await clientForTarget(target);
     const meta = adoptMeta(ref.instanceId, ref.sessionId);
 
     const result = await runGuarded(() => c.newSession(sessionCwd, [], meta)).catch(err => {
@@ -515,9 +671,10 @@ export function createAcpWorkspaceController(
       throw err;
     });
     const sid = result.sessionId;
+    sessionCwds.set(sid, sessionCwd);
 
     sessionDispatch(sid, { type: 'session_reset', sessionId: sid });
-    trackSubscription(sid, c);
+    trackSubscription(sid, c, target);
     if (result.configOptions)
       sessionDispatch(sid, { type: 'config_options', configOptions: result.configOptions });
     workspaceDispatch({
@@ -531,7 +688,6 @@ export function createAcpWorkspaceController(
 
   async function openSessionTab(id: SessionId): Promise<void> {
     if (disposed || !client) return;
-    const c = client;
 
     if (openSessions.has(id)) {
       setFocus(id);
@@ -542,10 +698,26 @@ export function createAcpWorkspaceController(
     workspaceDispatch({ type: 'session_load_start' });
     setFocus(id);
     sessionDispatch(id, { type: 'session_reset', sessionId: id });
-    trackSubscription(id, c);
+
+    let target = '';
+    let c: AcpClient;
+    try {
+      if (deps.resolveProject) {
+        target = await targetForCwd(sessionCwds.get(id));
+        c = await clientForTarget(target);
+      } else {
+        c = client as AcpClient;
+      }
+    } catch (err) {
+      removeSlice(id);
+      if (focusedSessionId === id) focusEmpty();
+      workspaceDispatch({ type: 'session_load_failed', message: errMessage(err) });
+      return;
+    }
+    trackSubscription(id, c, target);
 
     try {
-      const result = await runGuarded(() => c.loadSession(id, cwd));
+      const result = await runGuarded(() => c.loadSession(id, cwdFor(id)));
       if (result.configOptions)
         sessionDispatch(id, { type: 'config_options', configOptions: result.configOptions });
     } catch (err) {
@@ -594,7 +766,7 @@ export function createAcpWorkspaceController(
 
   async function deleteSession(id: SessionId): Promise<void> {
     if (disposed || !client) return;
-    const c = client;
+    const c = entryClient(id) ?? client;
 
     if (openSessions.has(id)) {
       const wasFocused = focusedSessionId === id;
@@ -625,7 +797,8 @@ export function createAcpWorkspaceController(
     const sid = focusedSessionId;
     const entry = openSessions.get(sid);
     if (!entry || entry.promptInFlight) return;
-    const c = client;
+    const c = entryClient(sid);
+    if (!c) return;
     entry.currentTurnId = nextId('assistant');
 
     const blocks = promptBlocksFromDraft(text, mentions, images, audio);
@@ -679,7 +852,9 @@ export function createAcpWorkspaceController(
   async function runTerminal(command: string): Promise<void> {
     if (disposed || !client || !focusedSessionId) return;
     const sid = focusedSessionId;
-    const res = await runGuarded(() => client!.runTerminal(sid, command));
+    const c = entryClient(sid);
+    if (!c) return;
+    const res = await runGuarded(() => c.runTerminal(sid, command));
     if (openSessions.has(sid)) {
       sessionDispatch(sid, {
         type: 'terminal_card',
@@ -705,14 +880,17 @@ export function createAcpWorkspaceController(
   }
 
   function cancel(): void {
-    if (!client || !focusedSessionId) return;
-    client.cancel(focusedSessionId);
+    const c = entryClient(focusedSessionId);
+    if (!c || !focusedSessionId) return;
+    c.cancel(focusedSessionId);
   }
 
   async function setConfigOption(configId: string, value: SessionConfigOptionValue): Promise<void> {
     if (disposed || !client || !focusedSessionId) return;
     const sid = focusedSessionId;
-    const result = await runGuarded(() => client!.setConfigOption(sid, configId, value));
+    const c = entryClient(sid);
+    if (!c) return;
+    const result = await runGuarded(() => c.setConfigOption(sid, configId, value));
     sessionDispatch(sid, { type: 'config_options', configOptions: result.configOptions });
   }
 
@@ -742,6 +920,10 @@ export function createAcpWorkspaceController(
     }
     rejectAllPendingPermissions();
     for (const entry of openSessions.values()) clearStallTimer(entry);
+    for (const timer of projectReconnectTimers.values()) clearTimeout(timer);
+    projectReconnectTimers.clear();
+    for (const conn of projectConns.values()) conn.client.close();
+    projectConns.clear();
     client?.close();
     client = null;
     currentTransport = null;

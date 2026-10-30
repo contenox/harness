@@ -38,8 +38,6 @@ import {
   SupportedProvider,
   TaskExecutionRequest,
   TaskExecutionResponse,
-  TerminalSession,
-  TerminalSessionRequest,
   WorkspaceRootsResponse,
 } from './types';
 
@@ -194,8 +192,6 @@ export const api = {
       options('DELETE'),
     ),
 
-  createTerminalSession: (data: TerminalSessionRequest) =>
-    apiFetch<TerminalSession>('/api/terminal/sessions', options('POST', data)),
   deleteTerminalSession: (id: string) =>
     apiFetch<void>(`/api/terminal/sessions/${encodeURIComponent(id)}`, options('DELETE')),
 

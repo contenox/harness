@@ -1,29 +1,36 @@
-import { NavItem } from '@contenox/ui';
+import { SidebarItem } from '@contenox/ui';
+import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MenuItem } from './Sidebar';
+
+export type MenuItem = {
+  path: string;
+  label: string;
+  icon?: ReactNode;
+};
 
 export function SidebarNav({
   items,
-  setIsOpen,
+  onNavigate,
+  ariaLabel,
 }: {
   items: MenuItem[];
-  setIsOpen: (open: boolean) => void;
+  onNavigate?: () => void;
+  ariaLabel?: string;
 }) {
   const { pathname } = useLocation();
 
   return (
-    <nav className="flex-1 space-y-1 p-4">
+    <nav className="flex flex-col gap-0.5" aria-label={ariaLabel}>
       {items.map(item => (
-        <NavItem
+        <SidebarItem
           key={item.path}
           as={Link}
           to={item.path}
-          isActive={pathname === item.path || pathname.startsWith(item.path + '/')}
+          active={pathname === item.path || pathname.startsWith(item.path + '/')}
           icon={item.icon}
-          onClick={() => setIsOpen(false)}
-        >
+          onClick={onNavigate}>
           {item.label}
-        </NavItem>
+        </SidebarItem>
       ))}
     </nav>
   );

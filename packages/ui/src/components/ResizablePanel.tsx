@@ -157,31 +157,20 @@ export const ResizablePanelHandle = forwardRef<
       aria-orientation={orientation}
       tabIndex={0}
       className={cn(
-        "flex shrink-0 items-center justify-center",
-        "bg-surface-200 dark:bg-dark-surface-400",
-        "hover:bg-surface-300 dark:hover:bg-dark-surface-500",
-        "active:bg-surface-400 dark:active:bg-dark-surface-600",
-        "transition-colors",
+        // 1px visible line, wider invisible hit area (via the ::before).
+        "group relative shrink-0 bg-line transition-colors",
+        "hover:bg-line-strong",
+        dragging && "bg-accent/60",
+        isHorizontal ? "w-px cursor-col-resize" : "h-px cursor-row-resize",
         isHorizontal
-          ? "w-1.5 cursor-col-resize"
-          : "h-1.5 cursor-row-resize",
-        dragging &&
-          (isHorizontal
-            ? "bg-surface-400 dark:bg-dark-surface-600"
-            : "bg-surface-400 dark:bg-dark-surface-600"),
+          ? "before:absolute before:inset-y-0 before:-inset-x-1.5 before:content-['']"
+          : "before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']",
         className,
       )}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       {...props}
-    >
-      <div
-        className={cn(
-          "rounded-full bg-surface-400 dark:bg-dark-surface-600",
-          isHorizontal ? "h-6 w-0.5" : "h-0.5 w-6",
-        )}
-      />
-    </div>
+    />
   );
 });

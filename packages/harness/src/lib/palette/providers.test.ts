@@ -203,15 +203,8 @@ describe('actionsProvider + buildPaletteItems', () => {
     expect(ids).toContain('action:new-mission');
     expect(ids).toContain('action:new-chat');
     expect(ids).toContain('nav:/fleet');
-    expect(ids).toContain('nav:/projects');
+    expect(ids).not.toContain('nav:/projects');
     expect(ids).toContain('nav:/settings');
-  });
-
-  it('navigates to the projects page from its nav target', () => {
-    const navigate = vi.fn();
-    const item = actionsProvider(ctx({ navigate })).find(i => i.id === 'nav:/projects')!;
-    item.action();
-    expect(navigate).toHaveBeenCalledWith('/projects');
   });
 
   it('fire-a-mission navigates to the dispatch form', () => {

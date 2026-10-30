@@ -28,14 +28,14 @@ export function H1({ children, className, variant }: TypographyProps) {
   return (
     <h1
       className={cn(
-        "text-text dark:text-dark-text",
+        "text-text",
         variant === "hero"
-          ? "text-5xl md:text-6xl font-bold leading-tight"
+          ? "text-4xl md:text-5xl font-semibold tracking-tight leading-tight"
           : variant === "sectionTitle"
-            ? "text-4xl font-display font-bold"
+            ? "text-3xl font-display font-semibold tracking-tight"
             : variant === "page"
-              ? "text-2xl font-semibold"
-              : "text-2xl font-bold",
+              ? "text-xl font-semibold tracking-tight"
+              : "text-xl font-semibold tracking-tight",
         className,
       )}
     >
@@ -48,12 +48,12 @@ export function H2({ children, className, variant }: TypographyProps) {
   return (
     <h2
       className={cn(
-        "font-semibold text-text dark:text-dark-text",
+        "font-semibold text-text",
         variant === "footerTitle"
-          ? "text-lg"
+          ? "text-base"
           : variant === "sectionTitle"
-            ? "text-3xl font-display font-bold"
-            : "text-xl",
+            ? "text-2xl font-display tracking-tight"
+            : "text-lg tracking-tight",
         className,
       )}
     >
@@ -67,10 +67,10 @@ export function H3({ children, className, variant, id }: TypographyProps) {
     <h3
       id={id}
       className={cn(
-        "text-text dark:text-dark-text",
+        "text-text",
         variant === "subsectionTitle"
-          ? "text-xl font-semibold"
-          : "text-lg font-medium",
+          ? "text-base font-semibold tracking-tight"
+          : "text-base font-semibold tracking-tight",
         className,
       )}
     >
@@ -83,22 +83,22 @@ export function P({ children, className, variant }: TypographyProps) {
   return (
     <p
       className={cn(
-        "text-text dark:text-dark-text",
+        "text-text",
         variant === "lead"
-          ? "text-xl leading-relaxed"
+          ? "text-base leading-relaxed text-text-muted"
           : variant === "cardSubtitle"
-            ? "text-sm text-text-muted dark:text-dark-text-muted"
+            ? "text-sm text-text-muted"
             : variant === "footerText"
-              ? "text-sm text-text-muted dark:text-dark-text-muted"
+              ? "text-sm text-text-muted"
               : variant === "body"
                 ? "text-base"
                 : variant === "muted"
-                  ? "text-text-muted dark:text-dark-text-muted"
+                  ? "text-text-muted"
                   : variant === "caption"
-                    ? "text-xs text-text-muted uppercase tracking-wide"
+                    ? "text-xs text-text-muted"
                     : "text-base",
         variant === "status"
-          ? "text-xs uppercase tracking-wider font-medium"
+          ? cn("text-[11px] font-medium tracking-[0.02em] text-text-muted", className)
           : className,
       )}
     >
@@ -109,7 +109,7 @@ export function P({ children, className, variant }: TypographyProps) {
 
 export function Small({ children, className }: TypographyProps) {
   return (
-    <p className={cn("text-sm text-text dark:text-dark-text-muted", className)}>
+    <p className={cn("text-sm text-text-muted", className)}>
       {children}
     </p>
   );
@@ -125,8 +125,9 @@ export function Span({
     <span
       className={cn(
         {
-          "text-xs uppercase tracking-wider font-medium": variant === "status",
-          "text-sm text-text-muted dark:text-dark-text-muted":
+          "text-[11px] font-medium tracking-[0.02em] text-text-muted":
+            variant === "status",
+          "text-sm text-text-muted":
             variant === "muted",
         },
         className,
@@ -142,7 +143,7 @@ export function Blockquote({ children, className }: TypographyProps) {
   return (
     <blockquote
       className={cn(
-        "border-l-4 pl-4 italic text-text dark:text-dark-text",
+        "border-l-2 border-line-strong pl-4 text-text",
         className,
       )}
     >

@@ -3,6 +3,7 @@ import { Suspense, lazy, useContext, type ReactNode } from 'react';
 import { Route, HashRouter as Router, Routes } from 'react-router-dom';
 import './app.css';
 import { Layout } from './components/Layout';
+import { LaunchFolderHandler } from './components/LaunchFolderHandler';
 import { NavbarSlotProvider } from './components/NavbarSlot';
 import { CommandPalette } from './components/palette/CommandPalette';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -47,6 +48,12 @@ function AuthenticatedAcpProvider({ children }: { children: ReactNode }) {
   return <AcpWorkspaceProvider>{children}</AcpWorkspaceProvider>;
 }
 
+function AuthedLaunchFolderHandler() {
+  const { user } = useContext(AuthContext);
+  if (!user) return null;
+  return <LaunchFolderHandler />;
+}
+
 function AuthedCommandPalette() {
   const { user } = useContext(AuthContext);
   if (!user) return null;
@@ -67,6 +74,7 @@ export default function App() {
             <AdoptIntentProvider>
 
             <AuthedCommandPalette />
+            <AuthedLaunchFolderHandler />
 
             <NavbarSlotProvider>
             <Layout

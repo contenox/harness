@@ -15,7 +15,7 @@ export const MISSION_INSPECTOR_TABS: readonly MissionInspectorTab[] = [
   { id: 'terminal', icon: Terminal, labelKey: 'inspector.tab_terminal' },
 ];
 
-const STORAGE_KEY = 'beam.missionInspector.activeTab';
+const STORAGE_KEY = 'contenox.missionInspector.activeTab';
 
 export function resolveActiveTab(
   stored: string | null,

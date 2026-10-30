@@ -57,7 +57,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
         rx="12"
         className={cn(
           "fill-surface-50 dark:fill-dark-surface-50 stroke-2 transition-all duration-300 ease-in-out",
-          "shadow-md hover:shadow-lg",
+          
           statusStrokes[status],
           isSelected ? "stroke-accent-500 dark:stroke-dark-accent-400" : "",
         )}

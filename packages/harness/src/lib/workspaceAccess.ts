@@ -1,4 +1,4 @@
-import { apiFetch } from './fetch';
+import { cwdApiFetch } from './projectRuntime';
 
 export type AccessAction = 'allow' | 'approve' | 'deny';
 
@@ -51,7 +51,7 @@ export async function fetchWorkspaceAccess(
   paths: string[],
 ): Promise<AccessEvaluateResponse> {
   const body: AccessEvaluateRequest = { paths };
-  return apiFetch<AccessEvaluateResponse>(accessUrl(root, policy), {
+  return cwdApiFetch<AccessEvaluateResponse>(root, accessUrl(root, policy), {
     method: 'POST',
     body: JSON.stringify(body),
   });

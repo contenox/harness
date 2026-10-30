@@ -1,5 +1,4 @@
 import { cn } from "../utils";
-import { Section } from "./Section";
 import { H3, P } from "./Typography";
 
 type EmptyStateVariant = "default" | "error" | "warning" | "success" | "info";
@@ -13,10 +12,20 @@ type EmptyStateProps = {
   orientation?: "vertical" | "horizontal";
   iconSize?: "sm" | "md" | "lg";
   variant?: EmptyStateVariant;
-
+  /** `hero`: large centered headline, for first-run / new-chat screens. */
+  size?: "default" | "hero";
   children?: React.ReactNode;
 };
 
+const iconTone: Record<EmptyStateVariant, string> = {
+  default: "bg-selected text-text-muted",
+  info: "bg-selected text-text-muted",
+  success: "bg-success/15 text-text-success",
+  warning: "bg-warning/15 text-text-warning",
+  error: "bg-error/15 text-text-error",
+};
+
+/** Quiet, centered empty state: muted icon tile, title, supporting copy, actions. */
 export function EmptyState({
   title,
   subtitle,
@@ -26,83 +35,66 @@ export function EmptyState({
   orientation = "vertical",
   iconSize = "md",
   variant = "default",
+  size = "default",
   children,
 }: EmptyStateProps) {
-  const variantStyles: Record<EmptyStateVariant, string> = {
-    default: cn("text-text dark:text-dark-text"),
-    info: cn(
-      "text-text dark:text-dark-text",
-      "bg-surface-50 dark:bg-dark-surface-50",
-    ),
-
-    success: cn(
-      "text-[var(--color-success-800)] dark:text-[var(--color-dark-success-700)]",
-      "bg-[var(--color-success-50)] dark:bg-[var(--color-dark-success-100)]",
-    ),
-    warning: cn(
-      "text-[var(--color-warning-800)] dark:text-[var(--color-dark-warning-700)]",
-      "bg-[var(--color-warning-50)] dark:bg-[var(--color-dark-warning-100)]",
-    ),
-    error: cn(
-      "text-[var(--color-error-800)] dark:text-[var(--color-dark-error-700)]",
-      "bg-[var(--color-error-50)] dark:bg-[var(--color-dark-error-100)]",
-    ),
-  };
-
   return (
-    <Section
-      title={title}
-      variant="body"
+    <div
       className={cn(
-        "p-8",
+        "p-8 text-text",
         orientation === "horizontal"
-          ? "flex items-center gap-6 text-left"
+          ? "flex items-center gap-4 text-left"
           : "text-center",
-        variantStyles[variant],
         className,
       )}
     >
       {icon && (
         <div
           className={cn(
-            "relative flex items-center justify-center text-primary-500 dark:text-dark-primary-400",
-            orientation === "horizontal" ? "flex-shrink-0" : "mx-auto mb-6",
+            "flex items-center justify-center rounded-xl",
+            iconTone[variant],
+            orientation === "horizontal" ? "shrink-0" : "mx-auto mb-4",
             {
-              "w-20 h-20 text-4xl": iconSize === "lg",
-              "w-16 h-16 text-3xl": iconSize === "md",
-              "w-12 h-12 text-2xl": iconSize === "sm",
+              "size-14 text-2xl": iconSize === "lg",
+              "size-10 text-xl": iconSize === "md",
+              "size-8 text-base": iconSize === "sm",
             },
           )}
         >
-          <div className="absolute inset-0 bg-primary-500/20 dark:bg-dark-primary-500/20 blur-xl rounded-full" />
-          <div className="relative z-10 flex items-center justify-center w-full h-full bg-surface-50/50 dark:bg-dark-surface-200/50 rounded-full shadow-sm border border-surface-200/50 dark:border-dark-surface-600/50 backdrop-blur-md">
-            {icon}
-          </div>
+          {icon}
         </div>
       )}
-      {subtitle && (
-        <P
-          variant="lead"
-          className="text-text-muted dark:text-dark-text-muted"
-        >
-          {subtitle}
-        </P>
-      )}
-      {description && (
-        <H3 className="text-text-secondary dark:text-dark-text-secondary font-medium mt-2">
-          {description}
-        </H3>
-      )}
-      {children && (
-        <div
+      <div className="min-w-0">
+        <H3
           className={cn(
-            "mt-6 flex flex-col gap-3",
-            orientation === "horizontal" ? "items-start" : "items-center",
+            size === "hero"
+              ? "text-3xl font-semibold tracking-tight"
+              : "text-base font-semibold",
           )}
         >
-          {children}
-        </div>
-      )}
-    </Section>
+          {title}
+        </H3>
+        {subtitle && (
+          <P variant="muted" className="mt-1 text-[13px]">
+            {subtitle}
+          </P>
+        )}
+        {description && (
+          <P variant="muted" className="mt-1 text-[13px]">
+            {description}
+          </P>
+        )}
+        {children && (
+          <div
+            className={cn(
+              "mt-4 flex flex-col gap-2",
+              orientation === "horizontal" ? "items-start" : "items-center",
+            )}
+          >
+            {children}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

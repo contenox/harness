@@ -1604,3 +1604,29 @@ describe('acpWorkspaceController: image prompt capability + image blocks', () =>
     });
   });
 });
+
+describe('acpWorkspaceController: session cwd on load', () => {
+  it("loads a listed session with its own cwd, not the controller default (Windows paths)", async () => {
+    const h = setup();
+    const p = h.controller.connect();
+    await flushMicrotasks();
+    const initReq = h.transports[0].lastSent();
+    h.transports[0].feed({ jsonrpc: '2.0', id: initReq.id, result: { protocolVersion: 1, agentInfo: { name: 'contenox' } } });
+    await flushMicrotasks();
+    const listReq = h.transports[0].lastSent();
+    const winCwd = String.raw`C:\Users\me\Contenox`;
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: listReq.id,
+      result: { sessions: [{ sessionId: 's-win', cwd: winCwd, title: 'hallo' }] },
+    });
+    await p;
+
+    const open = h.controller.openSessionTab('s-win');
+    await flushMicrotasks();
+    const loadReq = h.transports[0].sent.filter(f => f.method === 'session/load').at(-1)!;
+    expect((loadReq.params as Record<string, unknown>).cwd).toBe(winCwd);
+    h.transports[0].feed({ jsonrpc: '2.0', id: loadReq.id, result: {} });
+    await open;
+  });
+});

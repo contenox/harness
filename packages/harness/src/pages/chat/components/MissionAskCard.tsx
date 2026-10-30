@@ -19,7 +19,7 @@ export function MissionAskCard({ ask }: { ask: MissionAsk }) {
 
   return (
     <form
-      className="border-warning-300 dark:border-warning-800 mt-3 flex flex-col gap-2 rounded-lg border p-3"
+      className="border-warning/40 mt-3 flex flex-col gap-2 rounded-lg border p-3"
       onSubmit={e => {
         e.preventDefault();
         const answer = text.trim();

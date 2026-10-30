@@ -6,7 +6,7 @@ export interface FrecencyEntry {
 
 export type FrecencyStore = Record<string, FrecencyEntry>;
 
-const STORAGE_KEY = 'beam_palette_frecency';
+const STORAGE_KEY = 'contenox_palette_frecency';
 const HALF_LIFE_MS = 3 * 24 * 60 * 60 * 1000;
 const BOOST_FACTOR = 0.6;
 const MAX_ENTRIES = 250;

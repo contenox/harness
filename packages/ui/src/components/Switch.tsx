@@ -1,30 +1,26 @@
-import { forwardRef, type InputHTMLAttributes } from 'react';
-import { cn } from '../utils';
-import { Label } from './Label';
-import { Input } from './Input';
+import { forwardRef, type InputHTMLAttributes } from "react";
+import { cn } from "../utils";
 
 export type SwitchProps = InputHTMLAttributes<HTMLInputElement>;
 
-
 export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
   ({ className, ...props }, ref) => (
-    <Label className="relative inline-flex cursor-pointer items-center">
-      <Input type="checkbox" className="peer sr-only" ref={ref} {...props} />
+    <label className="relative inline-flex cursor-pointer items-center has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50">
+      <input type="checkbox" role="switch" className="peer sr-only" ref={ref} {...props} />
       <span
         aria-hidden="true"
         className={cn(
-          'bg-secondary-200 peer h-6 w-11 rounded-full',
-          'peer-checked:after:translate-x-full peer-checked:after:border-white',
-          'after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5',
-          'after:rounded-full after:border after:border-secondary-300 after:bg-white',
-          'after:transition-all after:content-["\"]',
-          'peer-checked:bg-primary-500 dark:peer-checked:bg-dark-primary-500',
-          'dark:border-dark-secondary-400 dark:bg-dark-secondary-300',
+          "h-5 w-9 rounded-full border border-line-strong bg-selected transition-colors",
+          "peer-checked:border-transparent peer-checked:bg-solid",
+          "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-accent/50",
+          "after:absolute after:top-[3px] after:left-[3px] after:size-3.5 after:rounded-full after:bg-text-muted",
+          "after:transition-transform after:duration-100 after:content-['']",
+          "peer-checked:after:translate-x-4 peer-checked:after:bg-on-solid",
           className,
         )}
       />
-    </Label>
+    </label>
   ),
 );
 
-Switch.displayName = 'Switch';
+Switch.displayName = "Switch";

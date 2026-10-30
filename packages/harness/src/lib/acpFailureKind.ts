@@ -53,6 +53,7 @@ export function classifySetupIssueCode(code: string | null | undefined): AcpFail
       return 'backend_unreachable';
     case 'default_model_not_available':
     case 'missing_default_model':
+    case 'missing_default_provider':
       return 'model_unavailable';
     default:
       return 'generic';

@@ -7,12 +7,8 @@ type TooltipProps = {
   children: ReactNode;
   position?: "top" | "bottom" | "left" | "right";
   className?: string;
-
   delay?: number;
 };
-
-
-
 
 const positionClasses: Record<NonNullable<TooltipProps["position"]>, string> = {
   top: "-translate-x-1/2 -translate-y-full",
@@ -21,6 +17,7 @@ const positionClasses: Record<NonNullable<TooltipProps["position"]>, string> = {
   right: "-translate-y-1/2",
 };
 
+/** Small inverted tooltip. */
 export function Tooltip({
   content,
   children,
@@ -41,7 +38,7 @@ export function Tooltip({
     timerRef.current = window.setTimeout(() => {
       const rect = wrapperRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const gap = 8;
+      const gap = 6;
       switch (position) {
         case "top":
           setCoords({ top: rect.top - gap, left: rect.left + rect.width / 2 });
@@ -93,9 +90,8 @@ export function Tooltip({
             role="tooltip"
             style={{ top: coords.top, left: coords.left }}
             className={cn(
-              "fixed z-50 rounded-md px-2 py-1 text-sm",
-              "bg-secondary-800 text-surface-50 dark:bg-dark-surface-200 dark:text-dark-text",
-              "animate-in fade-in-0 zoom-in-95",
+              "pointer-events-none fixed z-[60] max-w-xs rounded-md px-2 py-1 text-xs font-medium",
+              "bg-solid text-on-solid",
               positionClasses[position],
               className,
             )}

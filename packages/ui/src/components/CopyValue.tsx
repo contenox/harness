@@ -16,7 +16,7 @@ export function CopyRow({
   return (
     <div className="flex flex-col gap-2">
       <Small>{label}</Small>
-      <CodeBlock className="bg-surface-200 dark:bg-dark-surface-300 rounded-lg px-3 py-2 whitespace-pre-wrap break-all">
+      <CodeBlock className="rounded-lg border border-line bg-sidebar px-3 py-2 whitespace-pre-wrap break-all">
         {value}
       </CodeBlock>
       <CopyValueButton value={value} label={copyLabel} />
@@ -58,7 +58,7 @@ export function CopyValueButton({
 
 export function InlineCode({ children }: { children: React.ReactNode }) {
   return (
-    <code className="bg-surface-200 dark:bg-dark-surface-300 rounded px-1.5 py-0.5 font-mono">
+    <code className="rounded-md bg-selected px-1.5 py-0.5 font-mono text-[0.9em]">
       {children}
     </code>
   );

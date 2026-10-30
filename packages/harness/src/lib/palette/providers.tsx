@@ -1,7 +1,6 @@
 import {
   Bot,
   Database,
-  Folder,
   FolderOpen,
   Inbox,
   MessageSquare,
@@ -21,12 +20,11 @@ import type { PaletteItem, PaletteProvider, PaletteProviderContext } from './typ
 const icon = (i: LucideIcon) => createElement(i, { className: 'h-4 w-4', 'aria-hidden': true });
 
 const NAV_TARGETS: { path: string; labelKey: TranslationKey; icon: LucideIcon; keywords: string[] }[] = [
-  { path: '/chat', labelKey: 'navbar.chat', icon: MessageSquare, keywords: ['chat', 'session', 'sitzung', 'beam'] },
+  { path: '/chat', labelKey: 'navbar.chat', icon: MessageSquare, keywords: ['chat', 'session', 'sitzung'] },
   { path: '/fleet', labelKey: 'navbar.fleet', icon: Radar, keywords: ['fleet', 'flotte', 'board', 'instances', 'instanzen'] },
   { path: '/missions', labelKey: 'navbar.missions', icon: Rocket, keywords: ['missions', 'missionen'] },
   { path: '/inbox', labelKey: 'navbar.inbox', icon: Inbox, keywords: ['inbox', 'posteingang', 'approvals', 'freigaben', 'asks'] },
   { path: '/backends', labelKey: 'navbar.backends', icon: Database, keywords: ['backends', 'models', 'modelle', 'providers'] },
-  { path: '/projects', labelKey: 'navbar.projects', icon: Folder, keywords: ['projects', 'projekte', 'workspace', 'workspaces', 'arbeitsbereich', 'roots', 'root'] },
   { path: '/settings', labelKey: 'navbar.settings', icon: Settings, keywords: ['settings', 'einstellungen', 'defaults', 'config'] },
 ];
 

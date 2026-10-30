@@ -33,13 +33,13 @@ function avatarRingClass(role: ChatMessageBaseProps["role"]): string {
 
   switch (role) {
     case "user":
-      return "bg-primary-100 text-primary-800 dark:bg-dark-primary-600 dark:text-dark-text-inverted";
+      return "bg-solid text-on-solid";
     case "system":
-      return "bg-accent-100 text-accent-800 dark:bg-dark-accent-600 dark:text-dark-text";
+      return "bg-selected text-text-muted";
     case "tool":
-      return "bg-secondary-100 text-secondary-800 dark:bg-dark-secondary-600 dark:text-dark-text";
+      return "bg-selected text-text-muted";
     default:
-      return "bg-secondary-100 text-secondary-800 dark:bg-dark-secondary-600 dark:text-dark-text";
+      return "bg-selected text-text-muted";
   }
 }
 
@@ -54,21 +54,21 @@ function roleBadgeVariant(
 function bubbleBgClass(role: ChatMessageBaseProps["role"]): string {
   const isUser = role === "user";
   if (isUser) {
-    return "bg-surface-100 text-text dark:bg-dark-surface-300 dark:text-dark-text";
+    return "bg-selected text-text";
   }
-  return "bg-surface-50 text-text dark:bg-dark-surface-200 dark:text-dark-text";
+  return "bg-raised text-text";
 }
 
 function transcriptBlockClass(role: ChatMessageBaseProps["role"]): string {
   switch (role) {
     case "user":
-      return "border-l-primary-500 bg-surface-50 text-text shadow-sm dark:border-l-dark-primary-500 dark:bg-dark-surface-300/40 dark:text-dark-text";
+      return "border-l-solid bg-transparent text-text";
     case "system":
-      return "border-l-primary-400 bg-surface-50/70 text-text shadow-sm dark:border-l-dark-primary-600 dark:bg-dark-surface-300/30 dark:text-dark-text";
+      return "border-l-line-strong bg-transparent text-text";
     case "tool":
-      return "border-l-secondary-500 bg-surface-50/70 text-text shadow-sm dark:border-l-dark-surface-500 dark:bg-dark-surface-300/30 dark:text-dark-text";
+      return "border-l-line-strong bg-transparent text-text";
     default:
-      return "border-l-secondary-500 bg-surface-50/70 text-text shadow-sm dark:border-l-dark-surface-500 dark:bg-dark-surface-300/30 dark:text-dark-text";
+      return "border-l-line-strong bg-transparent text-text";
   }
 }
 
@@ -96,6 +96,7 @@ export function ChatMessage({
   className,
   "aria-label": ariaLabel,
   appearance = "bubble",
+  showRoleLabel = false,
 }: ChatMessageBaseProps) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
@@ -107,12 +108,12 @@ export function ChatMessage({
 
   const bubbleRing =
     isLatest && highlightLatest
-      ? "ring-2 ring-surface-300 dark:ring-dark-surface-500"
+      ? "ring-1 ring-line-strong"
       : "";
 
   const transcriptRing =
     isLatest && highlightLatest
-      ? "ring-2 ring-surface-300/70 dark:ring-dark-surface-500/60"
+      ? "ring-1 ring-line-strong"
       : "";
 
   const handleOpenChange = (next: boolean) => {
@@ -144,7 +145,7 @@ export function ChatMessage({
     <Tooltip content={timestampTooltip}>
       <Span
         variant="muted"
-        className="text-secondary-600 dark:text-dark-text-muted text-xs"
+        className="text-text-subtle text-xs"
       >
         {timestamp}
       </Span>
@@ -152,7 +153,7 @@ export function ChatMessage({
   ) : (
     <Span
       variant="muted"
-      className="text-secondary-600 dark:text-dark-text-muted text-xs"
+      className="text-text-subtle text-xs"
     >
       {timestamp}
     </Span>
@@ -160,6 +161,80 @@ export function ChatMessage({
 
   const articleLabel =
     ariaLabel ?? (typeof roleLabel === "string" ? roleLabel : "message");
+
+  if (appearance === "plain") {
+    const copyButton = copyText != null && (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 text-xs"
+        onClick={e => void handleCopy(e.currentTarget)}
+        aria-live="polite"
+        type="button"
+        aria-label={
+          copied
+            ? copiedLabel != null
+              ? String(copiedLabel)
+              : "Copied"
+            : copyLabel != null
+              ? String(copyLabel)
+              : "Copy"
+        }
+      >
+        {copied ? (
+          <span className="flex items-center gap-1">
+            <Check className="h-3.5 w-3.5" aria-hidden />
+            {copiedLabel ?? "Copied!"}
+          </span>
+        ) : (
+          (copyLabel ?? "Copy")
+        )}
+      </Button>
+    );
+    return (
+      <article
+        aria-label={articleLabel}
+        className={cn("group flex flex-col gap-1", isUser && "items-end", className)}
+      >
+        {!isUser && showRoleLabel && (
+          <Span variant="muted" className="text-xs">
+            {roleLabel}
+          </Span>
+        )}
+        <div
+          className={cn(
+            "min-w-0",
+            isUser ? "max-w-[85%] rounded-2xl bg-selected px-4 py-2.5 text-text" : "w-full text-text",
+          )}
+        >
+          <div className="prose prose-compact dark:prose-invert max-w-none min-w-0">
+            {children}
+          </div>
+          {error != null && (
+            <Panel className="mt-2 rounded-lg bg-error/10 p-3 text-text">
+              <div className="flex items-center justify-between gap-2">
+                <Span className="text-sm">{error}</Span>
+                {onRetry != null && (
+                  <Button variant="ghost" size="sm" onClick={onRetry}>
+                    {retryLabel ?? "Retry"}
+                  </Button>
+                )}
+              </div>
+            </Panel>
+          )}
+        </div>
+        <div
+          className={cn(
+            "flex items-center gap-2 p-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100",
+            isUser && "flex-row-reverse",
+          )}
+        >
+          {copyButton}
+          {secondaryActions}
+        </div>
+      </article>
+    );
+  }
 
   if (appearance === "transcript") {
     return (
@@ -196,7 +271,7 @@ export function ChatMessage({
           <CollapsibleContent>
             <div
               className={cn(
-                "rounded-r-lg border border-l-4 border-surface-200 dark:border-dark-surface-600 py-3 pr-3 pl-4",
+                "rounded-r-lg border border-l-2 border-line py-3 pr-3 pl-4",
                 transcriptBlockClass(role),
                 transcriptRing,
               )}
@@ -206,7 +281,7 @@ export function ChatMessage({
               </div>
 
               {error != null && (
-                <Panel className="bg-error-50 dark:bg-dark-error-600/30 text-error-800 dark:text-dark-text">
+                <Panel className="mt-2 rounded-lg bg-error/10 p-3 text-text">
                   <div className="flex items-center justify-between gap-2">
                     <Span className="text-sm">{error}</Span>
                     {onRetry != null && (
@@ -265,7 +340,7 @@ export function ChatMessage({
       >
         <div
           className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+            "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
             avatarRingClass(role),
           )}
           aria-hidden
@@ -307,7 +382,7 @@ export function ChatMessage({
             <Card
               variant="surface"
               className={cn(
-                "border-surface-200 dark:border-dark-surface-600 rounded-xl border p-4 shadow-sm group-hover:shadow-md",
+                "rounded-xl border border-line p-4",
                 bubbleBgClass(role),
                 bubbleRing,
               )}
@@ -317,7 +392,7 @@ export function ChatMessage({
               </div>
 
               {error != null && (
-                <Panel className="bg-error-50 dark:bg-dark-error-600/30 text-error-800 dark:text-dark-text">
+                <Panel className="mt-2 rounded-lg bg-error/10 p-3 text-text">
                   <div className="flex items-center justify-between gap-2">
                     <Span className="text-sm">{error}</Span>
                     {onRetry != null && (

@@ -2,13 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../lib/fetch';
 import { createHostTerminalSession } from './useHostTerminalSession';
 
-vi.mock('../lib/api', () => ({
-  api: {
-    createTerminalSession: vi.fn(),
-  },
+vi.mock('../lib/projectRuntime', () => ({
+  cwdApiFetch: vi.fn(),
 }));
 
-const { api } = await import('../lib/api');
+const { cwdApiFetch } = await import('../lib/projectRuntime');
+const fetchMock = vi.mocked(cwdApiFetch);
+
+function sentBody(call = 0): unknown {
+  const init = fetchMock.mock.calls[call][2] as { body: string };
+  return JSON.parse(init.body);
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -16,7 +20,7 @@ beforeEach(() => {
 
 describe('createHostTerminalSession', () => {
   it('returns the opened session on success and omits a blank cwd from the wire', async () => {
-    vi.mocked(api.createTerminalSession).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       id: 'sess-1',
       wsPath: '/api/terminal/sessions/sess-1/ws',
     });
@@ -24,26 +28,25 @@ describe('createHostTerminalSession', () => {
       id: 'sess-1',
       wsPath: '/api/terminal/sessions/sess-1/ws',
     });
-    expect(api.createTerminalSession).toHaveBeenCalledWith({ cols: 80, rows: 24 });
+    expect(fetchMock.mock.calls[0][0]).toBe('');
+    expect(fetchMock.mock.calls[0][1]).toBe('/api/terminal/sessions');
+    expect(sentBody()).toEqual({ cols: 80, rows: 24 });
   });
 
   it('includes a non-blank cwd', async () => {
-    vi.mocked(api.createTerminalSession).mockResolvedValueOnce({ id: 'x', wsPath: '/ws' });
+    fetchMock.mockResolvedValueOnce({ id: 'x', wsPath: '/ws' });
     await createHostTerminalSession('/home/user/project', 120, 40);
-    expect(api.createTerminalSession).toHaveBeenCalledWith({
-      cwd: '/home/user/project',
-      cols: 120,
-      rows: 40,
-    });
+    expect(fetchMock.mock.calls[0][0]).toBe('/home/user/project');
+    expect(sentBody()).toEqual({ cwd: '/home/user/project', cols: 120, rows: 40 });
   });
 
   it('folds a 404 into the absent sentinel (null)', async () => {
-    vi.mocked(api.createTerminalSession).mockRejectedValueOnce(new ApiError('not found', 404));
+    fetchMock.mockRejectedValueOnce(new ApiError('not found', 404));
     await expect(createHostTerminalSession('', 80, 24)).resolves.toBeNull();
   });
 
   it('propagates a 422 refusal (too many sessions / bad cwd) as a real error', async () => {
-    vi.mocked(api.createTerminalSession).mockRejectedValueOnce(
+    fetchMock.mockRejectedValueOnce(
       new ApiError('too many terminal sessions', 422),
     );
     await expect(createHostTerminalSession('', 80, 24)).rejects.toMatchObject({ status: 422 });

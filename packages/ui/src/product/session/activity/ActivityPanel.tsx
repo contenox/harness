@@ -67,7 +67,7 @@ export function ActivityPanel({ session }: { session: AcpSessionState }) {
 
       {filesNewest.length > 0 && (
         <section aria-label="Changed files" className="flex flex-col gap-1.5">
-          <h2 className="text-text-muted dark:text-dark-text-muted text-xs font-medium tracking-wide uppercase">
+          <h2 className="text-text-muted dark:text-dark-text-muted text-[11px] font-medium tracking-[0.02em]">
             Changed files
           </h2>
           {filesNewest.map(file => {
@@ -127,7 +127,7 @@ export function ActivityPanel({ session }: { session: AcpSessionState }) {
       )}
 
       <section aria-label="Tool calls" className="flex flex-col gap-1.5">
-        <h2 className="text-text-muted dark:text-dark-text-muted text-xs font-medium tracking-wide uppercase">
+        <h2 className="text-text-muted dark:text-dark-text-muted text-[11px] font-medium tracking-[0.02em]">
           Tool calls
         </h2>
         {pending && (

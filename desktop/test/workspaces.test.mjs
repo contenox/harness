@@ -14,19 +14,22 @@ test('workspaceFromArgv: no argument means no workspace', () => {
 });
 
 test('workspaceFromArgv: "." resolves against the shell cwd', () => {
-  assert.equal(workspaceFromArgv(['.'], '/home/me/project'), '/home/me/project');
+  const cwd = path.resolve('/home/me/project');
+  assert.equal(workspaceFromArgv(['.'], cwd), cwd);
 });
 
 test('workspaceFromArgv: an absolute path is kept', () => {
-  assert.equal(workspaceFromArgv(['/srv/app'], '/home/me'), '/srv/app');
+  assert.equal(workspaceFromArgv([path.resolve('/srv/app')], path.resolve('/home/me')), path.resolve('/srv/app'));
 });
 
 test('workspaceFromArgv: a relative path resolves against the shell cwd', () => {
-  assert.equal(workspaceFromArgv(['src/api'], '/home/me'), '/home/me/src/api');
+  const cwd = path.resolve('/home/me');
+  assert.equal(workspaceFromArgv(['src/api'], cwd), path.join(cwd, 'src', 'api'));
 });
 
 test('workspaceFromArgv: flags are skipped', () => {
-  assert.equal(workspaceFromArgv(['--no-sandbox', '.'], '/home/me'), '/home/me');
+  const cwd = path.resolve('/home/me');
+  assert.equal(workspaceFromArgv(['--no-sandbox', '.'], cwd), cwd);
 });
 
 test('workspaceFromArgv: electron app.asar paths are not workspaces', () => {
@@ -48,11 +51,19 @@ test('validateWorkspace: the home directory is refused', () => {
   assert.match(validateWorkspace(home, '/tmp', home).error, /home folder/);
 });
 
-test('validateWorkspace: a project directory is accepted and realpath-resolved', () => {
+test('validateWorkspace: a project directory is accepted and realpath-resolved', t => {
   const dir = tempDir();
   const link = path.join(tempDir(), 'link');
-  fs.symlinkSync(dir, link);
   assert.deepEqual(validateWorkspace(dir, '/tmp', '/nonexistent-home'), { path: dir });
+  try {
+    fs.symlinkSync(dir, link);
+  } catch (err) {
+    if (err.code === 'EPERM') {
+      t.skip('symlinks need elevated privileges on this platform');
+      return;
+    }
+    throw err;
+  }
   assert.deepEqual(validateWorkspace(link, '/tmp', '/nonexistent-home'), { path: dir });
 });
 

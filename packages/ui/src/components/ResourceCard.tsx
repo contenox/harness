@@ -2,8 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "../utils";
 import { Button } from "./Button";
 import { ButtonGroup } from "./ButtonGroup";
-import { Panel } from "./Panel";
-import { Spinner } from "./Spinner";
+import { Card } from "./Card";
 import { H2 } from "./Typography";
 
 interface ResourceCardProps {
@@ -22,16 +21,6 @@ interface ResourceCardProps {
   actionLabels?: { edit: string; delete: string; deleting: string };
 }
 
-const statusBorderStyles: Record<
-  NonNullable<ResourceCardProps["status"]>,
-  string
-> = {
-  default: "border-l-4 border-l-border dark:border-l-dark-surface-600",
-  success: "border-l-4 border-l-success dark:border-l-dark-success",
-  error: "border-l-4 border-l-error dark:border-l-dark-error",
-  warning: "border-l-4 border-l-warning dark:border-l-dark-warning",
-};
-
 export function ResourceCard({
   title,
   subtitle,
@@ -41,24 +30,18 @@ export function ResourceCard({
   actions,
   isLoading = false,
   className = "",
-  actionLabels = { edit: 'Edit', delete: 'Delete', deleting: 'Deleting' },
+  actionLabels = { edit: "Edit", delete: "Delete", deleting: "Deleting" },
 }: ResourceCardProps) {
   return (
-    <Panel
-      variant="bordered"
-      className={cn(
-        "bg-surface dark:bg-dark-surface-100 relative space-y-4 rounded-lg",
-        statusBorderStyles[status],
-        className,
-      )}
+    <Card
+      statusBorder={status === "default" ? undefined : status}
+      className={cn("relative space-y-4", className)}
     >
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <H2 className="break-words">{title}</H2>
+        <div className="min-w-0 space-y-0.5">
+          <H2 className="text-base break-words">{title}</H2>
           {subtitle && (
-            <div className="text-text-muted dark:text-dark-text-muted text-sm">
-              {subtitle}
-            </div>
+            <div className="text-[13px] text-text-muted">{subtitle}</div>
           )}
         </div>
         {badge && <div className="shrink-0">{badge}</div>}
@@ -67,7 +50,7 @@ export function ResourceCard({
       {children && <div className="space-y-4">{children}</div>}
 
       {actions && (
-        <div className="border-surface-300 dark:border-dark-surface-600 border-t pt-4">
+        <div className="border-t border-line pt-3">
           <ButtonGroup className="flex flex-wrap items-center justify-between">
             <div className="flex flex-wrap gap-2">
               {actions.edit && (
@@ -88,21 +71,14 @@ export function ResourceCard({
                 variant="danger"
                 size="sm"
                 onClick={actions.delete}
-                disabled={isLoading}
+                isLoading={isLoading}
               >
-                {isLoading ? (
-                  <>
-                    <Spinner size="sm" />
-                    {actionLabels.deleting}
-                  </>
-                ) : (
-                  actionLabels.delete
-                )}
+                {isLoading ? actionLabels.deleting : actionLabels.delete}
               </Button>
             )}
           </ButtonGroup>
         </div>
       )}
-    </Panel>
+    </Card>
   );
 }

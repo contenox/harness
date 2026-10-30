@@ -44,20 +44,20 @@ export function FormField({
     <div className={cn("space-y-1.5", className)}>
       <div className="flex items-baseline justify-between">
         <div className="flex items-center gap-1">
-          <Label htmlFor={fieldId} className="text-sm font-medium">
+          <Label htmlFor={fieldId} className="text-[13px] font-medium">
             {label}
             {required && (
-              <span className="text-error dark:text-dark-error">*</span>
+              <span className="text-text-error"> *</span>
             )}
           </Label>
           {tooltip && (
             <Tooltip content={tooltip}>
-              <HelpCircle className="h-4 w-4 text-text-muted dark:text-dark-text-muted cursor-help" />
+              <HelpCircle className="size-3.5 text-text-subtle cursor-help" />
             </Tooltip>
           )}
         </div>
         {description && (
-          <span className="text-xs text-text-muted dark:text-dark-text-muted">
+          <span className="text-xs text-text-muted">
             {description}
           </span>
         )}
@@ -66,7 +66,7 @@ export function FormField({
       {control}
 
       {error && (
-        <P className="text-xs text-error dark:text-dark-error flex items-center gap-1">
+        <P className="text-xs text-text-error flex items-center gap-1">
           {error}
         </P>
       )}

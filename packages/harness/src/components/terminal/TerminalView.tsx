@@ -5,6 +5,7 @@ import { Badge, Button, cn, Dialog, P } from '@contenox/ui';
 import { Eye, RotateCw, TerminalSquare } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { safeFit } from './terminalFit';
 import {
   buildTerminalWsUrl,
   createHostTerminalBridge,
@@ -41,13 +42,10 @@ export function TerminalView({ wsPath, className }: TerminalViewProps) {
       fontSize: 13,
       scrollback: 5000,
     });
+    let disposed = false;
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(host);
-    try {
-      fit.fit();
-    } catch {
-    }
     termRef.current = term;
     setReadOnly(TERMINAL_READ_ONLY_DEFAULT);
     term.options.disableStdin = TERMINAL_READ_ONLY_DEFAULT;
@@ -61,33 +59,57 @@ export function TerminalView({ wsPath, className }: TerminalViewProps) {
     bridgeRef.current = bridge;
 
     const sendFit = () => {
+      if (!safeFit(host, disposed, () => fit.fit())) return;
       try {
-        fit.fit();
         bridge.sendResize(term.cols, term.rows);
       } catch {
       }
     };
 
     socket.addEventListener('open', () => {
+      if (disposed) return;
       setConn('open');
       sendFit();
     });
-    socket.addEventListener('close', () => setConn('closed'));
-    socket.addEventListener('error', () => setConn('closed'));
+    socket.addEventListener('close', () => {
+      if (!disposed) setConn('closed');
+    });
+    socket.addEventListener('error', () => {
+      if (!disposed) setConn('closed');
+    });
 
+    // Defer the first fit until the renderer and layout exist.
+    let raf = requestAnimationFrame(() => {
+      raf = 0;
+      sendFit();
+    });
     const ro = new ResizeObserver(() => {
-      if (socket.readyState === WebSocket.OPEN) sendFit();
+      if (disposed) return;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        sendFit();
+      });
     });
     ro.observe(host);
 
     return () => {
+      disposed = true;
       ro.disconnect();
+      if (raf) cancelAnimationFrame(raf);
       bridge.dispose();
       try {
         socket.close();
       } catch {
       }
-      term.dispose();
+      // xterm's viewport schedules work on open; disposing in the same tick (effect re-run, strict
+      // mode, takeover remount) makes that work hit a torn-down renderer. Dispose a tick later.
+      window.setTimeout(() => {
+        try {
+          term.dispose();
+        } catch {
+        }
+      }, 0);
       termRef.current = null;
       bridgeRef.current = null;
     };

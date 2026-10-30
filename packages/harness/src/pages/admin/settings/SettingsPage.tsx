@@ -5,7 +5,7 @@ import { AutocompleteSettingsSection } from './AutocompleteSettingsSection';
 import { GlobalSettingsSection } from './GlobalSettingsSection';
 import { MissionSettingsSection } from './MissionSettingsSection';
 import { ResponseSettingsSection } from './ResponseSettingsSection';
-import { SetupWizardSection } from './SetupWizardSection';
+import { ProvidersLinkSection } from './ProvidersLinkSection';
 import { ShellEnvSettingsSection } from './ShellEnvSettingsSection';
 import { TelemetrySettingsSection } from './TelemetrySettingsSection';
 import { WorkspaceSettingsSection } from './WorkspaceSettingsSection';
@@ -30,7 +30,7 @@ export default function SettingsPage() {
         <ShellEnvSettingsSection />
         <TelemetrySettingsSection />
         <AccessSettingsSection />
-        <SetupWizardSection />
+        <ProvidersLinkSection />
       </div>
     </Page>
   );

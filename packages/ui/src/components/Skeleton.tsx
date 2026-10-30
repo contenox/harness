@@ -11,9 +11,10 @@ export function Skeleton({
 }: SkeletonProps) {
   return (
     <div
+      aria-hidden="true"
       className={cn(
-        "bg-secondary-100 dark:bg-dark-surface-200 animate-pulse rounded-md",
-        variant === "line" ? "h-4 w-full" : "h-8 w-8 rounded-full",
+        "animate-pulse bg-selected",
+        variant === "line" ? "h-4 w-full rounded-md" : "size-8 rounded-full",
         className,
       )}
       {...props}

@@ -12,35 +12,27 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="relative">
         {startIcon && (
-          <div className="absolute top-1/2 left-3 -translate-y-1/2 text-secondary-400 dark:text-dark-secondary-400">
+          <div className="pointer-events-none absolute top-1/2 left-2.5 flex -translate-y-1/2 items-center text-text-subtle">
             {startIcon}
           </div>
         )}
         <input
           ref={ref}
           className={cn(
-
-            "bg-surface-50 text-text placeholder:text-text-muted h-9 w-full rounded-lg border px-3 py-1 text-sm transition-colors",
-            "focus:ring-primary-500 focus:ring-2 focus:ring-offset-2 focus:outline-none",
-            "focus:ring-offset-surface-50 dark:focus:ring-offset-dark-surface-100",
-
-
-            "dark:bg-dark-surface-50 dark:text-dark-text dark:placeholder:text-dark-text-muted dark:focus:ring-dark-primary-500 dark:focus:ring-offset-dark-surface-50",
-
-            startIcon && "pl-10",
-            endIcon && "pr-10",
-
+            "h-8 w-full rounded-lg border bg-raised px-3 text-[13px] text-text transition-colors",
+            "placeholder:text-text-subtle",
+            "disabled:cursor-not-allowed disabled:opacity-50",
             error
-              ? "border-error-300 focus:border-error-500 focus:ring-error-500 dark:border-dark-error-400 dark:focus:border-dark-error-500 dark:focus:ring-dark-error-500"
-              : "border-surface-300 dark:border-dark-surface-600 focus:border-primary-500",
-            "disabled:bg-surface-100 dark:disabled:bg-dark-surface-200 disabled:text-text-muted disabled:cursor-not-allowed",
-            "placeholder:text-secondary-400 dark:placeholder:dark-secondary-400",
+              ? "border-error/60"
+              : "border-line-strong focus-visible:border-accent/60",
+            startIcon && "pl-8",
+            endIcon && "pr-8",
             className,
           )}
           {...props}
         />
         {endIcon && (
-          <div className="absolute top-1/2 right-3 -translate-y-1/2 text-secondary-400 dark:text-dark-secondary-400">
+          <div className="absolute top-1/2 right-2.5 flex -translate-y-1/2 items-center text-text-subtle">
             {endIcon}
           </div>
         )}
@@ -61,7 +53,11 @@ export const PasswordInput = forwardRef<HTMLInputElement, InputProps>(
     };
 
     const toggleIcon = (
-      <button type="button" onClick={toggleShowPassword}>
+      <button
+        type="button"
+        onClick={toggleShowPassword}
+        className="text-xs text-text-muted hover:text-text"
+      >
         {showPassword ? "Hide" : "Show"}
       </button>
     );

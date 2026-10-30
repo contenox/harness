@@ -1,4 +1,4 @@
-import { InlineNotice } from '@contenox/ui';
+import { InlineNotice, Span } from '@contenox/ui';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WorkspaceFilePeek } from '../../../hooks/useWorkspaceFiles';
@@ -32,7 +32,7 @@ export function FileViewTab({ path, readFile }: FileViewTabProps) {
   }, [path, readFile]);
 
   if (state.status === 'loading') {
-    return <span className="text-text-muted dark:text-dark-text-muted block px-1 py-1 text-xs">{t('workspace.loading')}</span>;
+    return <Span variant="muted" className="block px-1 py-1 text-xs">{t('workspace.loading')}</Span>;
   }
   if (state.status === 'error') {
     return <InlineNotice variant="error">{t('workspace.peek_error')}</InlineNotice>;
@@ -43,12 +43,14 @@ export function FileViewTab({ path, readFile }: FileViewTabProps) {
   const lineCount = state.peek.text.split('\n').length;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="text-text-muted dark:text-dark-text-muted shrink-0 px-1 pb-1 text-[11px]">
+      <Span variant="muted" className="block shrink-0 px-1 pb-1 text-[11px]">
         {lineCount} {lineCount === 1 ? t('workspace.line') : t('workspace.lines')}
-      </div>
+      </Span>
       <Suspense
         fallback={
-          <span className="text-text-muted dark:text-dark-text-muted block px-1 py-1 text-xs">{t('workspace.loading')}</span>
+          <Span variant="muted" className="block px-1 py-1 text-xs">
+            {t('workspace.loading')}
+          </Span>
         }>
         <MonacoView path={path} value={state.peek.text} />
       </Suspense>

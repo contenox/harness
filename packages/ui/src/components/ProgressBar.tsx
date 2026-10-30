@@ -13,18 +13,19 @@ export function ProgressBar({
 }: ProgressBarProps) {
   return (
     <div
-      className={cn(
-        "h-2 bg-surface-200 rounded-full overflow-hidden",
-        className,
-      )}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(value)}
+      className={cn("h-1.5 overflow-hidden rounded-full bg-selected", className)}
     >
       <div
-        className={cn("h-full transition-all duration-500 ease-out", {
-          "bg-surface-300": palette === "neutral",
-          "bg-success-500 dark:bg-dark-success-500": palette === "success",
-          "bg-warning-500 dark:bg-dark-warning-500": palette === "warning",
-          "bg-primary-500": palette === "primary",
-          "bg-error-500 dark:bg-dark-error-500": palette === "error",
+        className={cn("h-full rounded-full transition-[width] duration-300 ease-out", {
+          "bg-text-subtle": palette === "neutral",
+          "bg-success": palette === "success",
+          "bg-warning": palette === "warning",
+          "bg-solid": palette === "primary",
+          "bg-error": palette === "error",
         })}
         style={{ width: `${value}%` }}
       />

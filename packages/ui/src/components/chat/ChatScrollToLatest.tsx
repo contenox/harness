@@ -28,7 +28,7 @@ export function ChatScrollToLatest({
         variant="secondary"
         size="sm"
         onClick={onClick}
-        className="pointer-events-auto shadow-lg"
+        className="pointer-events-auto shadow-pop"
         aria-label={label}
       >
         <ArrowDown className="mr-1.5 h-3.5 w-3.5" />

@@ -106,7 +106,7 @@ export function SlashCommandMenu({ entries, activeIndex, onPick, onHoverIndex }:
     <div
       role="listbox"
       aria-label={t('acp_chat.slash_menu_label')}
-      className="border-surface-200 bg-surface-50 dark:border-dark-surface-600 dark:bg-dark-surface-100 absolute bottom-full left-0 z-20 mb-2 max-h-64 w-full overflow-auto rounded-lg border shadow-lg sm:w-96"
+      className="border-line bg-raised absolute bottom-full left-0 z-20 mb-2 max-h-64 w-full overflow-auto rounded-lg border shadow-lg sm:w-96"
     >
       {entries.map((entry, i) => (
         <button
@@ -121,13 +121,11 @@ export function SlashCommandMenu({ entries, activeIndex, onPick, onHoverIndex }:
           }}
           className={cn(
             'flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm',
-            i === activeIndex
-              ? 'bg-primary-50 dark:bg-dark-primary-900'
-              : 'hover:bg-surface-100 dark:hover:bg-dark-surface-300',
+            i === activeIndex ? 'bg-selected' : 'hover:bg-hover',
           )}
         >
-          <span className="text-text dark:text-dark-text font-mono text-xs font-medium">/{entry.name}</span>
-          <span className="text-text-muted dark:text-dark-text-muted text-xs">{entry.description}</span>
+          <span className="text-text font-mono text-xs font-medium">/{entry.name}</span>
+          <span className="text-text-muted text-xs">{entry.description}</span>
         </button>
       ))}
     </div>

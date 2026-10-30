@@ -45,10 +45,10 @@ export function Draggable({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={cn(
-        "cursor-grab active:cursor-grabbing transition-all duration-200 ease-in-out",
-        dragging && "opacity-50 scale-95 shadow-lg",
+        "cursor-grab active:cursor-grabbing",
+        dragging && "opacity-50",
         !isDragDisabled &&
-          "hover:shadow-md hover:bg-surface-50 dark:hover:bg-dark-surface-50",
+          "hover:bg-hover",
         className,
       )}
       data-draggable-id={draggableId}

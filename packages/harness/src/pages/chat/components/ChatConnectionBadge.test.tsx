@@ -18,44 +18,33 @@ function render(): string {
   return renderToStaticMarkup(createElement(ChatConnectionBadge));
 }
 
-describe('ChatConnectionBadge — extracted chat header content', () => {
-  it('renders the connection status and the active session’s own agent', () => {
+describe('ChatConnectionBadge', () => {
+  it('renders nothing while the connection is healthy — no agent name, no pill', () => {
     mock.workspace = {
       status: 'ready',
       agentName: 'contenox',
       activeSessionId: 'sess-1',
       sessions: [{ sessionId: 'sess-1', _meta: { [AGENT_META_KEY]: 'researcher' } }],
     };
+    expect(render()).toBe('');
+  });
+
+  it('never prints the agent name next to the pane toggles, even on the empty surface', () => {
+    mock.workspace = { status: 'ready', agentName: 'contenox', activeSessionId: null, sessions: [] };
+    expect(render()).not.toContain('contenox');
+  });
+
+  it('reflects a reconnecting status', () => {
+    mock.workspace = { status: 'reconnecting', agentName: 'contenox', activeSessionId: null, sessions: [] };
     const html = render();
-    expect(html).toContain('Connected');
-    expect(html).toContain('researcher');
+    expect(html).toContain('Reconnecting');
     expect(html).not.toContain('contenox');
   });
 
-  it('falls back to the workspace agent on the empty surface (no active session)', () => {
-    mock.workspace = {
-      status: 'ready',
-      agentName: 'contenox',
-      activeSessionId: null,
-      sessions: [],
-    };
-    const html = render();
-    expect(html).toContain('Connected');
-    expect(html).toContain('contenox');
-  });
-
-  it('is a compact chip, not a page header — no title, <h2>, or <header>', () => {
-    mock.workspace = { status: 'ready', agentName: null, activeSessionId: null, sessions: [] };
-    const html = render();
-    expect(html).toContain('Connected');
-    expect(html).not.toContain('beam');
-    expect(html).not.toContain('<h2');
-    expect(html).not.toContain('<header');
-  });
-
-  it('reflects a non-ready status (e.g. reconnecting)', () => {
-    mock.workspace = { status: 'reconnecting', agentName: null, activeSessionId: null, sessions: [] };
-    const html = render();
-    expect(html).toContain('Reconnecting');
+  it('shows an error pill only when the connection is broken', () => {
+    mock.workspace = { status: 'error', agentName: null, activeSessionId: null, sessions: [] };
+    expect(render()).toContain('Error');
+    mock.workspace = { status: 'disconnected', agentName: null, activeSessionId: null, sessions: [] };
+    expect(render()).toContain('Disconnected');
   });
 });

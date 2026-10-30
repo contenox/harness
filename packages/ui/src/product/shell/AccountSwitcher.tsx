@@ -29,7 +29,7 @@ export function AccountSwitcher() {
       onToggle={setOpen}
       contentClassName="border-surface-300 bg-surface-50 dark:border-dark-surface-600 dark:bg-dark-surface-100
                         top-full left-2 z-20 mt-1 max-h-80 min-w-56 w-max max-w-[calc(100vw-2rem)] overflow-y-auto
-                        rounded-md border shadow-lg backdrop-blur-none">
+                        rounded-xl border shadow-pop">
       <ul role="menu" aria-label="Switch team" className="flex flex-col">
         {accounts.map(account => {
           const isActive = account.id === active.id;

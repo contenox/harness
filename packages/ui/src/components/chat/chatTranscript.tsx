@@ -196,7 +196,7 @@ export const chatTranscriptMarkdownComponents: Components = {
     ...props
   }: React.ComponentPropsWithoutRef<"blockquote">) => (
     <blockquote
-      className="border-primary-400 dark:border-dark-primary-500 bg-surface-50 shadow-sm text-text dark:bg-dark-surface-300/20 dark:text-dark-text rounded-r-lg border-l-4 py-2 pl-4"
+      className="border-line-strong text-text-muted rounded-r-lg border-l-2 py-1 pl-4"
       {...props}
     >
       {children}

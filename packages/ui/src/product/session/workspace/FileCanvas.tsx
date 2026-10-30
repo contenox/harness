@@ -241,7 +241,7 @@ export function FileTreePanel({
               }
             },
           })}>
-      <div className="text-text-muted dark:text-dark-text-muted px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+      <div className="text-text-muted dark:text-dark-text-muted px-3 py-2 text-[11px] font-medium tracking-[0.02em]">
         Workspace
       </div>
       {manage?.toolbar(targetDir)}

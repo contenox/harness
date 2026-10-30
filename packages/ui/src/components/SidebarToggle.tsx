@@ -1,5 +1,5 @@
-import { Menu, X } from "lucide-react";
-import { Button } from "./Button";
+import { PanelLeft } from "lucide-react";
+import { IconButton } from "./IconButton";
 
 type SidebarToggleProps = {
   isOpen: boolean;
@@ -8,13 +8,13 @@ type SidebarToggleProps = {
 
 export function SidebarToggle({ isOpen, onToggle }: SidebarToggleProps) {
   return (
-    <Button
-      variant="ghost"
-      size="icon"
+    <IconButton
+      label="Toggle sidebar"
       onClick={onToggle}
-      aria-label="Toggle sidebar"
+      aria-expanded={isOpen}
+      noTooltip
     >
-      {isOpen ? <X className="size-6" /> : <Menu className="size-6" />}
-    </Button>
+      <PanelLeft className="size-4" />
+    </IconButton>
   );
 }

@@ -146,7 +146,7 @@ export function MentionMenu({ entries, scope, loading, activeIndex, onPick, onHo
 
   return (
     <div
-      className="border-surface-200 bg-surface-50 dark:border-dark-surface-600 dark:bg-dark-surface-100 absolute bottom-full left-0 z-20 mb-2 flex max-h-[60vh] w-full min-h-0 flex-col overflow-hidden rounded-lg border shadow-lg sm:w-96"
+      className="border-line bg-raised absolute bottom-full left-0 z-20 mb-2 flex max-h-[60vh] w-full min-h-0 flex-col overflow-hidden rounded-lg border shadow-lg sm:w-96"
     >
       <MentionFilePreview state={preview} />
       <div
@@ -155,12 +155,12 @@ export function MentionMenu({ entries, scope, loading, activeIndex, onPick, onHo
         className="min-h-0 flex-1 overflow-auto"
       >
         {scope !== '' && (
-          <div className="border-surface-200 dark:border-dark-surface-600 text-text-muted dark:text-dark-text-muted sticky top-0 border-b bg-inherit px-3 py-1.5 font-mono text-xs">
+          <div className="border-line text-text-muted sticky top-0 border-b bg-inherit px-3 py-1.5 font-mono text-xs">
             {scope}/
           </div>
         )}
         {loading && entries.length === 0 ? (
-          <div className="text-text-muted dark:text-dark-text-muted px-3 py-2 text-xs">{t('workspace.mention_loading')}</div>
+          <div className="text-text-muted px-3 py-2 text-xs">{t('workspace.mention_loading')}</div>
         ) : (
           entries.map((entry, i) => (
             <button
@@ -175,19 +175,19 @@ export function MentionMenu({ entries, scope, loading, activeIndex, onPick, onHo
               }}
               className={cn(
                 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
-                i === activeIndex ? 'bg-primary-50 dark:bg-dark-primary-900' : 'hover:bg-surface-100 dark:hover:bg-dark-surface-300',
+                i === activeIndex ? 'bg-selected' : 'hover:bg-hover',
               )}
             >
               {entry.isDirectory ? (
-                <Folder className="text-primary-500 dark:text-dark-primary h-3.5 w-3.5 shrink-0" aria-hidden />
+                <Folder className="text-text-muted size-3.5 shrink-0" aria-hidden />
               ) : (
-                <FileIcon className="text-text-muted dark:text-dark-text-muted h-3.5 w-3.5 shrink-0" aria-hidden />
+                <FileIcon className="text-text-muted size-3.5 shrink-0" aria-hidden />
               )}
-              <span className="text-text dark:text-dark-text min-w-0 flex-1 truncate font-mono text-xs font-medium">
+              <span className="text-text min-w-0 flex-1 truncate font-mono text-xs font-medium">
                 {entry.name}
                 {entry.isDirectory && '/'}
               </span>
-              {entry.isDirectory && <ChevronRight className="text-text-muted dark:text-dark-text-muted h-3.5 w-3.5 shrink-0" aria-hidden />}
+              {entry.isDirectory && <ChevronRight className="text-text-muted size-3.5 shrink-0" aria-hidden />}
             </button>
           ))
         )}

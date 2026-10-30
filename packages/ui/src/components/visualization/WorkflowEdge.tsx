@@ -346,7 +346,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
           height={chipHeight}
           rx="12"
           strokeWidth={1.25}
-          className={cn("shadow-sm", chipClass)}
+          className={cn(chipClass)}
         />
 
 

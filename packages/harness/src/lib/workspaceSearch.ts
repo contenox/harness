@@ -1,3 +1,4 @@
+import { cwdRawFetch } from './projectRuntime';
 import type { WorkspaceSearchDone, WorkspaceSearchMatch } from './types';
 
 
@@ -123,7 +124,11 @@ const defaultFetch: SearchFetch = (url, init) =>
   fetch(url, init) as unknown as Promise<SearchResponseLike>;
 
 export async function runWorkspaceSearch(opts: RunWorkspaceSearchOptions): Promise<void> {
-  const fetchImpl = opts.fetchImpl ?? defaultFetch;
+  const fetchImpl: SearchFetch =
+    opts.fetchImpl ??
+    (opts.root
+      ? (u, i) => cwdRawFetch(opts.root, u, i) as unknown as Promise<SearchResponseLike>
+      : defaultFetch);
   const url = buildSearchUrl(opts.query, opts.root, opts.limit);
 
   let response: SearchResponseLike;

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { cn } from "../utils";
-import { Button } from "./Button";
 
 export interface DropdownProps {
   isOpen?: boolean;
@@ -14,9 +13,16 @@ export interface DropdownProps {
   contentClassName?: string;
   className?: string;
   align?: "start" | "end";
+  /** Open below (default) or above the trigger (e.g. for the composer). */
+  side?: "bottom" | "top";
   placeholder?: string;
 }
 
+/**
+ * Menu / anchored panel. Raised surface, 12px radius, 4px padding, one soft
+ * shadow. Use `DropdownItem` for rows; any other content is allowed
+ * (see `Popover`).
+ */
 export function Dropdown({
   isOpen: controlledOpen,
   onToggle,
@@ -28,12 +34,12 @@ export function Dropdown({
   contentClassName,
   className,
   align = "start",
+  side = "bottom",
   placeholder = "Select",
 }: DropdownProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-
 
   const openerRef = useRef<HTMLElement | null>(null);
   const isControlled = controlledOpen !== undefined;
@@ -94,8 +100,6 @@ export function Dropdown({
     items[next].focus();
   };
 
-
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {
       case "Escape":
@@ -107,6 +111,9 @@ export function Dropdown({
         break;
       case "ArrowDown":
       case "ArrowUp": {
+        // Let text fields inside popovers keep their caret keys.
+        const t = e.target as HTMLElement;
+        if (t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && isOpen)) break;
         e.preventDefault();
         if (!isOpen) {
           setOpen(true);
@@ -119,13 +126,13 @@ export function Dropdown({
         break;
       }
       case "Home":
-        if (isOpen) {
+        if (isOpen && (e.target as HTMLElement).tagName !== "INPUT") {
           e.preventDefault();
           focusItem("first");
         }
         break;
       case "End":
-        if (isOpen) {
+        if (isOpen && (e.target as HTMLElement).tagName !== "INPUT") {
           e.preventDefault();
           focusItem("last");
         }
@@ -135,7 +142,6 @@ export function Dropdown({
         break;
     }
   };
-
 
   const handleBlur = (e: React.FocusEvent) => {
     if (isOpen && !e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -160,43 +166,34 @@ export function Dropdown({
       "aria-expanded": isOpen,
     } as React.HTMLAttributes<HTMLElement>)
   ) : options ? (
-    <Button
-      variant="ghost"
+    <button
+      type="button"
       onClick={toggle}
       aria-haspopup="listbox"
       aria-expanded={isOpen}
       className={cn(
-        "border-secondary-300 bg-surface-50 flex items-center justify-between rounded-lg border px-4 py-2.5",
-        "focus:ring-primary-500 focus:ring-2 focus:ring-offset-2",
-        "dark:border-dark-secondary-300 dark:bg-dark-surface-50",
+        "inline-flex h-8 items-center justify-between gap-2 rounded-lg border border-line-strong bg-raised px-3 text-[13px] text-text",
+        "hover:bg-hover",
       )}
     >
-      <span className="text-text dark:text-dark-text">
-        {options.find((opt) => opt.value === value)?.label || placeholder}
-      </span>
-      <ChevronDown className="text-secondary-400 dark:text-dark-secondary-400 h-5 w-5" />
-    </Button>
+      <span>{options.find((opt) => opt.value === value)?.label || placeholder}</span>
+      <ChevronDown className="size-4 text-text-subtle" />
+    </button>
   ) : null;
 
   const content = children
     ? children
     : options
       ? options.map((option) => (
-          <Button
-            variant="ghost"
+          <DropdownItem
             key={option.value}
             role="option"
             aria-selected={option.value === value}
+            selected={option.value === value}
             onClick={() => selectOption(option.value)}
-            className={cn(
-              "text-text hover:bg-secondary-100 w-full px-4 py-2 text-left",
-              "dark:text-dark-text dark:hover:bg-dark-surface-100",
-              option.value === value &&
-                "bg-primary-50 dark:bg-dark-primary-900",
-            )}
           >
             {option.label}
-          </Button>
+          </DropdownItem>
         ))
       : null;
 
@@ -212,21 +209,11 @@ export function Dropdown({
         <div
           ref={contentRef}
           className={cn(
-            "absolute z-50 mt-2 rounded-lg border shadow-lg backdrop-blur-md bg-surface-50/90 dark:bg-dark-surface-200/90",
-
-
-
-
-
-
+            "absolute z-50 rounded-xl border border-line bg-raised p-1 text-text shadow-pop",
+            side === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5",
             "w-max min-w-full max-w-[calc(100vw-2rem)]",
-
-
-
-
-
             "max-h-[min(32rem,calc(100vh-4rem))] overflow-y-auto overscroll-contain",
-            align === "end" && "right-0",
+            align === "end" ? "right-0" : "left-0",
             contentClassName,
           )}
           role={options && !children ? "listbox" : undefined}
@@ -236,4 +223,62 @@ export function Dropdown({
       )}
     </div>
   );
+}
+
+export type DropdownItemProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  icon?: React.ReactNode;
+  /** Shows a trailing check and selected overlay. */
+  selected?: boolean;
+  /** Destructive row: error text. */
+  danger?: boolean;
+  /** Trailing hint (e.g. a shortcut). */
+  trailing?: React.ReactNode;
+};
+
+/** Menu row: 32px, 8px radius, hover overlay. */
+export const DropdownItem = React.forwardRef<HTMLButtonElement, DropdownItemProps>(
+  function DropdownItem(
+    { icon, selected, danger, trailing, className, children, type = "button", role = "menuitem", ...props },
+    ref,
+  ) {
+    return (
+      <button
+        ref={ref}
+        type={type}
+        role={role}
+        className={cn(
+          "flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-left text-[13px]",
+          "hover:bg-hover focus-visible:bg-hover disabled:pointer-events-none disabled:opacity-50",
+          selected && "bg-selected",
+          danger ? "text-text-error" : "text-text",
+          className,
+        )}
+        {...props}
+      >
+        {icon && <span className="flex shrink-0 items-center text-text-muted">{icon}</span>}
+        <span className="min-w-0 flex-1 truncate">{children}</span>
+        {trailing && <span className="shrink-0 text-xs text-text-subtle">{trailing}</span>}
+        {selected && !trailing && <Check className="size-3.5 shrink-0 text-text-muted" />}
+      </button>
+    );
+  },
+);
+
+export function DropdownLabel({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn(
+        "px-2.5 pt-1.5 pb-1 text-[11px] font-medium tracking-[0.02em] text-text-subtle",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function DropdownSeparator({ className }: { className?: string }) {
+  return <div role="separator" className={cn("-mx-1 my-1 h-px bg-line", className)} />;
 }

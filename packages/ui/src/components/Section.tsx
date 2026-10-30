@@ -22,8 +22,12 @@ export function Section({
 }: SectionProps) {
   return (
     <Panel variant={variant} className={cn(className)} {...props}>
-      {title && <H2>{title}</H2>}
-      {description && <P>{description}</P>}
+      {(title || description) && (
+        <div className="mb-3 space-y-0.5">
+          {title && <H2 className="text-base">{title}</H2>}
+          {description && <P variant="muted" className="text-[13px]">{description}</P>}
+        </div>
+      )}
       <section>{children}</section>
     </Panel>
   );

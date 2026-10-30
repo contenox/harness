@@ -3,9 +3,8 @@ import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "../utils";
-import { Card } from "./Card";
 import { H3 } from "./Typography";
-import { Button } from "./Button";
+import { IconButton } from "./IconButton";
 
 type DialogProps = {
   open: boolean;
@@ -90,10 +89,7 @@ export function Dialog({
   if (!open) return null;
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 bg-scrim" onClick={onClose}>
       <div
         ref={panelRef}
         role="dialog"
@@ -103,32 +99,38 @@ export function Dialog({
         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-
-        <Card
+        <div
           className={cn(
-            "flex max-h-[calc(100dvh-2rem)] w-[min(400px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden",
+            "flex max-h-[calc(100dvh-2rem)] w-[min(440px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden",
+            "rounded-xl border border-line bg-raised p-5 text-text shadow-pop",
             className,
           )}
         >
-          <div className="mb-4 flex shrink-0 items-center justify-between">
-            <H3
-              id={titleId}
-              className="text-primary-600 dark:text-dark-primary-500 text-lg font-semibold"
-            >
+          <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
+            <H3 id={titleId} className="text-base font-semibold tracking-tight">
               {title}
             </H3>
-            <Button
-              onClick={onClose}
-              aria-label={closeLabel}
-              className="text-secondary-500 hover:bg-secondary-100 dark:text-dark-secondary-400 dark:hover:bg-dark-surface-200 rounded-sm p-1"
-            >
-              <X className="h-5 w-5 dark:text-dark-secondary-400" />
-            </Button>
+            <IconButton label={closeLabel} size="sm" onClick={onClose} className="-mr-1">
+              <X className="size-4" />
+            </IconButton>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-        </Card>
+          <div className="min-h-0 flex-1 overflow-y-auto text-[13px]">{children}</div>
+        </div>
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** Right-aligned button row for the bottom of a Dialog. */
+export function DialogFooter({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("mt-5 flex shrink-0 items-center justify-end gap-2", className)}
+      {...props}
+    />
   );
 }

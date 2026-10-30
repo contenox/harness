@@ -1,4 +1,5 @@
 import {
+  Button,
   ChatMessage,
   ChatStreamingCaret,
   ChatStreamThinkingBox,
@@ -18,12 +19,10 @@ import {
   ToolCallCard,
   type ToolCallCardProps,
 } from '@contenox/ui';
-import { useEffect, useState, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import logoMarkLightUrl from '../../../assets/logo-mark-light.svg?url';
-import logoMarkDarkUrl from '../../../assets/logo-mark.svg?url';
 import type {
   AcpChatMessage,
   AcpErrorCard,
@@ -34,7 +33,6 @@ import type {
 } from '../../../hooks/acpSessionState';
 import { acpFailureCopyKeys, classifyAcpExecutionError } from '../../../lib/acpFailureKind';
 import { shellCommandLine, shellOutputLines } from '../../../lib/shellExecution';
-import { useTheme } from '../../../lib/ThemeProvider';
 import {
   shouldShowStreamingCaret,
   shouldShowStreamingPlaceholder,
@@ -107,13 +105,6 @@ function locationKey(
   return `loc-${path ?? 'unnamed'}-${line ?? ''}-${indexOfKind}`;
 }
 
-function useAssistantAvatar(agentName: string | null): ReactNode {
-  const { theme } = useTheme();
-  if (!agentName || !/contenox/i.test(agentName)) return undefined;
-  const logoUrl = theme === 'dark' ? logoMarkDarkUrl : logoMarkLightUrl;
-  return <img src={logoUrl} alt="" aria-hidden className="h-5 w-5" />;
-}
-
 function ThinkingHeader({ streaming }: { streaming: boolean | undefined }) {
   const { t } = useTranslation();
   return (
@@ -125,7 +116,7 @@ function ThinkingHeader({ streaming }: { streaming: boolean | undefined }) {
   );
 }
 
-function TranscriptMessage({
+const TranscriptMessage = memo(function TranscriptMessage({
   message,
   agentName,
   isLatest,
@@ -137,15 +128,15 @@ function TranscriptMessage({
   const { t } = useTranslation();
   const isUser = message.role === 'user';
   const roleLabel = isUser ? t('acp_chat.role_user') : (agentName ?? t('acp_chat.role_agent'));
-  const avatar = useAssistantAvatar(isUser ? null : agentName);
+  const showRoleLabel = !isUser && !!agentName && !/contenox/i.test(agentName);
 
   return (
     <ChatMessage
       role={message.role}
       roleLabel={roleLabel}
-      avatar={avatar}
+      appearance="plain"
+      showRoleLabel={showRoleLabel}
       isLatest={isLatest}
-      latestLabel={t('acp_chat.latest_label')}
       collapsible={false}
       copyText={message.text || undefined}
       copyLabel={t('acp_chat.copy')}
@@ -190,7 +181,7 @@ function TranscriptMessage({
       )}
     </ChatMessage>
   );
-}
+});
 
 function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; onOpenFile?: (path: string) => void }) {
   const { t } = useTranslation();
@@ -222,17 +213,14 @@ function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; 
         />
       ))}
       {toolCall.locations && toolCall.locations.length > 0 && (
-        <ul className="text-text-muted dark:text-dark-text-muted space-y-0.5">
+        <ul className="text-text-muted space-y-0.5">
           {toolCall.locations.map((loc, i) => (
             <li key={locationKey(loc.path, loc.line, i)} className="break-all">
               {onOpenFile && loc.path ? (
-                <button
-                  type="button"
-                  onClick={() => onOpenFile(loc.path!)}
-                  className="text-primary hover:text-primary-600 dark:text-dark-primary dark:hover:text-dark-primary-400 hover:underline cursor-pointer text-left">
+                <Button type="button" variant="text" size="xs" onClick={() => onOpenFile(loc.path!)}>
                   {loc.path}
                   {loc.line ? `:${loc.line}` : ''}
-                </button>
+                </Button>
               ) : (
                 <>
                   {loc.path}
@@ -258,7 +246,13 @@ function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; 
   );
 }
 
-function TranscriptToolCall({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; onOpenFile?: (path: string) => void }) {
+const TranscriptToolCall = memo(function TranscriptToolCall({
+  toolCall,
+  onOpenFile,
+}: {
+  toolCall: AcpToolCallState;
+  onOpenFile?: (path: string) => void;
+}) {
   const { t } = useTranslation();
   const diffs = (toolCall.content ?? []).filter(c => c.type === 'diff');
   const other = (toolCall.content ?? []).filter(c => c.type !== 'diff');
@@ -298,9 +292,9 @@ function TranscriptToolCall({ toolCall, onOpenFile }: { toolCall: AcpToolCallSta
       duration={duration}
     />
   );
-}
+});
 
-function TranscriptTerminal({ card }: { card: AcpTerminalCard }) {
+const TranscriptTerminal = memo(function TranscriptTerminal({ card }: { card: AcpTerminalCard }) {
   const { t } = useTranslation();
   const lines = card.output.split('\n');
   return (
@@ -313,9 +307,9 @@ function TranscriptTerminal({ card }: { card: AcpTerminalCard }) {
       preview={tailLines(lines, 1).length > 0 ? <LogTail lines={lines} /> : undefined}
     />
   );
-}
+});
 
-function TranscriptError({ card }: { card: AcpErrorCard }) {
+const TranscriptError = memo(function TranscriptError({ card }: { card: AcpErrorCard }) {
   const { t } = useTranslation();
   const tk = t as (key: string) => string;
   const kind = classifyAcpExecutionError(card.message);
@@ -337,7 +331,7 @@ function TranscriptError({ card }: { card: AcpErrorCard }) {
       </div>
     </InlineNotice>
   );
-}
+});
 
 export interface TranscriptItemsProps {
   session: AcpSessionState;
@@ -401,7 +395,13 @@ function groupByTurn(items: AcpTimelineItem[]): TimelineGroup[] {
   return groups;
 }
 
-export function TranscriptItems({ session, agentName, onRespondPermission, onOpenFile }: TranscriptItemsProps) {
+/** The whole timeline. Memoized, and every entry is memoized on its own slice of state, so a streamed chunk or a keystroke elsewhere re-renders only what changed. */
+export const TranscriptItems = memo(function TranscriptItems({
+  session,
+  agentName,
+  onRespondPermission,
+  onOpenFile,
+}: TranscriptItemsProps) {
   const { t } = useTranslation();
   const pending = session.pendingPermission;
   const pendingToolCallId = pending?.toolCall.toolCallId ?? null;
@@ -411,10 +411,12 @@ export function TranscriptItems({ session, agentName, onRespondPermission, onOpe
       ? pendingToolCallId
       : null;
 
-  const latestErrorItemId =
-    session.error != null
-      ? ([...session.items].reverse().find(it => it.kind === 'error')?.id ?? null)
-      : null;
+  const latestErrorItemId = useMemo(
+    () =>
+      session.error != null ? ([...session.items].reverse().find(it => it.kind === 'error')?.id ?? null) : null,
+    [session.error, session.items],
+  );
+  const groups = useMemo(() => groupByTurn(session.items), [session.items]);
 
   const ctx: RenderItemContext = { session, agentName, latestErrorItemId, pending, anchorId, onRespondPermission, onOpenFile };
   const render = (entry: { item: AcpTimelineItem; index: number }) =>
@@ -422,7 +424,7 @@ export function TranscriptItems({ session, agentName, onRespondPermission, onOpe
 
   return (
     <>
-      {groupByTurn(session.items).map(group => {
+      {groups.map(group => {
         const steps = group.entries.filter(({ item }) => item.kind === 'tool_call' || item.kind === 'terminal');
         const rest = group.entries.filter(({ item }) => item.kind !== 'tool_call' && item.kind !== 'terminal');
         if (group.turnId === undefined || steps.length === 0 || rest.length === 0) {
@@ -444,4 +446,4 @@ export function TranscriptItems({ session, agentName, onRespondPermission, onOpe
       )}
     </>
   );
-}
+});

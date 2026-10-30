@@ -1,4 +1,4 @@
-import { Button, InlineNotice } from '@contenox/ui';
+import { IconButton, InlineNotice } from '@contenox/ui';
 import { ImagePlus, X } from 'lucide-react';
 import {
   useCallback,
@@ -147,16 +147,17 @@ export function ComposerImageAttachments({
               src={`data:${img.mimeType};base64,${img.data}`}
               alt={name}
               title={name}
-              className="border-surface-300 dark:border-dark-surface-400 h-14 w-14 rounded border object-cover"
+              className="border-line size-14 rounded border object-cover"
             />
-            <button
-              type="button"
+            <IconButton
+              size="xs"
+              variant="outline"
+              label={t('acp_chat.attachment_remove_label', { name })}
+              noTooltip
               onClick={() => onRemove(img.id)}
-              aria-label={t('acp_chat.attachment_remove_label', { name })}
-              title={t('acp_chat.attachment_remove_label', { name })}
-              className="bg-surface-50 text-text border-surface-300 hover:bg-surface-100 dark:bg-dark-surface-600 dark:text-dark-text dark:border-dark-surface-400 dark:hover:bg-dark-surface-500 absolute -top-1.5 -right-1.5 rounded-full border p-1.5 shadow-sm">
-              <X className="h-3.5 w-3.5" />
-            </button>
+              className="bg-raised absolute -top-1.5 -right-1.5 rounded-full">
+              <X className="size-3" />
+            </IconButton>
           </div>
         );
       })}
@@ -188,17 +189,15 @@ export function AttachImageButton({
           if (files.length > 0) onFiles(files);
         }}
       />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        disabled={disabled}
-        aria-label={t('acp_chat.attach_image_label')}
+      <IconButton
+        size="sm"
+        label={t('acp_chat.attach_image_label')}
         title={t('acp_chat.attach_image_tooltip')}
+        disabled={disabled}
         onClick={() => inputRef.current?.click()}
         data-testid="composer-attach-image">
-        <ImagePlus className="h-4 w-4" />
-      </Button>
+        <ImagePlus className="size-4" />
+      </IconButton>
     </>
   );
 }

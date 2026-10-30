@@ -9,7 +9,7 @@ import { classifySetupIssueCode } from '../../lib/acpFailureKind';
 import { getBlockingSetupIssue, getSetupIssueFixPath } from '../../lib/setupHealth';
 import type { SetupIssue } from '../../lib/types';
 import { SlashCommandRegistryProvider } from '../../lib/slashCommands';
-import { ChatConnectionBadge } from './components/ChatConnectionBadge';
+import { ChatTopBarControls } from './components/ChatTopBarControls';
 import { WorkspaceTabs } from './components/WorkspaceTabs';
 
 export default function AcpChatPage() {
@@ -43,13 +43,26 @@ function SetupRequiredState({
   const actionLabel =
     kind === 'model_unavailable' ? t('acp_recovery.model_unavailable_action') : t('acp_chat.setup_required_action');
 
+  const description =
+    kind === 'backend_unreachable'
+      ? t('acp_recovery.backend_unreachable_description')
+      : kind === 'model_unavailable'
+        ? t('acp_recovery.model_unavailable_description')
+        : t('acp_chat.setup_required_generic');
+  const detail = issue?.message ?? fallbackMessage ?? null;
+
   return (
     <div className="m-auto max-w-md p-6">
       <EmptyState
         variant="warning"
         title={title}
-        description={issue?.message ?? fallbackMessage ?? t('acp_chat.setup_required_generic')}
+        description={description}
       />
+      {detail && (
+        <p className="text-text-muted mt-2 text-center text-xs break-words">
+          {detail}
+        </p>
+      )}
       <div className="mt-4 flex justify-center gap-2">
         {kind === 'backend_unreachable' && (
           <Button type="button" variant="secondary" onClick={onRetryBackend}>
@@ -112,7 +125,7 @@ function AcpChatWorkspace() {
   const { sessionId: paramSessionId } = useParams<{ sessionId?: string }>();
   const { workspace, session, openSessionIds, reconnect } = useAcpWorkspace();
 
-  useNavbarSlot(<ChatConnectionBadge />);
+  useNavbarSlot(<ChatTopBarControls />);
 
   const { data: setupStatus, refetch: refetchSetupStatus } = useSetupStatus(true);
   const blockingSetupIssue = getBlockingSetupIssue(setupStatus);
@@ -157,7 +170,7 @@ function AcpChatWorkspace() {
   }
 
   return (
-    <div className="bg-surface dark:bg-dark-surface flex h-full min-h-0 flex-col">
+    <div className="bg-app flex h-full min-h-0 flex-col">
       <WorkspaceTabs />
     </div>
   );

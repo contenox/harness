@@ -32,22 +32,18 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     }, [indeterminate]);
 
     return (
-      <Label className="flex items-center gap-2">
+      <Label className="inline-flex cursor-pointer items-center gap-2">
         <Inbox
           type="checkbox"
           ref={localRef}
           className={cn(
-            "border-secondary-300 text-primary-500 focus:ring-primary-500 h-4 w-4 rounded",
-            "dark:border-dark-secondary-400 dark:bg-dark-surface-50 dark:checked:bg-dark-primary-500 dark:focus:ring-dark-primary-500",
+            "size-4 cursor-pointer rounded p-0 accent-solid",
+            "disabled:cursor-not-allowed disabled:opacity-50",
             className,
           )}
           {...props}
         />
-        {label && (
-          <span className="text-secondary-800 dark:text-dark-secondary-300 text-sm">
-            {label}
-          </span>
-        )}
+        {label && <span className="text-[13px] font-normal text-text">{label}</span>}
       </Label>
     );
   },

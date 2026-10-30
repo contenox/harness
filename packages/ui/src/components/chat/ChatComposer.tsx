@@ -1,11 +1,11 @@
 import React, { type FormEvent, useRef, useState } from "react";
 import { cn } from "../../utils";
 import { Badge } from "../Badge";
-import { Button } from "../Button";
 import { Textarea } from "../TextArea";
 import { H2 } from "../Typography";
 import { Tooltip } from "../Tooltip";
-import { Spinner } from "../Spinner";
+import { IconButton } from "../IconButton";
+import { ArrowUp } from "lucide-react";
 import {
   DEFAULT_COMPOSER_SOFT_MAX,
   isComposerCharCountWarning,
@@ -19,8 +19,11 @@ export type ChatComposerProps = {
   placeholder?: string;
   isPending?: boolean;
   disabled?: boolean;
+  /** Used as the send button's accessible label / tooltip (string). */
   submitLabel?: React.ReactNode;
   pendingLabel?: React.ReactNode;
+  /** Icon inside the send button. Defaults to an up arrow. */
+  submitIcon?: React.ReactNode;
   title?: string;
   className?: string;
   variant?: "default" | "compact" | "workbench";
@@ -52,9 +55,8 @@ export type ChatComposerProps = {
 };
 
 const baseTextarea =
-  "w-full border-0 bg-transparent text-text placeholder:text-surface-400 " +
-  "dark:text-dark-text dark:placeholder:text-dark-surface-600 " +
-  "focus:outline-none focus:ring-0 transition-colors p-3 sm:p-4";
+  "w-full resize-none border-0 bg-transparent px-2 py-1.5 text-sm text-text " +
+  "placeholder:text-text-subtle focus-visible:border-0 focus-visible:outline-none";
 
 export function ChatComposer({
   value,
@@ -65,6 +67,7 @@ export function ChatComposer({
   disabled = false,
   submitLabel = "Send",
   pendingLabel = "Sending…",
+  submitIcon,
   title,
   className,
   variant = "default",
@@ -138,10 +141,10 @@ export function ChatComposer({
         className={cn(
           baseTextarea,
           variant === "compact"
-            ? "resize-vertical min-h-[60px]"
+            ? "min-h-[40px] max-h-48"
             : variant === "workbench"
-              ? "min-h-[140px] max-h-[50vh] resize-y sm:min-h-[180px] md:min-h-[200px]"
-              : "resize-vertical min-h-[80px]",
+              ? "min-h-[140px] max-h-[50vh] resize-y sm:min-h-[180px]"
+              : "min-h-[52px] max-h-64",
           textareaClassName,
         )}
         onKeyDown={handleKeyDown}
@@ -166,31 +169,27 @@ export function ChatComposer({
 
   const softNoteBlock =
     overSoftMax && softLimitExceededNote ? (
-      <p className="text-text-muted dark:text-dark-secondary-400 text-xs">
+      <p className="text-text-muted px-2 text-xs">
         {softLimitExceededNote}
       </p>
     ) : null;
 
-  const submitButton = (compactHeight?: boolean, workbenchTall?: boolean) => (
-    <Button
+  const submitButton = () => (
+    <IconButton
       type="submit"
       variant="primary"
+      size="md"
+      label={
+        typeof (isPending ? pendingLabel : submitLabel) === "string"
+          ? ((isPending ? pendingLabel : submitLabel) as string)
+          : "Send"
+      }
       disabled={submitDisabled}
-      size="lg"
-      className={cn(
-        compactHeight && "h-[60px]",
-        workbenchTall && "min-h-[3rem] self-end",
-      )}
+      isLoading={isPending}
+      className="rounded-full"
     >
-      {isPending ? (
-        <>
-          <Spinner size="sm" className="mr-2" />
-          {pendingLabel}
-        </>
-      ) : (
-        submitLabel
-      )}
-    </Button>
+      {submitIcon ?? <ArrowUp className="size-4" />}
+    </IconButton>
   );
 
   const handleFormSubmit = (e: FormEvent) => {
@@ -205,38 +204,30 @@ export function ChatComposer({
         <form
           ref={formRef}
           onSubmit={handleFormSubmit}
-          className="flex items-start gap-2"
+          className="flex items-end gap-2 rounded-xl border border-line bg-raised p-2 focus-within:border-line-strong"
         >
           {textareaBlock}
-          {submitButton(true)}
+          {submitButton()}
         </form>
       </div>
     );
   }
 
   const formInner = (
-    <form ref={formRef} onSubmit={handleFormSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleFormSubmit} className="flex flex-col gap-2">
       {title != null && title !== "" && variant !== "workbench" && (
-        <H2 className="text-text dark:text-dark-text text-2xl font-semibold">
-          {title}
-        </H2>
+        <H2 className="px-2 pt-1 text-base font-semibold">{title}</H2>
       )}
-
-      <div className="space-y-4">
-        <div className="space-y-3">
-          {attachments}
-          <div className="flex gap-2">{textareaBlock}</div>
-
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              {footerStart}
-              {footerEnd}
-            </div>
-            {submitButton(false, variant === "workbench")}
-          </div>
-          {softNoteBlock}
+      {attachments}
+      {textareaBlock}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1">
+          {footerStart}
+          {footerEnd}
         </div>
+        <div className="shrink-0">{submitButton()}</div>
       </div>
+      {softNoteBlock}
     </form>
   );
 
@@ -244,9 +235,8 @@ export function ChatComposer({
     return (
       <div
         className={cn(
-          "border-surface-200 dark:border-dark-surface-600 bg-surface-50/80 dark:bg-dark-surface-100/80 border-t px-3 py-3 transition-all duration-300 sm:px-4",
-          isFocused &&
-            "ring-primary-500/40 dark:ring-primary-500/40 ring-2 ring-inset shadow-[0_0_15px_color-mix(in_oklab,var(--color-primary-500)_10%,transparent)] dark:shadow-[0_0_15px_color-mix(in_oklab,var(--color-primary-500)_20%,transparent)]",
+          "border-t border-line bg-app px-3 py-3 sm:px-4",
+          isFocused && "border-line-strong",
           className,
         )}
       >
@@ -258,11 +248,8 @@ export function ChatComposer({
   return (
     <div
       className={cn(
-        "rounded-2xl border transition-all duration-300 backdrop-blur-md p-2 sm:p-3 shadow-xl shadow-black/5 dark:shadow-black/20",
-        "bg-surface-50/70 border-surface-200/50 dark:bg-dark-surface-100/70 dark:border-dark-surface-300/30",
-        isFocused
-          ? "border-primary-500/50 dark:border-primary-500/50 ring-2 ring-primary-500/20 dark:ring-primary-500/20 shadow-[0_0_20px_color-mix(in_oklab,var(--color-primary-500)_15%,transparent)] dark:shadow-[0_0_20px_color-mix(in_oklab,var(--color-primary-500)_25%,transparent)]"
-          : "hover:border-surface-300/60 dark:hover:border-dark-surface-400/50",
+        "rounded-xl border bg-raised p-2 transition-colors",
+        isFocused ? "border-line-strong" : "border-line",
         className,
       )}
     >

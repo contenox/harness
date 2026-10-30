@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             />
             <nav
               aria-label="Primary"
-              className="border-surface-300 bg-surface-50 dark:border-dark-surface-600 dark:bg-dark-surface-100 absolute top-12 right-auto bottom-0 left-0 flex w-72 max-w-[85%] flex-col gap-1 overflow-y-auto border-r p-2 shadow-2xl">
+              className="border-surface-300 bg-surface-50 dark:border-dark-surface-600 dark:bg-dark-surface-100 absolute top-12 right-auto bottom-0 left-0 flex w-72 max-w-[85%] flex-col gap-1 overflow-y-auto border-r p-2">
               <ShellLinks onNavigate={() => setOpen(false)} />
             </nav>
           </div>

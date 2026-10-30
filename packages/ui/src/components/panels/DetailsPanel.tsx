@@ -120,7 +120,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
 
   return (
     <div
-      className={`bg-surface-50 dark:bg-dark-surface-50 flex h-full w-96 flex-col border-l border-surface-300 dark:border-dark-surface-300 shadow-xl ${className}`}
+      className={`bg-surface-50 dark:bg-dark-surface-50 flex h-full w-96 flex-col border-l border-surface-300 dark:border-dark-surface-300 ${className}`}
     >
 
       <div className="flex items-center justify-between border-b border-surface-300 dark:border-dark-surface-300 p-4">

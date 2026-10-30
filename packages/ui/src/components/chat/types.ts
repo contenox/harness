@@ -46,5 +46,12 @@ export type ChatMessageBaseProps = {
 
   "aria-label"?: string;
 
-  appearance?: "bubble" | "transcript";
+  /**
+   * "plain" is the Codex / Claude desktop look: the user's message is a subtle right-aligned bubble,
+   * the assistant's is bare text. No avatar, role badge or "latest" badge.
+   */
+  appearance?: "bubble" | "transcript" | "plain";
+
+  /** Plain appearance only: show `roleLabel` as a small muted label above an assistant message. */
+  showRoleLabel?: boolean;
 };

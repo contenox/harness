@@ -1,6 +1,5 @@
 import { cn } from "../utils";
 import { ProgressBar } from "./ProgressBar";
-import { P } from "./Typography";
 
 export type Status =
   | "planned"
@@ -20,6 +19,18 @@ export interface StatusIndicatorProps {
   showIcon?: boolean;
 }
 
+const statusConfig: Record<
+  Status,
+  { dot: string; text: string; icon: string }
+> = {
+  planned: { dot: "bg-text-subtle", text: "text-text-muted", icon: "○" },
+  "in-progress": { dot: "bg-warning", text: "text-text-warning", icon: "⟳" },
+  completed: { dot: "bg-success", text: "text-text-success", icon: "✓" },
+  error: { dot: "bg-error", text: "text-text-error", icon: "✗" },
+  warning: { dot: "bg-warning", text: "text-text-warning", icon: "⚠" },
+  info: { dot: "bg-accent", text: "text-text-accent", icon: "ℹ" },
+};
+
 export function StatusIndicator({
   status,
   label,
@@ -28,69 +39,25 @@ export function StatusIndicator({
   className,
   showIcon = false,
 }: StatusIndicatorProps) {
-  const statusConfig = {
-    planned: {
-      color: "bg-surface-400 dark:bg-dark-surface-500",
-      text: "text-text-muted dark:text-dark-text-muted",
-      icon: "○",
-    },
-    "in-progress": {
-      color: "bg-warning-500 dark:bg-dark-warning-500",
-      text: "text-warning-700 dark:text-dark-warning-700",
-      icon: "⟳",
-    },
-    completed: {
-      color: "bg-success-500 dark:bg-dark-success-500",
-      text: "text-success-700 dark:text-dark-success-700",
-      icon: "✓",
-    },
-    error: {
-      color: "bg-error-500 dark:bg-dark-error-500",
-      text: "text-error-700 dark:text-dark-error-700",
-      icon: "✗",
-    },
-    warning: {
-      color: "bg-warning-600 dark:bg-dark-warning-500",
-      text: "text-warning-700 dark:text-dark-warning-700",
-      icon: "⚠",
-    },
-    info: {
-      color: "bg-info-500 dark:bg-dark-primary-500",
-      text: "text-info-700 dark:text-dark-primary-300",
-      icon: "ℹ",
-    },
-  };
-
+  const cfg = statusConfig[status];
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-
-      <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            "w-2 h-2 rounded-full",
-            statusConfig[status].color,
-          )}
-        />
-        {showIcon && (
-          <span className={cn("text-xs", statusConfig[status].text)}>
-            {statusConfig[status].icon}
-          </span>
-        )}
-      </div>
-
+    <div className={cn("flex items-center gap-2", className)}>
+      <span className="flex items-center gap-1.5">
+        <span className={cn("size-2 rounded-full", cfg.dot)} />
+        {showIcon && <span className={cn("text-xs", cfg.text)}>{cfg.icon}</span>}
+      </span>
 
       <div className="flex-1">
         {label && (
-          <P
-            variant="caption"
+          <p
             className={cn(
-              "uppercase tracking-wide",
-              statusConfig[status].text,
-              size === "sm" ? "text-xs" : "text-sm",
+              "font-medium",
+              cfg.text,
+              size === "sm" ? "text-xs" : "text-[13px]",
             )}
           >
             {label}
-          </P>
+          </p>
         )}
 
         {typeof progress === "number" && (
@@ -101,13 +68,11 @@ export function StatusIndicator({
                 ? "success"
                 : status === "error"
                   ? "error"
-                  : status === "warning"
+                  : status === "warning" || status === "in-progress"
                     ? "warning"
-                    : status === "in-progress"
-                      ? "warning"
-                      : "neutral"
+                    : "neutral"
             }
-            className={size === "sm" ? "h-1.5" : "h-2"}
+            className={size === "sm" ? "h-1" : "h-1.5"}
           />
         )}
       </div>

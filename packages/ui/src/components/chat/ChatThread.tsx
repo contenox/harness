@@ -27,7 +27,7 @@ export function ChatThread({
   return (
     <div
       className={cn(
-        "text-text dark:text-dark-text flex min-h-0 min-w-0 flex-1 flex-col",
+        "text-text flex min-h-0 min-w-0 flex-1 flex-col",
         className,
       )}
     >

@@ -1,3 +1,4 @@
+import { cwdRawFetch } from './projectRuntime';
 import { parseSSEFrames } from './workspaceSearch';
 
 
@@ -75,7 +76,11 @@ const defaultFetch: FindFetch = (url, init) =>
   fetch(url, init) as unknown as Promise<FindResponseLike>;
 
 export async function runWorkspaceFind(opts: RunWorkspaceFindOptions): Promise<void> {
-  const fetchImpl = opts.fetchImpl ?? defaultFetch;
+  const fetchImpl: FindFetch =
+    opts.fetchImpl ??
+    (opts.root
+      ? (u, i) => cwdRawFetch(opts.root, u, i) as unknown as Promise<FindResponseLike>
+      : defaultFetch);
   const url = buildFindUrl(opts);
 
   let response: FindResponseLike;

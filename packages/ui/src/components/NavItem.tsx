@@ -46,16 +46,16 @@ export function NavItem({
       aria-label={label}
       title={label}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-4 py-2.5 transition-colors",
-        compactOnMedium && 'flex-1 flex-col justify-center gap-1 px-2 py-3 text-xs sm:flex-none sm:flex-row sm:justify-center sm:py-3 sm:text-sm lg:justify-start lg:gap-3 lg:px-4',
+        "flex h-8 items-center gap-2 rounded-lg px-2.5 text-[13px] transition-colors",
+        compactOnMedium && "h-auto flex-1 flex-col justify-center gap-1 px-2 py-2 text-xs sm:h-8 sm:flex-none sm:flex-row sm:justify-center sm:text-[13px] lg:justify-start lg:gap-2 lg:px-2.5",
         isActive
-          ? "bg-primary-50/50 dark:bg-dark-primary-900/30 text-primary-700 dark:text-dark-primary-400 font-medium"
-          : "text-text dark:text-dark-text hover:bg-surface-100 dark:hover:bg-dark-surface-100",
+          ? "bg-selected font-medium text-text"
+          : "text-text-muted hover:bg-hover hover:text-text",
         className,
       )}
     >
       {icon && (
-        <span className="text-primary dark:text-dark-primary shrink-0">{icon}</span>
+        <span className="flex shrink-0 items-center text-text-muted [&>svg]:size-4">{icon}</span>
       )}
       <span className={cn('truncate', compactOnMedium && 'sm:hidden lg:block')}>{children}</span>
     </Tag>

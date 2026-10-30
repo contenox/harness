@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../lib/api';
 import { ApiError } from '../lib/fetch';
+import { cwdApiFetch } from '../lib/projectRuntime';
 import { terminalKeys } from '../lib/queryKeys';
 import type { TerminalSession } from '../lib/types';
 
@@ -12,10 +12,12 @@ export async function createHostTerminalSession(
   rows: number,
 ): Promise<HostTerminalSessionData> {
   try {
-    return await api.createTerminalSession({
-      ...(cwd ? { cwd } : {}),
-      cols,
-      rows,
+    // Routed to the runtime that owns `cwd`, so the shell starts in that project's runtime.
+    return await cwdApiFetch<TerminalSession>(cwd, '/api/terminal/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ ...(cwd ? { cwd } : {}), cols, rows }),
     });
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null;

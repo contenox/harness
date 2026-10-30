@@ -1,10 +1,11 @@
 import { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } from 'electron';
 import { execFileSync, spawn } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { startUiServer } from './server.mjs';
 import { existingDir, validateWorkspace, workspaceFromArgv } from './workspaces.mjs';
 
@@ -16,30 +17,30 @@ const configPath = path.join(app.getPath('userData'), 'workspace.json');
 const logDir = path.join(app.getPath('userData'), 'logs');
 const runtimeLogPath = path.join(logDir, 'runtime.log');
 
-let runtime = null;
-let starting = null;
+const IDLE_STOP_MS = 15 * 60 * 1000;
+const IDLE_CHECK_MS = 60 * 1000;
+const DEFAULT_KEY = 'default';
+
+// Supervisor state. One runtime instance per project folder, all sharing one --data-dir/--db.
+// instance: { key, path, child, origin, startingPromise, lastUsed, stopping }
+const instances = new Map();
+let defaultInstance = null;
+let runtimeInitPromise = null;
+let idleTimer = null;
+let pendingLaunchFolder = null;
+
 let ui = null;
 let mainWindow = null;
-let pickerWindow = null;
-let currentWorkspace = null;
-let quitting = false;
+let quitState = 0; // 0 running, 1 cleaning up, 2 ready to exit
+const isQuitting = () => quitState !== 0;
 
-
-
-let switchQueue = Promise.resolve();
-
-
-
+// Only the UI port is persisted; older files may still carry current/recent which are ignored.
 function readConfig() {
   try {
     const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    return {
-      current: typeof parsed.current === 'string' ? parsed.current : '',
-      recent: Array.isArray(parsed.recent) ? parsed.recent.filter(p => typeof p === 'string') : [],
-      uiPort: Number.isInteger(parsed.uiPort) && parsed.uiPort > 0 ? parsed.uiPort : 0,
-    };
+    return { uiPort: Number.isInteger(parsed.uiPort) && parsed.uiPort > 0 ? parsed.uiPort : 0 };
   } catch {
-    return { current: '', recent: [], uiPort: 0 };
+    return { uiPort: 0 };
   }
 }
 
@@ -50,20 +51,18 @@ function writeConfig(patch) {
   return next;
 }
 
-function rememberWorkspace(workspace) {
-  const previous = readConfig();
-  const recent = [workspace, ...previous.recent.filter(p => p !== workspace)].slice(0, 10);
-  return writeConfig({ current: workspace, recent });
+// Short stable id used in /rt/<key>/ URLs.
+function projectKey(normalizedPath) {
+  const subject = process.platform === 'win32' ? normalizedPath.toLowerCase() : normalizedPath;
+  return crypto.createHash('sha256').update(subject).digest('hex').slice(0, 12);
 }
 
-function forgetRecent(workspace) {
-  const previous = readConfig();
-  return writeConfig({ recent: previous.recent.filter(p => p !== workspace) });
+function appendLog(text) {
+  try {
+    fs.mkdirSync(logDir, { recursive: true });
+    fs.appendFileSync(runtimeLogPath, text.endsWith('\n') ? text : `${text}\n`);
+  } catch {}
 }
-
-
-
-
 
 function runtimeBinary() {
   const suffix = process.platform === 'win32' ? '.exe' : '';
@@ -134,67 +133,99 @@ function terminate(child) {
   });
 }
 
+// ---- runtime supervisor ---------------------------------------------------------------------
 
+function runtimeDirs() {
+  return { data: path.join(app.getPath('userData'), 'data'), db: path.join(app.getPath('userData'), 'local.db') };
+}
 
-async function startRuntime(workspace) {
-  const binary = runtimeBinary();
-  if (!fs.existsSync(binary)) throw new Error(`bundled runtime missing: ${binary}`);
-
-  const data = path.join(app.getPath('userData'), 'data');
-  const db = path.join(app.getPath('userData'), 'local.db');
-  fs.mkdirSync(data, { recursive: true });
-  fs.mkdirSync(logDir, { recursive: true });
-  if (!fs.existsSync(db)) {
-    execFileSync(binary, ['--data-dir', data, '--db', db, 'init', '--force'], {
-      env: { ...process.env, HOME: os.homedir() },
-      stdio: 'ignore',
+// Runs "init --force" once (only when the db is missing) before any serve starts.
+function initRuntimeOnce() {
+  if (!runtimeInitPromise) {
+    runtimeInitPromise = (async () => {
+      const binary = runtimeBinary();
+      if (!fs.existsSync(binary)) throw new Error(`bundled runtime missing: ${binary}`);
+      const { data, db } = runtimeDirs();
+      fs.mkdirSync(data, { recursive: true });
+      fs.mkdirSync(logDir, { recursive: true });
+      if (!fs.existsSync(db)) {
+        execFileSync(binary, ['--data-dir', data, '--db', db, 'init', '--force'], {
+          env: { ...process.env, HOME: os.homedir() },
+          stdio: 'ignore',
+        });
+      }
+    })().catch(error => {
+      runtimeInitPromise = null;
+      throw error;
     });
   }
+  return runtimeInitPromise;
+}
 
+async function startInstance(inst) {
+  await initRuntimeOnce();
+  const binary = runtimeBinary();
+  const { data, db } = runtimeDirs();
   const port = await freePort();
   const log = fs.openSync(runtimeLogPath, 'a');
-  fs.writeSync(log, `\n=== ${new Date().toISOString()} serve ${workspace}\n`);
-  const child = spawn(binary, ['--data-dir', data, '--db', db, 'serve', workspace], {
-    cwd: workspace,
+  fs.writeSync(log, `\n=== ${new Date().toISOString()} serve ${inst.path} [${inst.key}]\n`);
+  const child = spawn(binary, ['--data-dir', data, '--db', db, 'serve', inst.path], {
+    cwd: inst.path,
     env: { ...process.env, HOME: os.homedir(), ADDR: '127.0.0.1', PORT: String(port) },
     stdio: ['ignore', log, log],
   });
   fs.closeSync(log);
+  inst.child = child;
 
-  starting = child;
   const failed = new Promise((_, reject) => {
     child.once('exit', (code, signal) => reject(new Error(`runtime exited during startup (${signal || code})`)));
     child.once('error', error => reject(error));
   });
+  failed.catch(() => {});
 
   try {
     await Promise.race([waitForHealth(`http://127.0.0.1:${port}/health`), failed]);
   } catch (error) {
-    if (starting === child) starting = null;
+    inst.child = null;
     await terminate(child);
     const tail = logTail();
     throw new Error(tail ? `${error.message}\n\n${tail}` : error.message);
   }
+  if (inst.stopping) {
+    inst.child = null;
+    await terminate(child);
+    throw new Error('runtime was stopped during startup');
+  }
 
-  if (starting === child) starting = null;
-  runtime = child;
-  child.once('exit', (code, signal) => handleRuntimeExit(child, code, signal));
-  return `http://127.0.0.1:${port}`;
+  inst.origin = `http://127.0.0.1:${port}`;
+  inst.lastUsed = Date.now();
+  child.once('exit', (code, signal) => handleInstanceExit(inst, child, code, signal));
+  return inst.origin;
 }
 
-async function stopRuntime() {
-  const child = runtime;
-  const pending = starting;
-  runtime = null;
-  starting = null;
-  if (pending) await terminate(pending);
+async function stopInstance(inst) {
+  inst.stopping = true;
+  if (instances.get(inst.key) === inst) instances.delete(inst.key);
+  const child = inst.child;
+  inst.child = null;
+  inst.origin = null;
   if (child) await terminate(child);
+  // A start still in flight sees inst.stopping and terminates its own child.
+  if (inst.startingPromise) await inst.startingPromise.catch(() => {});
 }
 
-function handleRuntimeExit(child, code, signal) {
-  if (child !== runtime) return;
-  runtime = null;
-  if (quitting) return;
+function stopAllInstances() {
+  return Promise.all([...instances.values()].map(inst => stopInstance(inst)));
+}
+
+function handleInstanceExit(inst, child, code, signal) {
+  if (inst.child !== child) return;
+  inst.child = null;
+  inst.origin = null;
+  if (instances.get(inst.key) === inst) instances.delete(inst.key);
+  if (isQuitting() || inst.stopping) return;
+  appendLog(`=== ${new Date().toISOString()} runtime [${inst.key}] ${inst.path} exited unexpectedly (${signal || code})`);
+  if (inst !== defaultInstance) return; // project runtimes restart on the next ensureProjectRuntime
   const tail = logTail();
   void dialog
     .showMessageBox({
@@ -202,31 +233,128 @@ function handleRuntimeExit(child, code, signal) {
       title: 'Contenox runtime stopped',
       message: 'The local runtime exited unexpectedly.',
       detail: `Exit: ${signal || code}\n\n${tail || 'No log output.'}`,
-      buttons: ['Restart', 'Choose Workspace', 'Quit'],
+      buttons: ['Restart', 'Quit'],
       defaultId: 0,
       cancelId: 1,
     })
-    .then(result => {
-      if (result.response === 0 && currentWorkspace) {
-        void enqueue(() => performSwitch(currentWorkspace)).catch(showErrorDialog);
-      } else if (result.response === 1) {
-        showPicker();
-      } else {
+    .then(async result => {
+      if (result.response !== 0) {
         app.quit();
+        return;
+      }
+      try {
+        await startDefaultInstance();
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.reload();
+      } catch (error) {
+        showErrorDialog(error);
       }
     });
 }
 
+// The default instance serves ~/Contenox and all unprefixed (global) UI traffic.
+async function startDefaultInstance() {
+  const dir = path.join(os.homedir(), 'Contenox');
+  fs.mkdirSync(dir, { recursive: true });
+  const inst = {
+    key: DEFAULT_KEY,
+    path: existingDir(dir) ?? dir,
+    child: null,
+    origin: null,
+    startingPromise: null,
+    lastUsed: Date.now(),
+    stopping: false,
+  };
+  defaultInstance = inst;
+  instances.set(DEFAULT_KEY, inst);
+  inst.startingPromise = startInstance(inst);
+  try {
+    await inst.startingPromise;
+  } catch (error) {
+    if (instances.get(DEFAULT_KEY) === inst) instances.delete(DEFAULT_KEY);
+    throw error;
+  } finally {
+    inst.startingPromise = null;
+  }
+  return inst.origin;
+}
 
+// Returns { ok, key, prefix } for a project folder, starting its runtime if needed (concurrent calls share one start).
+async function ensureProjectRuntime(target) {
+  if (process.env.CONTENOX_DEV_URL) {
+    // Dev mode (dev.mjs) runs a single runtime itself; there is no supervisor, so this reports an error.
+    return { ok: false, error: 'Project runtimes are not available in dev mode.' };
+  }
+  if (isQuitting()) return { ok: false, error: 'Contenox is quitting.' };
+  const check = validateWorkspace(target);
+  if (check.error) return { ok: false, error: check.error };
+  const key = projectKey(check.path);
+  let inst = instances.get(key);
+  if (inst && inst.startingPromise) {
+    try {
+      await inst.startingPromise;
+    } catch (error) {
+      return { ok: false, error: String(error.message) };
+    }
+  } else if (!inst || !inst.child || !inst.origin) {
+    inst = { key, path: check.path, child: null, origin: null, startingPromise: null, lastUsed: Date.now(), stopping: false };
+    instances.set(key, inst);
+    const starting = startInstance(inst);
+    inst.startingPromise = starting;
+    try {
+      await starting;
+    } catch (error) {
+      if (instances.get(key) === inst) instances.delete(key);
+      return { ok: false, error: String(error.message) };
+    } finally {
+      inst.startingPromise = null;
+    }
+  }
+  inst.lastUsed = Date.now();
+  return { ok: true, key, prefix: `/rt/${key}` };
+}
 
-async function openUi(runtimeOrigin) {
+async function stopProjectRuntime(target) {
+  const check = validateWorkspace(target);
+  if (check.error) return { ok: false, error: check.error };
+  const inst = instances.get(projectKey(check.path));
+  if (!inst || inst === defaultInstance) return { ok: true };
+  await stopInstance(inst);
+  return { ok: true };
+}
+
+// Called by the UI server for every request: null = default instance, otherwise a project key.
+function resolveTarget(key) {
+  const inst = key === null ? defaultInstance : instances.get(key);
+  if (!inst || inst.stopping || !inst.child) return null;
+  return inst.origin;
+}
+
+function markActivity(key) {
+  if (key === null) return;
+  const inst = instances.get(key);
+  if (inst) inst.lastUsed = Date.now();
+}
+
+function stopIdleInstances() {
+  const now = Date.now();
+  for (const inst of [...instances.values()]) {
+    if (inst === defaultInstance || !inst.origin || inst.startingPromise) continue;
+    if (ui && ui.openWebSockets(inst.key) > 0) continue; // open websockets count as in use
+    if (now - inst.lastUsed < IDLE_STOP_MS) continue;
+    appendLog(`=== ${new Date().toISOString()} stopping idle runtime [${inst.key}] ${inst.path}`);
+    void stopInstance(inst);
+  }
+}
+
+async function openUi() {
   const preferred = readConfig().uiPort;
+  const options = { uiDir: uiDir(), resolveTarget, onActivity: markActivity };
   let server;
   try {
-    server = await startUiServer({ uiDir: uiDir(), runtimeOrigin, port: preferred });
+    server = await startUiServer({ ...options, port: preferred });
   } catch (error) {
     if (error.code !== 'EADDRINUSE') throw error;
-    server = await startUiServer({ uiDir: uiDir(), runtimeOrigin, port: 0 });
+    server = await startUiServer({ ...options, port: 0 });
   }
   if (server.port !== preferred) writeConfig({ uiPort: server.port });
   return server;
@@ -236,88 +364,36 @@ function uiDir() {
   return path.join(process.resourcesPath, 'ui');
 }
 
+// ---- windows --------------------------------------------------------------------------------
 
+// Top bar height in the renderer (TitleBar is h-12) and the matching caption-button overlay.
+const TITLEBAR_HEIGHT = 48;
+const TITLEBAR_THEMES = {
+  dark: { color: '#0f0f0f', symbolColor: '#e5e5e5' },
+  light: { color: '#f8f7f4', symbolColor: '#2b2925' },
+};
 
-function enqueue(task) {
-  const run = switchQueue.then(task, task);
-  switchQueue = run.then(
-    () => undefined,
-    () => undefined,
-  );
-  return run;
-}
-
-function switchWorkspace(target) {
-  return enqueue(() => performSwitch(target));
-}
-
-async function performSwitch(target) {
-  if (quitting) throw new Error('Contenox is quitting.');
-  const check = validateWorkspace(target);
-  if (check.error) throw new Error(check.error);
-  const next = check.path;
-
-  if (next === currentWorkspace && runtime && ui) {
-    await showMain(ui.port);
-    focusMain();
-    return;
+function titleBarOptions() {
+  if (process.platform === 'darwin') {
+    return { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 16 } };
   }
-
-  const previous = currentWorkspace;
-  await stopRuntime();
-
-  try {
-    const origin = await startRuntime(next);
-    if (ui) ui.setRuntimeOrigin(origin);
-    else ui = await openUi(origin);
-    currentWorkspace = next;
-    rememberWorkspace(next);
-    buildMenu();
-    await showMain(ui.port);
-    closePicker();
-    return;
-  } catch (error) {
-    if (quitting) throw error;
-    let restored = false;
-    if (previous && previous !== next) {
-      try {
-        const origin = await startRuntime(previous);
-        if (ui) ui.setRuntimeOrigin(origin);
-        else ui = await openUi(origin);
-        currentWorkspace = previous;
-        await showMain(ui.port);
-        restored = true;
-      } catch {}
-    }
-    if (!restored) currentWorkspace = null;
-    const note = restored ? `\n\nThe previous workspace is still open:\n${previous}` : '';
-    throw new Error(`${error.message}${note}`);
-  }
+  return {
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { ...TITLEBAR_THEMES.dark, height: TITLEBAR_HEIGHT },
+  };
 }
 
-function closeWorkspace() {
-  return enqueue(async () => {
-    await stopRuntime();
-    if (ui) {
-      const closing = ui;
-      ui = null;
-      await closing.close();
-    }
-    currentWorkspace = null;
-    writeConfig({ current: '' });
-    buildMenu();
-    showPicker();
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.destroy();
-      mainWindow = null;
-    }
-  });
+function applyTitleBarTheme(window, theme) {
+  if (process.platform === 'darwin' || !window || window.isDestroyed()) return;
+  const colors = TITLEBAR_THEMES[theme];
+  if (!colors || typeof window.setTitleBarOverlay !== 'function') return;
+  window.setTitleBarOverlay({ ...colors, height: TITLEBAR_HEIGHT });
+  window.setBackgroundColor(colors.color);
 }
-
-
 
 function windowOptions(extra = {}) {
   return {
+    ...titleBarOptions(),
     width: 1440,
     height: 960,
     minWidth: 960,
@@ -335,20 +411,18 @@ function windowOptions(extra = {}) {
   };
 }
 
-function hardenWindow(window, { allowFile = false } = {}) {
+function hardenWindow(window) {
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
   window.webContents.on('will-navigate', (event, url) => {
     const allowed = [];
-    if (allowFile) allowed.push('file://');
     if (process.env.CONTENOX_DEV_URL) allowed.push(new URL(process.env.CONTENOX_DEV_URL).origin);
     if (ui) allowed.push(`http://127.0.0.1:${ui.port}`);
     try {
       const target = new URL(url);
-      const ok = allowed.some(entry => (entry === 'file://' ? url.startsWith(pickerUrl()) : target.origin === entry));
-      if (!ok) event.preventDefault();
+      if (!allowed.some(entry => target.origin === entry)) event.preventDefault();
     } catch {
       event.preventDefault();
     }
@@ -364,13 +438,9 @@ function createMainWindow(url) {
   void mainWindow.loadURL(url);
 }
 
-async function showMain(port) {
+function showMain(port) {
   const url = `http://127.0.0.1:${port}/`;
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    createMainWindow(url);
-    return;
-  }
-  await mainWindow.loadURL(url);
+  if (!mainWindow || mainWindow.isDestroyed()) createMainWindow(url);
 }
 
 function focusMain() {
@@ -380,68 +450,26 @@ function focusMain() {
   mainWindow.focus();
 }
 
-function createPickerWindow(message = '') {
-  if (pickerWindow && !pickerWindow.isDestroyed()) {
-    focusPicker();
-    return;
+// Hands a folder requested from outside (argv, env, second instance) to the UI.
+// takeLaunchFolder() returns it once; the event reaches an already-loaded window immediately.
+function offerLaunchFolder(folder) {
+  const real = existingDir(folder);
+  if (!real) return;
+  pendingLaunchFolder = real;
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.send('contenox:launch-folder', real);
   }
-  pickerWindow = new BrowserWindow(windowOptions({ width: 920, height: 620, minWidth: 760, minHeight: 520 }));
-  hardenWindow(pickerWindow, { allowFile: true });
-  pickerWindow.on('closed', () => {
-    pickerWindow = null;
-  });
-  void pickerWindow.loadFile(path.join(here, 'workspace.html'), { query: message ? { error: message } : {} });
 }
 
-function showPicker(message = '') {
-  createPickerWindow(message);
-  focusPicker();
-}
-
-function focusPicker() {
-  if (!pickerWindow || pickerWindow.isDestroyed()) return;
-  if (pickerWindow.isMinimized()) pickerWindow.restore();
-  pickerWindow.show();
-  pickerWindow.focus();
-}
-
-function closePicker() {
-  if (pickerWindow && !pickerWindow.isDestroyed()) pickerWindow.close();
-  pickerWindow = null;
-}
-
-
+// ---- menu / dialogs -------------------------------------------------------------------------
 
 function buildMenu() {
   const isMac = process.platform === 'darwin';
-  const recent = readConfig().recent.filter(workspace => existingDir(workspace));
-  const openRecent = recent.length
-    ? [
-        ...recent.map(workspace => ({
-          label: `${path.basename(workspace)} — ${workspace}`,
-          click: () => void switchWorkspace(workspace).catch(showErrorDialog),
-        })),
-        { type: 'separator' },
-        {
-          label: 'Clear Recent Workspaces',
-          click: () => {
-            writeConfig({ recent: [] });
-            buildMenu();
-          },
-        },
-      ]
-    : [{ label: 'No recent workspaces', enabled: false }];
-
   const template = [
     ...(isMac ? [{ role: 'appMenu' }] : []),
     {
       label: 'File',
       submenu: [
-        { label: 'Open Workspace…', accelerator: 'CmdOrCtrl+O', click: () => void openWorkspaceFromDialog() },
-        { label: 'Open Recent', submenu: openRecent },
-        { type: 'separator' },
-        { label: 'Close Workspace', click: () => void closeWorkspace() },
-        { type: 'separator' },
         { label: 'Install ‘contenox’ Command in PATH', enabled: app.isPackaged, click: () => void installCommandLineTool('contenox', app.getPath('exe')) },
         { label: 'Install ‘contenox-runtime’ Command in PATH', enabled: app.isPackaged, click: () => void installCommandLineTool('contenox-runtime', runtimeBinary()) },
         { label: 'Open Logs Folder', click: () => void shell.openPath(logDir) },
@@ -471,27 +499,14 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-async function openWorkspaceFromDialog({ report = true } = {}) {
-  const selected = await chooseFolder();
-  if (!selected) return { ok: false, cancelled: true };
-  try {
-    await switchWorkspace(selected);
-    return { ok: true };
-  } catch (error) {
-    if (report) showErrorDialog(error);
-    return { ok: false, error: String(error.message) };
-  }
-}
-
 async function chooseFolder(parent = mainWindow) {
   const options = {
-    title: 'Choose a workspace folder',
-    buttonLabel: 'Open Workspace',
+    title: 'Choose a project folder',
+    buttonLabel: 'Choose Folder',
     properties: ['openDirectory', 'createDirectory'],
   };
-  const window = parent && !parent.isDestroyed() ? parent : pickerWindow;
-  const result = window && !window.isDestroyed()
-    ? await dialog.showOpenDialog(window, options)
+  const result = parent && !parent.isDestroyed()
+    ? await dialog.showOpenDialog(parent, options)
     : await dialog.showOpenDialog(options);
   if (result.canceled) return null;
   return result.filePaths[0] ?? null;
@@ -501,13 +516,11 @@ function showErrorDialog(error) {
   void dialog.showMessageBox({
     type: 'error',
     title: 'Contenox',
-    message: 'The workspace could not be opened.',
+    message: 'Contenox ran into a problem.',
     detail: String(error?.message ?? error),
     buttons: ['OK'],
   });
 }
-
-
 
 async function installCommandLineTool(name, target) {
   try {
@@ -547,15 +560,10 @@ function showInfo(detail) {
   return dialog.showMessageBox({ type: 'info', title: 'Contenox', message: 'Command line tool', detail, buttons: ['OK'] });
 }
 
-
-
-function pickerUrl() {
-  return pathToFileURL(path.join(here, 'workspace.html')).href;
-}
+// ---- IPC ------------------------------------------------------------------------------------
 
 function trusted(event) {
   const url = event.senderFrame?.url || '';
-  if (url.startsWith(pickerUrl())) return true;
   if (ui && url.startsWith(`http://127.0.0.1:${ui.port}`)) return true;
   if (process.env.CONTENOX_DEV_URL && url.startsWith(process.env.CONTENOX_DEV_URL)) return true;
   return false;
@@ -594,19 +602,48 @@ function handle(channel, fn) {
 }
 
 handle('contenox:select-directory', () => chooseFolder());
-handle('contenox:pick-workspace', () => chooseFolder(pickerWindow));
-handle('contenox:open-workspace', () => openWorkspaceFromDialog({ report: false }));
-handle('contenox:use-workspace', async workspace => {
-  await switchWorkspace(workspace);
-  return { ok: true };
+handle('contenox:ensure-project-runtime', target => ensureProjectRuntime(target));
+handle('contenox:stop-project-runtime', target => stopProjectRuntime(target));
+ipcMain.on('contenox:set-titlebar-theme', (event, theme) => {
+  if (!trusted(event)) return;
+  applyTitleBarTheme(BrowserWindow.fromWebContents(event.sender), theme);
 });
-handle('contenox:current-workspace', () => ({ ok: true, workspace: currentWorkspace }));
-handle('contenox:recent-workspaces', () => readConfig().recent);
-handle('contenox:forget-recent', workspace => ({ ok: true, recent: forgetRecent(workspace).recent }));
+handle('contenox:take-launch-folder', () => {
+  const folder = pendingLaunchFolder;
+  pendingLaunchFolder = null;
+  return folder;
+});
 
+// ---- shutdown -------------------------------------------------------------------------------
 
+// Last resort: a socket that resets while we are tearing down must not pop the Electron
+// "JavaScript error in the main process" dialog. Anything else is rethrown as usual.
+process.on('uncaughtException', error => {
+  const benign = error && (error.code === 'ECONNRESET' || error.code === 'EPIPE');
+  if (isQuitting() && benign) {
+    appendLog(`=== ${new Date().toISOString()} ignored ${error.code} during shutdown: ${error.message}`);
+    return;
+  }
+  throw error;
+});
 
+async function shutdown() {
+  if (idleTimer) clearInterval(idleTimer);
+  idleTimer = null;
+  // 1. windows (and with them their live websockets), 2. UI server, 3. runtimes.
+  for (const window of BrowserWindow.getAllWindows()) {
+    try { window.destroy(); } catch {}
+  }
+  mainWindow = null;
+  if (ui) {
+    const closing = ui;
+    ui = null;
+    await closing.close();
+  }
+  await stopAllInstances();
+}
 
+// ---- app lifecycle --------------------------------------------------------------------------
 
 const hasLock = process.env.CONTENOX_DEV_URL ? true : app.requestSingleInstanceLock();
 if (!hasLock) {
@@ -617,12 +654,9 @@ if (hasLock) {
   app.on('second-instance', (_event, argv, workingDirectory) => {
     const args = argv.slice(1);
     const requested = args.some(arg => arg && !arg.startsWith('-')) ? workspaceFromArgv(args, workingDirectory) : null;
-    if (requested) {
-      void switchWorkspace(requested).catch(showErrorDialog);
-      return;
-    }
+    if (requested) offerLaunchFolder(requested);
     if (mainWindow && !mainWindow.isDestroyed()) focusMain();
-    else showPicker();
+    else if (ui) showMain(ui.port);
   });
 
   app.whenReady().then(async () => {
@@ -631,8 +665,7 @@ if (hasLock) {
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length !== 0) return;
-      if (ui) void showMain(ui.port);
-      else showPicker();
+      if (ui) showMain(ui.port);
     });
 
     if (process.env.CONTENOX_DEV_URL) {
@@ -643,37 +676,37 @@ if (hasLock) {
     const args = process.argv.slice(app.isPackaged ? 1 : 2);
     const fromArgv = workspaceFromArgv(args, process.cwd());
     const fromEnv = process.env.CONTENOX_WORKSPACE ? path.resolve(process.env.CONTENOX_WORKSPACE) : null;
-    const configured = readConfig().current ? path.resolve(readConfig().current) : null;
-    const wanted = fromArgv ?? fromEnv ?? configured;
+    const wanted = fromArgv ?? fromEnv;
+    if (wanted) offerLaunchFolder(wanted);
 
-    if (!wanted) {
-      showPicker();
+    try {
+      await startDefaultInstance();
+      ui = await openUi();
+    } catch (error) {
+      dialog.showErrorBox('Contenox could not start', String(error?.message ?? error));
+      app.quit();
       return;
     }
-    try {
-      await switchWorkspace(wanted);
-    } catch (error) {
-      showPicker(String(error.message));
-    }
+    idleTimer = setInterval(stopIdleInstances, IDLE_CHECK_MS);
+    idleTimer.unref?.();
+    showMain(ui.port);
   });
 }
 
 app.on('before-quit', event => {
-  if (quitting) return;
-  if (!runtime && !starting && !ui) return;
+  if (quitState === 2) return;
   event.preventDefault();
-  quitting = true;
-  void (async () => {
-    await stopRuntime();
-    if (ui) {
-      const closing = ui;
-      ui = null;
-      await closing.close();
-    }
-    app.quit();
-  })();
+  if (quitState === 1) return;
+  quitState = 1;
+  void shutdown()
+    .catch(error => appendLog(`=== shutdown error: ${error?.message ?? error}`))
+    .finally(() => {
+      quitState = 2;
+      app.quit();
+    });
 });
 
 app.on('window-all-closed', () => {
+  if (isQuitting()) return;
   if (process.platform !== 'darwin') app.quit();
 });

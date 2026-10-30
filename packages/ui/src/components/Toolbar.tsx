@@ -11,11 +11,10 @@ export const Toolbar = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
         ref={ref}
         role="toolbar"
         className={cn(
-          "bg-surface-50 dark:bg-dark-surface-200",
-          "text-text dark:text-dark-text",
+          "bg-app text-text",
           "flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2",
-          "border-b border-surface-300 dark:border-dark-surface-400",
-          "px-3 py-2",
+          "border-b border-line",
+          "px-3 py-1.5",
           className,
         )}
         {...props}
@@ -48,7 +47,7 @@ export function ToolbarItem({ label, tooltip, children, className, ...props }: T
   return (
     <div className={cn("flex min-w-0 items-center gap-2", className)} {...props}>
       <span className="flex shrink-0 items-center gap-1">
-        <Span variant="muted" className="text-xs sm:text-sm">
+        <Span variant="muted" className="text-xs">
           {label}
         </Span>
         {tooltip && (
