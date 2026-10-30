@@ -11,7 +11,7 @@ describe('selectRows', () => {
     expect(selectRows(opt([{ value: 'a', name: 'A' }]))).toEqual([{ value: 'a', label: 'A' }]);
   });
 
-  it('prefixes grouped options with their group label', () => {
+  it('keeps the group name on grouped options', () => {
     const rows = selectRows(
       opt([
         { group: 'g1', name: 'Anthropic', options: [{ value: 'a', name: 'Sonnet' }] },
@@ -19,8 +19,8 @@ describe('selectRows', () => {
       ]),
     );
     expect(rows).toEqual([
-      { value: 'a', label: 'Anthropic / Sonnet' },
-      { value: 'b', label: 'Bedrock / Sonnet' },
+      { value: 'a', label: 'Sonnet', group: 'Anthropic' },
+      { value: 'b', label: 'Sonnet', group: 'Bedrock' },
     ]);
   });
 });

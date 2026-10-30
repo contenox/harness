@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Dropdown } from "./Dropdown";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { Dropdown, DropdownItem } from "./Dropdown";
 import { Button } from "./Button";
 
 const meta: Meta<typeof Dropdown> = {
@@ -93,5 +94,70 @@ export const Closed: Story = {
         />
       </div>
     );
+  },
+};
+
+function expectFullyVisible(el: HTMLElement) {
+  const r = el.getBoundingClientRect();
+  expect(r.top).toBeGreaterThanOrEqual(0);
+  expect(r.left).toBeGreaterThanOrEqual(0);
+  expect(r.bottom).toBeLessThanOrEqual(window.innerHeight);
+  expect(r.right).toBeLessThanOrEqual(window.innerWidth);
+  const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  expect(el.contains(hit)).toBe(true);
+}
+
+function Menu() {
+  return (
+    <>
+      <DropdownItem>Edit</DropdownItem>
+      <DropdownItem>Check connection</DropdownItem>
+      <DropdownItem danger>Remove</DropdownItem>
+    </>
+  );
+}
+
+export const InsideClippingContainer: Story = {
+  name: "Dropdown inside clipping container",
+  render: () => (
+    <div style={{ width: 320, height: 56, overflow: "hidden" }} className="rounded-xl border border-line">
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: 8 }}>
+        <Dropdown
+          align="end"
+          trigger={<Button variant="secondary">Menu</Button>}
+        >
+          <Menu />
+        </Dropdown>
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "Menu" }));
+    const body = within(document.body);
+    const item = await body.findByRole("menuitem", { name: "Remove" });
+    expectFullyVisible(item);
+    expect(canvasElement.contains(item)).toBe(false);
+  },
+};
+
+export const FlipsNearViewportBottom: Story = {
+  render: () => (
+    <div style={{ position: "fixed", left: 24, bottom: 8 }}>
+      <Dropdown trigger={<Button variant="secondary">Menu</Button>}>
+        <Menu />
+      </Dropdown>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const trigger = within(canvasElement).getByRole("button", { name: "Menu" });
+    await userEvent.click(trigger);
+    const item = await within(document.body).findByRole("menuitem", { name: "Remove" });
+    await waitFor(() => {
+      expect(item.parentElement?.dataset.side).toBe("top");
+      expect(item.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+        trigger.getBoundingClientRect().top,
+      );
+    });
+    expectFullyVisible(item);
   },
 };

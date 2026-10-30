@@ -17,7 +17,7 @@ export function Accordion({ title, children, className }: AccordionProps) {
   return (
     <div
       className={cn(
-        "border-secondary-200 dark:border-dark-secondary-300 rounded-lg border",
+        "border-line rounded-lg border",
         className,
       )}
     >
@@ -26,12 +26,12 @@ export function Accordion({ title, children, className }: AccordionProps) {
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center justify-between p-4"
       >
-        <Span className="text-secondary-800 dark:text-dark-secondary-200 text-sm font-medium">
+        <Span className="text-text text-sm font-medium">
           {title}
         </Span>
         <ChevronDown
           className={cn(
-            "text-secondary-400 dark:text-dark-secondary-400 h-5 w-5 transition-transform",
+            "text-text-subtle h-5 w-5 transition-transform",
             isOpen && "rotate-180",
           )}
         />

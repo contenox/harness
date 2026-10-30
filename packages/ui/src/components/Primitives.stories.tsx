@@ -1,10 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { useState } from "react";
 import { Plus, Settings } from "lucide-react";
 import { RadioCardGroup } from "./RadioCard";
 import { TitleBar } from "./TitleBar";
-import { OneTimeCode } from "./OneTimeCode";
-import { Step, Steps } from "./Steps";
 import { Chip } from "./Chip";
 import { IconButton } from "./IconButton";
 import { Kbd } from "./Kbd";
@@ -99,6 +98,19 @@ export const RadioCards: Story = {
       />
     );
   },
+  play: async ({ canvasElement }) => {
+    const c = within(canvasElement);
+    const [a, b] = c.getAllByRole("radio");
+    await expect(a).toHaveAttribute("tabindex", "0");
+    await expect(b).toHaveAttribute("tabindex", "-1");
+    a.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(b).toHaveFocus();
+    await expect(b).toHaveAttribute("aria-checked", "true");
+    await expect(b).toHaveAttribute("tabindex", "0");
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(a).toHaveAttribute("aria-checked", "true");
+  },
 };
 
 export const WindowTitleBar: Story = {
@@ -106,23 +118,5 @@ export const WindowTitleBar: Story = {
     <TitleBar start={<IconButton label="Toggle sidebar"><Settings className="size-4" /></IconButton>} end={<IconButton label="Terminal" active><Plus className="size-4" /></IconButton>} reserveEnd={0}>
       <span className="truncate text-sm font-medium">Session title</span>
     </TitleBar>
-  ),
-};
-
-export const DeviceCodeSteps: Story = {
-  render: () => (
-    <div className="max-w-sm">
-      <Steps>
-        <Step number={1} title="Sign in in your browser" done>
-          We opened the ChatGPT sign-in page for you.
-        </Step>
-        <Step number={2} title="Enter this code">
-          <OneTimeCode value="PLGQ-T2YJJ" copyLabel="Copy" copiedLabel="Copied" copied />
-        </Step>
-        <Step number={3} title="Confirm access">
-          Allow Contenox to use your ChatGPT account. This window continues automatically.
-        </Step>
-      </Steps>
-    </div>
   ),
 };

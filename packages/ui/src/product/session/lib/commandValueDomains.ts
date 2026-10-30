@@ -1,5 +1,5 @@
 
-import type { SessionConfigOption, SessionConfigValue } from '@contenox/acp-client';
+import type { SessionConfigOption } from '@contenox/acp-client';
 import { isGroupedOptions, selectableValues } from './configOptions';
 
 
@@ -13,9 +13,6 @@ export const COMMAND_MODEL = 'model';
 export const COMMAND_PROVIDER = 'provider';
 export const COMMAND_THINK = 'think';
 export const COMMAND_POLICY = 'policy';
-
-
-const MODEL_DEFAULT_GROUP = 'default';
 
 
 const HITL_POLICY_DEFAULT_VALUE = '__contenox_default__';
@@ -58,47 +55,19 @@ export function commandValueDomains(
   return domains;
 }
 
+/**
+ * Generic: the model command offers every selectable value (opaque, inserted as-is); the provider
+ * command offers the option's group ids when it is grouped.
+ */
 function modelCommandDomains(option: SessionConfigOption): {
   models: string[];
   providers: string[];
 } {
-  const models: string[] = [];
-  const providers: string[] = [];
-  if (!Array.isArray(option.options)) return { models, providers };
-
-  if (isGroupedOptions(option.options)) {
-    for (const group of option.options) {
-      const provider = text(group.group);
-      if (provider !== '' && provider !== MODEL_DEFAULT_GROUP) providers.push(provider);
-      for (const value of group.options ?? []) {
-        models.push(modelFromConfigValue(value.value, provider));
-      }
-    }
-    return { models, providers };
-  }
-
-
-
-  for (const value of option.options as SessionConfigValue[]) {
-    const [provider, model] = splitModelConfigValue(value.value);
-    if (provider !== '') providers.push(provider);
-    models.push(model);
-  }
+  const models = selectableValues(option).map(value => value.value);
+  const providers = isGroupedOptions(option.options)
+    ? option.options.map(group => text(group.group)).filter(id => id !== '')
+    : [];
   return { models, providers };
-}
-
-
-function modelFromConfigValue(value: unknown, provider: string): string {
-  const model = text(value);
-  if (provider === '' || provider === MODEL_DEFAULT_GROUP) return model;
-  return model.startsWith(`${provider}/`) ? model.slice(provider.length + 1) : model;
-}
-
-function splitModelConfigValue(value: unknown): [provider: string, model: string] {
-  const raw = text(value);
-  const slash = raw.indexOf('/');
-  if (slash < 0) return ['', raw];
-  return [raw.slice(0, slash).trim(), raw.slice(slash + 1).trim()];
 }
 
 function addCommandValues(

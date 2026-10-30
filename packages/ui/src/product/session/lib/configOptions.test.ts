@@ -92,12 +92,12 @@ describe('toControlProps', () => {
 });
 
 describe('flattenGroups', () => {
-  it('folds the group name into each label, because Select renders no optgroup', () => {
+  it('keeps the group name on each entry (rendered as an optgroup)', () => {
     const props = toControlProps(MODEL);
     expect(flattenGroups(props.groups ?? [])).toEqual([
-      { value: 'local/qwen3-coder', label: 'Local / qwen3-coder' },
-      { value: 'local/devstral', label: 'Local / devstral' },
-      { value: 'openai/gpt-5', label: 'OpenAI / gpt-5' },
+      { value: 'local/qwen3-coder', label: 'qwen3-coder', group: 'Local' },
+      { value: 'local/devstral', label: 'devstral', group: 'Local' },
+      { value: 'openai/gpt-5', label: 'gpt-5', group: 'OpenAI' },
     ]);
   });
 });

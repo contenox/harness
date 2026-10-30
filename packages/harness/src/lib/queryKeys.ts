@@ -25,6 +25,12 @@ export const providerKeys = {
   login: (provider: string) => ['providers', provider, 'login'] as const,
 };
 
+export const connectionKeys = {
+  all: ['connections'] as const,
+  list: () => [...connectionKeys.all, 'list'] as const,
+  login: (id: string) => [...connectionKeys.all, id, 'login'] as const,
+};
+
 export const stateKeys = {
   all: ['state'] as const,
   pending: () => [...stateKeys.all, 'pending'],
@@ -53,12 +59,6 @@ export const setupKeys = {
   shellEnv: () => [...setupKeys.all, 'shell-env'] as const,
 };
 
-export const userKeys = {
-  all: ['users'] as const,
-  current: () => [...userKeys.all, 'current'],
-  list: (from?: string) => [...userKeys.all, 'list', { from }] as const,
-};
-
 export const systemKeys = {
   all: ['system'] as const,
   resources: () => [...systemKeys.all, 'resources'],
@@ -69,10 +69,6 @@ export const authKeys = {
   status: () => [...authKeys.all, 'status'] as const,
 };
 
-export const execKeys = {
-  all: ['exec'] as const,
-};
-
 export const typeKeys = {
   all: ['types'] as const,
 };
@@ -80,17 +76,11 @@ export const typeKeys = {
 export const chainKeys = {
   all: ['chains'] as const,
   list: () => [...chainKeys.all, 'list'] as const,
-  byPath: (vfsPath: string) => [...chainKeys.all, 'path', vfsPath] as const,
-  triggers: (vfsPath: string) => [...chainKeys.byPath(vfsPath), 'triggers'] as const,
-  tasks: (vfsPath: string) => [...chainKeys.byPath(vfsPath), 'tasks'] as const,
-  triggerDetail: (vfsPath: string, triggerId: string) =>
-    [...chainKeys.triggers(vfsPath), triggerId] as const,
 };
 
 export const hitlPolicyKeys = {
   all: ['hitl-policies'] as const,
   list: () => [...hitlPolicyKeys.all, 'list'] as const,
-  byName: (name: string) => [...hitlPolicyKeys.all, 'name', name] as const,
 };
 
 export const telegramKeys = {
@@ -162,38 +152,12 @@ export const functionKeys = {
   detail: (name: string) => [...functionKeys.all, 'detail', name] as const,
 };
 
-export const localHookKeys = {
-  all: ['localHooks'] as const,
-  list: () => [...localHookKeys.all, 'list'] as const,
-};
-
-export const remoteHookKeys = {
-  all: ['remoteHooks'] as const,
-  list: (params: { limit?: number; cursor?: string }) =>
-    [...remoteHookKeys.all, 'list', params] as const,
-  detail: (id: string) => [...remoteHookKeys.all, id] as const,
-  byName: (name: string) => [...remoteHookKeys.all, 'name', name] as const,
-  schemas: () => [...remoteHookKeys.all, 'schemas'] as const,
-};
-
-export const mcpServerKeys = {
-  all: ['mcpServers'] as const,
-  list: (params: { limit?: number; cursor?: string }) =>
-    [...mcpServerKeys.all, 'list', params] as const,
-  detail: (id: string) => [...mcpServerKeys.all, id] as const,
-  byName: (name: string) => [...mcpServerKeys.all, 'name', name] as const,
-};
-
 export const agentKeys = {
   all: ['agents'] as const,
   list: (params: { limit?: number; cursor?: string }) =>
     [...agentKeys.all, 'list', params] as const,
   detail: (id: string) => [...agentKeys.all, id] as const,
   byName: (name: string) => [...agentKeys.all, 'name', name] as const,
-};
-
-export const modelRegistryKeys = {
-  all: ['model-registry'] as const,
 };
 
 export const fleetKeys = {

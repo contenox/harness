@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "../utils";
 
@@ -18,8 +19,48 @@ export interface DropdownProps {
   placeholder?: string;
 }
 
+const VIEWPORT_MARGIN = 8;
+const ANCHOR_GAP = 6;
+const MAX_PANEL_HEIGHT = 512;
+
+export interface PanelPlacement {
+  top: number;
+  left: number;
+  maxHeight: number;
+  side: "bottom" | "top";
+}
+
 /**
- * Menu / anchored panel. Raised surface, 12px radius, 4px padding, one soft
+ * Pure placement of a fixed-position panel next to its trigger: honours the preferred
+ * side/align, flips when the other side has more room, and keeps the panel in the viewport.
+ */
+export function computePanelPlacement(args: {
+  anchor: { top: number; bottom: number; left: number; right: number };
+  panel: { width: number; height: number };
+  viewport: { width: number; height: number };
+  side: "bottom" | "top";
+  align: "start" | "end";
+}): PanelPlacement {
+  const { anchor, panel, viewport, side, align } = args;
+  const spaceBelow = viewport.height - anchor.bottom - ANCHOR_GAP - VIEWPORT_MARGIN;
+  const spaceAbove = anchor.top - ANCHOR_GAP - VIEWPORT_MARGIN;
+  const space = (s: "bottom" | "top") => (s === "bottom" ? spaceBelow : spaceAbove);
+  const other = side === "bottom" ? "top" : "bottom";
+  const chosen = panel.height > space(side) && space(other) > space(side) ? other : side;
+  const maxHeight = Math.max(96, Math.min(MAX_PANEL_HEIGHT, space(chosen)));
+  const height = Math.min(panel.height, maxHeight);
+  const top = chosen === "bottom" ? anchor.bottom + ANCHOR_GAP : anchor.top - ANCHOR_GAP - height;
+  const rawLeft = align === "end" ? anchor.right - panel.width : anchor.left;
+  const left = Math.max(
+    VIEWPORT_MARGIN,
+    Math.min(rawLeft, viewport.width - panel.width - VIEWPORT_MARGIN),
+  );
+  return { top: Math.max(VIEWPORT_MARGIN, top), left, maxHeight, side: chosen };
+}
+
+/**
+ * Menu / anchored panel. The panel is portaled to document.body with fixed positioning, so
+ * overflow-hidden ancestors cannot clip it. Raised surface, 12px radius, 4px padding, one soft
  * shadow. Use `DropdownItem` for rows; any other content is allowed
  * (see `Popover`).
  */
@@ -41,6 +82,8 @@ export function Dropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  const [placement, setPlacement] = useState<PanelPlacement | null>(null);
+
   const openerRef = useRef<HTMLElement | null>(null);
   const isControlled = controlledOpen !== undefined;
   const isOpen = isControlled ? controlledOpen : internalOpen;
@@ -61,9 +104,11 @@ export function Dropdown({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(target) &&
+        !contentRef.current?.contains(target)
       ) {
         closeRef.current();
       }
@@ -72,6 +117,51 @@ export function Dropdown({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPlacement(null);
+      return;
+    }
+    const place = () => {
+      const anchorEl = dropdownRef.current;
+      const panelEl = contentRef.current;
+      if (!anchorEl || !panelEl) return;
+      const r = anchorEl.getBoundingClientRect();
+      const next = computePanelPlacement({
+        anchor: r,
+        panel: { width: panelEl.offsetWidth, height: panelEl.scrollHeight + 2 },
+        viewport: {
+          width: document.documentElement.clientWidth,
+          height: window.innerHeight,
+        },
+        side,
+        align,
+      });
+      setPlacement((prev) =>
+        prev &&
+        prev.top === next.top &&
+        prev.left === next.left &&
+        prev.maxHeight === next.maxHeight &&
+        prev.side === next.side
+          ? prev
+          : next,
+      );
+    };
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    const ro =
+      typeof ResizeObserver !== "undefined" && contentRef.current
+        ? new ResizeObserver(place)
+        : null;
+    if (ro && contentRef.current) ro.observe(contentRef.current);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+      ro?.disconnect();
+    };
+  }, [isOpen, side, align]);
 
   const itemElements = () =>
     Array.from(
@@ -144,7 +234,12 @@ export function Dropdown({
   };
 
   const handleBlur = (e: React.FocusEvent) => {
-    if (isOpen && !e.currentTarget.contains(e.relatedTarget as Node)) {
+    const next = e.relatedTarget as Node | null;
+    if (
+      isOpen &&
+      !e.currentTarget.contains(next) &&
+      !contentRef.current?.contains(next)
+    ) {
       close();
     }
   };
@@ -205,22 +300,31 @@ export function Dropdown({
       onBlur={handleBlur}
     >
       {triggerElement}
-      {isOpen && (
-        <div
-          ref={contentRef}
-          className={cn(
-            "absolute z-50 rounded-xl border border-line bg-raised p-1 text-text shadow-pop",
-            side === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5",
-            "w-max min-w-full max-w-[calc(100vw-2rem)]",
-            "max-h-[min(32rem,calc(100vh-4rem))] overflow-y-auto overscroll-contain",
-            align === "end" ? "right-0" : "left-0",
-            contentClassName,
-          )}
-          role={options && !children ? "listbox" : undefined}
-        >
-          {content}
-        </div>
-      )}
+      {isOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={contentRef}
+            className={cn(
+              "fixed z-[60] rounded-xl border border-line bg-raised p-1 text-text shadow-pop",
+              "w-max min-w-[var(--anchor-w)] max-w-[calc(100vw-2rem)]",
+              "overflow-y-auto overscroll-contain",
+              contentClassName,
+            )}
+            style={{
+              top: placement?.top ?? 0,
+              left: placement?.left ?? 0,
+              maxHeight: placement?.maxHeight ?? MAX_PANEL_HEIGHT,
+              ["--anchor-w" as string]: `${dropdownRef.current?.offsetWidth ?? 0}px`,
+              visibility: placement ? "visible" : "hidden",
+            }}
+            data-side={placement?.side ?? side}
+            role={options && !children ? "listbox" : undefined}
+          >
+            {content}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

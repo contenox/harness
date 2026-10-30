@@ -1,99 +1,18 @@
-PROJECT_ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-NPM ?= npm
-NODE_OPTIONS ?= --max-old-space-size=4096
-export NODE_OPTIONS
+# Thin alias for the npm scripts: every target runs scripts/tasks.mjs (see `npm run help`).
+# Variables map to flags: RUNTIME_BIN=<path>, CONFIRM=yes, DRY_RUN=yes. Needs only Node.
+RUNNER := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))scripts/tasks.mjs
+FLAGS := $(if $(RUNTIME_BIN),--runtime-bin="$(RUNTIME_BIN)",) $(if $(filter yes,$(CONFIRM)),--yes,) $(if $(filter yes,$(DRY_RUN)),--dry-run,)
 
-.PHONY: help install install-web desktop-install build build-ui build-harness test test-ui test-harness test-acp-client typecheck lint runtime-fetch dev desktop\:dev desktop-dev desktop-stage desktop-verify desktop-checksums desktop-package-dir desktop-package desktop-sign-rpm ci clean
+TASKS := install install-web install-desktop build build-ui build-harness test test-ui test-harness \
+	test-acp-client typecheck lint ci dev stage stage-local package-dir package package-local qa verify \
+	checksums sign-rpm runtime-fetch stop clean reset-local-state
+OLD_NAMES := desktop-install desktop-dev desktop-stage desktop-stage-local desktop-package-dir \
+	desktop-package desktop-package-local desktop-verify desktop-checksums desktop-sign-rpm
+
+.PHONY: help $(TASKS) $(OLD_NAMES)
 
 help:
-	@echo "install          install web and desktop dependencies"
-	@echo "install-web      install web dependencies"
-	@echo "build            build UI and harness"
-	@echo "test             run UI, harness and acp-client tests"
-	@echo "typecheck        typecheck harness"
-	@echo "lint             lint harness"
-	@echo "runtime-fetch    download and verify the pinned runtime"
-	@echo "desktop-install  install Electron dependencies"
-	@echo "desktop-dev      run the Electron desktop app"
-	@echo "desktop-stage    stage runtime and harness UI for packaging"
-	@echo "desktop-verify   verify the unpacked desktop package"
-	@echo "desktop-checksums write SHA256SUMS for host installers"
-	@echo "desktop-package-dir  build an unpacked desktop app"
-	@echo "desktop-package  build host installers"
-	@echo "dev              alias for desktop-dev"
-	@echo "ci               install, build, typecheck, lint, test"
-	@echo "clean            remove build and runtime output"
+	@node "$(RUNNER)" help
 
-install: install-web desktop-install
-
-install-web:
-	$(NPM) --prefix $(PROJECT_ROOT)packages/ui ci
-	$(NPM) --prefix $(PROJECT_ROOT)packages/harness ci
-	$(NPM) --prefix $(PROJECT_ROOT)packages/acp-client ci
-
-build: build-ui build-harness
-
-build-ui:
-	$(NPM) --prefix $(PROJECT_ROOT)packages/ui run build
-
-build-harness: build-ui
-	$(NPM) --prefix $(PROJECT_ROOT)packages/harness run build
-
-test: test-ui test-harness test-acp-client
-
-test-ui:
-	$(NPM) --prefix $(PROJECT_ROOT)packages/ui test -- --project unit
-
-test-harness:
-	$(NPM) --prefix $(PROJECT_ROOT)packages/harness test
-
-test-acp-client:
-	$(NPM) --prefix $(PROJECT_ROOT)packages/acp-client test
-
-typecheck:
-	$(NPM) --prefix $(PROJECT_ROOT)packages/harness run typecheck
-
-lint:
-	$(NPM) --prefix $(PROJECT_ROOT)packages/harness run lint
-
-runtime-fetch:
-	node $(PROJECT_ROOT)scripts/fetch-runtime.mjs
-
-desktop-install:
-	$(NPM) --prefix $(PROJECT_ROOT)desktop ci
-	node $(PROJECT_ROOT)desktop/node_modules/electron/install.js
-
-desktop-dev: runtime-fetch desktop-install
-	$(NPM) --prefix $(PROJECT_ROOT)desktop run dev
-
-dev: desktop-dev
-
-desktop\:dev: desktop-dev
-
-desktop-stage: build runtime-fetch desktop-install
-	$(NPM) --prefix $(PROJECT_ROOT)desktop run stage
-
-desktop-verify:
-	$(NPM) --prefix $(PROJECT_ROOT)desktop run verify:package
-
-desktop-checksums:
-	$(NPM) --prefix $(PROJECT_ROOT)desktop run checksums
-
-desktop-package-dir: desktop-stage
-	$(NPM) --prefix $(PROJECT_ROOT)desktop run package:dir
-	$(NPM) --prefix $(PROJECT_ROOT)desktop run verify:package
-
-desktop-package: desktop-stage
-	$(NPM) --prefix $(PROJECT_ROOT)desktop run package
-	$(NPM) --prefix $(PROJECT_ROOT)desktop run verify:package
-	$(NPM) --prefix $(PROJECT_ROOT)desktop run checksums
-
-desktop\:package: desktop-package
-
-desktop-sign-rpm:
-	GNUPGHOME="$(GNUPGHOME)" RELEASE_PUBLIC_KEY_FILE="$(RELEASE_PUBLIC_KEY_FILE)" scripts/sign-rpm.sh desktop/dist
-
-ci: install-web build typecheck lint test
-
-clean:
-	rm -rf $(PROJECT_ROOT)packages/ui/dist $(PROJECT_ROOT)packages/harness/dist $(PROJECT_ROOT)desktop/node_modules $(PROJECT_ROOT).runtime
+$(TASKS) $(OLD_NAMES):
+	@node "$(RUNNER)" $@ $(FLAGS)

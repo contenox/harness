@@ -65,7 +65,7 @@ export default function BackendsSection() {
 
   return (
     <GridLayout variant="body" columns={2} responsive={{ base: 1, lg: 2 }} className="gap-6">
-      <div className="order-2 space-y-6 lg:order-1">
+      <div className="order-2 space-y-6 @4xl:order-1">
         <Section title={t('backends.manage_title')}>
           <div className="space-y-4">
             {backends && backends.length > 0 ? (
@@ -87,7 +87,7 @@ export default function BackendsSection() {
         </Section>
       </div>
 
-      <div className="order-1 space-y-6 lg:sticky lg:top-4 lg:order-2 lg:self-start">
+      <div className="order-1 space-y-6 @4xl:sticky @4xl:top-4 @4xl:order-2 @4xl:self-start">
         <BackendForm
           editingBackend={editingBackend}
           onCancel={resetForm}

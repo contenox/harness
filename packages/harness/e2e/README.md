@@ -3,7 +3,7 @@
 Screenshot tests for the harness SPA, for review rather than for gates.
 
 `run.sh` builds the UI, resolves the pinned `contenox-runtime` binary from
-`runtime.lock.json` + `.runtime/` (`make runtime-fetch` if missing), seeds a throwaway
+`runtime.lock.json` + `.runtime/` (`npm run runtime-fetch` if missing), seeds a throwaway
 `$HOME` with a **scripted-test backend** and one ACP conversation, starts
 `contenox-runtime serve` against it plus the SPA server from
 `desktop/src/server.mjs` (via `serve-ui.mjs`) in front of it, and lets Playwright capture one full-page

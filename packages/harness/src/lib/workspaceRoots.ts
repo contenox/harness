@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import type { WorkspaceRoot } from './types';
 
 
@@ -28,8 +29,12 @@ function basename(path: string): string {
 
 export function projectName(root: WorkspaceRoot): string {
   const name = root.name?.trim();
+  const folder = basename(root.path);
+  // The default project is the scratchpad for chats without a project. Show it by what it is,
+  // unless the user gave it a name of their own (a name other than its folder's).
+  if (root.default && (!name || name === folder)) return i18n.t('projects.scratchpad');
   if (name) return name;
-  return basename(root.path) || root.path;
+  return folder || root.path;
 }
 
 function containsPath(root: string, target: string): boolean {

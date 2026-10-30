@@ -1,43 +1,34 @@
 import { apiFetch } from './fetch';
 import {
   Agent,
-  AuthenticatedUser,
   AuthStatus,
   Backend,
   BackendRuntimeState,
-  ChainDefinition,
   CLIConfig,
   CLIConfigUpdateRequest,
   CLIConfigUpdateResponse,
   CloudProviderType,
-  ConfigureProviderInput,
+  Connection,
+  CreateConnectionInput,
+  PatchConnectionInput,
   DispatchRequest,
   DispatchResult,
   FleetEntry,
   HITLApproval,
-  HITLPolicy,
-  LocalHook,
-  MCPServer,
   Mission,
   MissionChangesResponse,
   MissionFileDiff,
   MissionReport,
-  ModelDescriptor,
-  ModelRegistryEntry,
   AgentPreset,
   AgentPresetInstallResult,
   AgentRecord,
   OperatorInboxItem,
   ProviderLoginStart,
   ProviderLoginStatus,
-  RemoteHook,
   SetupStatus,
   ShellEnvResponse,
   ShellEnvUpdateRequest,
   StatusResponse,
-  SupportedProvider,
-  TaskExecutionRequest,
-  TaskExecutionResponse,
   WorkspaceRootsResponse,
 } from './types';
 
@@ -64,14 +55,6 @@ const options = (method: HttpMethod, data?: unknown): ApiOptions => {
   return options;
 };
 
-const localAuthenticatedUser: AuthenticatedUser = {
-  id: 'local-user',
-  subject: 'local-user',
-  email: 'local@localhost',
-  friendlyName: 'Local user',
-  username: 'local-user',
-};
-
 const normalizeSetupStatus = (raw: SetupStatus): SetupStatus => ({
   ...raw,
   defaultModel: raw.defaultModel ?? '',
@@ -85,50 +68,6 @@ const normalizeSetupStatus = (raw: SetupStatus): SetupStatus => ({
 });
 
 export const api = {
-  getRemoteHooks: (params?: { limit?: number; cursor?: string }) => {
-    const search = new URLSearchParams();
-    if (params?.limit !== undefined) search.set('limit', params.limit.toString());
-    if (params?.cursor) search.set('cursor', params.cursor);
-    const qs = search.toString() ? `?${search.toString()}` : '';
-    return apiFetch<RemoteHook[]>(`/api/tools/remote${qs}`);
-  },
-
-  getRemoteHook: (id: string) => apiFetch<RemoteHook>(`/api/tools/remote/${id}`),
-
-  getRemoteHookByName: (name: string) => apiFetch<RemoteHook>(`/api/tools/remote/by-name/${name}`),
-
-  createRemoteHook: (data: Partial<RemoteHook>) =>
-    apiFetch<RemoteHook>('/api/tools/remote', options('POST', data)),
-
-  updateRemoteHook: (id: string, data: Partial<RemoteHook>) =>
-    apiFetch<RemoteHook>(`/api/tools/remote/${id}`, options('PUT', data)),
-
-  deleteRemoteHook: (id: string) => apiFetch<string>(`/api/tools/remote/${id}`, options('DELETE')),
-  getLocalHooks: () => apiFetch<LocalHook[]>('/api/tools/local'),
-
-  getRemoteHookSchemas: () => apiFetch<Record<string, unknown>>('/api/tools/schemas'),
-
-  getMcpServers: (params?: { limit?: number; cursor?: string }) => {
-    const search = new URLSearchParams();
-    if (params?.limit !== undefined) search.set('limit', params.limit.toString());
-    if (params?.cursor) search.set('cursor', params.cursor);
-    const qs = search.toString() ? `?${search.toString()}` : '';
-    return apiFetch<MCPServer[]>(`/api/mcp-servers${qs}`);
-  },
-  getMcpServer: (id: string) => apiFetch<MCPServer>(`/api/mcp-servers/${id}`),
-  getMcpServerByName: (name: string) =>
-    apiFetch<MCPServer>(`/api/mcp-servers/by-name/${encodeURIComponent(name)}`),
-  createMcpServer: (data: Partial<MCPServer>) =>
-    apiFetch<MCPServer>('/api/mcp-servers', options('POST', data)),
-  updateMcpServer: (id: string, data: Partial<MCPServer>) =>
-    apiFetch<MCPServer>(`/api/mcp-servers/${id}`, options('PUT', data)),
-  deleteMcpServer: (id: string) => apiFetch<string>(`/api/mcp-servers/${id}`, options('DELETE')),
-  startMcpOAuth: (id: string, body: { redirectBase: string }) =>
-    apiFetch<{ authorizationUrl: string }>(
-      `/api/mcp-servers/${id}/oauth/start`,
-      options('POST', body),
-    ),
-
   getAgents: (params?: { limit?: number; cursor?: string }) => {
     const search = new URLSearchParams();
     if (params?.limit !== undefined) search.set('limit', params.limit.toString());
@@ -215,33 +154,11 @@ export const api = {
     apiFetch<ShellEnvResponse>('/api/shell-env', options('PUT', body)),
 
   listPolicies: () => apiFetch<string[]>('/api/hitl-policies/list'),
-  getPolicy: (name: string) =>
-    apiFetch<HITLPolicy>(`/api/hitl-policies?name=${encodeURIComponent(name)}`),
-  createPolicy: (name: string, policy: HITLPolicy) =>
-    apiFetch<HITLPolicy>(
-      `/api/hitl-policies?name=${encodeURIComponent(name)}`,
-      options('POST', policy),
-    ),
-  updatePolicy: (name: string, policy: HITLPolicy) =>
-    apiFetch<HITLPolicy>(
-      `/api/hitl-policies?name=${encodeURIComponent(name)}`,
-      options('PUT', policy),
-    ),
-  deletePolicy: (name: string) =>
-    apiFetch<string>(`/api/hitl-policies?name=${encodeURIComponent(name)}`, options('DELETE')),
 
   getRuntimeBackendState: () => apiFetch<BackendRuntimeState[]>('/api/state'),
 
-  taskEvents(requestId: string): EventSource {
-    return new EventSource(`/api/task-events?requestId=${encodeURIComponent(requestId)}`);
-  },
-
-  configureProvider: (provider: CloudProviderType, data: ConfigureProviderInput) =>
-    apiFetch<StatusResponse>(`/api/providers/${provider}/configure`, options('POST', data)),
-
   getProviderStatus: (provider: CloudProviderType) =>
     apiFetch<StatusResponse>(`/api/providers/${provider}/status`),
-  getSupportedProviders: () => apiFetch<SupportedProvider[]>('/api/providers/supported'),
 
   listAgentPresets: () => apiFetch<AgentPreset[]>('/api/agent-presets'),
   installAgentPreset: (name: string, force = false) =>
@@ -262,53 +179,49 @@ export const api = {
   logoutProvider: (provider: CloudProviderType) =>
     apiFetch<string>(`/api/providers/${provider}/login`, options('DELETE')),
 
-  getCurrentUser: async (): Promise<AuthenticatedUser> => localAuthenticatedUser,
+  cancelProviderLogin: (provider: CloudProviderType) =>
+    apiFetch<ProviderLoginStatus>(`/api/providers/${provider}/login/cancel`, options('POST')),
+
+  listConnections: () => apiFetch<Connection[]>('/api/providers/connections'),
+  createConnection: (providerType: string, data: CreateConnectionInput) =>
+    apiFetch<Connection>(
+      `/api/providers/${encodeURIComponent(providerType)}/connections`,
+      options('POST', data),
+    ),
+  patchConnection: (id: string, data: PatchConnectionInput) =>
+    apiFetch<Connection>(
+      `/api/providers/connections/${encodeURIComponent(id)}`,
+      options('PATCH', data),
+    ),
+  deleteConnection: (id: string) =>
+    apiFetch<string>(`/api/providers/connections/${encodeURIComponent(id)}`, options('DELETE')),
+  checkConnection: (id: string) =>
+    apiFetch<Connection>(
+      `/api/providers/connections/${encodeURIComponent(id)}/check`,
+      // A synchronous discovery cycle can take up to 30s on the runtime side.
+      { ...options('POST'), timeoutMs: 45_000 },
+    ),
+  startConnectionLogin: (id: string) =>
+    apiFetch<ProviderLoginStart>(
+      `/api/providers/connections/${encodeURIComponent(id)}/login`,
+      options('POST'),
+    ),
+  getConnectionLogin: (id: string) =>
+    apiFetch<ProviderLoginStatus>(`/api/providers/connections/${encodeURIComponent(id)}/login`),
+  cancelConnectionLogin: (id: string) =>
+    apiFetch<ProviderLoginStatus>(
+      `/api/providers/connections/${encodeURIComponent(id)}/login/cancel`,
+      options('POST'),
+    ),
+  logoutConnection: (id: string) =>
+    apiFetch<string>(
+      `/api/providers/connections/${encodeURIComponent(id)}/login`,
+      options('DELETE'),
+    ),
 
   getAuthStatus: () => apiFetch<AuthStatus>('/ui/auth-status', { credentials: 'same-origin' }),
   loginWithToken: (token: string) => apiFetch<AuthStatus>('/ui/login', options('POST', { token })),
   logout: () => apiFetch<AuthStatus>('/ui/logout', options('POST')),
 
-  executeTaskChain: (
-    data: TaskExecutionRequest,
-    opts?: { signal?: AbortSignal; requestId?: string },
-  ) => {
-    const requestOptions = options('POST', data);
-    if (opts?.requestId) {
-      requestOptions.headers = {
-        ...requestOptions.headers,
-        'X-Request-ID': opts.requestId,
-      };
-    }
-    return apiFetch<TaskExecutionResponse>(`/api/tasks`, {
-      ...requestOptions,
-      signal: opts?.signal,
-    });
-  },
-
   listChains: () => apiFetch<string[]>('/api/taskchains/list'),
-  getChain: (path: string) =>
-    apiFetch<ChainDefinition>(`/api/taskchains?path=${encodeURIComponent(path)}`),
-  createChain: (path: string, data: Partial<ChainDefinition>) =>
-    apiFetch<ChainDefinition>(
-      `/api/taskchains?path=${encodeURIComponent(path)}`,
-      options('POST', data),
-    ),
-  updateChain: (path: string, data: Partial<ChainDefinition>) =>
-    apiFetch<ChainDefinition>(
-      `/api/taskchains?path=${encodeURIComponent(path)}`,
-      options('PUT', data),
-    ),
-  deleteChain: (path: string) =>
-    apiFetch<void>(`/api/taskchains?path=${encodeURIComponent(path)}`, options('DELETE')),
-
-  listModelRegistry: () => apiFetch<ModelDescriptor[]>('/api/model-registry'),
-  createModelRegistryEntry: (data: Omit<ModelRegistryEntry, 'id' | 'createdAt' | 'updatedAt'>) =>
-    apiFetch<ModelRegistryEntry>('/api/model-registry', options('POST', data)),
-  deleteModelRegistryEntry: (id: string) =>
-    apiFetch<void>(`/api/model-registry/${encodeURIComponent(id)}`, options('DELETE')),
-  downloadModel: (name: string) =>
-    apiFetch<string>('/api/model-registry/download', {
-      ...options('POST', { name }),
-      timeoutMs: null,
-    }),
 };

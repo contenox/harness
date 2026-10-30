@@ -19,14 +19,7 @@ const meta: Meta<typeof GridLayout> = {
 };
 
 const Cell = ({ index }: { index: number }) => (
-  <div
-    style={{
-      padding: "1rem",
-      background: "var(--color-surface-100)",
-      borderRadius: "0.5rem",
-      textAlign: "center",
-    }}
-  >
+  <div className="rounded-lg bg-sidebar p-4 text-center text-[13px] text-text">
     Item {index}
   </div>
 );
@@ -63,5 +56,40 @@ export const Responsive: Story = {
         <Cell key={i} index={i + 1} />
       ))}
     </GridLayout>
+  ),
+};
+
+/** Collapse follows the container, not the viewport: same props, three widths. */
+export const NarrowContainers: Story = {
+  args: { responsive: { base: 1, sm: 2, md: 3, lg: 4 } },
+  render: (args) => (
+    <div className="flex flex-col gap-6">
+      {[320, 640, 960].map((w) => (
+        <div key={w} style={{ width: w, maxWidth: "100%" }}>
+          <GridLayout {...args} title={`Container ${w}px`}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Cell key={i} index={i + 1} />
+            ))}
+          </GridLayout>
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+export const ColumnsInNarrowContainer: Story = {
+  args: { columns: 4 },
+  render: (args) => (
+    <div className="flex flex-col gap-6">
+      {[320, 520, 960].map((w) => (
+        <div key={w} style={{ width: w, maxWidth: "100%" }}>
+          <GridLayout {...args} title={`columns=4 in ${w}px`}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Cell key={i} index={i + 1} />
+            ))}
+          </GridLayout>
+        </div>
+      ))}
+    </div>
   ),
 };

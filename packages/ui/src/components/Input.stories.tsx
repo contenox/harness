@@ -47,6 +47,10 @@ export const WithError: Story = {
   args: { defaultValue: "invalid@", error: true },
 };
 
+export const Mono: Story = {
+  args: { defaultValue: "ANTHROPIC_API_KEY", mono: true },
+};
+
 export const WithStartIcon: Story = {
   args: {
     placeholder: "Search...",

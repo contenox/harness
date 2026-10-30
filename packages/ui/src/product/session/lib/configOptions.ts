@@ -12,6 +12,8 @@ export type ConfigControlKind = 'boolean' | 'select-flat' | 'select-grouped';
 export interface SelectControlOption {
   value: string;
   label: string;
+  /** Group name for native <optgroup> rendering. */
+  group?: string;
 }
 
 export interface SelectControlGroup {
@@ -34,9 +36,10 @@ export function isGroupedOptions(
   return Array.isArray(options) && options.length > 0 && 'group' in options[0];
 }
 
+/** Flat list of a grouped select; each entry keeps its group name (labels are not concatenated). */
 export function flattenGroups(groups: SelectControlGroup[]): SelectControlOption[] {
   return groups.flatMap(group =>
-    group.options.map(option => ({ value: option.value, label: `${group.label} / ${option.label}` })),
+    group.options.map(option => ({ value: option.value, label: option.label, group: group.label })),
   );
 }
 

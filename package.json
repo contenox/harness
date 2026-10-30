@@ -1,0 +1,38 @@
+{
+  "name": "contenox-harness-workspace",
+  "private": true,
+  "description": "Developer entry points for the Contenox harness. No dependencies: every script runs scripts/tasks.mjs.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "help": "node scripts/tasks.mjs help",
+    "setup": "node scripts/tasks.mjs setup",
+    "install-web": "node scripts/tasks.mjs install-web",
+    "install-desktop": "node scripts/tasks.mjs install-desktop",
+    "dev": "node scripts/tasks.mjs dev",
+    "build": "node scripts/tasks.mjs build",
+    "build-ui": "node scripts/tasks.mjs build-ui",
+    "build-harness": "node scripts/tasks.mjs build-harness",
+    "test": "node scripts/tasks.mjs test",
+    "test-ui": "node scripts/tasks.mjs test-ui",
+    "test-harness": "node scripts/tasks.mjs test-harness",
+    "test-acp-client": "node scripts/tasks.mjs test-acp-client",
+    "typecheck": "node scripts/tasks.mjs typecheck",
+    "lint": "node scripts/tasks.mjs lint",
+    "ci": "node scripts/tasks.mjs ci",
+    "runtime-fetch": "node scripts/tasks.mjs runtime-fetch",
+    "stage": "node scripts/tasks.mjs stage",
+    "stage-local": "node scripts/tasks.mjs stage-local",
+    "package-dir": "node scripts/tasks.mjs package-dir",
+    "package": "node scripts/tasks.mjs package",
+    "package-local": "node scripts/tasks.mjs package-local",
+    "qa": "node scripts/tasks.mjs qa",
+    "verify": "node scripts/tasks.mjs verify",
+    "checksums": "node scripts/tasks.mjs checksums",
+    "sign-rpm": "node scripts/tasks.mjs sign-rpm",
+    "stop": "node scripts/tasks.mjs stop",
+    "clean": "node scripts/tasks.mjs clean",
+    "reset-local-state": "node scripts/tasks.mjs reset-local-state"
+  }
+}

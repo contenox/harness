@@ -8,14 +8,14 @@ import {
   Popover,
   SearchBar,
 } from '@contenox/ui';
+import { buildChoiceEntries, choiceItems, needsSearch, summarizeChoice } from '@contenox/ui/session-lib';
 import { ConfigOptionControl } from '@contenox/ui/session-ui';
 import { Folder, FolderPlus, MoreHorizontal } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NewProjectDialog } from '../../../components/workspace/NewProjectDialog';
 import { useWorkspaceRoots } from '../../../hooks/useWorkspaceRoots';
 import { displayRootForPath, projectName, shortenRootPath } from '../../../lib/workspaceRoots';
-import { currentChoiceLabel, isModelOption, optionChoices, shortChoiceLabel } from '../lib/composerChips';
 import { filterProjects } from '../lib/projectChoices';
 
 export interface SelectChipProps {
@@ -24,44 +24,99 @@ export interface SelectChipProps {
   align?: 'start' | 'end';
 }
 
-/** A select-type ACP config option as a compact chip showing the current choice. */
+/**
+ * A select-type ACP config option as a compact chip. Grouped options show group headers in
+ * runtime order; values are opaque. The chip shows the selected value's name plus its group
+ * as a small secondary label.
+ */
 export function SelectChip({ option, onChange, align = 'end' }: SelectChipProps) {
-  const choices = optionChoices(option);
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  if (choices.length === 0) return null;
-  const fullLabel = currentChoiceLabel(option);
-  const label = isModelOption(option) ? shortChoiceLabel(fullLabel) : fullLabel;
+  const [query, setQuery] = useState('');
+  const panelRef = useRef<HTMLDivElement>(null);
+  const searchable = needsSearch(option);
+  const entries = useMemo(() => buildChoiceEntries(option, query), [option, query]);
+  if (option.type === 'boolean' || choiceItems(buildChoiceEntries(option)).length === 0) return null;
+
+  const { label, badge, title } = summarizeChoice(option);
+  const shown = label ?? t('composer_chips.not_set');
+  const close = () => {
+    setOpen(false);
+    setQuery('');
+  };
+  const pick = (value: string) => {
+    onChange(option.id, value);
+    close();
+  };
+  const items = choiceItems(entries);
+
   return (
     <Dropdown
       align={align}
       side="top"
       isOpen={open}
-      onToggle={setOpen}
-      contentClassName="w-64"
+      onToggle={next => (next ? setOpen(true) : close())}
+      contentClassName="w-72"
       trigger={
         <Chip
           caret
           active={open}
-          label={label}
-          className="max-w-[9rem] shrink"
-          title={label === fullLabel ? (option.description ?? option.name) : `${option.name}: ${fullLabel}`}
-          aria-label={`${option.name}: ${fullLabel}`}
+          label={
+            <>
+              {shown}
+              {badge && <span className="text-text-subtle ml-1.5 text-xs font-normal">{badge}</span>}
+            </>
+          }
+          className="max-w-[12rem] shrink"
+          title={title ?? option.description ?? option.name}
+          aria-label={`${option.name}: ${title ?? t('composer_chips.not_set')}`}
         />
       }>
+      <div ref={panelRef}>
+      {searchable && (
+        <div className="p-1 pb-1.5">
+          <SearchBar
+            autoFocus
+            value={query}
+            placeholder={t('composer_chips.choice_search')}
+            aria-label={t('composer_chips.choice_search')}
+            onChange={e => setQuery(e.target.value)}
+            onClear={() => setQuery('')}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && items[0]) {
+                e.preventDefault();
+                pick(items[0].value);
+              } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                e.stopPropagation();
+                panelRef.current?.querySelector<HTMLElement>('[role="option"]')?.focus();
+              }
+            }}
+          />
+        </div>
+      )}
       <div role="listbox" aria-label={option.name}>
-        {choices.map(choice => (
-          <DropdownItem
-            key={choice.value}
-            role="option"
-            aria-selected={choice.value === option.currentValue}
-            selected={choice.value === option.currentValue}
-            onClick={() => {
-              onChange(option.id, choice.value);
-              setOpen(false);
-            }}>
-            {choice.label}
-          </DropdownItem>
-        ))}
+        {items.length === 0 && (
+          <div className="text-text-subtle px-2.5 py-2 text-[13px]">{t('composer_chips.choice_none')}</div>
+        )}
+        {entries.map(entry =>
+          entry.kind === 'header' ? (
+            <DropdownLabel key={`h:${entry.key}`} role="presentation">
+              {entry.label}
+            </DropdownLabel>
+          ) : (
+            <DropdownItem
+              key={entry.value}
+              role="option"
+              aria-selected={entry.value === option.currentValue}
+              selected={entry.value === option.currentValue}
+              title={entry.description}
+              onClick={() => pick(entry.value)}>
+              {entry.label}
+            </DropdownItem>
+          ),
+        )}
+      </div>
       </div>
     </Dropdown>
   );
@@ -91,7 +146,12 @@ export function OverflowChip({ options, onChange }: OverflowChipProps) {
       }>
       <div className="flex flex-col gap-3">
         {options.map(option => (
-          <ConfigOptionControl key={option.id} option={option} onChange={value => onChange(option.id, value)} />
+          <ConfigOptionControl
+            key={option.id}
+            option={option}
+            notSetLabel={t('composer_chips.not_set')}
+            onChange={value => onChange(option.id, value)}
+          />
         ))}
       </div>
     </Popover>

@@ -15,7 +15,7 @@ export function ProvidersLinkSection() {
             {t('settings.manage_providers_description')}
           </P>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => navigate('/backends')}>
+        <Button variant="secondary" size="sm" onClick={() => navigate('/backends?tab=providers')}>
           {t('settings.manage_providers_action')}
         </Button>
       </div>

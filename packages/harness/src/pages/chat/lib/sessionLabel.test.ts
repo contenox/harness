@@ -27,3 +27,10 @@ describe('workspaceLabel', () => {
     expect(workspaceLabel('/')).toBeNull();
   });
 });
+
+describe('workspaceLabel on Windows paths', () => {
+  it('uses the last folder of a backslash path', () => {
+    expect(workspaceLabel(String.raw`C:\Users\me\website`)).toBe('website');
+    expect(workspaceLabel('D:\\dev\\repos\\')).toBe('repos');
+  });
+});

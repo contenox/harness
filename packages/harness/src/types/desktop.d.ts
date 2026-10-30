@@ -12,6 +12,8 @@ declare global {
       ensureProjectRuntime(
         path: string,
       ): Promise<{ ok: true; key: string; prefix: string } | { ok: false; error: string }>;
+      /** Open an existing project folder in the OS file manager. */
+      revealPath?(path: string): Promise<{ ok: boolean; error?: string }>;
       stopProjectRuntime(path: string): Promise<{ ok: boolean; error?: string }>;
       /** Folder requested at launch (argv / CONTENOX_WORKSPACE / second instance); returned once. */
       takeLaunchFolder(): Promise<string | null>;

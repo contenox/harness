@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('contenoxDesktop', {
   selectDirectory: () => ipcRenderer.invoke('contenox:select-directory'),
   // Starts (or reuses) the runtime for a project folder -> { ok, key, prefix } | { ok:false, error }.
   ensureProjectRuntime: path => ipcRenderer.invoke('contenox:ensure-project-runtime', path),
+  // Opens a project folder in the OS file manager -> { ok } | { ok:false, error }.
+  revealPath: path => ipcRenderer.invoke('contenox:reveal-path', path),
   stopProjectRuntime: path => ipcRenderer.invoke('contenox:stop-project-runtime', path),
   // Folder requested via argv / CONTENOX_WORKSPACE / second instance; returns it once, then null.
   takeLaunchFolder: () => ipcRenderer.invoke('contenox:take-launch-folder'),

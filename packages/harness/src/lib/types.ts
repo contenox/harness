@@ -1,22 +1,5 @@
-import type { CapturedStateUnit, InlineAttachment } from '@contenox/ui';
+import type { InlineAttachment } from '@contenox/ui';
 export type { InlineAttachment };
-
-export type ModelDescriptor = {
-  id?: string;
-  name: string;
-  sourceUrl: string;
-  sizeBytes: number;
-  curated: boolean;
-};
-
-export type ModelRegistryEntry = {
-  id: string;
-  name: string;
-  sourceUrl: string;
-  sizeBytes: number;
-  createdAt?: string;
-  updatedAt?: string;
-};
 
 export type Backend = {
   id: string;
@@ -26,6 +9,7 @@ export type Backend = {
   models: string[];
   pulledModels: ObservedModel[];
   error: string;
+  errorCode?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -37,6 +21,7 @@ export type BackendRuntimeState = {
   pulledModels: ObservedModel[];
   backend: Backend;
   error?: string;
+  errorCode?: string;
 };
 
 export type ObservedModel = {
@@ -50,16 +35,6 @@ export type ObservedModel = {
   canEmbed: boolean;
   canPrompt: boolean;
   canStream: boolean;
-};
-
-export type LayoutDirection = 'horizontal' | 'vertical';
-
-export type StateResponse = {
-  response: string;
-  state: CapturedStateUnit[];
-  inputTokenCount: number;
-  outputTokenCount: number;
-  error?: string;
 };
 
 export type ChatContextArtifact = {
@@ -203,25 +178,8 @@ export type CloudProviderType =
   | 'gemini'
   | 'mistral'
   | 'bedrock'
-  | 'vertex-google';
-
-export type ConfigureProviderInput = {
-  apiKey?: string;
-  apiKeyEnv?: string;
-  baseUrl?: string;
-  defaultModel?: string;
-  upsert: boolean;
-  setDefault?: boolean;
-};
-
-export type SupportedProvider = {
-  provider: string;
-  defaultBaseUrl?: string;
-  requiresBaseUrl: boolean;
-  requiresSecretConfig: boolean;
-  requiresLogin?: boolean;
-  recommendedApiKeyEnv?: string;
-};
+  | 'vertex-google'
+  | 'vllm';
 
 export type ProviderLoginStart = {
   provider: string;
@@ -234,6 +192,51 @@ export type ProviderLoginStart = {
 export type ProviderLoginStatus = ProviderLoginStart & {
   error?: string;
 };
+
+export type ConnectionConfigState = 'missing' | 'configured' | 'invalid';
+export type ConnectionAuthState =
+  | 'not_required'
+  | 'authenticated'
+  | 'login_required'
+  | 'refresh_required'
+  | 'login_pending';
+export type ConnectionHealth = 'unknown' | 'checking' | 'available' | 'unavailable';
+export type BackendErrorCode =
+  | 'login_required'
+  | 'unauthorized'
+  | 'unreachable'
+  | 'no_models'
+  | 'model_unavailable'
+  | 'misconfigured';
+
+/** A configured provider instance (runtime backend + credentials + auth). Secrets are never returned. */
+export type Connection = {
+  id: string;
+  name: string;
+  providerType: string;
+  baseUrl: string;
+  configState: ConnectionConfigState;
+  authState: ConnectionAuthState;
+  health: ConnectionHealth;
+  errorCode?: BackendErrorCode | string;
+  error?: string;
+  secretSource: 'none' | 'literal' | 'env';
+  secretConfigured: boolean;
+  secretPresent: boolean;
+  apiKeyEnv?: string;
+  modelCount: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CreateConnectionInput = {
+  name?: string;
+  apiKey?: string;
+  apiKeyEnv?: string;
+  baseUrl?: string;
+};
+
+export type PatchConnectionInput = CreateConnectionInput & { clearSecret?: boolean };
 
 export type ModelJob = {
   url: string;
@@ -255,18 +258,6 @@ export type ErrorState = {
   error: string | null;
 };
 
-export type QueueItem = {
-  url: string;
-  model: string;
-  status: QueueProgressStatus;
-};
-
-export type QueueProgressStatus = {
-  total: number;
-  completed: number;
-  status: string;
-};
-
 export type Model = {
   id: string;
   model: string;
@@ -285,19 +276,6 @@ export type Pool = {
   purposeType: string;
   createdAt?: string;
   updatedAt?: string;
-};
-
-export type AuthResponse = {
-  user: User;
-};
-
-export type LocalHook = {
-  name: string;
-  description: string;
-  type: string;
-  source?: 'builtin' | 'mcp' | 'remote';
-  tools: Tool[];
-  unavailableReason?: string;
 };
 
 export type Agent = {
@@ -485,23 +463,6 @@ export type OperatorInboxItem = {
   createdAt: string;
 };
 
-export type MCPServer = {
-  id: string;
-  name: string;
-  transport: 'stdio' | 'sse' | 'http' | string;
-  command?: string;
-  args?: string[];
-  url?: string;
-  authType?: string;
-  authToken?: string;
-  authEnvKey?: string;
-  connectTimeoutSeconds: number;
-  headers?: Record<string, string>;
-  injectParams?: Record<string, string>;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
 export type Tool = {
   type: string;
   function: {
@@ -521,53 +482,6 @@ export type User = {
   updatedAt?: string;
 };
 
-export type DownloadStatus = {
-  status: string;
-  digest?: string;
-  total?: number;
-  completed?: number;
-  model: string;
-  baseUrl: string;
-};
-
-export type AccessEntry = {
-  id: string;
-  identity: string;
-  resource: string;
-  resourceType: string;
-  permission: string;
-  createdAt?: string;
-  updatedAt?: string;
-  identityDetails?: IdentityDetails;
-  fileDetails?: filesDetails;
-};
-
-export type filesDetails = {
-  id: string;
-  path: string;
-  type: string;
-};
-
-export type IdentityDetails = {
-  id: string;
-  friendlyName: string;
-  email: string;
-  subject: string;
-};
-
-export type UpdateUserRequest = {
-  email?: string;
-  subject?: string;
-  friendlyName?: string;
-  password?: string;
-};
-
-export type UpdateAccessEntryRequest = {
-  identity?: string;
-  resource?: string;
-  permission?: string;
-};
-
 export type AuthenticatedUser = {
   id: string;
   subject: string;
@@ -582,190 +496,10 @@ export type AuthStatus = {
   authenticated: boolean;
 };
 
-export type PendingJob = {
-  id: string;
-  taskType: string;
-  operation: string;
-  subject: string;
-  entityId: string;
-  scheduledFor: string;
-  validUntil: string;
-  retryCount: number;
-  createdAt: string;
-};
-
-export type InProgressJob = PendingJob & {
-  leaser: string;
-  leaseExpiration: string;
-};
-export type Exec = {
-  prompt: string;
-};
-
-export type ExecResp = {
-  id: string;
-  response: string;
-};
-
-export type TaskExecutionRequest = {
-  input: unknown;
-  inputType: string;
-  chain: ChainDefinition;
-  templateVars?: Record<string, string>;
-};
-
-export type TaskExecutionResponse = {
-  output: unknown;
-  outputType: string;
-  state: CapturedStateUnit[];
-};
-
-export interface HookCall {
-  name: string;
-  tool_name?: string;
-  args?: Record<string, string>;
-}
-
-export type ComposeStrategy = 'override' | 'merge_chat_histories' | 'append_string_to_chat_history';
-
-export type OperatorTerm =
-  | 'equals'
-  | 'contains'
-  | 'starts_with'
-  | 'ends_with'
-  | 'gt'
-  | 'lt'
-  | 'in_range'
-  | 'default';
-
-export interface TransitionBranch {
-  operator?: OperatorTerm;
-  when: string;
-  goto: string;
-  compose?: BranchCompose;
-}
-
-export interface TaskTransition {
-  on_failure?: string;
-  branches: TransitionBranch[];
-}
-
-export type FormTransition = TaskTransition;
-
-export interface ChainTask {
-  id: string;
-  description: string;
-  handler: TaskHandler;
-  system_instruction?: string;
-  execute_config?: ExecuteConfig;
-  tools?: HookCall;
-  print?: string;
-  prompt_template: string;
-  output_template?: string;
-  input_var?: string;
-  transition: TaskTransition;
-  timeout?: string;
-  retry_on_failure?: number;
-}
-
-export type FormTask = Partial<ChainTask> & {
-  id: string;
-  handler: TaskHandler;
-  prompt_template: string;
-  transition: TaskTransition;
-};
-
-export interface RetryPolicy {
-  max_attempts?: number;
-  initial_backoff?: string;
-  max_backoff?: string;
-  jitter?: number;
-  rate_limit_min_wait?: string;
-  fallback_model_id?: string;
-  fallback_after?: number;
-}
-
-export interface CompactPolicy {
-  trigger_fraction?: number;
-  keep_recent?: number;
-  model?: string;
-  provider?: string;
-  max_failures?: number;
-  min_replaced_messages?: number;
-}
-
-export interface ExecuteConfig {
-  model?: string;
-  models?: string[];
-  provider?: string;
-  providers?: string[];
-  temperature?: number;
-  tools?: string[];
-  hooks?: string[];
-  hide_tools?: string[];
-  pass_clients_tools?: boolean;
-  tools_policies?: Record<string, Record<string, string>>;
-  hook_policies?: Record<string, Record<string, string>>;
-  think?: string;
-  shift?: boolean;
-  retry_policy?: RetryPolicy;
-  compact_policy?: CompactPolicy;
-}
-
-export interface ChainDefinition {
-  id: string;
-  description: string;
-  tasks: ChainTask[];
-  token_limit?: number;
-  debug?: boolean;
-}
-
-export type ActivityLog = {
-  id: string;
-  operation: string;
-  subject: string;
-  start: string;
-  end?: string;
-  error?: string;
-  entityID?: string;
-  entityData?: undefined;
-  durationMS?: number;
-  metadata?: Record<string, string>;
-  requestID?: string;
-};
-
-export type ActivityLogsResponse = ActivityLog[];
-
-export type TrackedRequest = {
-  id: string;
-};
-
-export type ActivityOperation = {
-  operation: string;
-  subject: string;
-};
-
-export type TrackedEvent = {
-  id: string;
-  operation: string;
-  subject: string;
-  start: string;
-  end?: string;
-  error?: string;
-  entityID?: string;
-  entityData?: unknown;
-  durationMS?: number;
-  metadata?: Record<string, string>;
-  requestID?: string;
-};
-
 export type Operation = {
   operation: string;
   subject: string;
 };
-
-export type TrackedRequestsResponse = TrackedRequest[];
-export type ActivityOperationsResponse = ActivityOperation[];
 
 export type Alert = {
   id: string;
@@ -773,45 +507,6 @@ export type Alert = {
   metadata: unknown;
   message: string;
   timestamp: string;
-};
-
-export type ActivityAlertsResponse = Alert[];
-
-export interface GitHubRepo {
-  id: string;
-  userID: string;
-  botUserName: string;
-  owner: string;
-  repoName: string;
-  accessToken: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PullRequest {
-  id: number;
-  number: number;
-  title: string;
-  state: string;
-  url: string;
-  createdAt: string;
-  updatedAt: string;
-  authorLogin: string;
-}
-
-export type TelegramFrontend = {
-  id: string;
-  userID: string;
-  chatChain: string;
-  description: string;
-  botToken: string;
-  syncInterval: number;
-  status: string;
-  lastOffset: number;
-  lastHeartbeat?: string;
-  lastError: string;
-  createdAt?: string;
-  updatedAt?: string;
 };
 
 export type Bot = {
@@ -822,86 +517,6 @@ export type Bot = {
   taskChainID: string;
   createdAt: string;
   updatedAt: string;
-};
-
-export type InternalEvent = {
-  id: string;
-  nid: number;
-  created_at: string;
-  event_type: string;
-  event_source: string;
-  aggregate_id: string;
-  aggregate_type: string;
-  version: number;
-  data: Record<string, unknown>;
-  metadata: Record<string, unknown>;
-};
-
-export type RawEvent = {
-  id: string;
-  nid: number;
-  received_at: string;
-  path: string;
-  headers: Record<string, string>;
-  payload: Record<string, unknown>;
-};
-
-export type MappingConfig = {
-  path: string;
-  eventType: string;
-  eventSource: string;
-  aggregateType: string;
-  aggregateIDField: string;
-  aggregateTypeField: string;
-  eventTypeField: string;
-  eventSourceField: string;
-  eventIDField: string;
-  version: number;
-  metadataMapping: Record<string, string>;
-};
-
-export type EventStreamMessage = {
-  id: string;
-  event_type: string;
-  aggregate_type: string;
-  aggregate_id: string;
-  version: number;
-  data: Record<string, unknown>;
-  created_at: string;
-};
-
-export type TaskRequest = {
-  prompt: string;
-  modelName: string;
-  modelProvider: string;
-};
-
-export type TaskResponse = {
-  id: string;
-  response: string;
-};
-
-export type DataType = 'string' | 'json';
-
-export type ExecutionHistory = {
-  taskID: string;
-  taskType: string;
-  inputType: string;
-  outputType: string;
-  transition: string;
-  duration: number;
-  error?: string;
-}[];
-
-export type PaginationParams = {
-  limit?: number;
-  cursor?: string;
-};
-
-export type PaginatedResponse<T> = {
-  data: T[];
-  nextCursor?: string;
-  hasMore: boolean;
 };
 
 export type ValidationError = {
@@ -916,124 +531,6 @@ export type ApiError = {
   details?: ValidationError[];
 };
 
-export type WebhookPayload = {
-  headers: Record<string, string>;
-  body: Record<string, unknown>;
-  query: Record<string, string>;
-  method: string;
-  path: string;
-};
-
-export interface BranchCompose {
-  with_var?: string;
-  strategy?: string;
-}
-
-export type IntegrationConfig = {
-  id: string;
-  name: string;
-  type: 'webhook' | 'api' | 'event';
-  config: Record<string, unknown>;
-  enabled: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type SystemHealth = {
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  components: {
-    database: HealthStatus;
-    cache: HealthStatus;
-    executor: HealthStatus;
-    eventBus: HealthStatus;
-  };
-  timestamp: string;
-};
-
-export type HealthStatus = {
-  status: 'up' | 'down' | 'degraded';
-  latency?: number;
-  error?: string;
-  lastChecked: string;
-};
-
-export interface BackendApiError {
-  error: {
-    message: string;
-    type?: string;
-    code?: string;
-    param?: string;
-  };
-}
-
-export type RemoteHook = {
-  id: string;
-  name: string;
-  endpointUrl: string;
-  timeoutMs: number;
-  headers?: Record<string, string>;
-  properties: InjectionArg;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type InjectionArg = {
-  name: string;
-  value: unknown;
-  in: 'path' | 'query' | 'body';
-};
-
-export type RemoteHookListResponse = {
-  hooks: RemoteHook[];
-  nextCursor?: string;
-};
-
-export interface DragResult {
-  draggableId: string;
-  source: {
-    index: number;
-    droppableId: string;
-  };
-  destination: {
-    index: number;
-    droppableId: string;
-  } | null;
-}
-
-export interface DroppableProvided {
-  innerRef: (element: HTMLElement | null) => void;
-  droppableProps: {
-    [key: string]: unknown;
-  };
-  placeholder?: React.ReactNode;
-}
-
-export interface DraggableProvided {
-  innerRef: (element: HTMLElement | null) => void;
-  draggableProps: {
-    [key: string]: unknown;
-    style?: React.CSSProperties;
-  };
-  dragHandleProps: {
-    [key: string]: unknown;
-  } | null;
-}
-
-export type TaskHandler =
-  | 'raise_error'
-  | 'route'
-  | 'chat_completion'
-  | 'execute_tool_calls'
-  | 'noop'
-  | 'tools';
-
-export const HandleRaiseError: TaskHandler = 'raise_error';
-export const HandleRoute: TaskHandler = 'route';
-export const HandleChatCompletion: TaskHandler = 'chat_completion';
-export const HandleExecuteToolCalls: TaskHandler = 'execute_tool_calls';
-export const HandleNoop: TaskHandler = 'noop';
-export const HandleTools: TaskHandler = 'tools';
-
 export type WorkspaceRoot = {
   path: string;
   default: boolean;
@@ -1043,13 +540,6 @@ export type WorkspaceRoot = {
 
 export type WorkspaceRootsResponse = {
   roots: WorkspaceRoot[];
-};
-
-export type TerminalSessionRequest = {
-  cwd?: string;
-  cols: number;
-  rows: number;
-  shell?: string;
 };
 
 export type TerminalSession = {

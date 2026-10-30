@@ -190,6 +190,30 @@ describe('acpWorkspaceController: connect()', () => {
     expect(h.wsStore.state.workspaceConfigOptions).toEqual(workspaceConfigOptions);
   });
 
+  it('stores static slash commands from the initialize _meta extension in workspace state', async () => {
+    const h = setup();
+    const commands = [{ name: 'help', description: 'Help', input: { hint: 'topic' } }];
+    const p = h.controller.connect();
+    await flushMicrotasks();
+    const initReq = h.transports[0].lastSent();
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: initReq.id,
+      result: { protocolVersion: 1, agentInfo: { name: 'contenox' }, _meta: { 'contenox.availableCommands': commands } },
+    });
+    await flushMicrotasks();
+    const listReq = h.transports[0].lastSent();
+    h.transports[0].feed({ jsonrpc: '2.0', id: listReq.id, result: { sessions: [] } });
+    await p;
+    expect(h.wsStore.state.workspaceAvailableCommands).toEqual(commands);
+  });
+
+  it('leaves workspace commands empty for an old runtime without the key', async () => {
+    const h = setup();
+    await connectReady(h);
+    expect(h.wsStore.state.workspaceAvailableCommands).toEqual([]);
+  });
+
   it('leaves workspace config options empty for an agent that advertises no extension (graceful degrade)', async () => {
     const h = setup();
     await connectReady(h);

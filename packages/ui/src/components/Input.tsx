@@ -5,10 +5,12 @@ type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   startIcon?: React.ReactNode;
   endIcon?: React.ReactNode;
   error?: boolean;
+  /** Monospace text, for identifiers such as environment variable names. */
+  mono?: boolean;
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, startIcon, endIcon, error = false, ...props }, ref) => {
+  ({ className, startIcon, endIcon, error = false, mono = false, ...props }, ref) => {
     return (
       <div className="relative">
         {startIcon && (
@@ -27,6 +29,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               : "border-line-strong focus-visible:border-accent/60",
             startIcon && "pl-8",
             endIcon && "pr-8",
+            mono && "font-mono",
             className,
           )}
           {...props}

@@ -29,8 +29,8 @@ jobs:
             packages/acp-client/package-lock.json
             website/package-lock.json
 
-      - run: make install-web
-      - run: make build
-      - run: make typecheck
-      - run: make lint
-      - run: make test
+      - run: npm run install-web
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test

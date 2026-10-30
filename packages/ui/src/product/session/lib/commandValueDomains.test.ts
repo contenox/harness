@@ -66,7 +66,7 @@ describe('commandValueDomains', () => {
       POLICY_OPTION,
     ]);
 
-    expect(domains.get(COMMAND_MODEL)).toEqual(['gpt-5-mini', 'claude-sonnet-4']);
+    expect(domains.get(COMMAND_MODEL)).toEqual(['openai/gpt-5-mini', 'anthropic/claude-sonnet-4']);
     expect(domains.get(COMMAND_PROVIDER)).toEqual(['openai', 'anthropic']);
     expect(domains.get(COMMAND_THINK)).toEqual([
       'auto',
@@ -120,14 +120,14 @@ describe('commandValueDomains', () => {
     const domains = commandValueDomains([
       modelOption([['gemini', ['models/gemini-3.1-pro-preview']]]),
     ]);
-    expect(domains.get(COMMAND_MODEL)).toEqual(['models/gemini-3.1-pro-preview']);
+    expect(domains.get(COMMAND_MODEL)).toEqual(['gemini/models/gemini-3.1-pro-preview']);
     expect(domains.get(COMMAND_PROVIDER)).toEqual(['gemini']);
   });
 
 
 
 
-  it('never offers the placeholder group as a provider', () => {
+  it('treats every group id as an opaque provider (no placeholder special case)', () => {
     const domains = commandValueDomains([
       {
         id: 'model',
@@ -143,13 +143,12 @@ describe('commandValueDomains', () => {
         ],
       },
     ]);
-    expect(domains.has(COMMAND_PROVIDER)).toBe(false);
     expect(domains.get(COMMAND_MODEL)).toEqual(['some-model']);
   });
 
 
 
-  it('falls back to the wire encoding for an ungrouped model select', () => {
+  it('offers ungrouped model values as they are', () => {
     const domains = commandValueDomains([
       {
         id: 'model',
@@ -163,8 +162,8 @@ describe('commandValueDomains', () => {
         ],
       },
     ]);
-    expect(domains.get(COMMAND_MODEL)).toEqual(['qwen3-coder', 'devstral', 'bare-model']);
-    expect(domains.get(COMMAND_PROVIDER)).toEqual(['local']);
+    expect(domains.get(COMMAND_MODEL)).toEqual(['local/qwen3-coder', 'local/devstral', 'bare-model']);
+    expect(domains.has(COMMAND_PROVIDER)).toBe(false);
   });
 
 
@@ -173,11 +172,11 @@ describe('commandValueDomains', () => {
   it('preserves wire order, drops blanks and keeps the first of each duplicate', () => {
     const domains = commandValueDomains([
       modelOption([
-        ['openai', ['gpt-5', ' ', 'gpt-5-mini', 'gpt-5']],
+        ['openai', ['gpt-5', 'gpt-5-mini', 'gpt-5']],
         ['azure', ['gpt-5']],
       ]),
     ]);
-    expect(domains.get(COMMAND_MODEL)).toEqual(['gpt-5', 'gpt-5-mini']);
+    expect(domains.get(COMMAND_MODEL)).toEqual(['openai/gpt-5', 'openai/gpt-5-mini', 'azure/gpt-5']);
     expect(domains.get(COMMAND_PROVIDER)).toEqual(['openai', 'azure']);
   });
 
@@ -201,5 +200,21 @@ describe('commandValueDomains', () => {
     const domains = commandValueDomains([THINK_OPTION]);
     expect(domains.get('constructor')).toBeUndefined();
     expect(domains.get('__proto__')).toBeUndefined();
+  });
+
+  it('offers opaque values from groups without parsing them or special-casing a group', () => {
+    const domains = commandValueDomains([
+      {
+        id: 'model',
+        name: 'Model',
+        type: 'select',
+        currentValue: '',
+        options: [
+          { group: 'default', name: 'Any provider', options: [{ value: 'a:b/c', name: 'c' }] },
+          { group: 'p1', name: 'P1', options: [{ value: 'p1|x', name: 'x' }] },
+        ],
+      },
+    ]);
+    expect(domains.get(COMMAND_MODEL)).toEqual(['a:b/c', 'p1|x']);
   });
 });

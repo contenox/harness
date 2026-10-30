@@ -1,269 +1,127 @@
-# Contributing to Contenox
+# Contributing to the Contenox desktop app
 
-Thanks for helping improve Contenox. This repository centers on the V1 runtime
-surface: local CLI usage, ACP over stdio, the VS Code extension that embeds
-the same Go runtime, and `contenox-runtime serve` hosting the HTTP API and the bundled
-cockpit UI.
-
-## Code of Conduct
-
-Treat contributors with respect. Keep technical disagreements concrete and
-actionable.
-
-## Architecture
-
-Contenox is a local-first Go runtime with a thin set of host adapters:
+Thanks for helping improve Contenox. This repository is the desktop app:
 
 ```text
-CLI / ACP / VS Code stdio bridge
-    ->
-Service Layer (runtime/*service/)
-    ->
-Task Engine (runtime/taskengine/)
-    ->
-Data + Integrations (lib*/ + runtime/runtimetypes/ + runtime/localtools/)
+desktop/            Electron shell: window, local static server, runtime process management, packaging
+packages/harness/   React UI (Vite, TypeScript) shown inside the shell
+packages/ui/        @contenox/ui component library, with Storybook
+packages/acp-client/ ACP client used by the UI
+scripts/            Node helpers behind the npm scripts (tasks.mjs is the task runner)
 ```
 
-The Go runtime owns chains, execution state, model routing, tools, MCP worker
-sessions, human-in-the-loop policy, session history, and local state. Editor
-integrations should stay adapters around that runtime. They should not re-create
-chain semantics in TypeScript or a separate UI server.
+The app bundles the `contenox-runtime` binary, which is built and released from a
+separate project. This repository only consumes that binary; you do not need Go.
 
-### V1 product surface
+Please read the [Code of Conduct](CODE_OF_CONDUCT.md). Report security issues as
+described in [SECURITY.md](SECURITY.md).
 
-The V1 public surface is:
+## Prerequisites
 
-- `contenox` CLI
-- `contenox-runtime acp` for ACP clients such as Zed, JetBrains, and AionUi
-- `contenox-runtime serve`, which hosts the cockpit UI and the HTTP API
-  under `/api`, including the OpenAI-compatible and Ollama-compatible inbound
-  endpoints and the generated OpenAPI docs (`/api/docs`)
+- Node.js 22 and npm (the version CI uses).
+- Nothing else: the developer commands are npm scripts and work the same in PowerShell, cmd and
+  POSIX shells. (An optional `Makefile` forwards `make <task>` to the same runner.)
+- `git`.
 
-When you change this surface, update
-`docs/development/blueprints/v1-feature-map.md` and the relevant user docs in
-the same change.
+## Setup and development
 
-### Abstraction layers
-
-**Service Layer** - each domain gets its own interface and implementation
-package (`execservice`, `backendservice`, `mcpserverservice`, `stateservice`,
-`hitlservice`, `localfileservice`, etc.). Services communicate through the
-shared `runtimetypes.Store` interface and bus events rather than depending on
-each other directly.
-
-**Task Engine** (`runtime/taskengine/`) - the core execution model. Chains are
-JSON/YAML DAGs with typed I/O (`DataType`: String, Int, JSON, ChatHistory, Any).
-Task handlers (`chat_completion`, `execute_tool_calls`, `tools`, `route`,
-`raise_error`, `noop`) and branch operators (`equals`, `contains`,
-`starts_with`, `ends_with`, `default`, `edge_traversed_at_least`) are
-declarative. New Go primitives should be rare.
-
-**LLM Resolution** - `llmrepo.ModelRepo` handles request-side selection by
-capability, provider, model, and context length. `modelrepo.Provider`
-implementations handle provider-side calls for Ollama/Ollama Cloud, OpenAI, OpenRouter, Anthropic, Mistral, Gemini, AWS Bedrock, Vertex, and
-vLLM. Runtime state catalogs configured backend capabilities for selectors and
-diagnostics.
-
-**Tool System** - chains invoke tools by name and resolution happens at runtime.
-Built-in providers include `local_shell`, `local_fs`, `webtools`, `echo`,
-`print`, OpenAPI-backed remote tools, and MCP-backed tools. HITL policy wraps
-tool execution where approval is required.
-
-**Event-driven async** - `libbus` abstracts the local event bus. Services publish
-typed events such as `task.events.step_completed`, and other services subscribe
-without direct package coupling.
-
-**Key files to orient yourself:**
-
-| File | What it shows |
-|------|---------------|
-| `runtime/taskengine/tasktype.go` | Chain schema, task handlers, branch operators |
-| `runtime/taskengine/taskenv.go` | Runtime tool resolution and chain execution context |
-| `runtime/contenoxcli/cli.go` | CLI dispatch |
-| `runtime/contenoxcli/engine.go` | CLI-local engine bootstrap |
-
-## Repository structure
-
-The `contenox` binary is the main entrypoint. Current commands include `setup`,
-`init`, `chat`, `run`, `tools`, `mcp`, `backend`, `agent`, `cache`, `config`,
-`model`, `state`, `doctor`, `session`, `acp`, `acpx`, `serve`, `approvals`,
-`fleet`, `mission`, `workspace`, `update`, and `version`. (`fleet`, `mission`,
-and `approvals` are REST clients to a running `contenox-runtime serve`; `workspace`
-grants or revokes the workspace roots a session may run in, written to the
-shared config and applied to a running serve live via a reload doorbell;
-`acp` and `acpx` speak stdio protocols for editors; most of the rest work
-against the local database directly.)
-
-All AI workflow packages live under `runtime/`. Infrastructure libraries
-(`libauth`, `libbus`, `libcipher`, `libdbexec`, `libkvstore`,
-`libroutine`, `libtracker`) stay at the module root.
-
-```text
-cmd/contenox/          contenox binary entry point
-runtime/contenoxcli/  CLI command implementations
-runtime/taskengine/   chain schema and execution engine
-runtime/llmrepo/      provider/model selection
-runtime/localtools/   local shell, local filesystem, web, echo, print tools
-runtime/*service/     runtime services
-docs/development/blueprints/      product and release planning notes
-lib*/                 infrastructure libraries with no LLM dependency
+```sh
+npm run setup    # npm ci for packages/ui, packages/harness, packages/acp-client and desktop
+npm run dev      # hot-reload sandbox: Electron window + Vite UI + one runtime with throwaway state
 ```
 
-### Makefile overview
+`npm run setup` always reinstalls (it is `install` for make; `npm run install` is avoided because npm
+reserves that name). Do not run `npm install` in the repository root. Other tasks (`dev`, `build`, `test`, `package`, ...) run
+`npm ci` only when `node_modules` is missing or a `package.json`/`package-lock.json` is newer
+(tracked by `node_modules/.make-installed`).
 
-Run `make help` at the repo root for the full list.
+Run `npm run` to list the tasks and `npm run help` for their descriptions. Options are flags after
+`--`: `--runtime-bin=<path>`, `--yes`, `--dry-run`, and `--plan` (print the steps without running
+them), for example `npm run dev -- --plan`.
 
-| Prefix | Purpose |
-|--------|---------|
-| `build-*` | CLI and cockpit UI builds |
-| `package-*` | product packaging targets |
-| `test-*` | Go unit tests, explicit integration suites, and CLI help checks |
-| `dev-*` | local binary install helpers |
-| `deps-*` | UI dependencies |
-| `clean*` | remove generated binaries and build artifacts |
+`npm run dev` is a sandbox, not your real app: it builds the UI library (`packages/ui`), fetches the
+pinned release runtime (`runtime.lock.json`; skipped when `--runtime-bin=<path>` (or the `RUNTIME_BIN` environment variable) names another
+binary), and starts the Electron window with the Vite dev server and a single runtime. State is
+thrown away: it lives in `.runtime/dev` inside the checkout, there are no per-project runtimes,
+and it never touches your real app data. The UI hot-reloads; after editing `packages/ui` run
+`npm run build-ui` again. It stops processes from a previous run first (fixed ports 5173 and 32123).
+`npm run help` lists all tasks.
 
-Version bumps and release notes for the **contenox runtime** live in
-`Makefile.version` (`make -f Makefile.version help`), which edits
-`runtime/version/version.txt`.
+## Build, checks and tests
 
-### Surface docs
-
-Keep these files in sync when changing public surface area:
-
-- `docs/development/blueprints/v1-feature-map.md`
-- `docs/reference/contenox-cli.md`
-- `docs/development/windows-development.md`
-
-## Local development setup
-
-### Prerequisites
-
-- [Go](https://go.dev/doc/install) 1.25+
-- `make` (helpful; individual `go build` / `npm` commands also work)
-- `curl` and `git`
-- Node.js 22+ and npm for the cockpit UI
-- Optional: an LLM provider key or a local server (Ollama, vLLM).
-
-Native Windows development is a first-class supported path. Use Git for Windows (brings Git Bash), the official Go MSI, and Node.js 22+ for the UI. Place tools, GOPATH, caches, and scratch data on a secondary drive (e.g. `D:`) for performance and cleanliness. Git Bash can run the bash-based build scripts.
-
-WSL2 remains a convenient option for a Linux-like workflow or when you primarily need to produce Linux artifacts.
-
-See `docs/development/windows-development.md` for the complete native Windows guide (including environment setup on a secondary drive, Windows Terminal profiles for Git Bash, and PATH wiring) plus WSL recommendations.
-
-### Go binary path
-
-`go install` puts binaries in `$GOPATH/bin` (or `%GOPATH%\bin` on Windows), usually `~/go/bin`.
-
-Unix shells:
-
-```bash
-export PATH=$PATH:$(go env GOPATH)/bin
+```sh
+npm run build      # build the UI library and the harness UI
+npm run typecheck  # tsc for the harness app only
+npm run lint       # eslint for the harness app only
+npm run test       # unit tests: UI library, harness, acp-client
+npm run ci         # install-web, build, typecheck, lint, test (what CI runs)
 ```
 
-PowerShell:
+Run `npm run typecheck`, `npm run lint` and `npm run test` before opening a pull request.
 
-```powershell
-$env:Path += ";$(go env GOPATH)\bin"
+### Storybook and story tests
+
+```sh
+cd packages/ui
+npm run storybook          # http://localhost:6006
+npx playwright install chromium   # once
+npm run test:stories       # story tests in a headless browser
 ```
 
-On Windows you can centralize GOPATH, caches, and PATH on a secondary drive using a small environment script (example patterns are shown in `docs/development/windows-development.md`).
+## Trying the app with an unreleased runtime
 
-### Building the CLI
+`npm run qa` and `npm run package-local` package the unpacked app and bundle a
+`contenox-runtime` that is not the pinned release:
 
-Unix / Git Bash:
-
-```bash
-# Build the binary into ./bin/contenox-runtime
-make build-contenox
-
-# Run an example
-./bin/contenox-runtime "list files in this repository"
+```sh
+npm run package-local      # unpacked app in desktop/dist, bundling contenox-runtime from PATH
+npm run qa                 # same, then launch the packaged app
+npm run qa -- --runtime-bin=<path-to-contenox-runtime>   # bundle a specific binary instead
 ```
 
-PowerShell (native Windows checkout):
+Without `--runtime-bin` the `contenox-runtime` found on `PATH` is used. To get one,
+install a development build with the runtime project's own `make dev-install`
+(it installs `contenox-runtime` into your per-user bin directory). The two
+projects only share that binary name; neither refers to the other's files.
 
-```powershell
-go build -o bin\contenox.exe .\cmd\contenox
-# or, if make is available
-make build-contenox-windows
-.\bin\contenox.exe "list files in this repository"
-```
+Other packaging tasks: `npm run package-dir` (unpacked, pinned runtime),
+`npm run package` (host installers, verified, with checksums). CI uses `npm run stage`,
+`npm run verify`, `npm run checksums` and `npm run sign-rpm`; the last signs Linux `.rpm` files and only
+works on Linux.
 
-Optional (Unix): `make dev-install` symlinks `contenox` to `~/.local/bin/contenox-runtime`.
+## Housekeeping
 
-On Windows you can add the output directory or use the environment setup script to put the binary on your PATH.
+- `npm run stop` stops dev servers, the dev app and runtimes started from this checkout.
+  On Windows this releases file locks; install, staging, dev and clean run it first.
+  `npm run stop -- --dry-run` only lists them.
+- `npm run reset-local-state` shows what would be wiped for a fresh-install test (app data,
+  runtime home files, dev state). It is a dry run; `npm run reset-local-state -- --yes` deletes.
+- `npm run clean` removes `packages/ui/dist`, `packages/harness/dist`, `desktop/node_modules`
+  and `.runtime` (downloaded runtimes and dev-mode state); `-- --dry-run` only lists.
+- The old `desktop-*` task names (via `make` or `node scripts/tasks.mjs`) (`desktop-dev`, `desktop-package`, ...) still work for one
+  release and print a deprecation note.
 
-## Running tests
+## UI conventions
 
-Before submitting a pull request, run the checks that match your change.
-
-Fast path, matching CI:
-
-```bash
-make test-unit
-```
-
-Full Go suite, including any system tests that are not separately gated:
-
-```bash
-make test
-```
-
-Targeted system suites are explicit because some use local services or containers:
-
-```bash
-make test-system
-```
-
-vLLM container tests are hidden behind an opt-in gate:
-
-```bash
-make test-vllm
-```
-
-CLI package and help drift checks:
-
-```bash
-make test-contenox-verbose
-make test-contenox-help
-```
-
-Optional race detector:
-
-```bash
-go test -race ./... -run '^TestUnit_'
-```
-
-If command names, flags, README examples, or user-facing help changed, also run
-`make test-contenox-help` and update the relevant docs.
+- Build screens from `@contenox/ui` components. If a primitive is missing, add it to
+  `packages/ui` together with a story (and a test when it has logic), then use it. Avoid
+  one-off styled `div`s in the harness.
+- Use semantic design tokens (for example `bg-app`, `bg-raised`, `bg-hover`), not raw colors,
+  so themes keep working. See `packages/ui/src/index.css`.
+- All user-facing strings go through i18n in `packages/harness/src/i18n.ts`, with both
+  English (`en`) and German (`de`) entries.
+- `packages/ui/DIVERGENCE.md` records where the library differs from its upstream copy;
+  update it when you make such a change.
 
 ## Pull request guidelines
 
 1. Open an issue first for major feature or architecture changes.
-2. Branch from `main` with a descriptive name such as `feature/xyz`,
-   `fix/abc`, or `docs/def`.
+2. Branch from `main` with a descriptive name such as `feature/xyz`, `fix/abc` or `docs/def`.
 3. Use clear commit messages. Conventional Commit prefixes are preferred.
-4. Run `gofmt` on Go changes.
-5. Keep docs and blueprints in sync with public-surface changes.
-6. Keep generated artifacts out of commits unless the release process requires
-   them.
+4. Keep `npm run typecheck`, `lint` and `test` green; run `npm run build` when you touch the library or build setup.
+5. Use LF line endings in every file (`.editorconfig` sets this). On Windows, set
+   `core.autocrlf` so git does not convert them; check with `git ls-files --eol`.
+6. Do not commit build output, `node_modules`, or unrelated lockfile changes.
+7. Keep user-facing docs in sync with behavior changes.
 
-## Code conventions
-
-### Go style
-
-- Prefer self-documenting code. Add short comments only for non-obvious
-  invariants, protocol behavior, security boundaries, or tricky edge cases.
-- Service constructors accept interfaces. Wire concrete implementations in
-  `runtime/contenoxcli/engine.go`.
-- Keep chain behavior declarative. Business logic belongs in chain definitions
-  unless a new primitive is genuinely needed in `taskengine`.
-- Tool exposure must be explicit. `execute_config.tools` omitted, `null`, or
-  `[]` exposes no registry tools. Use `["*"]` only when a chain intentionally
-  opts into all registered tools, and prefer narrow allowlists such as
-  `["local_fs"]`.
-- Runtime allowlists may restrict task allowlists but must not expand them.
-- Wide interfaces are a smell. New code should accept the narrowest interface
-  slice it actually needs.
-- Public-surface changes (new commands, HTTP routes, compatibility endpoints)
-  need matching updates to the user-facing docs.
+Licensed under Apache-2.0.

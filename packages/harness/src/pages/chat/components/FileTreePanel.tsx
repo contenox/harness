@@ -1,7 +1,8 @@
-import { FileTree, IconButton, Span, type FileTreeNode } from '@contenox/ui';
+import { Button, EmptyState, FileTree, IconButton, Span, type FileTreeNode } from '@contenox/ui';
 import { Filter, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { RootChip } from '../../../components/workspace/RootChip';
 import { WorkspaceBoundaryNotice } from '../../../components/workspace/WorkspaceBoundaryNotice';
 import type { UseWorkspaceFilesResult } from '../../../hooks/useWorkspaceFiles';
@@ -31,6 +32,7 @@ function TreeMessage({ children, error = false }: { children: string | null; err
 /** Project file tree: IconButton toolbar (agent view, filter, refresh), root chip, filter bar, tree. */
 export function FileTreePanel({ root, files, onOpenFile, selectedFilePath }: FileTreePanelProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { roots } = useWorkspaceRoots();
   const { agentView, setAgentView, ensureLoaded } = files;
   const model = useFileTreeModel(root, files);
@@ -50,7 +52,23 @@ export function FileTreePanel({ root, files, onOpenFile, selectedFilePath }: Fil
 
   const tree = () => {
     if (files.rootLoading && baseNodes.length === 0) return <TreeMessage>{t('workspace.loading')}</TreeMessage>;
-    if (isEmptyRoot) return <TreeMessage>{t('workspace.empty')}</TreeMessage>;
+    if (isEmptyRoot) {
+      const reveal = window.contenoxDesktop?.revealPath;
+      return (
+        <EmptyState title={t('workspace.empty')} description={root} className="px-3 py-6 [&_p]:break-all">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/projects')}>
+              {t('workspace.empty_switch_project')}
+            </Button>
+            {reveal && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => void reveal(root)}>
+                {t('workspace.empty_open_folder')}
+              </Button>
+            )}
+          </div>
+        </EmptyState>
+      );
+    }
     if (!filterActive) {
       return (
         <FileTree

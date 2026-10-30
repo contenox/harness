@@ -1,5 +1,4 @@
 import type { SessionConfigOption } from '@contenox/acp-client';
-import { flattenGroups, toControlProps, type SelectControlOption } from '@contenox/ui/session-lib';
 
 export const WORKSPACE_ROOT_CONFIG_ID = 'workspace-root';
 
@@ -31,28 +30,4 @@ export function splitComposerOptions(options: readonly SessionConfigOption[]): C
     else rest.push(o);
   }
   return { mode, model, rest };
-}
-
-/** Flat choices of a select option (grouped options are flattened with "group / name" labels). */
-export function optionChoices(option: SessionConfigOption): SelectControlOption[] {
-  const props = toControlProps(option);
-  if (props.kind === 'boolean') return [];
-  return props.kind === 'select-grouped' ? flattenGroups(props.groups ?? []) : (props.options ?? []);
-}
-
-/** Label of the option's current value, falling back to the raw value. */
-export function currentChoiceLabel(option: SessionConfigOption): string {
-  const choice = optionChoices(option).find(c => c.value === option.currentValue);
-  return choice?.label ?? option.currentValue;
-}
-
-/** Last segment of a "group / name" label (the model name without its provider). */
-export function shortChoiceLabel(label: string): string {
-  const i = label.lastIndexOf(' / ');
-  return i >= 0 ? label.slice(i + 3) : label;
-}
-
-/** Whether the option is the model selector (its chip shows only the model name). */
-export function isModelOption(option: SessionConfigOption): boolean {
-  return isModel(option);
 }

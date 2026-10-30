@@ -59,6 +59,15 @@ describe('planDefaultSelection', () => {
       model: 'gpt-5.4',
     });
   });
+  it('prefers the models of the backend that was just connected', () => {
+    const first = { ...backend('openai', ['gpt-4o']), id: 'openai' };
+    const second = { ...backend('openai', ['gpt-5.4', 'o3']), id: 'openai-2' };
+    const s = status([first, second]);
+    expect(planDefaultSelection(s, 'openai', 'openai-2')).toEqual({
+      provider: 'openai',
+      model: 'gpt-5.4',
+    });
+  });
   it('falls back to any backend with models', () => {
     const s = status([backend('openai-codex', []), backend('ollama', ['llama3'])]);
     expect(planDefaultSelection(s, 'openai-codex')).toEqual({ provider: 'ollama', model: 'llama3' });

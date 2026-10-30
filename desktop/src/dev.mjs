@@ -28,6 +28,8 @@ function stop() {
 }
 process.on('SIGINT', () => { stop(); process.exit(130); });
 process.on('SIGTERM', () => { stop(); process.exit(143); });
+// Any other way out (an error during startup included) must not leave the runtime or Vite running.
+process.on('exit', stop);
 
 async function wait(url, label) {
   for (let i = 0; i < 240; i += 1) {
@@ -42,7 +44,11 @@ async function wait(url, label) {
 
 fs.mkdirSync(path.join(state, 'home'), { recursive: true });
 fs.mkdirSync(path.join(state, 'workspace'), { recursive: true });
-const binary = execFileSync(process.execPath, [path.join(root, 'scripts', 'fetch-runtime.mjs'), '--print-path'], { encoding: 'utf8' });
+// RUNTIME_BIN (e.g. a dev-installed contenox-runtime) overrides the pinned release.
+const binary = process.env.RUNTIME_BIN?.trim()
+  ? path.resolve(process.env.RUNTIME_BIN.trim())
+  : execFileSync(process.execPath, [path.join(root, 'scripts', 'fetch-runtime.mjs'), '--print-path'], { encoding: 'utf8' });
+if (!fs.existsSync(binary)) throw new Error(`runtime not found: ${binary}`);
 const home = path.join(state, 'home');
 const data = path.join(state, 'workspace', '.contenox');
 const db = path.join(home, '.contenox', 'local.db');
@@ -59,7 +65,13 @@ runtime.on('exit', code => {
 await wait(`http://127.0.0.1:${port}/health`, 'runtime');
 
 console.error('vite: http://127.0.0.1:5173');
-const vite = run('npm', ['--prefix', harness, 'run', 'dev:proxy', '--', '--port', '5173', '--host', '127.0.0.1'], {
+// Run Vite's own entry with this Node binary: spawning `npm` fails on Windows (npm is npm.cmd),
+// and going through a shell would bring back per-platform quoting.
+const vitePkgPath = require.resolve('vite/package.json', { paths: [harness] });
+const vitePkg = JSON.parse(fs.readFileSync(vitePkgPath, 'utf8'));
+const viteBin = path.join(path.dirname(vitePkgPath), typeof vitePkg.bin === 'string' ? vitePkg.bin : vitePkg.bin.vite);
+const vite = run(process.execPath, [viteBin, '--mode', 'proxy', '--port', '5173', '--host', '127.0.0.1', '--strictPort'], {
+  cwd: harness,
   env: { ...process.env, VITE_DEV_API_PROXY: '1', VITE_DEV_PROXY_TARGET: `http://127.0.0.1:${port}` },
 });
 vite.on('exit', code => {

@@ -9,6 +9,7 @@ import { classifySetupIssueCode } from '../../lib/acpFailureKind';
 import { getBlockingSetupIssue, getSetupIssueFixPath } from '../../lib/setupHealth';
 import type { SetupIssue } from '../../lib/types';
 import { SlashCommandRegistryProvider } from '../../lib/slashCommands';
+import { ChatFailureRecovery } from './components/ChatFailureRecovery';
 import { ChatTopBarControls } from './components/ChatTopBarControls';
 import { WorkspaceTabs } from './components/WorkspaceTabs';
 
@@ -51,8 +52,8 @@ function SetupRequiredState({
         : t('acp_chat.setup_required_generic');
   const detail = issue?.message ?? fallbackMessage ?? null;
 
-  return (
-    <div className="m-auto max-w-md p-6">
+  const plain = (
+    <>
       <EmptyState
         variant="warning"
         title={title}
@@ -73,6 +74,21 @@ function SetupRequiredState({
           {actionLabel}
         </Button>
       </div>
+    </>
+  );
+
+  // A broken connection or default model is repaired in place; the setup form opens in a
+  // dialog and first run is never shown again.
+  return (
+    <div className="m-auto w-full max-w-md p-6">
+      <ChatFailureRecovery
+        kind={kind}
+        issueCode={issue?.code}
+        message={detail}
+        chooseModelPath={fixPath}
+        onResolved={onRetryBackend}
+        fallback={plain}
+      />
     </div>
   );
 }

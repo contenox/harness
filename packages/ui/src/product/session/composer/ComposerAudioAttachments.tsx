@@ -279,6 +279,20 @@ export function ComposerAudioAttachments({
   );
 }
 
+export interface AttachAudioLabels {
+  add: string;
+  record: string;
+  stop: string;
+  discard: string;
+}
+
+const DEFAULT_AUDIO_LABELS: AttachAudioLabels = {
+  add: 'Add audio',
+  record: 'Record a voice note',
+  stop: 'Stop recording and attach',
+  discard: 'Discard recording',
+};
+
 export function AttachAudioButtons({
   onFiles,
   disabled,
@@ -286,7 +300,9 @@ export function AttachAudioButtons({
   onStartRecording,
   onStopRecording,
   onCancelRecording,
+  labels,
 }: {
+  labels?: Partial<AttachAudioLabels>;
   onFiles: (files: File[]) => void;
   disabled?: boolean;
   recording: RecordingReadout | null;
@@ -295,6 +311,7 @@ export function AttachAudioButtons({
   onCancelRecording: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const l = { ...DEFAULT_AUDIO_LABELS, ...labels };
   if (recording) {
     return (
       <span className="flex items-center gap-1">
@@ -303,8 +320,8 @@ export function AttachAudioButtons({
           variant="ghost"
           palette="neutral"
           size="icon"
-          aria-label="Stop recording and attach"
-          title="Stop recording and attach"
+          aria-label={l.stop}
+          title={l.stop}
           onClick={onStopRecording}>
           <Square className="text-error-600 dark:text-dark-error-500 h-5 w-5" aria-hidden />
         </Button>
@@ -318,8 +335,8 @@ export function AttachAudioButtons({
           variant="ghost"
           palette="neutral"
           size="icon"
-          aria-label="Discard recording"
-          title="Discard recording"
+          aria-label={l.discard}
+          title={l.discard}
           onClick={onCancelRecording}>
           <X className="h-5 w-5" aria-hidden />
         </Button>
@@ -351,8 +368,8 @@ export function AttachAudioButtons({
         palette="neutral"
         size="icon"
         disabled={disabled}
-        aria-label="Add audio"
-        title="Add audio"
+        aria-label={l.add}
+        title={l.add}
         onClick={() => inputRef.current?.click()}>
         <Music className="h-5 w-5" aria-hidden />
       </Button>
@@ -364,8 +381,8 @@ export function AttachAudioButtons({
           palette="neutral"
           size="icon"
           disabled={disabled}
-          aria-label="Record a voice note"
-          title="Record a voice note"
+          aria-label={l.record}
+          title={l.record}
           onClick={onStartRecording}>
           <Mic className="h-5 w-5" aria-hidden />
         </Button>

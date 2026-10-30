@@ -109,6 +109,17 @@ export function workspaceConfigOptionsFromInit(init: InitializeResponse): Sessio
   );
 }
 
+export const AVAILABLE_COMMANDS_META_KEY = 'contenox.availableCommands';
+
+/** Static slash-command list the runtime advertises on `initialize` (empty for older runtimes). */
+export function availableCommandsFromInit(init: InitializeResponse): AvailableCommand[] {
+  const raw = init._meta?.[AVAILABLE_COMMANDS_META_KEY];
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (c): c is AvailableCommand =>
+      typeof c === 'object' && c !== null && typeof (c as AvailableCommand).name === 'string',
+  );
+}
 
 export const AGENT_META_KEY = 'contenox.agent';
 
@@ -326,12 +337,14 @@ export interface SessionConfigValue {
   value: string;
   name: string;
   description?: string;
+  _meta?: Record<string, unknown>;
 }
 
 export interface SessionConfigGroup {
   group: string;
   name: string;
   options: SessionConfigValue[];
+  _meta?: Record<string, unknown>;
 }
 
 export type SessionConfigOptionValues = SessionConfigValue[] | SessionConfigGroup[];
@@ -344,6 +357,7 @@ export interface SessionConfigOption {
   type: string;
   currentValue: string;
   options: SessionConfigOptionValues;
+  _meta?: Record<string, unknown>;
 }
 
 export interface NewSessionResponse {

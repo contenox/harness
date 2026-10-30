@@ -8,6 +8,8 @@ export interface ConfigOptionControlProps {
   onChange: (value: SessionConfigOptionValue) => void;
   disabled?: boolean;
   hint?: string;
+  /** Shown when the option has no current value (translated by the caller). */
+  notSetLabel?: string;
 }
 
 export function ConfigOptionControl({
@@ -16,6 +18,7 @@ export function ConfigOptionControl({
   onChange,
   disabled,
   hint,
+  notSetLabel,
 }: ConfigOptionControlProps) {
   const props = toControlProps(option);
 
@@ -42,6 +45,7 @@ export function ConfigOptionControl({
       value={current}
       disabled={disabled}
       options={options}
+      placeholder={current === '' ? notSetLabel : undefined}
       onChange={event => onChange(fromControlValue(props.kind, event.target.value))}
     />
   );

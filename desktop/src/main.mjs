@@ -6,6 +6,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isAllowedExternalUrl } from './externalUrl.mjs';
 import { startUiServer } from './server.mjs';
 import { existingDir, validateWorkspace, workspaceFromArgv } from './workspaces.mjs';
 
@@ -251,9 +252,17 @@ function handleInstanceExit(inst, child, code, signal) {
     });
 }
 
-// The default instance serves ~/Contenox and all unprefixed (global) UI traffic.
+// The default project is the scratchpad for chats that don't belong to a project. Installs from
+// before the rename keep using ~/Contenox, so sessions stored with that folder keep working.
+function scratchpadDir() {
+  const legacy = path.join(os.homedir(), 'Contenox');
+  if (existingDir(legacy)) return legacy;
+  return path.join(os.homedir(), 'Contenox Scratchpad');
+}
+
+// The default instance serves the scratchpad and all unprefixed (global) UI traffic.
 async function startDefaultInstance() {
-  const dir = path.join(os.homedir(), 'Contenox');
+  const dir = scratchpadDir();
   fs.mkdirSync(dir, { recursive: true });
   const inst = {
     key: DEFAULT_KEY,
@@ -413,7 +422,7 @@ function windowOptions(extra = {}) {
 
 function hardenWindow(window) {
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/i.test(url)) void shell.openExternal(url);
+    if (isAllowedExternalUrl(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
   window.webContents.on('will-navigate', (event, url) => {
@@ -604,6 +613,14 @@ function handle(channel, fn) {
 handle('contenox:select-directory', () => chooseFolder());
 handle('contenox:ensure-project-runtime', target => ensureProjectRuntime(target));
 handle('contenox:stop-project-runtime', target => stopProjectRuntime(target));
+// Opens an existing project folder in the OS file manager. Only existing directories are
+// accepted (validateWorkspace), never files, so this cannot launch an executable.
+handle('contenox:reveal-path', async target => {
+  const check = validateWorkspace(target);
+  if (check.error) return { ok: false, error: check.error };
+  const error = await shell.openPath(check.path);
+  return error ? { ok: false, error } : { ok: true };
+});
 ipcMain.on('contenox:set-titlebar-theme', (event, theme) => {
   if (!trusted(event)) return;
   applyTitleBarTheme(BrowserWindow.fromWebContents(event.sender), theme);

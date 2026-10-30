@@ -1,4 +1,6 @@
 
+import type { AvailableCommand } from '../../../lib/acp';
+
 export interface SlashMenuEntry {
   name: string;
   description: string;
@@ -37,4 +39,12 @@ export function slashMenuKeyFromEvent(key: string): SlashMenuKeyAction | null {
 export function clampIndex(index: number, length: number): number {
   if (length <= 0) return 0;
   return ((index % length) + length) % length;
+}
+
+/** Session list once it has commands; until then (and in an empty chat) the workspace-level list. */
+export function selectAvailableCommands(
+  sessionCommands: AvailableCommand[],
+  workspaceCommands: AvailableCommand[],
+): AvailableCommand[] {
+  return sessionCommands.length > 0 ? sessionCommands : workspaceCommands;
 }

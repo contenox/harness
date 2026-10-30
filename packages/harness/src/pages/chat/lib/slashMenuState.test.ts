@@ -3,6 +3,7 @@ import {
   clampIndex,
   deriveSlashMenuQuery,
   filterSlashCommands,
+  selectAvailableCommands,
   slashMenuKeyFromEvent,
   type SlashMenuEntry,
 } from './slashMenuState';
@@ -90,5 +91,20 @@ describe('clampIndex', () => {
 
   it('returns 0 for an empty list', () => {
     expect(clampIndex(5, 0)).toBe(0);
+  });
+});
+
+describe('selectAvailableCommands', () => {
+  const ws = [{ name: 'help', description: 'workspace' }];
+  const sess = [{ name: 'clear', description: 'session' }];
+  it('uses the workspace list in an empty chat', () => {
+    expect(selectAvailableCommands([], ws)).toBe(ws);
+  });
+  it('prefers the session list once it has commands', () => {
+    expect(selectAvailableCommands(sess, ws)).toBe(sess);
+  });
+  it('falls back to the workspace list while the session list is still empty', () => {
+    expect(selectAvailableCommands([], ws)).toBe(ws);
+    expect(selectAvailableCommands([], [])).toEqual([]);
   });
 });

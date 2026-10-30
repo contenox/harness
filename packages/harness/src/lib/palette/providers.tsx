@@ -121,7 +121,7 @@ export const sessionsProvider: PaletteProvider = (ctx): PaletteItem[] =>
   ctx.sessions.map(s => {
     const agentName = externalAgentFromMeta(s._meta);
     const title =
-      meaningfulTitle(s) ?? ctx.t('palette.session_fallback', { shortId: s.sessionId.slice(0, 8) });
+      meaningfulTitle(s) ?? ctx.t('acp_sidebar.untitled_session');
     return {
       id: `session:${s.sessionId}`,
       type: 'session',

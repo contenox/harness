@@ -25,18 +25,49 @@ function digest(buffer) {
   return createHash('sha256').update(buffer).digest('hex');
 }
 
+const RETRIES = 4;
+
+// Retries transient network failures (connection resets, timeouts, 5xx) with a short backoff.
 async function download(url) {
-  const response = await fetch(url, { redirect: 'follow' });
-  if (!response.ok) throw new Error(`download failed ${response.status}: ${url}`);
-  return Buffer.from(await response.arrayBuffer());
+  let lastError;
+  for (let attempt = 1; attempt <= RETRIES; attempt += 1) {
+    let response;
+    try {
+      response = await fetch(url, { redirect: 'follow' });
+      if (response.ok) return Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      lastError = error; // network error (reset, timeout, DNS): retry
+    }
+    if (response && !response.ok) {
+      lastError = new Error(`download failed ${response.status}: ${url}`);
+      const retryable = response.status >= 500 || response.status === 429;
+      if (!retryable) throw lastError;
+    }
+    if (attempt < RETRIES) {
+      const delay = 500 * 2 ** (attempt - 1);
+      console.error(`download of ${url} failed (${lastError.cause?.code ?? lastError.message}); retrying in ${delay} ms`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error(`download failed after ${RETRIES} attempts: ${url}: ${lastError.cause?.code ?? lastError.message}`);
 }
 
 fs.mkdirSync(outputDir, { recursive: true });
 
-const manifestBytes = await download(`${base}/runtime-manifest.json`);
+// The manifest is pinned by hash in runtime.lock.json, so a cached copy that still matches the
+// hash is as trustworthy as a fresh download. That keeps `npm run dev` working offline once the
+// runtime has been fetched and verified.
+const manifestCache = path.join(outputDir, 'runtime-manifest.json');
+let manifestBytes = fs.existsSync(manifestCache) ? fs.readFileSync(manifestCache) : null;
+if (!manifestBytes || digest(manifestBytes) !== lock.manifestSha256) {
+  manifestBytes = await download(`${base}/runtime-manifest.json`);
+}
 const manifestHash = digest(manifestBytes);
 if (manifestHash !== lock.manifestSha256) {
   throw new Error(`manifest sha256 mismatch: ${manifestHash}`);
+}
+if (!fs.existsSync(manifestCache) || digest(fs.readFileSync(manifestCache)) !== manifestHash) {
+  fs.writeFileSync(manifestCache, manifestBytes);
 }
 const manifest = JSON.parse(manifestBytes.toString('utf8'));
 if (manifest.version !== version) {

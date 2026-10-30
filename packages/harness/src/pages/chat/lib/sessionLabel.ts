@@ -8,7 +8,7 @@ export function meaningfulTitle(session: SessionInfo): string | null {
 
 export function workspaceLabel(cwd?: string | null): string | null {
   if (!cwd) return null;
-  const parts = cwd.split('/').filter(Boolean);
+  const parts = cwd.split(/[\\/]/).filter(Boolean); // Windows and POSIX separators
   if (parts.length === 0) return null;
   return parts[parts.length - 1];
 }

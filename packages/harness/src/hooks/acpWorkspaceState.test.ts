@@ -298,3 +298,28 @@ describe('acpSessionsReducer: multiplexed per-session slices', () => {
     expect(selectOpenSessionIds(state).sort()).toEqual(['sess-a', 'sess-b']);
   });
 });
+
+describe('acpWorkspaceReducer: workspace available commands', () => {
+  it('stores non-empty lists, ignores empty ones, and survives ready', () => {
+    const cmds = [{ name: 'help', description: 'Help' }];
+    let state = run({ type: 'workspace_available_commands', commands: cmds });
+    expect(state.workspaceAvailableCommands).toEqual(cmds);
+    state = acpWorkspaceReducer(state, { type: 'workspace_available_commands', commands: [] });
+    expect(state.workspaceAvailableCommands).toEqual(cmds);
+    state = acpWorkspaceReducer(state, {
+      type: 'ready',
+      agentName: 'x',
+      workspaceConfigOptions: [],
+      promptCapabilities: {},
+    });
+    expect(state.workspaceAvailableCommands).toEqual(cmds);
+  });
+});
+
+describe('acpWorkspaceReducer: workspace config options replacement', () => {
+  it('replaces the options at runtime', () => {
+    const next = [{ id: 'model', name: 'Model', type: 'select', currentValue: '', options: [] }];
+    const state = run({ type: 'workspace_config_options', configOptions: next });
+    expect(state.workspaceConfigOptions).toEqual(next);
+  });
+});

@@ -1104,3 +1104,39 @@ describe('AcpClient: image content blocks in message chunks', () => {
     expect(images).toEqual([undefined, undefined, undefined]);
   });
 });
+
+describe('AcpClient: workspace config options', () => {
+  const options = [{ id: 'model', name: 'Model', type: 'select', currentValue: '', options: [] }];
+
+  it('requests the workspace config options and unwraps them', async () => {
+    const transport = new MockTransport();
+    const client = new AcpClient(transport);
+    const pending = client.workspaceConfigOptions();
+    const req = transport.lastSent();
+    expect(req.method).toBe('_contenox/workspaceConfigOptions');
+    transport.feed({ jsonrpc: '2.0', id: req.id, result: { configOptions: options } });
+    await expect(pending).resolves.toEqual(options);
+  });
+
+  it('notifies listeners when the agent reports changed options, until unsubscribed', () => {
+    const transport = new MockTransport();
+    const client = new AcpClient(transport);
+    const listener = vi.fn();
+    const unsubscribe = client.onWorkspaceConfigOptionsChanged(listener);
+    const frame = { jsonrpc: '2.0', method: '_contenox/workspaceConfigOptionsChanged', params: { configOptions: options } };
+    transport.feed(frame);
+    expect(listener).toHaveBeenCalledWith(options);
+    unsubscribe();
+    transport.feed(frame);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a change notification without options', () => {
+    const transport = new MockTransport();
+    const client = new AcpClient(transport);
+    const listener = vi.fn();
+    client.onWorkspaceConfigOptionsChanged(listener);
+    transport.feed({ jsonrpc: '2.0', method: '_contenox/workspaceConfigOptionsChanged', params: {} });
+    expect(listener).not.toHaveBeenCalled();
+  });
+});

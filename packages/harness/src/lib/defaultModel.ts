@@ -18,18 +18,21 @@ export function chatModelsFor(status: SetupStatus | undefined, provider?: string
 
 /**
  * Chooses the default provider + model once chat models are visible.
- * Prefers the hinted provider (the one the user just set up); otherwise the first backend
- * that exposes chat models. Returns null while no model is available yet.
+ * Prefers the backend the user just connected (by id), then the hinted provider type;
+ * otherwise the first backend that exposes chat models. Returns null while no model is
+ * available yet.
  */
 export function planDefaultSelection(
   status: SetupStatus | undefined,
   preferredProvider?: string,
+  preferredBackendId?: string,
 ): DefaultSelection | null {
   const checks = status?.backendChecks ?? [];
-  const candidates = [
-    ...(preferredProvider ? checks.filter(b => b.type === preferredProvider) : []),
-    ...checks.filter(b => !preferredProvider || b.type !== preferredProvider),
-  ];
+  const exact = preferredBackendId ? checks.filter(b => b.id === preferredBackendId) : [];
+  const sameType = preferredProvider
+    ? checks.filter(b => b.type === preferredProvider && !exact.includes(b))
+    : [];
+  const candidates = [...exact, ...sameType, ...checks.filter(b => !exact.includes(b) && !sameType.includes(b))];
   for (const backend of candidates) {
     const model = pickDefaultModel(backend.chatModels ?? []);
     if (model) return { provider: backend.type, model };

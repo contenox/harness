@@ -63,12 +63,12 @@ export const Collapsible = ({
         {title ? (
           <>
             {" "}
-            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md bg-surface-50 dark:bg-dark-surface-50 border border-surface-300 dark:border-dark-surface-300 px-3 py-2 text-left text-text dark:text-dark-text hover:bg-surface-100 dark:hover:bg-dark-surface-100">
+            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-line bg-raised px-3 py-2 text-left text-text hover:bg-hover">
               {" "}
               <span>{title}</span>
               <span
                 aria-hidden
-                className="text-text-muted dark:text-dark-text-muted"
+                className="text-text-muted"
               >
                 {open ? "−" : "+"}
               </span>
@@ -127,9 +127,7 @@ export const CollapsibleTrigger = ({
       className={cn(
         "flex w-full items-center justify-between",
         "transition-colors duration-200",
-        "focus:outline-none focus-visible:ring-2",
-        "focus-visible:ring-primary-500 dark:focus-visible:ring-dark-primary-500",
-        "focus-visible:ring-offset-2 focus-visible:ring-offset-surface-50 dark:focus-visible:ring-offset-dark-surface-50",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
         className,
       )}
       {...props}

@@ -80,7 +80,7 @@ export const ChatSessionTab = memo(function ChatSessionTab({ sessionId, onSessio
       composer={
         <ChatComposerContainer
           files={chat.files}
-          availableCommands={session.availableCommands}
+          availableCommands={chat.availableCommands}
           isPrompting={session.isPrompting}
           disabled={session.pendingPermission != null || (!session.isPrompting && !ready)}
           ready={ready}

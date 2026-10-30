@@ -46,10 +46,6 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install make
-        if: runner.os == 'Windows'
-        run: choco install make -y --no-progress
-
       - name: Install Linux packaging tools
         if: runner.os == 'Linux'
         run: sudo apt-get update -qq && sudo apt-get install -y rpm awscli
@@ -62,8 +58,8 @@ jobs:
         if: runner.os == 'macOS'
         run: command -v aws >/dev/null || brew install awscli
 
-      - run: make install-web
-      - run: make desktop-package
+      - run: npm run install-web
+      - run: npm run package
 
       - name: Import release signing key
         if: runner.os == 'Linux'
@@ -88,7 +84,7 @@ jobs:
         if: runner.os == 'Linux'
         env:
           RELEASE_PUBLIC_KEY_FILE: ${{ runner.temp }}/release.asc
-        run: make desktop-sign-rpm
+        run: npm run sign-rpm
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:

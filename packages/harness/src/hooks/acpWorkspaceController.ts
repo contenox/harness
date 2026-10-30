@@ -4,6 +4,7 @@ import {
   agentMeta,
   createAcpClient,
   JSON_RPC_ERROR_CODES,
+  availableCommandsFromInit,
   missionAskFromMeta,
   workspaceConfigOptionsFromInit,
   type PromptCapabilities,
@@ -43,6 +44,12 @@ export interface AcpWorkspaceControllerDeps {
   resolveProject?: (cwd: string) => Promise<string>;
   createClient?: (transport: Transport) => AcpClient;
   cwd?: string;
+  /**
+   * Adapter for the runtime's ext method that returns the current workspace config options (used
+   * by the empty chat). Return null when unsupported. Called after every (re)connect; the result
+   * replaces the options from `initialize`.
+   */
+  fetchWorkspaceConfigOptions?: (client: AcpClient) => Promise<SessionConfigOption[] | null>;
 }
 
 export interface AcpWorkspaceController {
@@ -71,6 +78,10 @@ export interface AcpWorkspaceController {
     options: Array<{ configId: string; value: SessionConfigOptionValue }>,
   ): Promise<void>;
   reconnect(): Promise<void>;
+  /** Re-reads the workspace config options through the ext-method adapter (no-op without one). */
+  refreshWorkspaceConfigOptions(): Promise<void>;
+  /** Replaces the workspace config options (e.g. from a change notification). */
+  setWorkspaceConfigOptions(configOptions: SessionConfigOption[]): void;
   dispose(): void;
 }
 
@@ -398,8 +409,11 @@ export function createAcpWorkspaceController(
       onUsage: usage => active(() => sessionDispatch(sid, { type: 'usage', usage })),
       onTerminalOutput: payload =>
         active(() => sessionDispatch(sid, { type: 'terminal_output', payload })),
-      onAvailableCommands: commands =>
-        sessionDispatch(sid, { type: 'available_commands', commands }),
+      onAvailableCommands: commands => {
+        sessionDispatch(sid, { type: 'available_commands', commands });
+        // Fallback cache for runtimes that don't advertise commands on initialize.
+        workspaceDispatch({ type: 'workspace_available_commands', commands });
+      },
       onConfigOptions: configOptions =>
         sessionDispatch(sid, { type: 'config_options', configOptions }),
       onSessionInfo: info =>
@@ -432,6 +446,9 @@ export function createAcpWorkspaceController(
     const c = buildClient(transport);
     try {
       const init = await c.initialize();
+      if (!disposed) {
+        workspaceDispatch({ type: 'workspace_available_commands', commands: availableCommandsFromInit(init) });
+      }
       return {
         client: c,
         transport,
@@ -449,6 +466,7 @@ export function createAcpWorkspaceController(
     client = c;
     currentTransport = transport;
     transport.onClose(() => handleTransportClose(transport));
+    c.onWorkspaceConfigOptionsChanged?.(setWorkspaceConfigOptions);
   }
 
   async function refreshSessionsInternal(c: AcpClient): Promise<void> {
@@ -473,6 +491,24 @@ export function createAcpWorkspaceController(
     return connectPromise;
   }
 
+  async function refreshWorkspaceConfigOptionsFor(c: AcpClient): Promise<void> {
+    if (!deps.fetchWorkspaceConfigOptions) return;
+    try {
+      const options = await deps.fetchWorkspaceConfigOptions(c);
+      if (!disposed && options) workspaceDispatch({ type: 'workspace_config_options', configOptions: options });
+    } catch {
+      // Optional ext method: the options from initialize stay.
+    }
+  }
+
+  async function refreshWorkspaceConfigOptions(): Promise<void> {
+    if (client) await refreshWorkspaceConfigOptionsFor(client);
+  }
+
+  function setWorkspaceConfigOptions(configOptions: SessionConfigOption[]): void {
+    if (!disposed) workspaceDispatch({ type: 'workspace_config_options', configOptions });
+  }
+
   async function doConnect(): Promise<void> {
     workspaceDispatch({ type: 'connecting' });
     try {
@@ -488,6 +524,7 @@ export function createAcpWorkspaceController(
         workspaceConfigOptions: established.workspaceConfigOptions,
         promptCapabilities: established.promptCapabilities,
       });
+      void refreshWorkspaceConfigOptionsFor(established.client);
       await refreshSessionsInternal(established.client);
     } catch (err) {
       if (disposed) return;
@@ -555,6 +592,7 @@ export function createAcpWorkspaceController(
         workspaceConfigOptions: established.workspaceConfigOptions,
         promptCapabilities: established.promptCapabilities,
       });
+      void refreshWorkspaceConfigOptionsFor(established.client);
       await restoreOpenSessions(established.client);
       if (disposed) return;
       await refreshSessionsInternal(established.client);
@@ -948,6 +986,8 @@ export function createAcpWorkspaceController(
     setConfigOption,
     applyConfigOptions,
     reconnect,
+    refreshWorkspaceConfigOptions,
+    setWorkspaceConfigOptions,
     dispose,
   };
 }

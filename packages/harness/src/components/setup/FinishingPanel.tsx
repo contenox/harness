@@ -1,4 +1,4 @@
-import { Button, FormField, InlineNotice, Span, Select, Spinner } from '@contenox/ui';
+import { Button, FormField, InlineNotice, Select, Span, Spinner } from '@contenox/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePutCLIConfig } from '../../hooks/usePutCLIConfig';
@@ -64,7 +64,12 @@ function ManualModelSelect({ data, provider, checking, onCheckAgain }: ManualPro
           {putConfig.error.message}
         </InlineNotice>
       )}
-      <Button size="lg" className="w-full" isLoading={putConfig.isPending} disabled={!selected} onClick={save}>
+      <Button
+        size="lg"
+        className="w-full"
+        isLoading={putConfig.isPending}
+        disabled={!selected}
+        onClick={save}>
         {t('signin.save')}
       </Button>
     </div>

@@ -19,6 +19,15 @@ function rememberHandOff(code: string): void {
   }
 }
 
+/** Forget the last hand-off so the next attempt opens the browser again. */
+export function clearBrowserHandoff(): void {
+  try {
+    sessionStorage.removeItem(HANDED_OFF_KEY);
+  } catch {
+    // Storage may be unavailable; nothing to clear.
+  }
+}
+
 /**
  * When a device code arrives, open the sign-in page in the system browser and put the code on
  * the clipboard, once per code (a reload does not reopen the browser). Returns whether the code

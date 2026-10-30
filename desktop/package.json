@@ -9,6 +9,7 @@
     "start": "electron .",
     "stage": "node scripts/stage.mjs",
     "package:dir": "npm run stage && electron-builder --dir --publish never",
+    "package:dir:staged": "electron-builder --dir --publish never -c.electronDist=node_modules/electron/dist",
     "package": "npm run stage && electron-builder --publish never",
     "verify:package": "node scripts/verify-package.mjs",
     "checksums": "node scripts/package-checksums.mjs",

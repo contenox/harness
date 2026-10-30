@@ -24,6 +24,20 @@ describe('groupSessionsByProject', () => {
     expect(g.other).toEqual([]);
   });
 
+  it('orders projects by latest activity, then empty projects by name', () => {
+    const many: WorkspaceRoot[] = [
+      { path: '/p/zeta', default: false },
+      { path: '/p/alpha', default: false },
+      { path: '/p/older', default: false },
+      { path: '/p/newer', default: false },
+    ];
+    const g = groupSessionsByProject(
+      [s('o', '/p/older', '2026-01-01T00:00:00Z'), s('n', '/p/newer', '2026-03-01T00:00:00Z')],
+      many,
+    );
+    expect(g.projects.map(p => p.root.path)).toEqual(['/p/newer', '/p/older', '/p/alpha', '/p/zeta']);
+  });
+
   it('puts sessions outside every project in other', () => {
     const g = groupSessionsByProject([s('x', '/elsewhere'), s('y')], roots);
     expect(g.other.map(x => x.sessionId)).toEqual(['x', 'y']);

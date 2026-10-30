@@ -48,7 +48,7 @@ export function Form({
         className="space-y-6"
       >
         {title && (
-          <H2 className="text-text dark:text-dark-text text-2xl font-semibold">
+          <H2 className="text-text text-lg font-semibold">
             {title}
           </H2>
         )}

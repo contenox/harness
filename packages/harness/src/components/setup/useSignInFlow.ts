@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePutCLIConfig } from '../../hooks/usePutCLIConfig';
 import { useRefreshSetupStatus } from '../../hooks/useRefreshSetupStatus';
+import { api } from '../../lib/api';
 import { onlyDefaultsMissing, planDefaultSelection } from '../../lib/defaultModel';
-import type { CloudProviderType, SetupStatus } from '../../lib/types';
+import { verifyProviderSignIn } from '../../lib/signInVerify';
+import type { CloudProviderType, Connection, SetupStatus } from '../../lib/types';
 
 export const CODEX: CloudProviderType = 'openai-codex';
 const POLL_MS = 3000;
@@ -11,37 +13,60 @@ const MODEL_WAIT_MS = 30_000;
 export type SignInView = 'codex' | 'others';
 
 /**
- * State machine behind the sign-in screen: which panel is shown, polling the setup status
- * while a provider is being connected, and picking the default provider + model once one is ready.
+ * State machine behind the sign-in screen: which panel is shown and, once a provider is
+ * connected and verified, picking its default provider + model.
  */
 export function useSignInFlow(data: SetupStatus | undefined) {
   const [view, setView] = useState<SignInView>('codex');
   const [readyProvider, setReadyProvider] = useState<string | undefined>();
+  const [readyConnectionId, setReadyConnectionId] = useState<string | undefined>();
   const [timedOut, setTimedOut] = useState(false);
   const refresh = useRefreshSetupStatus();
   const putConfig = usePutCLIConfig();
   const attempted = useRef<string | null>(null);
+  const { mutate: refreshStatus } = refresh;
 
   const finishing = readyProvider !== undefined || onlyDefaultsMissing(data);
   const plan = useMemo(
-    () => (finishing ? planDefaultSelection(data, readyProvider) : null),
-    [finishing, data, readyProvider],
+    () => (finishing ? planDefaultSelection(data, readyProvider, readyConnectionId) : null),
+    [finishing, data, readyProvider, readyConnectionId],
   );
 
-  const markReady = useCallback((provider: string) => {
-    setTimedOut(false);
-    setReadyProvider(provider);
-  }, []);
-  const onCodexSignedIn = useCallback(() => markReady(CODEX), [markReady]);
+  const markReady = useCallback(
+    (provider: string, connectionId?: string) => {
+      setTimedOut(false);
+      setReadyConnectionId(connectionId);
+      setReadyProvider(provider);
+      // The connection was just verified, so one refresh brings in its models.
+      refreshStatus();
+    },
+    [refreshStatus],
+  );
 
-  const { mutate: refreshStatus } = refresh;
-  const polling = finishing || view === 'others';
+  /** A provider from the list was saved and verified available. */
+  const onConnected = useCallback(
+    (connection: Connection) => markReady(connection.providerType, connection.id),
+    [markReady],
+  );
+
+  /** ChatGPT signed in: run the discovery check first, then continue to the model step. */
+  const onCodexSignedIn = useCallback(() => {
+    void verifyProviderSignIn(
+      { list: api.listConnections, check: api.checkConnection },
+      CODEX,
+    ).then(connection => markReady(CODEX, connection?.id));
+  }, [markReady]);
+
+  // Verification (the connection check) already refreshed the runtime, so one refresh on
+  // markReady is enough. Polling remains only as a fallback while the default model step waits
+  // for chat models to show up in the setup status (e.g. a first-run state that was already
+  // "only defaults missing", or a slow provider cycle).
   useEffect(() => {
-    if (!polling) return;
+    if (!finishing || plan) return;
     refreshStatus();
     const timer = window.setInterval(() => refreshStatus(), POLL_MS);
     return () => window.clearInterval(timer);
-  }, [polling, refreshStatus]);
+  }, [finishing, plan, refreshStatus]);
 
   useEffect(() => {
     if (!finishing || plan) return;
@@ -75,7 +100,7 @@ export function useSignInFlow(data: SetupStatus | undefined) {
     showWorking,
     showManual,
     readyProvider,
-    markReady,
+    onConnected,
     onCodexSignedIn,
     checkAgain,
     checking: refresh.isPending,

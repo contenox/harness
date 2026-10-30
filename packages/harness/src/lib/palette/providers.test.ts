@@ -158,7 +158,7 @@ describe('sessionsProvider', () => {
     const session: SessionInfo = { sessionId: 'abcdef123456', title: 'abcdef123456' };
     const [item] = sessionsProvider(ctx({ navigate, sessions: [session] }));
     expect(item.type).toBe('session');
-    expect(item.title).toBe('palette.session_fallback:abcdef12');
+    expect(item.title).toBe('acp_sidebar.untitled_session');
     item.action();
     expect(navigate).toHaveBeenCalledWith('/chat/abcdef123456');
   });

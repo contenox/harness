@@ -4,17 +4,14 @@ import { AttachAudioButtons } from '@contenox/ui/session-ui';
 import { Mic, Music, Plus, ImagePlus } from 'lucide-react';
 import { memo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FOOTER_ATTACH_MENU_BELOW, footerEndLayout } from '../lib/footerLayout';
 import { useParentWidth } from '../../../hooks/useParentWidth';
 import type { AcpUsageState } from '../../../hooks/acpSessionState';
 import type { ComposerChipOptions } from '../lib/composerChips';
 import { OverflowChip, SelectChip } from './ComposerChips';
 import { AttachImageButton } from './ComposerImageAttachments';
+import { effectiveUsageMax } from '../lib/usageLimit';
 import { UsageMeter } from './UsageMeter';
-
-/** Footer widths (px) under which the footer degrades. */
-const FOOTER_COMPACT_USAGE_BELOW = 620;
-const FOOTER_ATTACH_MENU_BELOW = 480;
-const FOOTER_CHIPS_TO_OVERFLOW_BELOW = 360;
 
 type AudioButtonProps = React.ComponentProps<typeof AttachAudioButtons>;
 
@@ -45,8 +42,15 @@ export const ComposerFooterStart = memo(function ComposerFooterStart({
   onStopRecording,
   onCancelRecording,
 }: ComposerFooterStartProps) {
+  const { t } = useTranslation();
+  const audioLabels = {
+    add: t('acp_chat.attach_audio_label'),
+    record: t('acp_chat.record_audio_label'),
+    stop: t('acp_chat.record_stop_label'),
+    discard: t('acp_chat.record_discard_label'),
+  };
   const [probe, width] = useParentWidth<HTMLSpanElement>();
-  const narrow = width !== null && width < FOOTER_ATTACH_MENU_BELOW;
+  const narrow = width !== null && width > 0 && width < FOOTER_ATTACH_MENU_BELOW;
   const menuOnly = narrow && !recording && (imagesSupported || audioSupported);
   return (
     <>
@@ -65,6 +69,7 @@ export const ComposerFooterStart = memo(function ComposerFooterStart({
       {!menuOnly && imagesSupported && <AttachImageButton onFiles={onImageFiles} disabled={disabled} />}
       {!menuOnly && audioSupported && (
         <AttachAudioButtons
+          labels={audioLabels}
           onFiles={onAudioFiles}
           disabled={disabled}
           recording={recording}
@@ -188,18 +193,17 @@ export interface ComposerFooterEndProps {
 /** Right side of the composer footer: context usage, mode / model chips, overflow. */
 export const ComposerFooterEnd = memo(function ComposerFooterEnd({ usage, options, onChange }: ComposerFooterEndProps) {
   const [probe, width] = useParentWidth<HTMLSpanElement>();
-  const compact = width !== null && width < FOOTER_COMPACT_USAGE_BELOW;
-  const chipsInOverflow = width !== null && width < FOOTER_CHIPS_TO_OVERFLOW_BELOW;
-  const overflowOptions = chipsInOverflow
-    ? [options.mode, options.model, ...options.rest].filter((o): o is NonNullable<typeof o> => o != null)
-    : options.rest;
+  const { compactUsage: compact, chipsInOverflow, overflowOptions } = footerEndLayout(width, options);
   return (
-    <span className="ml-auto flex min-w-0 shrink items-center gap-1">
+    <>
+      {/* The probe must be a sibling of the group below: it measures the footer row, not the group. */}
       <span ref={probe} hidden aria-hidden />
-      <UsageMeter usage={usage} compact={compact} />
-      {!chipsInOverflow && options.mode && <SelectChip option={options.mode} onChange={onChange} />}
-      {!chipsInOverflow && options.model && <SelectChip option={options.model} onChange={onChange} />}
-      <OverflowChip options={overflowOptions} onChange={onChange} />
-    </span>
+      <span className="ml-auto flex min-w-0 shrink items-center gap-1">
+        <UsageMeter usage={usage} max={usage ? effectiveUsageMax(usage.size, options.rest) : undefined} compact={compact} />
+        {!chipsInOverflow && options.mode && <SelectChip option={options.mode} onChange={onChange} />}
+        {!chipsInOverflow && options.model && <SelectChip option={options.model} onChange={onChange} />}
+        <OverflowChip options={overflowOptions} onChange={onChange} />
+      </span>
+    </>
   );
 });

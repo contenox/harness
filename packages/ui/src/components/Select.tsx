@@ -1,10 +1,23 @@
-import { forwardRef } from "react";
+import { Fragment, forwardRef } from "react";
 import { cn } from "../utils";
 
 type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
-  options: Array<{ value: string; label: string; disabled?: boolean }>;
+  /** Consecutive options sharing a `group` render under an <optgroup>. */
+  options: Array<{ value: string; label: string; disabled?: boolean; group?: string }>;
   placeholder?: string;
 };
+
+type SelectChoice = { value: string; label: string; disabled?: boolean; group?: string };
+
+function groupSelectOptions(options: SelectChoice[]) {
+  const sections: Array<{ group: string | undefined; options: SelectChoice[] }> = [];
+  for (const option of options) {
+    const last = sections[sections.length - 1];
+    if (last && last.group === option.group) last.options.push(option);
+    else sections.push({ group: option.group, options: [option] });
+  }
+  return sections;
+}
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, options, placeholder, ...props }, ref) => (
@@ -24,15 +37,24 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           {placeholder}
         </SelectOption>
       )}
-      {options.map((option) => (
-        <SelectOption
-          key={option.value}
-          value={option.value}
-          disabled={option.disabled}
-        >
-          {option.label}
-        </SelectOption>
-      ))}
+      {groupSelectOptions(options).map((section, i) => {
+        const rendered = section.options.map((option) => (
+          <SelectOption
+            key={option.value}
+            value={option.value}
+            disabled={option.disabled}
+          >
+            {option.label}
+          </SelectOption>
+        ));
+        return section.group === undefined ? (
+          <Fragment key={`s:${i}`}>{rendered}</Fragment>
+        ) : (
+          <optgroup key={`g:${i}`} label={section.group}>
+            {rendered}
+          </optgroup>
+        );
+      })}
     </select>
   ),
 );

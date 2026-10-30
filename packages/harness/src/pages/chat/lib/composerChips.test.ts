@@ -1,6 +1,6 @@
 import type { SessionConfigOption } from '@contenox/acp-client';
 import { describe, expect, it } from 'vitest';
-import { currentChoiceLabel, optionChoices, splitComposerOptions } from './composerChips';
+import { splitComposerOptions } from './composerChips';
 
 function opt(id: string, extra: Partial<SessionConfigOption> = {}): SessionConfigOption {
   return {
@@ -39,25 +39,5 @@ describe('splitComposerOptions', () => {
 
   it('handles an empty list', () => {
     expect(splitComposerOptions([])).toEqual({ mode: undefined, model: undefined, rest: [] });
-  });
-});
-
-describe('choices', () => {
-  it('lists flat choices and labels the current value', () => {
-    const o = opt('model', { currentValue: 'b' });
-    expect(optionChoices(o)).toEqual([
-      { value: 'a', label: 'Alpha' },
-      { value: 'b', label: 'Beta' },
-    ]);
-    expect(currentChoiceLabel(o)).toBe('Beta');
-  });
-
-  it('flattens groups and falls back to the raw value', () => {
-    const o = opt('model', {
-      currentValue: 'zzz',
-      options: [{ group: 'g', name: 'Group', options: [{ value: 'a', name: 'Alpha' }] }],
-    });
-    expect(optionChoices(o)).toEqual([{ value: 'a', label: 'Group / Alpha' }]);
-    expect(currentChoiceLabel(o)).toBe('zzz');
   });
 });

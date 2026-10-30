@@ -1,5 +1,5 @@
 import { acpSessionReducer, initialAcpSessionState, type AcpSessionAction, type AcpSessionState } from './acpSessionState';
-import type { PromptCapabilities, SessionConfigOption, SessionInfo } from '@contenox/acp-client';
+import type { AvailableCommand, PromptCapabilities, SessionConfigOption, SessionInfo } from '@contenox/acp-client';
 
 
 export type AcpWorkspaceStatus =
@@ -22,6 +22,8 @@ export interface AcpWorkspaceState {
   sessionLoadError: string | null;
   workspaceConfigOptions: SessionConfigOption[];
   promptCapabilities: PromptCapabilities;
+  /** Slash commands known before any session exists (initialize _meta, else last seen session list). */
+  workspaceAvailableCommands: AvailableCommand[];
 }
 
 export const initialAcpWorkspaceState: AcpWorkspaceState = {
@@ -34,6 +36,7 @@ export const initialAcpWorkspaceState: AcpWorkspaceState = {
   sessionLoadError: null,
   workspaceConfigOptions: [],
   promptCapabilities: {},
+  workspaceAvailableCommands: [],
 };
 
 export type AcpWorkspaceAction =
@@ -44,6 +47,8 @@ export type AcpWorkspaceAction =
       workspaceConfigOptions: SessionConfigOption[];
       promptCapabilities: PromptCapabilities;
     }
+  | { type: 'workspace_available_commands'; commands: AvailableCommand[] }
+  | { type: 'workspace_config_options'; configOptions: SessionConfigOption[] }
   | { type: 'reconnecting' }
   | { type: 'disconnected' }
   | { type: 'setup_required'; message: string }
@@ -108,6 +113,12 @@ export function acpWorkspaceReducer(state: AcpWorkspaceState, action: AcpWorkspa
         workspaceConfigOptions: action.workspaceConfigOptions,
         promptCapabilities: action.promptCapabilities,
       };
+
+    case 'workspace_available_commands':
+      return action.commands.length > 0 ? { ...state, workspaceAvailableCommands: action.commands } : state;
+
+    case 'workspace_config_options':
+      return { ...state, workspaceConfigOptions: action.configOptions };
 
     case 'reconnecting':
       return { ...state, status: 'reconnecting', error: null };

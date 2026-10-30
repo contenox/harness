@@ -48,6 +48,7 @@ vi.mock('../../../hooks/useAcpWorkspace', () => {
     agentName: 'agent-x',
     sessions: [{ sessionId: 's1', cwd: 'C:/proj' }],
     workspaceConfigOptions: [],
+    workspaceAvailableCommands: [],
     promptCapabilities: {},
   };
   return {

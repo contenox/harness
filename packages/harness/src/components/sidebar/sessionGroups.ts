@@ -1,6 +1,6 @@
 import type { SessionInfo } from '../../lib/acp';
 import type { WorkspaceRoot } from '../../lib/types';
-import { projectForCwd } from '../../lib/workspaceRoots';
+import { projectForCwd, projectName } from '../../lib/workspaceRoots';
 
 export interface ProjectGroup {
   root: WorkspaceRoot;
@@ -38,8 +38,18 @@ export function groupSessionsByProject(
     if (bucket) bucket.push(session);
     else other.push(session);
   }
-  return {
-    projects: roots.map(root => ({ root, sessions: byPath.get(root.path) ?? [] })),
-    other,
-  };
+  // Projects with the most recent activity first; projects without sessions follow by name.
+  const projects: ProjectGroup[] = roots.map(root => ({ root, sessions: byPath.get(root.path) ?? [] }));
+  // Sessions are already newest first, so a project's latest activity is its first session.
+  const latest = (group: ProjectGroup) => (group.sessions.length ? updatedMs(group.sessions[0]) : null);
+  const label = (group: ProjectGroup) => projectName(group.root);
+  projects.sort((a, b) => {
+    const la = latest(a);
+    const lb = latest(b);
+    if (la !== null && lb !== null && la !== lb) return lb - la;
+    if (la === null && lb !== null) return 1;
+    if (la !== null && lb === null) return -1;
+    return label(a).localeCompare(label(b));
+  });
+  return { projects, other };
 }

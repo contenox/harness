@@ -1,6 +1,8 @@
-import { Badge, Label, Panel, ResourceCard } from '@contenox/ui';
+import { Badge, Label, ResourceCard } from '@contenox/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ConnectionRepair } from '../../../../components/providers/ConnectionRepair';
+import { connectionFromBackend } from '../../../../lib/chatRecovery';
 import { Backend } from '../../../../lib/types';
 import { ModelStatusDisplay } from './ModelStatusDisplay';
 
@@ -49,22 +51,20 @@ export function BackendCard({ backend, onEdit, onDelete }: BackendCardProps) {
         edit: () => onEdit(backend),
         delete: () => handleDelete(backend.id),
       }}
-      isLoading={deletingBackendId === backend.id}>
+      isLoading={deletingBackendId === backend.id}
+      actionLabels={{
+        edit: t('common.edit'),
+        delete: t('common.delete'),
+        deleting: t('common.deleting'),
+      }}>
       <div className="flex items-center gap-2">
         <Badge variant={backend.error ? 'error' : 'default'} size="sm">
           {backendTypeLabel(backend)}
         </Badge>
-        {backend.error && (
-          <Badge variant="error" size="sm">
-            {t('backends.error')}
-          </Badge>
-        )}
       </div>
 
-      {backend.error && (
-        <Panel variant="error" className="p-3 text-sm">
-          {backend.error}
-        </Panel>
+      {(backend.error || backend.errorCode) && (
+        <ConnectionRepair connection={connectionFromBackend(backend)} />
       )}
 
       {observedModels.length > 0 && (

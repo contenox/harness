@@ -7,10 +7,13 @@ import { useEffect, useState, type ComponentProps } from 'react';
 export function CopyRow({
   label,
   copyLabel,
+  copiedLabel,
   value,
 }: {
   label: string;
   copyLabel: string;
+  /** Shown briefly after copying. Defaults to "Copied". */
+  copiedLabel?: string;
   value: string;
 }) {
   return (
@@ -19,7 +22,7 @@ export function CopyRow({
       <CodeBlock className="rounded-lg border border-line bg-sidebar px-3 py-2 whitespace-pre-wrap break-all">
         {value}
       </CodeBlock>
-      <CopyValueButton value={value} label={copyLabel} />
+      <CopyValueButton value={value} label={copyLabel} copiedLabel={copiedLabel} />
     </div>
   );
 }
@@ -27,11 +30,14 @@ export function CopyRow({
 export function CopyValueButton({
   value,
   label,
+  copiedLabel = 'Copied',
   size = 'sm',
   className = 'self-start',
 }: {
   value: string;
   label: string;
+  /** Shown for two seconds after a successful copy. Defaults to "Copied". */
+  copiedLabel?: string;
   size?: ComponentProps<typeof Button>['size'];
   className?: string;
 }) {
@@ -51,7 +57,7 @@ export function CopyValueButton({
       onClick={() => {
         void copyTextToClipboard(value).then(setCopied);
       }}>
-      {copied ? 'Copied' : label}
+      {copied ? copiedLabel : label}
     </Button>
   );
 }

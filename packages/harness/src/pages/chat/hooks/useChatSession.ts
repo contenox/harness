@@ -19,7 +19,9 @@ import { splitComposerOptions, WORKSPACE_ROOT_CONFIG_ID } from '../lib/composerC
 import { canAttachAudio } from '../lib/audioAttachments';
 import { canAttachImages } from '../lib/imageAttachments';
 import { submitChatTurn, type SubmitPayload } from '../lib/submitTurn';
-import { resolveWorkspaceRoot } from '../lib/workspaceRoot';
+import { mostRecentProjectRoot, resolveWorkspaceRoot } from '../lib/workspaceRoot';
+import { useWorkspaceRoots } from '../../../hooks/useWorkspaceRoots';
+import { selectAvailableCommands } from '../lib/slashMenuState';
 
 const HITL_POLICY_CONFIG_ID = 'hitl-policy';
 
@@ -70,9 +72,15 @@ export function useChatSession(sessionId: string | null, onSessionCreated: (sess
 
   const stagedRoot = stagedConfig[WORKSPACE_ROOT_CONFIG_ID];
   const defaultRoot = configOptionCurrentValue(workspace.workspaceConfigOptions, WORKSPACE_ROOT_CONFIG_ID);
+  const { roots: projectRoots } = useWorkspaceRoots();
+  const recentRoot = useMemo(
+    () => mostRecentProjectRoot(workspace.sessions, projectRoots),
+    [workspace.sessions, projectRoots],
+  );
   const workspaceRoot = resolveWorkspaceRoot({
     onEmptyChat,
     stagedRoot: typeof stagedRoot === 'string' ? stagedRoot : undefined,
+    recentRoot,
     defaultRoot,
     activeSessionCwd: sessionInfo?.cwd ?? null,
   });
@@ -178,6 +186,7 @@ export function useChatSession(sessionId: string | null, onSessionCreated: (sess
     chipOptions,
     imagesSupported: canAttachImages(workspace.promptCapabilities),
     audioSupported: canAttachAudio(workspace.promptCapabilities),
+    availableCommands: selectAvailableCommands(session.availableCommands, workspace.workspaceAvailableCommands),
   };
 }
 

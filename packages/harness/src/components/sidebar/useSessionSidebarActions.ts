@@ -10,10 +10,8 @@ import { projectName } from '../../lib/workspaceRoots';
 import { meaningfulTitle } from '../../pages/chat/lib/sessionLabel';
 
 export function sessionLabel(session: SessionInfo, t: TFunction): string {
-  return (
-    meaningfulTitle(session) ??
-    t('acp_sidebar.session_fallback_label', { shortId: session.sessionId.slice(0, 8) })
-  );
+  // Never show internal ids; the runtime titles a session from its first message.
+  return meaningfulTitle(session) ?? t('acp_sidebar.untitled_session');
 }
 
 /** Confirm-then-act handlers for deleting a session or forgetting a project. */

@@ -184,6 +184,13 @@ export interface AcpClientOptions {
   capabilities?: AcpCapabilityProvider;
 }
 
+const WORKSPACE_CONFIG_CHANGED = '_contenox/workspaceConfigOptionsChanged';
+
+function configOptionsOf(value: unknown): SessionConfigOption[] | null {
+  if (!isRecord(value) || !Array.isArray(value.configOptions)) return null;
+  return value.configOptions as SessionConfigOption[];
+}
+
 export class AcpClient {
   private readonly transport: Transport;
   private nextId = 1;
@@ -192,6 +199,7 @@ export class AcpClient {
 
   private readonly subscriptions = new Map<SessionId, SessionEventHandlers>();
   private readonly capabilityProvider?: AcpCapabilityProvider;
+  private readonly workspaceConfigListeners = new Set<(options: SessionConfigOption[]) => void>();
   private closed = false;
 
   constructor(transport: Transport, opts: AcpClientOptions = {}) {
@@ -214,6 +222,7 @@ export class AcpClient {
     this.pending.clear();
     this.activePrompts.clear();
     this.subscriptions.clear();
+    this.workspaceConfigListeners.clear();
     this.capabilityProvider?.dispose?.();
   }
 
@@ -345,6 +354,11 @@ export class AcpClient {
 
 
   private handleNotification(n: JsonRpcNotificationFrame): void {
+    if (n.method === WORKSPACE_CONFIG_CHANGED) {
+      const options = configOptionsOf(n.params);
+      if (options) for (const listener of this.workspaceConfigListeners) listener(options);
+      return;
+    }
     if (n.method !== 'session/update') return;
     const params = n.params as SessionNotification;
     if (!params) return;
@@ -515,6 +529,18 @@ export class AcpClient {
       sessionId,
       command,
     });
+  }
+
+  /** Current workspace-level config options (Contenox extension; other agents reject it). */
+  async workspaceConfigOptions(): Promise<SessionConfigOption[] | null> {
+    const result = await this.call<unknown>('_contenox/workspaceConfigOptions', {});
+    return configOptionsOf(result);
+  }
+
+  /** Called with the new workspace config options whenever the agent reports a change. */
+  onWorkspaceConfigOptionsChanged(listener: (options: SessionConfigOption[]) => void): () => void {
+    this.workspaceConfigListeners.add(listener);
+    return () => this.workspaceConfigListeners.delete(listener);
   }
 
   async listWorkspace(path?: string): Promise<WorkspaceListing> {

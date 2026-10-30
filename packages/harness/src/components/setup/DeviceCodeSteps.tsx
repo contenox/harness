@@ -26,7 +26,7 @@ export function DeviceCodeSteps({ url, code, codeCopied, cancelling, onCancel }:
     <div className="flex w-full flex-col gap-5">
       <Steps>
         <Step number={1} title={t('signin.step_open_title')}>
-          <span>{t('signin.step_open_desc')} </span>
+          {t('signin.step_open_desc')}{' '}
           <Button
             type="button"
             variant="text"

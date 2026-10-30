@@ -65,6 +65,7 @@ export function AcpWorkspaceProvider({ children }: AcpWorkspaceProviderProps) {
           return new WebSocketTransport(acpWsUrl(prefix));
         },
         resolveProject: hasProjectBridge() ? projectPathForCwd : undefined,
+        fetchWorkspaceConfigOptions: client => client.workspaceConfigOptions(),
       },
       workspaceDispatch,
       sessionsDispatch,

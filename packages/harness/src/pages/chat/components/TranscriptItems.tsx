@@ -10,8 +10,6 @@ import {
   diffLinesFromTexts,
   DiffView,
   InlineAttachments,
-  InlineNotice,
-  Span,
   stripAnsi,
   TerminalOutput,
   tailLines,
@@ -31,12 +29,12 @@ import type {
   AcpTimelineItem,
   AcpToolCallState,
 } from '../../../hooks/acpSessionState';
-import { acpFailureCopyKeys, classifyAcpExecutionError } from '../../../lib/acpFailureKind';
 import { shellCommandLine, shellOutputLines } from '../../../lib/shellExecution';
 import {
   shouldShowStreamingCaret,
   shouldShowStreamingPlaceholder,
 } from '../lib/streamingPresentation';
+import { ChatErrorCard } from './ChatErrorCard';
 import { MissionAskCard } from './MissionAskCard';
 import { PermissionCard } from './PermissionCard';
 
@@ -310,27 +308,7 @@ const TranscriptTerminal = memo(function TranscriptTerminal({ card }: { card: Ac
 });
 
 const TranscriptError = memo(function TranscriptError({ card }: { card: AcpErrorCard }) {
-  const { t } = useTranslation();
-  const tk = t as (key: string) => string;
-  const kind = classifyAcpExecutionError(card.message);
-  const copy = acpFailureCopyKeys(kind);
-  const headline = copy.titleKey ? tk(copy.titleKey) : t('acp_chat.turn_failed_label');
-  const hint = copy.descriptionKey ? tk(copy.descriptionKey) : null;
-  return (
-    <InlineNotice variant="error">
-      <div className="flex flex-col gap-1.5">
-        <Span className="font-medium">{headline}</Span>
-        {hint && <Span className="text-sm">{hint}</Span>}
-        {card.message && (
-          <Collapsible defaultOpen={false} title={t('acp_chat.error_details_toggle')}>
-            <p className="mt-1 max-h-40 overflow-y-auto text-xs [overflow-wrap:anywhere] break-words whitespace-pre-wrap">
-              {card.message}
-            </p>
-          </Collapsible>
-        )}
-      </div>
-    </InlineNotice>
-  );
+  return <ChatErrorCard message={card.message} fallbackTitleKey="acp_chat.turn_failed_label" />;
 });
 
 export interface TranscriptItemsProps {

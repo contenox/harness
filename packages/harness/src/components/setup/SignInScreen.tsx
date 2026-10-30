@@ -19,14 +19,19 @@ export function SignInScreen({ data }: Props) {
   const { t } = useTranslation();
   const flow = useSignInFlow(data);
   const finishing = flow.showWorking || flow.showManual;
+  const providerList = flow.view === 'others' && !flow.finishing;
 
   return (
-    <div className="flex h-full min-h-0 flex-col items-center overflow-y-auto bg-app px-4 py-10">
-      <div className="m-auto flex w-full max-w-sm flex-col items-center gap-8">
-        {flow.view === 'others' && !flow.finishing ? (
+    <div className="bg-app flex h-full min-h-0 flex-col items-center overflow-y-auto px-4 py-10">
+      <div
+        className={`m-auto flex w-full flex-col items-center gap-8 ${providerList ? 'max-w-md' : 'max-w-sm'}`}>
+        {providerList ? (
           <>
-            <SignInHero title={t('signin.others_title')} subtitle={t('signin.others_description')} />
-            <OtherProvidersPanel onBack={() => flow.setView('codex')} onSaved={flow.markReady} />
+            <SignInHero />
+            <OtherProvidersPanel
+              onBack={() => flow.setView('codex')}
+              onConnected={flow.onConnected}
+            />
           </>
         ) : (
           <>
