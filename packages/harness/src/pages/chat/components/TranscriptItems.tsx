@@ -10,6 +10,7 @@ import {
   diffLinesFromTexts,
   DiffView,
   InlineAttachments,
+  InlineNotice,
   stripAnsi,
   TerminalOutput,
   tailLines,
@@ -17,6 +18,7 @@ import {
   ToolCallCard,
   type ToolCallCardProps,
 } from '@contenox/ui';
+import { toolCallError } from '@contenox/ui/session-lib';
 import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
@@ -186,6 +188,15 @@ function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; 
   const diffs = (toolCall.content ?? []).filter(c => c.type === 'diff');
   const other = (toolCall.content ?? []).filter(c => c.type !== 'diff');
   const hasRaw = toolCall.rawInput != null || toolCall.rawOutput != null || other.length > 0;
+  const errorText = toolCallError(toolCall);
+
+  const errorNotice = errorText ? (
+    <InlineNotice variant="error">
+      <span className="font-medium">{t('acp_chat.tool_error_label')}</span>
+      {'\n'}
+      {errorText}
+    </InlineNotice>
+  ) : null;
 
   const shellLines =
     toolCall.kind === 'execute' && other.length === 0 ? shellOutputLines(toolCall.rawOutput) : null;
@@ -193,6 +204,7 @@ function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; 
     const commandLine = shellCommandLine(toolCall.rawInput);
     return (
       <div className="space-y-3">
+        {errorNotice}
         <TerminalOutput
           lines={commandLine ? [commandLine, ...shellLines] : shellLines}
           maxHeight="15rem"
@@ -203,6 +215,7 @@ function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; 
 
   return (
     <div className="space-y-3">
+      {errorNotice}
       {diffs.map((d, i) => (
         <DiffView
           key={diffKey(d.path, i)}
@@ -255,6 +268,7 @@ const TranscriptToolCall = memo(function TranscriptToolCall({
   const diffs = (toolCall.content ?? []).filter(c => c.type === 'diff');
   const other = (toolCall.content ?? []).filter(c => c.type !== 'diff');
   const hasDetail =
+    toolCallError(toolCall) != null ||
     diffs.length > 0 ||
     other.length > 0 ||
     toolCall.rawInput != null ||

@@ -94,6 +94,8 @@ export interface ToolCallEvent {
   locations?: ToolCallLocation[];
   rawInput?: unknown;
   rawOutput?: unknown;
+  /** Provider or agent annotations, passed through untouched. */
+  meta?: Record<string, unknown>;
 }
 
 export interface UsageEvent {
@@ -412,6 +414,7 @@ export class AcpClient {
           locations: update.locations,
           rawInput: update.rawInput,
           rawOutput: update.rawOutput,
+          meta: (update as { _meta?: unknown })._meta as Record<string, unknown> | undefined,
         });
         return;
       case 'plan':

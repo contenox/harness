@@ -48,6 +48,8 @@ export interface AcpToolCallState {
   locations?: ToolCallLocation[];
   rawInput?: unknown;
   rawOutput?: unknown;
+  /** Agent or runtime annotations for this call, passed through untouched. */
+  meta?: Record<string, unknown>;
   startTime?: number;
 }
 
@@ -347,6 +349,7 @@ export function acpSessionReducer(
         locations: event.locations ?? existing?.locations,
         rawInput: event.rawInput ?? existing?.rawInput,
         rawOutput: event.rawOutput ?? existing?.rawOutput,
+        meta: event.meta ?? existing?.meta,
         startTime: shouldCaptureStartTime ? Date.now() : existing?.startTime,
       };
 

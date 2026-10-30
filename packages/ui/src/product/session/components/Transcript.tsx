@@ -19,6 +19,7 @@ import type {
   AcpToolCallState,
 } from '../state/acpSessionState';
 import { DROPPED_KIND_AUDIO, DROPPED_KIND_IMAGE } from '../lib/droppedContent';
+import { toolCallError } from '../lib/toolCallError';
 import type { ImagePart, ToolCallStatus } from '@contenox/acp-client';
 
 export function Transcript({ session }: { session: AcpSessionState }) {
@@ -181,13 +182,27 @@ const CARD_STATUS: Record<ToolCallStatus, CardStatus> = {
 };
 
 function ToolCallItem({ call }: { call: AcpToolCallState }) {
+  const errorText = toolCallError(call);
+  const detail =
+    errorText != null || call.rawOutput != null ? (
+      <ToolCallDetail errorText={errorText} rawOutput={call.rawOutput} />
+    ) : undefined;
   return (
     <ToolCallCard
       tool={call.kind ?? 'tool'}
       title={call.title ?? call.toolCallId}
       status={call.status ? CARD_STATUS[call.status] : 'pending'}
-      detail={call.rawOutput != null ? <RawDetail value={call.rawOutput} /> : undefined}
+      detail={detail}
     />
+  );
+}
+
+function ToolCallDetail({ errorText, rawOutput }: { errorText: string | null; rawOutput?: unknown }) {
+  return (
+    <div className="space-y-2">
+      {errorText != null && <InlineNotice variant="error">{errorText}</InlineNotice>}
+      {rawOutput != null && <RawDetail value={rawOutput} />}
+    </div>
   );
 }
 
