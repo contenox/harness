@@ -1,6 +1,6 @@
-import { Button, DiffView, diffLinesFromTexts, PaneFrame, SidebarItem } from '@contenox/ui';
+import { Button, diffLinesFromTexts, DiffView, PaneFrame, SidebarItem } from '@contenox/ui';
 import { FolderOpen } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { aggregateSessionDiffs, type SessionDiffSource } from '../lib/sessionDiffs';
 import { PaneNotice } from './PaneNotice';
@@ -9,10 +9,12 @@ export interface DiffPaneProps {
   session: SessionDiffSource;
   onOpenFile: (path: string) => void;
   onClose: () => void;
+  /** Work-surface tab strip supplied by the session; replaces the pane title. */
+  paneTabs?: ReactNode;
 }
 
 /** Files changed in this session (first old text to last new text), list on top, diff below. */
-export function DiffPane({ session, onOpenFile, onClose }: DiffPaneProps) {
+export function DiffPane({ session, onOpenFile, onClose, paneTabs }: DiffPaneProps) {
   const { t } = useTranslation();
   const { items, toolCalls } = session;
   const diffs = useMemo(() => aggregateSessionDiffs({ items, toolCalls }), [items, toolCalls]);
@@ -25,7 +27,8 @@ export function DiffPane({ session, onOpenFile, onClose }: DiffPaneProps) {
 
   return (
     <PaneFrame
-      title={t('panes.diff')}
+      title={paneTabs ? undefined : t('panes.diff')}
+      tabs={paneTabs}
       onClose={onClose}
       closeLabel={t('panes.close')}
       actions={

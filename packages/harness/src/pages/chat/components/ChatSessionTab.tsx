@@ -2,13 +2,15 @@ import { memo, useMemo } from 'react';
 import { useChatSession } from '../hooks/useChatSession';
 import { ChatComposerContainer } from './ChatComposerContainer';
 import { ChatSessionView } from './ChatSessionView';
-import { ComposerFooterEnd } from './ComposerFooter';
 import { ProjectChip } from './ComposerChips';
+import { ComposerFooterEnd } from './ComposerFooter';
 import { DiffPane } from './DiffPane';
 import { FilesPane } from './FilesPane';
+import { PaneTabs } from './PaneTabs';
 import { SessionHeaderArea } from './SessionHeaderArea';
 import { TerminalPane } from './TerminalPane';
 import { TranscriptArea } from './TranscriptArea';
+import { WorkspaceColumn } from './WorkspaceColumn';
 
 export interface ChatSessionTabProps {
   sessionId: string | null;
@@ -19,7 +21,10 @@ export interface ChatSessionTabProps {
  * One chat tab. It wires the session model into the view; draft state is not here (see
  * ChatComposerContainer), so keystrokes never re-render this component or the transcript.
  */
-export const ChatSessionTab = memo(function ChatSessionTab({ sessionId, onSessionCreated }: ChatSessionTabProps) {
+export const ChatSessionTab = memo(function ChatSessionTab({
+  sessionId,
+  onSessionCreated,
+}: ChatSessionTabProps) {
   const chat = useChatSession(sessionId, onSessionCreated);
   const { session, workspaceRoot, paneState, closePane } = chat;
   const ready = chat.workspaceStatus === 'ready';
@@ -46,6 +51,13 @@ export const ChatSessionTab = memo(function ChatSessionTab({ sessionId, onSessio
     [session.usage, chat.chipOptions, chat.changeConfig, chat.refreshCatalog],
   );
 
+  const paneTabs = paneState.pane ? (
+    <PaneTabs
+      active={paneState.pane}
+      onSelect={pane => chat.dispatchPane({ type: 'show', pane })}
+    />
+  ) : null;
+
   const paneContent =
     paneState.pane === 'terminal' ? (
       <TerminalPane
@@ -53,17 +65,38 @@ export const ChatSessionTab = memo(function ChatSessionTab({ sessionId, onSessio
         cwd={workspaceRoot}
         agentOutputAvailable={(session.terminal?.text?.length ?? 0) > 0}
         onClose={closePane}
+        paneTabs={paneTabs}
       />
     ) : paneState.pane === 'files' ? (
-      <FilesPane root={workspaceRoot} files={chat.files} state={paneState} dispatch={chat.dispatchPane} onClose={closePane} />
+      <FilesPane
+        root={workspaceRoot}
+        files={chat.files}
+        state={paneState}
+        dispatch={chat.dispatchPane}
+        onClose={closePane}
+        paneTabs={paneTabs}
+      />
     ) : paneState.pane === 'diff' ? (
-      <DiffPane session={session} onOpenFile={chat.openFile} onClose={closePane} />
+      <DiffPane
+        session={session}
+        onOpenFile={chat.openFile}
+        onClose={closePane}
+        paneTabs={paneTabs}
+      />
     ) : null;
 
   return (
     <ChatSessionView
       pane={paneState.pane}
       paneContent={paneContent}
+      workspaceTree={
+        <WorkspaceColumn
+          root={workspaceRoot}
+          files={chat.files}
+          selectedFilePath={paneState.activeFile}
+          onOpenFile={chat.openFile}
+        />
+      }
       header={
         <SessionHeaderArea
           adopted={chat.adopted}

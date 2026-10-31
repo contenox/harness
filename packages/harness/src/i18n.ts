@@ -861,6 +861,7 @@ const resources = {
         shell: 'Shell',
         agent_output: 'Agent output',
         no_project: 'Choose a project to use this pane.',
+        pick_file: 'Select a file from the workspace tree.',
         diff_empty: 'No file changes in this session yet.',
         diff_list_label: 'Changed files',
         diff_changes: '{{count}} changes',
@@ -1505,6 +1506,7 @@ const resources = {
         mission_session_title:
           'This session is a fleet mission unit (mission {{id}}), not a chat you started.',
         projects: 'Projects',
+        workspace: 'Workspace',
         new_project: 'New project',
         new_session_in_project: 'New session in {{name}}',
         project_menu: 'Options for {{name}}',
@@ -2654,6 +2656,7 @@ const resources = {
         shell: 'Shell',
         agent_output: 'Agent-Ausgabe',
         no_project: 'Wähle ein Projekt, um diesen Bereich zu nutzen.',
+        pick_file: 'Wähle eine Datei im Arbeitsbereich.',
         diff_empty: 'In dieser Sitzung gibt es noch keine Dateiänderungen.',
         diff_list_label: 'Geänderte Dateien',
         diff_changes: '{{count}} Änderungen',
@@ -3293,6 +3296,7 @@ const resources = {
         mission_session_title:
           'Diese Sitzung ist eine Fleet-Missions-Einheit (Mission {{id}}), kein von Ihnen gestarteter Chat.',
         projects: 'Projekte',
+        workspace: 'Arbeitsbereich',
         new_project: 'Neues Projekt',
         new_session_in_project: 'Neue Sitzung in {{name}}',
         project_menu: 'Optionen für {{name}}',

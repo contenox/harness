@@ -17,20 +17,30 @@ export interface FileTreePanelProps {
   files: UseWorkspaceFilesResult;
   onOpenFile: (path: string) => void;
   selectedFilePath?: string | null;
+  /** Column variant: no root chip (the workspace is already named by the column header). */
+  compact?: boolean;
 }
 
 const NO_EXPANDED = new Set<string>();
 
 function TreeMessage({ children, error = false }: { children: string | null; error?: boolean }) {
   return (
-    <Span variant="muted" className={error ? 'text-text-error block px-1 py-2 text-xs' : 'block px-1 py-2 text-xs'}>
+    <Span
+      variant="muted"
+      className={error ? 'text-text-error block px-1 py-2 text-xs' : 'block px-1 py-2 text-xs'}>
       {children}
     </Span>
   );
 }
 
 /** Project file tree: IconButton toolbar (agent view, filter, refresh), root chip, filter bar, tree. */
-export function FileTreePanel({ root, files, onOpenFile, selectedFilePath }: FileTreePanelProps) {
+export function FileTreePanel({
+  root,
+  files,
+  onOpenFile,
+  selectedFilePath,
+  compact = false,
+}: FileTreePanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { roots } = useWorkspaceRoots();
@@ -51,13 +61,21 @@ export function FileTreePanel({ root, files, onOpenFile, selectedFilePath }: Fil
   const isEmptyRoot = !files.rootLoading && !files.error && baseNodes.length === 0;
 
   const tree = () => {
-    if (files.rootLoading && baseNodes.length === 0) return <TreeMessage>{t('workspace.loading')}</TreeMessage>;
+    if (files.rootLoading && baseNodes.length === 0)
+      return <TreeMessage>{t('workspace.loading')}</TreeMessage>;
     if (isEmptyRoot) {
       const reveal = window.contenoxDesktop?.revealPath;
       return (
-        <EmptyState title={t('workspace.empty')} description={root} className="px-3 py-6 [&_p]:break-all">
+        <EmptyState
+          title={t('workspace.empty')}
+          description={root}
+          className="px-3 py-6 [&_p]:break-all">
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/projects')}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate('/projects')}>
               {t('workspace.empty_switch_project')}
             </Button>
             {reveal && (
@@ -87,7 +105,9 @@ export function FileTreePanel({ root, files, onOpenFile, selectedFilePath }: Fil
     if (nodes.length === 0) {
       return (
         <TreeMessage>
-          {find.status === 'searching' ? t('workspace.filter_searching') : t('workspace.filter_no_matches')}
+          {find.status === 'searching'
+            ? t('workspace.filter_searching')
+            : t('workspace.filter_no_matches')}
         </TreeMessage>
       );
     }
@@ -104,13 +124,22 @@ export function FileTreePanel({ root, files, onOpenFile, selectedFilePath }: Fil
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col">
-      <div className="border-line flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5">
-        <RootChip root={displayRootForPath(root, roots)} />
+      <div
+        className={`border-line flex shrink-0 items-center gap-2 border-b px-3 py-1.5 ${compact ? 'justify-end' : 'justify-between'}`}>
+        {!compact && <RootChip root={displayRootForPath(root, roots)} />}
         <div className="flex shrink-0 items-center gap-0.5">
-          <IconButton size="sm" label={t('workspace.agent_view')} active={agentView} onClick={() => setAgentView(!agentView)}>
+          <IconButton
+            size="sm"
+            label={t('workspace.agent_view')}
+            active={agentView}
+            onClick={() => setAgentView(!agentView)}>
             <ShieldCheck className="size-4" />
           </IconButton>
-          <IconButton size="sm" label={t('workspace.filter_toggle')} active={model.filterOpen} onClick={model.toggleFilter}>
+          <IconButton
+            size="sm"
+            label={t('workspace.filter_toggle')}
+            active={model.filterOpen}
+            onClick={model.toggleFilter}>
             <Filter className="size-4" />
           </IconButton>
           <IconButton size="sm" label={t('workspace.refresh')} onClick={model.handleRefresh}>
@@ -122,7 +151,11 @@ export function FileTreePanel({ root, files, onOpenFile, selectedFilePath }: Fil
       {agentView && <AccessLegend error={!!access.error} evaluating={access.isLoading} />}
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {files.error ? (
-          <WorkspaceBoundaryNotice message={files.error} roots={roots} onRetry={model.handleRefresh} />
+          <WorkspaceBoundaryNotice
+            message={files.error}
+            roots={roots}
+            onRetry={model.handleRefresh}
+          />
         ) : null}
         {tree()}
       </div>
