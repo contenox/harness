@@ -1,9 +1,9 @@
 import '../../../test/fakeDomGlobals';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
-import { findAll, installFakeDom, typeInto, type FakeDomHandle } from '../../../test/fakeDom';
+import { clickOn, findAll, installFakeDom, typeInto, type FakeDomHandle } from '../../../test/fakeDom';
 import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
 import type { ComposerFiles } from '../hooks/useComposerController';
 import { ChatComposerContainer } from './ChatComposerContainer';
@@ -122,6 +122,41 @@ describe('ChatComposerContainer slash pickers', () => {
     const button = findAll(dom.container, n => n.getAttribute?.('data-testid') === 'composer-attach-image')[0];
     expect(button).toBeDefined();
     expect(button?.getAttribute('type')).toBe('button');
+    await act(async () => root.unmount());
+  });
+
+  it('shows a clickable Stop control while prompting, even with an approval pending', async () => {
+    const onCancel = vi.fn();
+    const root = createRoot(dom.container as unknown as Element);
+    await act(async () => {
+      root.render(
+        createElement(ChatComposerContainer, {
+          files: FILES,
+          availableCommands: COMMANDS,
+          configOptions: CONFIG_OPTIONS,
+          isPrompting: true,
+          // A pending approval disables the composer, not the running turn.
+          disabled: true,
+          ready: true,
+          imagesSupported: false,
+          audioSupported: false,
+          projectChip: null,
+          footerEnd: null,
+          onSubmit: async () => {},
+          onCancel,
+        }),
+      );
+    });
+    const stop = findAll(dom.container, n => n.getAttribute?.('aria-label') === 'Stop')[0];
+    expect(stop).toBeDefined();
+    expect(stop?.getAttribute('type')).toBe('button');
+    expect(stop?.getAttribute('disabled')).toBeNull();
+    const square = findAll(dom.container, n => (n.getAttribute?.('class') ?? '').includes('lucide-square'));
+    expect(square.length).toBeGreaterThan(0);
+    clickOn(dom.container, stop!, fn => {
+      void act(fn);
+    });
+    expect(onCancel).toHaveBeenCalledTimes(1);
     await act(async () => root.unmount());
   });
 });

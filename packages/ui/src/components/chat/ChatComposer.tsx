@@ -24,6 +24,12 @@ export type ChatComposerProps = {
   pendingLabel?: React.ReactNode;
   /** Icon inside the send button. Defaults to an up arrow. */
   submitIcon?: React.ReactNode;
+  /**
+   * When set, the submit control becomes a Stop button: a plain button that
+   * calls this handler instead of submitting the form, and stays enabled while
+   * the rest of the composer is disabled for a running turn.
+   */
+  onStop?: () => void;
   title?: string;
   className?: string;
   variant?: "default" | "compact" | "workbench";
@@ -68,6 +74,7 @@ export function ChatComposer({
   submitLabel = "Send",
   pendingLabel = "Sending…",
   submitIcon,
+  onStop,
   title,
   className,
   variant = "default",
@@ -174,9 +181,10 @@ export function ChatComposer({
       </p>
     ) : null;
 
+  const stopping = onStop != null;
   const submitButton = () => (
     <IconButton
-      type="submit"
+      type={stopping ? "button" : "submit"}
       variant="primary"
       size="md"
       label={
@@ -184,8 +192,9 @@ export function ChatComposer({
           ? ((isPending ? pendingLabel : submitLabel) as string)
           : "Send"
       }
-      disabled={submitDisabled}
-      isLoading={isPending}
+      onClick={stopping ? onStop : undefined}
+      disabled={stopping ? false : submitDisabled}
+      isLoading={!stopping && isPending}
       className="rounded-full"
     >
       {submitIcon ?? <ArrowUp className="size-4" />}

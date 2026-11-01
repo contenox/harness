@@ -23,7 +23,7 @@ export const TranscriptArea = memo(function TranscriptArea({
 }: TranscriptAreaProps) {
   const { t } = useTranslation();
   const { containerRef, endRef, isNearBottom, scrollToEnd } = useChatScroll({
-    deps: [session.items, session.pendingPermission],
+    deps: [session.items, session.messages, session.toolCalls, session.pendingPermission],
   });
 
   if (session.items.length === 0 && !session.pendingPermission) {

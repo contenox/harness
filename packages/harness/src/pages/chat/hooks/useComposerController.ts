@@ -19,7 +19,6 @@ export interface UseComposerControllerArgs {
   imagesSupported: boolean;
   audioSupported: boolean;
   onSubmit: (payload: SubmitPayload) => Promise<void>;
-  onCancel: () => void;
 }
 
 /**
@@ -34,7 +33,6 @@ export function useComposerController({
   imagesSupported,
   audioSupported,
   onSubmit,
-  onCancel,
 }: UseComposerControllerArgs) {
   const [draft, setDraft] = useState('');
   const [caret, setCaret] = useState(0);
@@ -87,10 +85,9 @@ export function useComposerController({
     async (e: FormEvent) => {
       e.preventDefault();
       if (slashMenu.open || mentionMenu.open) return;
-      if (isPrompting) {
-        if ((e.nativeEvent as SubmitEvent).submitter) onCancel();
-        return;
-      }
+      // Stop is its own button (ChatComposer.onStop); a submit while the turn
+      // is running must not send the draft as a second prompt.
+      if (isPrompting) return;
       const text = draft.trim();
       if (!text) return;
 
@@ -132,7 +129,6 @@ export function useComposerController({
       restoreImages,
       takeAudio,
       onSubmit,
-      onCancel,
     ],
   );
 

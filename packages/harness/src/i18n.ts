@@ -1355,6 +1355,7 @@ const resources = {
         thinking_streaming_label: 'Thinking…',
         thinking_done_label: 'Thoughts',
         typing_label: 'Assistant is typing',
+        waiting_for_model: 'Waiting for the model to respond…',
         copy: 'Copy',
         copied: 'Copied!',
         mission_ask_hint:
@@ -3142,6 +3143,7 @@ const resources = {
         thinking_streaming_label: 'Denkt nach…',
         thinking_done_label: 'Gedanken',
         typing_label: 'Assistent tippt',
+        waiting_for_model: 'Warte auf die Antwort des Modells…',
         copy: 'Kopieren',
         copied: 'Kopiert!',
         mission_ask_hint:

@@ -35,6 +35,7 @@ import { shellCommandLine, shellOutputLines } from '../../../lib/shellExecution'
 import {
   shouldShowStreamingCaret,
   shouldShowStreamingPlaceholder,
+  shouldShowWaitingForModel,
 } from '../lib/streamingPresentation';
 import { ChatErrorCard } from './ChatErrorCard';
 import { MissionAskCard } from './MissionAskCard';
@@ -431,6 +432,12 @@ export const TranscriptItems = memo(function TranscriptItems({
           </div>
         );
       })}
+      {shouldShowWaitingForModel(session) && (
+        <ChatTranscriptStreamingPlaceholder>
+          {t('acp_chat.waiting_for_model')}
+          <ChatStreamingCaret />
+        </ChatTranscriptStreamingPlaceholder>
+      )}
       {pending && anchorId == null && (
         <PermissionCard key="perm-fallback" permission={pending} onRespond={onRespondPermission} />
       )}

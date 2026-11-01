@@ -1,9 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import type { AcpChatMessage } from '../../../hooks/acpSessionState';
-import { shouldShowStreamingCaret, shouldShowStreamingPlaceholder } from './streamingPresentation';
+import {
+  initialAcpSessionState,
+  type AcpChatMessage,
+  type AcpSessionState,
+} from '../../../hooks/acpSessionState';
+import {
+  shouldShowStreamingCaret,
+  shouldShowStreamingPlaceholder,
+  shouldShowWaitingForModel,
+} from './streamingPresentation';
 
 function message(patch: Partial<AcpChatMessage>): AcpChatMessage {
   return { id: 'm1', role: 'assistant', text: '', ...patch };
+}
+
+function session(patch: Partial<AcpSessionState>): AcpSessionState {
+  return { ...initialAcpSessionState, ...patch };
 }
 
 describe('streamingPresentation: placeholder/caret switch', () => {
@@ -30,5 +42,54 @@ describe('streamingPresentation: placeholder/caret switch', () => {
 
   it('hides the caret while no text has arrived yet (placeholder owns that state instead)', () => {
     expect(shouldShowStreamingCaret(message({ text: '', streaming: true }))).toBe(false);
+  });
+});
+
+describe('streamingPresentation: waiting for the model', () => {
+  it('shows while the prompt is in flight and no assistant message exists yet', () => {
+    expect(shouldShowWaitingForModel(session({ isPrompting: true }))).toBe(true);
+  });
+
+  it('hides once the assistant message exists', () => {
+    expect(
+      shouldShowWaitingForModel(session({ isPrompting: true, activeTurnMessageId: 'm1' })),
+    ).toBe(false);
+  });
+
+  it('hides when no turn is in flight', () => {
+    expect(shouldShowWaitingForModel(session({}))).toBe(false);
+  });
+
+  it('hides while a permission request waits on the user', () => {
+    expect(
+      shouldShowWaitingForModel(
+        session({
+          isPrompting: true,
+          pendingPermission: {} as unknown as AcpSessionState['pendingPermission'],
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('hides while a tool is running', () => {
+    expect(
+      shouldShowWaitingForModel(
+        session({
+          isPrompting: true,
+          toolCalls: { t1: { toolCallId: 't1', status: 'in_progress' } },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('shows again after a tool finishes, until the model speaks', () => {
+    expect(
+      shouldShowWaitingForModel(
+        session({
+          isPrompting: true,
+          toolCalls: { t1: { toolCallId: 't1', status: 'completed' } },
+        }),
+      ),
+    ).toBe(true);
   });
 });

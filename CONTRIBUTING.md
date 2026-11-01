@@ -110,8 +110,6 @@ works on Linux.
   so themes keep working. See `packages/ui/src/index.css`.
 - All user-facing strings go through i18n in `packages/harness/src/i18n.ts`, with both
   English (`en`) and German (`de`) entries.
-- `packages/ui/DIVERGENCE.md` records where the library differs from its upstream copy;
-  update it when you make such a change.
 
 ## Pull request guidelines
 

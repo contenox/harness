@@ -1,5 +1,6 @@
 import { ChatComposer } from '@contenox/ui';
 import { AudioAttachmentNoticeView, ComposerAudioAttachments, SlashCommandMenu } from '@contenox/ui/session-ui';
+import { Square } from 'lucide-react';
 import { useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
@@ -53,7 +54,6 @@ export function ChatComposerContainer({
     imagesSupported,
     audioSupported,
     onSubmit,
-    onCancel,
   });
   const { imageAttachments, audioAttachments, slashMenu, mentionMenu } = c;
   const { addFiles: addImages } = imageAttachments;
@@ -93,6 +93,10 @@ export function ChatComposerContainer({
         canSubmit={ready || isPrompting}
         allowEmptyMessage={isPrompting}
         submitLabel={isPrompting ? t('acp_chat.composer_stop') : t('acp_chat.composer_send')}
+        submitIcon={isPrompting ? <Square className="size-3.5 fill-current" aria-hidden /> : undefined}
+        // A pending approval disables the composer, but the turn is still
+        // running: the Stop control must stay clickable to cancel it.
+        onStop={isPrompting ? onCancel : undefined}
         placeholder={ready ? t('acp_chat.composer_placeholder') : t('acp_chat.composer_placeholder_connecting')}
         attachments={
           <>

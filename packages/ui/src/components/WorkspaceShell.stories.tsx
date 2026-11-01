@@ -9,7 +9,7 @@ const meta: Meta<typeof WorkspaceShell> = {
   title: 'Layout/WorkspaceShell',
   component: WorkspaceShell,
   args: {
-    header: 'Contenox CRM',
+    header: 'Contenox',
     navigation: <nav aria-label="Primary"><NavItem href="#files" icon={<Files />} label="Files" isActive>Files</NavItem></nav>,
     children: <PageContent>Workspace content</PageContent>,
   },

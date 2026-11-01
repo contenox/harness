@@ -256,6 +256,30 @@ export function typeInto(container: FakeNode, textarea: FakeNode, text: string, 
   }
 }
 
+/** Dispatches a bubbling click through the mounted container. */
+export function clickOn(container: FakeNode, target: FakeNode, wrap: (fn: () => void) => void) {
+  wrap(() => dispatch(container, target, 'click', { button: 0 }));
+}
+
+/** Dispatches a bubbling DOM event through the mounted container and the target's own listeners. */
+export function fireEvent(container: FakeNode, target: FakeNode, type: string, init: Record<string, unknown> = {}) {
+  dispatch(container, target, type, init);
+  const event = {
+    type,
+    target,
+    currentTarget: target,
+    bubbles: true,
+    cancelable: true,
+    defaultPrevented: false,
+    preventDefault() {
+      this.defaultPrevented = true;
+    },
+    stopPropagation() {},
+    ...init,
+  };
+  for (const listener of target.listeners[type] ?? []) listener.fn(event);
+}
+
 export function findAll(root: FakeNode, pred: (n: FakeNode) => boolean, out: FakeNode[] = []): FakeNode[] {
   if (pred(root)) out.push(root);
   for (const c of root.childNodes) findAll(c, pred, out);
