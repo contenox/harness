@@ -6,6 +6,7 @@ import { useChatPane } from '../../../hooks/chatPaneStore';
 import { useAcpWorkspace } from '../../../hooks/useAcpWorkspace';
 import { useSetupStatus } from '../../../hooks/useSetupStatus';
 import { useWorkspaceFiles } from '../../../hooks/useWorkspaceFiles';
+import { useWorkspaceRoots } from '../../../hooks/useWorkspaceRoots';
 import {
   externalAgentFromMeta,
   type SessionConfigOption,
@@ -15,13 +16,20 @@ import { classifyAcpExecutionError } from '../../../lib/acpFailureKind';
 import { adoptResultFromMeta } from '../../../lib/adoptMeta';
 import { useStagedAgent } from '../../../lib/stagedAgent';
 import { useStagedRoot } from '../../../lib/stagedRoot';
-import { splitComposerOptions, withLiveModelValues, WORKSPACE_ROOT_CONFIG_ID } from '../lib/composerChips';
 import { canAttachAudio } from '../lib/audioAttachments';
+import {
+  splitComposerOptions,
+  withLiveModelValues,
+  WORKSPACE_ROOT_CONFIG_ID,
+} from '../lib/composerChips';
 import { canAttachImages } from '../lib/imageAttachments';
-import { submitChatTurn, type SubmitPayload } from '../lib/submitTurn';
-import { mostRecentProjectRoot, resolveWorkspaceRoot } from '../lib/workspaceRoot';
-import { useWorkspaceRoots } from '../../../hooks/useWorkspaceRoots';
 import { selectAvailableCommands } from '../lib/slashMenuState';
+import { submitChatTurn, type SubmitPayload } from '../lib/submitTurn';
+import {
+  mostRecentProjectRoot,
+  relativeWorkspacePath,
+  resolveWorkspaceRoot,
+} from '../lib/workspaceRoot';
 
 const HITL_POLICY_CONFIG_ID = 'hitl-policy';
 
@@ -45,7 +53,10 @@ export function overlayStagedValues(
  * config, the right pane, and the submit / cancel / config actions. Holds no composer state, so
  * typing never re-renders whatever consumes this hook.
  */
-export function useChatSession(sessionId: string | null, onSessionCreated: (sessionId: string) => void) {
+export function useChatSession(
+  sessionId: string | null,
+  onSessionCreated: (sessionId: string) => void,
+) {
   const navigate = useNavigate();
   const acp = useAcpWorkspace();
   const {
@@ -80,7 +91,10 @@ export function useChatSession(sessionId: string | null, onSessionCreated: (sess
   }, [onEmptyChat, launchRoot, setLaunchRoot]);
 
   const stagedRoot = stagedConfig[WORKSPACE_ROOT_CONFIG_ID];
-  const defaultRoot = configOptionCurrentValue(workspace.workspaceConfigOptions, WORKSPACE_ROOT_CONFIG_ID);
+  const defaultRoot = configOptionCurrentValue(
+    workspace.workspaceConfigOptions,
+    WORKSPACE_ROOT_CONFIG_ID,
+  );
   const { roots: projectRoots } = useWorkspaceRoots();
   const recentRoot = useMemo(
     () => mostRecentProjectRoot(workspace.sessions, projectRoots),
@@ -95,13 +109,30 @@ export function useChatSession(sessionId: string | null, onSessionCreated: (sess
   });
 
   const currentHitlPolicy = onEmptyChat
-    ? configOptionCurrentValue(overlayStagedValues(workspace.workspaceConfigOptions, stagedConfig), HITL_POLICY_CONFIG_ID)
+    ? configOptionCurrentValue(
+        overlayStagedValues(workspace.workspaceConfigOptions, stagedConfig),
+        HITL_POLICY_CONFIG_ID,
+      )
     : configOptionCurrentValue(session.configOptions, HITL_POLICY_CONFIG_ID);
   const files = useWorkspaceFiles(workspaceRoot, currentHitlPolicy);
 
   const { state: paneState, dispatch: dispatchPane } = useChatPane(sessionKey);
-  const openFile = useCallback((path: string) => dispatchPane({ type: 'openFile', path }), [dispatchPane]);
-  const openTerminal = useCallback(() => dispatchPane({ type: 'show', pane: 'terminal' }), [dispatchPane]);
+  const openFile = useCallback(
+    (path: string) => {
+      const relative = relativeWorkspacePath(path, workspaceRoot, window.contenoxDesktop?.platform);
+      if (relative !== null) dispatchPane({ type: 'openFile', path: relative });
+    },
+    [dispatchPane, workspaceRoot],
+  );
+  const canOpenFile = useCallback(
+    (path: string) =>
+      relativeWorkspacePath(path, workspaceRoot, window.contenoxDesktop?.platform) != null,
+    [workspaceRoot],
+  );
+  const openTerminal = useCallback(
+    () => dispatchPane({ type: 'show', pane: 'terminal' }),
+    [dispatchPane],
+  );
   const closePane = useCallback(() => dispatchPane({ type: 'close' }), [dispatchPane]);
 
   const { refetch: refetchSetupStatus } = useSetupStatus(true);
@@ -191,6 +222,7 @@ export function useChatSession(sessionId: string | null, onSessionCreated: (sess
     paneState,
     dispatchPane,
     openFile,
+    canOpenFile,
     closePane,
     openSettings,
     respondPermission: acp.respondPermission,
@@ -203,7 +235,10 @@ export function useChatSession(sessionId: string | null, onSessionCreated: (sess
     configOptions: sourceOptions ?? [],
     imagesSupported: canAttachImages(workspace.promptCapabilities),
     audioSupported: canAttachAudio(workspace.promptCapabilities),
-    availableCommands: selectAvailableCommands(session.availableCommands, workspace.workspaceAvailableCommands),
+    availableCommands: selectAvailableCommands(
+      session.availableCommands,
+      workspace.workspaceAvailableCommands,
+    ),
   };
 }
 

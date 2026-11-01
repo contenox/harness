@@ -20,6 +20,7 @@ export interface FilesPaneProps {
   files: UseWorkspaceFilesResult;
   state: PaneState;
   dispatch: (action: PaneAction) => void;
+  onOpenFile: (path: string) => void;
   onClose: () => void;
   /** Work-surface tab strip supplied by the session; replaces the pane title. */
   paneTabs?: ReactNode;
@@ -34,7 +35,15 @@ function baseName(path: string): string {
  * workspace column, so the pane is editor-only; on narrow windows it keeps its own
  * resizable tree above the editor.
  */
-export function FilesPane({ root, files, state, dispatch, onClose, paneTabs }: FilesPaneProps) {
+export function FilesPane({
+  root,
+  files,
+  state,
+  dispatch,
+  onOpenFile,
+  onClose,
+  paneTabs,
+}: FilesPaneProps) {
   const { t } = useTranslation();
   const wide = useMediaQuery('(min-width: 1280px)');
   const activeFile = state.activeFile;
@@ -53,7 +62,7 @@ export function FilesPane({ root, files, state, dispatch, onClose, paneTabs }: F
     <FileTreePanel
       root={root}
       files={files}
-      onOpenFile={path => dispatch({ type: 'openFile', path })}
+      onOpenFile={onOpenFile}
       selectedFilePath={activeFile}
     />
   );

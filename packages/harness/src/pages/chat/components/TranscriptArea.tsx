@@ -11,6 +11,7 @@ export interface TranscriptAreaProps {
   stagedAgent: string | null;
   onRespondPermission: (optionId: string) => void;
   onOpenFile: (path: string) => void;
+  canOpenFile?: (path: string) => boolean;
 }
 
 /** The scrolling timeline, or the "what should we build?" start screen while the chat is empty. */
@@ -20,6 +21,7 @@ export const TranscriptArea = memo(function TranscriptArea({
   stagedAgent,
   onRespondPermission,
   onOpenFile,
+  canOpenFile,
 }: TranscriptAreaProps) {
   const { t } = useTranslation();
   const { containerRef, endRef, isNearBottom, scrollToEnd } = useChatScroll({
@@ -49,6 +51,7 @@ export const TranscriptArea = memo(function TranscriptArea({
           agentName={agentName}
           onRespondPermission={onRespondPermission}
           onOpenFile={onOpenFile}
+          canOpenFile={canOpenFile}
         />
       </ChatThread>
       <ChatScrollToLatest visible={!isNearBottom} onClick={scrollToEnd} label={t('acp_chat.scroll_to_latest')} />

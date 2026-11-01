@@ -2,9 +2,9 @@ import {
   AcpClient,
   AcpError,
   agentMeta,
+  availableCommandsFromInit,
   createAcpClient,
   JSON_RPC_ERROR_CODES,
-  availableCommandsFromInit,
   missionAskFromMeta,
   workspaceConfigOptionsFromInit,
   type PromptCapabilities,
@@ -25,7 +25,6 @@ import {
   type AcpSessionsAction,
   type AcpWorkspaceAction,
 } from './acpWorkspaceState';
-
 
 export type WorkspaceDispatch = (action: AcpWorkspaceAction) => void;
 export type SessionsDispatch = (action: AcpSessionsAction) => void;
@@ -69,7 +68,7 @@ export interface AcpWorkspaceController {
     mentions?: WorkspaceFileRef[],
     images?: PendingImageAttachment[],
     audio?: PendingAudioAttachment[],
-  ): void;
+  ): boolean;
   runTerminal(command: string): Promise<void>;
   respondPermission(optionId: string): void;
   cancel(): void;
@@ -160,7 +159,6 @@ export function createAcpWorkspaceController(
   let focusedSessionId: SessionId | null = null;
 
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-
 
   function keyOf(sid: SessionId | null): string {
     return sid ?? EMPTY_SESSION_KEY;
@@ -349,7 +347,6 @@ export function createAcpWorkspaceController(
     for (const sid of openSessions.keys()) rejectPendingPermission(sid);
   }
 
-
   function clearStallTimer(entry: OpenSessionEntry | undefined): void {
     if (entry?.stallTimer) {
       clearTimeout(entry.stallTimer);
@@ -434,8 +431,10 @@ export function createAcpWorkspaceController(
     };
   }
 
-
-  async function establishConnection(target: string, attempt: number): Promise<{
+  async function establishConnection(
+    target: string,
+    attempt: number,
+  ): Promise<{
     client: AcpClient;
     transport: Transport;
     agentName: string | null;
@@ -447,7 +446,10 @@ export function createAcpWorkspaceController(
     try {
       const init = await c.initialize();
       if (!disposed) {
-        workspaceDispatch({ type: 'workspace_available_commands', commands: availableCommandsFromInit(init) });
+        workspaceDispatch({
+          type: 'workspace_available_commands',
+          commands: availableCommandsFromInit(init),
+        });
       }
       return {
         client: c,
@@ -495,7 +497,8 @@ export function createAcpWorkspaceController(
     if (!deps.fetchWorkspaceConfigOptions) return;
     try {
       const options = await deps.fetchWorkspaceConfigOptions(c);
-      if (!disposed && options) workspaceDispatch({ type: 'workspace_config_options', configOptions: options });
+      if (!disposed && options)
+        workspaceDispatch({ type: 'workspace_config_options', configOptions: options });
     } catch {
       // Optional ext method: the options from initialize stay.
     }
@@ -544,8 +547,7 @@ export function createAcpWorkspaceController(
         sessionDispatch(sid, { type: 'config_options', configOptions: result.configOptions });
       sessionDispatch(sid, { type: 'connection_resumed' });
       return;
-    } catch {
-    }
+    } catch {}
     sessionDispatch(sid, { type: 'session_reset', sessionId: sid });
     trackSubscription(sid, c, target);
     try {
@@ -643,7 +645,6 @@ export function createAcpWorkspaceController(
     }
     scheduleReconnectAttempt(0);
   }
-
 
   async function refreshSessions(): Promise<void> {
     if (disposed || !client) return;
@@ -824,19 +825,18 @@ export function createAcpWorkspaceController(
     focusEmpty();
   }
 
-
   function sendPrompt(
     text: string,
     mentions: WorkspaceFileRef[] = [],
     images: PendingImageAttachment[] = [],
     audio: PendingAudioAttachment[] = [],
-  ): void {
-    if (disposed || !client || !focusedSessionId || !text.trim()) return;
+  ): boolean {
+    if (disposed || !client || !focusedSessionId || !text.trim()) return false;
     const sid = focusedSessionId;
     const entry = openSessions.get(sid);
-    if (!entry || entry.promptInFlight) return;
+    if (!entry || entry.promptInFlight) return false;
     const c = entryClient(sid);
-    if (!c) return;
+    if (!c) return false;
     entry.currentTurnId = nextId('assistant');
 
     const blocks = promptBlocksFromDraft(text, mentions, images, audio);
@@ -885,6 +885,7 @@ export function createAcpWorkspaceController(
         e.turnSettled = true;
         sessionDispatch(sid, { type: 'prompt_error', message: errMessage(err) });
       });
+    return true;
   }
 
   async function runTerminal(command: string): Promise<void> {
@@ -947,7 +948,6 @@ export function createAcpWorkspaceController(
       throw err;
     }
   }
-
 
   function dispose(): void {
     if (disposed) return;

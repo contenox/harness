@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { submitChatTurn, type SubmitPayload, type SubmitTurnDeps } from './submitTurn';
+import {
+  PromptNotSentError,
+  submitChatTurn,
+  type SubmitPayload,
+  type SubmitTurnDeps,
+} from './submitTurn';
 
 function deps(over: Partial<SubmitTurnDeps> = {}): SubmitTurnDeps {
   return {
@@ -9,7 +14,7 @@ function deps(over: Partial<SubmitTurnDeps> = {}): SubmitTurnDeps {
     stagedConfig: {},
     newSession: vi.fn(async () => 'new-sid'),
     applyConfigOptions: vi.fn(async () => {}),
-    sendPrompt: vi.fn(),
+    sendPrompt: vi.fn(() => true),
     runTerminal: vi.fn(async () => {}),
     openTerminal: vi.fn(),
     clearStagedAgent: vi.fn(),
@@ -90,5 +95,17 @@ describe('submitChatTurn: orchestration', () => {
     });
     await expect(submitChatTurn(d, prompt())).rejects.toThrow('nope');
     expect(d.sendPrompt).not.toHaveBeenCalled();
+  });
+});
+
+describe('submitChatTurn: a prompt the workspace could not send', () => {
+  it('rejects so the composer can give the user their message back', async () => {
+    const d = deps({ sessionId: 's1', sendPrompt: vi.fn(() => false) });
+    await expect(submitChatTurn(d, prompt())).rejects.toBeInstanceOf(PromptNotSentError);
+  });
+
+  it('resolves when the prompt went out', async () => {
+    const d = deps({ sessionId: 's1' });
+    await expect(submitChatTurn(d, prompt())).resolves.toBeUndefined();
   });
 });

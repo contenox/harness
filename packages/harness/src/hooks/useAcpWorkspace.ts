@@ -1,13 +1,17 @@
 import { useCallback, useEffect } from 'react';
 import type { SessionConfigOptionValue } from '../lib/acp';
+import { useAcpWorkspaceContext } from '../lib/acp/AcpWorkspaceProvider';
 import type { AdoptRef } from '../lib/adoptMeta';
 import type { PendingAudioAttachment } from '../pages/chat/lib/audioAttachments';
 import type { PendingImageAttachment } from '../pages/chat/lib/imageAttachments';
 import type { WorkspaceFileRef } from '../pages/chat/lib/mentions';
-import type { AcpWorkspaceController } from './acpWorkspaceController';
-import { useAcpWorkspaceContext } from '../lib/acp/AcpWorkspaceProvider';
 import type { AcpSessionState } from './acpSessionState';
-import { selectOpenSessionIds, type AcpSessionsState, type AcpWorkspaceState } from './acpWorkspaceState';
+import type { AcpWorkspaceController } from './acpWorkspaceController';
+import {
+  selectOpenSessionIds,
+  type AcpSessionsState,
+  type AcpWorkspaceState,
+} from './acpWorkspaceState';
 
 export interface UseAcpWorkspaceResult {
   /** The controller behind this workspace, for extension calls the page needs (agents view). */
@@ -31,12 +35,14 @@ export interface UseAcpWorkspaceResult {
     mentions?: WorkspaceFileRef[],
     images?: PendingImageAttachment[],
     audio?: PendingAudioAttachment[],
-  ) => void;
+  ) => boolean;
   runTerminal: (command: string) => Promise<void>;
   respondPermission: (optionId: string) => void;
   cancel: () => void;
   setConfigOption: (configId: string, value: string | boolean) => void;
-  applyConfigOptions: (options: Array<{ configId: string; value: SessionConfigOptionValue }>) => Promise<void>;
+  applyConfigOptions: (
+    options: Array<{ configId: string; value: SessionConfigOptionValue }>,
+  ) => Promise<void>;
   reconnect: () => void;
 }
 
@@ -108,7 +114,7 @@ export function useAcpWorkspace(): UseAcpWorkspaceResult {
       images?: PendingImageAttachment[],
       audio?: PendingAudioAttachment[],
     ) => {
-      controller.sendPrompt(text, mentions, images, audio);
+      return controller.sendPrompt(text, mentions, images, audio);
     },
     [controller],
   );

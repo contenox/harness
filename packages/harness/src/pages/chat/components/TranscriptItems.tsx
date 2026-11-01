@@ -184,7 +184,15 @@ const TranscriptMessage = memo(function TranscriptMessage({
   );
 });
 
-function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; onOpenFile?: (path: string) => void }) {
+function ToolCallDetail({
+  toolCall,
+  onOpenFile,
+  canOpenFile,
+}: {
+  toolCall: AcpToolCallState;
+  onOpenFile?: (path: string) => void;
+  canOpenFile?: (path: string) => boolean;
+}) {
   const { t } = useTranslation();
   const diffs = (toolCall.content ?? []).filter(c => c.type === 'diff');
   const other = (toolCall.content ?? []).filter(c => c.type !== 'diff');
@@ -224,21 +232,31 @@ function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; 
       ))}
       {toolCall.locations && toolCall.locations.length > 0 && (
         <ul className="text-text-muted space-y-0.5">
-          {toolCall.locations.map((loc, i) => (
-            <li key={locationKey(loc.path, loc.line, i)} className="break-all">
-              {onOpenFile && loc.path ? (
-                <Button type="button" variant="text" size="xs" onClick={() => onOpenFile(loc.path!)}>
-                  {loc.path}
-                  {loc.line ? `:${loc.line}` : ''}
-                </Button>
-              ) : (
-                <>
-                  {loc.path}
-                  {loc.line ? `:${loc.line}` : ''}
-                </>
-              )}
-            </li>
-          ))}
+          {toolCall.locations.map((loc, i) => {
+            const openable = loc.path != null && (canOpenFile?.(loc.path) ?? true);
+            return (
+              <li key={locationKey(loc.path, loc.line, i)} className="break-all">
+                {onOpenFile && loc.path ? (
+                  <span title={openable ? undefined : t('workspace.file_outside_project')}>
+                    <Button
+                      type="button"
+                      variant="text"
+                      size="xs"
+                      disabled={!openable}
+                      onClick={() => onOpenFile(loc.path!)}>
+                      {loc.path}
+                      {loc.line ? `:${loc.line}` : ''}
+                    </Button>
+                  </span>
+                ) : (
+                  <>
+                    {loc.path}
+                    {loc.line ? `:${loc.line}` : ''}
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
       {hasRaw && (
@@ -259,9 +277,11 @@ function ToolCallDetail({ toolCall, onOpenFile }: { toolCall: AcpToolCallState; 
 const TranscriptToolCall = memo(function TranscriptToolCall({
   toolCall,
   onOpenFile,
+  canOpenFile,
 }: {
   toolCall: AcpToolCallState;
   onOpenFile?: (path: string) => void;
+  canOpenFile?: (path: string) => boolean;
 }) {
   const { t } = useTranslation();
   const diffs = (toolCall.content ?? []).filter(c => c.type === 'diff');
@@ -298,7 +318,15 @@ const TranscriptToolCall = memo(function TranscriptToolCall({
         error: t('acp_chat.tool_status_error'),
       }}
       toggleDetailLabel={t('acp_chat.tool_toggle_detail')}
-      detail={hasDetail ? <ToolCallDetail toolCall={toolCall} onOpenFile={onOpenFile} /> : undefined}
+      detail={
+        hasDetail ? (
+          <ToolCallDetail
+            toolCall={toolCall}
+            onOpenFile={onOpenFile}
+            canOpenFile={canOpenFile}
+          />
+        ) : undefined
+      }
       preview={toolCallPreview(toolCall)}
       duration={duration}
     />
@@ -329,6 +357,7 @@ export interface TranscriptItemsProps {
   agentName: string | null;
   onRespondPermission: (optionId: string) => void;
   onOpenFile?: (path: string) => void;
+  canOpenFile?: (path: string) => boolean;
 }
 
 interface RenderItemContext {
@@ -339,10 +368,20 @@ interface RenderItemContext {
   anchorId: string | null;
   onRespondPermission: (optionId: string) => void;
   onOpenFile?: (path: string) => void;
+  canOpenFile?: (path: string) => boolean;
 }
 
 function renderItem(item: AcpTimelineItem, isLatest: boolean, ctx: RenderItemContext): ReactNode {
-  const { session, agentName, latestErrorItemId, pending, anchorId, onRespondPermission, onOpenFile } = ctx;
+  const {
+    session,
+    agentName,
+    latestErrorItemId,
+    pending,
+    anchorId,
+    onRespondPermission,
+    onOpenFile,
+    canOpenFile,
+  } = ctx;
   let rendered: ReactNode = null;
   if (item.kind === 'message') {
     const message = session.messages[item.id];
@@ -358,7 +397,14 @@ function renderItem(item: AcpTimelineItem, isLatest: boolean, ctx: RenderItemCon
       card && item.id !== latestErrorItemId ? <TranscriptError key={`e-${item.id}`} card={card} /> : null;
   } else {
     const toolCall = session.toolCalls[item.id];
-    rendered = toolCall ? <TranscriptToolCall key={`t-${item.id}`} toolCall={toolCall} onOpenFile={onOpenFile} /> : null;
+    rendered = toolCall ? (
+      <TranscriptToolCall
+        key={`t-${item.id}`}
+        toolCall={toolCall}
+        onOpenFile={onOpenFile}
+        canOpenFile={canOpenFile}
+      />
+    ) : null;
   }
   const anchorHere = pending && anchorId != null && item.kind === 'tool_call' && item.id === anchorId;
   if (!anchorHere) return rendered;
@@ -392,6 +438,7 @@ export const TranscriptItems = memo(function TranscriptItems({
   agentName,
   onRespondPermission,
   onOpenFile,
+  canOpenFile,
 }: TranscriptItemsProps) {
   const { t } = useTranslation();
   const pending = session.pendingPermission;
@@ -409,7 +456,16 @@ export const TranscriptItems = memo(function TranscriptItems({
   );
   const groups = useMemo(() => groupByTurn(session.items), [session.items]);
 
-  const ctx: RenderItemContext = { session, agentName, latestErrorItemId, pending, anchorId, onRespondPermission, onOpenFile };
+  const ctx: RenderItemContext = {
+    session,
+    agentName,
+    latestErrorItemId,
+    pending,
+    anchorId,
+    onRespondPermission,
+    onOpenFile,
+    canOpenFile,
+  };
   const render = (entry: { item: AcpTimelineItem; index: number }) =>
     renderItem(entry.item, entry.index === session.items.length - 1, ctx);
 

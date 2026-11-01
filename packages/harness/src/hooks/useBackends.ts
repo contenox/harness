@@ -1,15 +1,10 @@
-import {
-  useMutation,
-  UseMutationResult,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { useMutation, UseMutationResult, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { backendKeys, setupKeys } from '../lib/queryKeys';
 import { Backend } from '../lib/types';
 
 export function useBackends() {
-  return useSuspenseQuery<Backend[]>({
+  return useQuery<Backend[]>({
     queryKey: backendKeys.all,
     queryFn: api.getBackends,
     refetchInterval: 15_000,
@@ -49,5 +44,3 @@ export function useUpdateBackend() {
     },
   });
 }
-
-

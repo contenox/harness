@@ -1,8 +1,8 @@
 import type { SessionConfigOptionValue } from '../../../lib/acp';
 import type { PendingAudioAttachment } from './audioAttachments';
+import { WORKSPACE_ROOT_CONFIG_ID } from './composerChips';
 import type { PendingImageAttachment } from './imageAttachments';
 import type { WorkspaceFileRef } from './mentions';
-import { WORKSPACE_ROOT_CONFIG_ID } from './composerChips';
 
 /** What the composer hands over on submit. Draft / attachment state stays inside the composer. */
 export type SubmitPayload =
@@ -24,13 +24,15 @@ export interface SubmitTurnDeps {
   stagedExternalAgent: string | null;
   stagedConfig: Record<string, SessionConfigOptionValue>;
   newSession: (cwd?: string, agentName?: string | null) => Promise<string>;
-  applyConfigOptions: (options: Array<{ configId: string; value: SessionConfigOptionValue }>) => Promise<void>;
+  applyConfigOptions: (
+    options: Array<{ configId: string; value: SessionConfigOptionValue }>,
+  ) => Promise<void>;
   sendPrompt: (
     text: string,
     mentions: WorkspaceFileRef[],
     images: PendingImageAttachment[],
     audio: PendingAudioAttachment[],
-  ) => void;
+  ) => boolean;
   runTerminal: (command: string) => Promise<void>;
   openTerminal: () => void;
   clearStagedAgent: () => void;
@@ -64,5 +66,14 @@ export async function submitChatTurn(deps: SubmitTurnDeps, payload: SubmitPayloa
     return;
   }
   await ensureSession(deps, true);
-  deps.sendPrompt(payload.text, payload.mentions, payload.images, payload.takeAudio());
+  if (!deps.sendPrompt(payload.text, payload.mentions, payload.images, payload.takeAudio())) {
+    throw new PromptNotSentError();
+  }
+}
+
+export class PromptNotSentError extends Error {
+  constructor() {
+    super('the prompt was not sent');
+    this.name = 'PromptNotSentError';
+  }
 }

@@ -1,8 +1,9 @@
+import type { ImagePart } from '@contenox/acp-client';
+import { Mic, Music, Square, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../../../components/Button';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { Span } from '../../../components/Typography';
-import { Mic, Music, Square, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AUDIO_ACCEPT_ATTRIBUTE,
   AudioAttachmentError,
@@ -11,8 +12,6 @@ import {
   type AudioAttachmentErrorReason,
   type PendingAudioAttachment,
 } from '../lib/audioAttachments';
-import type { ImagePart } from '@contenox/acp-client';
-import { fitsPromptWireLimit } from '../lib/imageAttachments';
 import {
   canRecordAudio,
   formatSeconds,
@@ -21,7 +20,7 @@ import {
   startBrowserRecording,
   type ActiveRecording,
 } from '../lib/audioRecording';
-
+import { fitsPromptWireLimit } from '../lib/imageAttachments';
 
 export type AudioAttachmentNotice =
   | 'not_supported'
@@ -47,6 +46,7 @@ export interface UseAudioAttachmentsResult {
   removeClip: (id: string) => void;
   approveForSend: (text: string) => boolean;
   takeForSend: () => PendingAudioAttachment[];
+  restoreClips: (clips: PendingAudioAttachment[]) => void;
   recording: RecordingReadout | null;
   startRecording: () => Promise<void>;
   stopRecording: () => void;
@@ -63,8 +63,6 @@ export function useAudioAttachments(
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recorderRef = useRef<ActiveRecording | null>(null);
   const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-
 
   const clipsRef = useRef(clips);
   clipsRef.current = clips;
@@ -196,8 +194,6 @@ export function useAudioAttachments(
 
   const approveForSend = useCallback(
     (text: string): boolean => {
-
-
       if (!fitsPromptWireLimit(text, [...carriedRef.current, ...clipsRef.current])) {
         showNotice('message_too_large');
         return false;
@@ -216,6 +212,13 @@ export function useAudioAttachments(
     return staged;
   }, []);
 
+  const restoreClips = useCallback((restored: PendingAudioAttachment[]) => {
+    if (restored.length === 0) return;
+    const next = [...restored, ...clipsRef.current.filter(c => !restored.some(r => r.id === c.id))];
+    clipsRef.current = next;
+    setClips(next);
+  }, []);
+
   return {
     clips,
     notice,
@@ -223,6 +226,7 @@ export function useAudioAttachments(
     removeClip,
     approveForSend,
     takeForSend,
+    restoreClips,
     recording,
     startRecording,
     stopRecording,
@@ -345,7 +349,6 @@ export function AttachAudioButtons({
   }
   return (
     <>
-
       <input
         ref={inputRef}
         type="file"
@@ -390,8 +393,6 @@ export function AttachAudioButtons({
     </>
   );
 }
-
-
 
 const NOTICE_TEXT: Record<AudioAttachmentNotice, string> = {
   not_supported: 'This machine’s agent does not accept audio.',

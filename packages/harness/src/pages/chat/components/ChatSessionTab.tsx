@@ -73,6 +73,7 @@ export const ChatSessionTab = memo(function ChatSessionTab({
         files={chat.files}
         state={paneState}
         dispatch={chat.dispatchPane}
+        onOpenFile={chat.openFile}
         onClose={closePane}
         paneTabs={paneTabs}
       />
@@ -80,6 +81,7 @@ export const ChatSessionTab = memo(function ChatSessionTab({
       <DiffPane
         session={session}
         onOpenFile={chat.openFile}
+        canOpenFile={chat.canOpenFile}
         onClose={closePane}
         paneTabs={paneTabs}
       />
@@ -115,6 +117,7 @@ export const ChatSessionTab = memo(function ChatSessionTab({
           stagedAgent={chat.stagedExternalAgent}
           onRespondPermission={chat.respondPermission}
           onOpenFile={chat.openFile}
+          canOpenFile={chat.canOpenFile}
         />
       }
       composer={

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } from 'electron';
+import { app, BrowserWindow, Menu, clipboard, dialog, ipcMain, session, shell } from 'electron';
 import { execFileSync, spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -6,6 +6,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { contextMenuTemplate } from './contextMenu.mjs';
 import { isAllowedExternalUrl } from './externalUrl.mjs';
 import { startUiServer } from './server.mjs';
 import { existingDir, validateWorkspace, workspaceFromArgv } from './workspaces.mjs';
@@ -434,6 +435,10 @@ function windowOptions(extra = {}) {
 }
 
 function hardenWindow(window) {
+  window.webContents.on('context-menu', (_event, params) => {
+    const template = contextMenuTemplate(params, { copyLink: url => clipboard.writeText(url) });
+    Menu.buildFromTemplate(template).popup({ window });
+  });
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (isAllowedExternalUrl(url)) void shell.openExternal(url);
     return { action: 'deny' };
@@ -499,6 +504,7 @@ function buildMenu() {
         isMac ? { role: 'close' } : { role: 'quit' },
       ],
     },
+    { role: 'editMenu' },
     {
       label: 'View',
       submenu: [
@@ -591,24 +597,26 @@ function trusted(event) {
   return false;
 }
 
-// Microphone only (no video), and only for the app's own UI origin or the dev URL.
-function allowMicrophoneForOwnUi() {
+function allowOwnUiPermissions() {
   const ownOrigin = origin => {
     if (!origin) return false;
     if (ui && origin === `http://127.0.0.1:${ui.port}`) return true;
     return Boolean(process.env.CONTENOX_DEV_URL) && origin === new URL(process.env.CONTENOX_DEV_URL).origin;
   };
-  const micOnly = (permission, origin, mediaTypes) =>
-    permission === 'media' && ownOrigin(origin) && !(mediaTypes ?? []).includes('video');
+  const allowed = (permission, origin, mediaTypes) => {
+    if (!ownOrigin(origin)) return false;
+    if (permission === 'clipboard-sanitized-write') return true;
+    return permission === 'media' && !(mediaTypes ?? []).includes('video');
+  };
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback, details) => {
     let origin = '';
     try {
       origin = new URL(details.requestingUrl).origin;
     } catch {}
-    callback(micOnly(permission, origin, details.mediaTypes));
+    callback(allowed(permission, origin, details.mediaTypes));
   });
   session.defaultSession.setPermissionCheckHandler((_wc, permission, requestingOrigin, details) =>
-    micOnly(permission, requestingOrigin, details.mediaType === 'video' ? ['video'] : []),
+    allowed(permission, requestingOrigin, details.mediaType === 'video' ? ['video'] : []),
   );
 }
 
@@ -692,7 +700,7 @@ if (hasLock) {
 
   app.whenReady().then(async () => {
     buildMenu();
-    allowMicrophoneForOwnUi();
+    allowOwnUiPermissions();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length !== 0) return;

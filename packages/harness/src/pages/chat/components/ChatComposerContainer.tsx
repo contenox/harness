@@ -1,5 +1,9 @@
-import { ChatComposer } from '@contenox/ui';
-import { AudioAttachmentNoticeView, ComposerAudioAttachments, SlashCommandMenu } from '@contenox/ui/session-ui';
+import { ChatComposer, InlineNotice } from '@contenox/ui';
+import {
+  AudioAttachmentNoticeView,
+  ComposerAudioAttachments,
+  SlashCommandMenu,
+} from '@contenox/ui/session-ui';
 import { Square } from 'lucide-react';
 import { useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -84,6 +88,11 @@ export function ChatComposerContainer({
       {menu}
       <ImageAttachmentNoticeView notice={imageAttachments.notice} />
       <AudioAttachmentNoticeView notice={audioAttachments.notice} />
+      {c.sendFailed && (
+        <InlineNotice variant="error" className="mb-2">
+          {t('acp_chat.composer_send_failed')}
+        </InlineNotice>
+      )}
       <ChatComposer
         value={c.draft}
         onChange={c.setDraft}
@@ -93,15 +102,25 @@ export function ChatComposerContainer({
         canSubmit={ready || isPrompting}
         allowEmptyMessage={isPrompting}
         submitLabel={isPrompting ? t('acp_chat.composer_stop') : t('acp_chat.composer_send')}
-        submitIcon={isPrompting ? <Square className="size-3.5 fill-current" aria-hidden /> : undefined}
+        submitIcon={
+          isPrompting ? <Square className="size-3.5 fill-current" aria-hidden /> : undefined
+        }
         // A pending approval disables the composer, but the turn is still
         // running: the Stop control must stay clickable to cancel it.
         onStop={isPrompting ? onCancel : undefined}
-        placeholder={ready ? t('acp_chat.composer_placeholder') : t('acp_chat.composer_placeholder_connecting')}
+        placeholder={
+          ready ? t('acp_chat.composer_placeholder') : t('acp_chat.composer_placeholder_connecting')
+        }
         attachments={
           <>
-            <ComposerImageAttachments images={imageAttachments.images} onRemove={imageAttachments.removeImage} />
-            <ComposerAudioAttachments clips={audioAttachments.clips} onRemove={audioAttachments.removeClip} />
+            <ComposerImageAttachments
+              images={imageAttachments.images}
+              onRemove={imageAttachments.removeImage}
+            />
+            <ComposerAudioAttachments
+              clips={audioAttachments.clips}
+              onRemove={audioAttachments.removeClip}
+            />
           </>
         }
         footerStart={

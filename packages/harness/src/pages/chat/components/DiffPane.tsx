@@ -8,18 +8,20 @@ import { PaneNotice } from './PaneNotice';
 export interface DiffPaneProps {
   session: SessionDiffSource;
   onOpenFile: (path: string) => void;
+  canOpenFile?: (path: string) => boolean;
   onClose: () => void;
   /** Work-surface tab strip supplied by the session; replaces the pane title. */
   paneTabs?: ReactNode;
 }
 
 /** Files changed in this session (first old text to last new text), list on top, diff below. */
-export function DiffPane({ session, onOpenFile, onClose, paneTabs }: DiffPaneProps) {
+export function DiffPane({ session, onOpenFile, canOpenFile, onClose, paneTabs }: DiffPaneProps) {
   const { t } = useTranslation();
   const { items, toolCalls } = session;
   const diffs = useMemo(() => aggregateSessionDiffs({ items, toolCalls }), [items, toolCalls]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const selected = diffs.find(d => d.path === selectedPath) ?? diffs[0] ?? null;
+  const openable = selected != null && (canOpenFile?.(selected.path) ?? true);
   const lines = useMemo(
     () => (selected ? diffLinesFromTexts(selected.oldText, selected.newText) : []),
     [selected],
@@ -33,10 +35,17 @@ export function DiffPane({ session, onOpenFile, onClose, paneTabs }: DiffPanePro
       closeLabel={t('panes.close')}
       actions={
         selected && (
-          <Button type="button" variant="ghost" size="xs" onClick={() => onOpenFile(selected.path)}>
-            <FolderOpen className="mr-1 size-3" aria-hidden />
-            {t('panes.diff_open_file')}
-          </Button>
+          <span title={openable ? undefined : t('workspace.file_outside_project')}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              disabled={!openable}
+              onClick={() => onOpenFile(selected.path)}>
+              <FolderOpen className="mr-1 size-3" aria-hidden />
+              {t('panes.diff_open_file')}
+            </Button>
+          </span>
         )
       }>
       {selected ? (

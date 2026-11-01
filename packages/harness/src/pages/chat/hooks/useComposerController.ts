@@ -5,11 +5,15 @@ import type { UseWorkspaceFilesResult } from '../../../hooks/useWorkspaceFiles';
 import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
 import { useImageAttachments } from '../components/ComposerImageAttachments';
 import { useMentionMenu } from '../components/MentionMenu';
+import type { PendingAudioAttachment } from '../lib/audioAttachments';
 import { activeMentions, mentionPreviewPath, type WorkspaceFileRef } from '../lib/mentions';
 import type { SubmitPayload } from '../lib/submitTurn';
 import { parseTerminalPassthrough } from '../lib/terminalPassthrough';
 
-export type ComposerFiles = Pick<UseWorkspaceFilesResult, 'cache' | 'ensureLoaded' | 'isLoading' | 'readFile'>;
+export type ComposerFiles = Pick<
+  UseWorkspaceFilesResult,
+  'cache' | 'ensureLoaded' | 'isLoading' | 'readFile'
+>;
 
 export interface UseComposerControllerArgs {
   files: ComposerFiles;
@@ -41,7 +45,12 @@ export function useComposerController({
   const imageAttachments = useImageAttachments(imagesSupported);
   const { takeImages, restoreImages } = imageAttachments;
   const audioAttachments = useAudioAttachments(audioSupported, imageAttachments.images);
-  const { takeForSend: takeAudio, approveForSend: approveAudio } = audioAttachments;
+  const {
+    takeForSend: takeAudio,
+    approveForSend: approveAudio,
+    restoreClips: restoreAudio,
+  } = audioAttachments;
+  const [sendFailed, setSendFailed] = useState(false);
   const audioClipCount = audioAttachments.clips.length;
 
   const mentionMenu = useMentionMenu({
@@ -62,12 +71,19 @@ export function useComposerController({
   });
   const slashMenu = useSlashCommandMenu(draft, setDraft, availableCommands, configOptions);
 
-  const previewPath = mentionMenu.open ? mentionPreviewPath(mentionMenu.entries, mentionMenu.activeIndex) : null;
+  const previewPath = mentionMenu.open
+    ? mentionPreviewPath(mentionMenu.entries, mentionMenu.activeIndex)
+    : null;
   const filePreview = useFilePreview(previewPath, files.readFile);
 
   // `input` fires in the same event batch as the draft change, so typing costs one render, not two.
   const trackCaret = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement> | MouseEvent<HTMLTextAreaElement> | FormEvent<HTMLTextAreaElement>) => {
+    (
+      e:
+        | KeyboardEvent<HTMLTextAreaElement>
+        | MouseEvent<HTMLTextAreaElement>
+        | FormEvent<HTMLTextAreaElement>,
+    ) => {
       setCaret(e.currentTarget.selectionStart ?? 0);
     },
     [],
@@ -90,6 +106,7 @@ export function useComposerController({
       if (isPrompting) return;
       const text = draft.trim();
       if (!text) return;
+      setSendFailed(false);
 
       const command = parseTerminalPassthrough(draft);
       if (command) {
@@ -99,6 +116,7 @@ export function useComposerController({
           await onSubmit({ kind: 'shell', command });
         } catch {
           setDraft(draft);
+          setSendFailed(true);
         }
         return;
       }
@@ -109,12 +127,25 @@ export function useComposerController({
       const turnImages = takeImages();
       setDraft('');
       setMentions([]);
+      let turnAudio: PendingAudioAttachment[] = [];
+      const takeTurnAudio = () => {
+        turnAudio = takeAudio();
+        return turnAudio;
+      };
       try {
-        await onSubmit({ kind: 'prompt', text, mentions: turnMentions, images: turnImages, takeAudio });
+        await onSubmit({
+          kind: 'prompt',
+          text,
+          mentions: turnMentions,
+          images: turnImages,
+          takeAudio: takeTurnAudio,
+        });
       } catch {
         setDraft(text);
         setMentions(turnMentions);
         restoreImages(turnImages);
+        restoreAudio(turnAudio);
+        setSendFailed(true);
       }
     },
     [
@@ -128,6 +159,7 @@ export function useComposerController({
       takeImages,
       restoreImages,
       takeAudio,
+      restoreAudio,
       onSubmit,
     ],
   );
@@ -143,5 +175,6 @@ export function useComposerController({
     trackCaret,
     handleKeyDown,
     handleSubmit,
+    sendFailed,
   };
 }

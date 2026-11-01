@@ -1,21 +1,40 @@
-export async function copyTextToClipboard(text: string): Promise<boolean> {
+function copyWithTextarea(text: string): boolean {
+  const previous = document.activeElement as HTMLElement | null;
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.top = "0";
+  area.style.left = "-9999px";
+  document.body.appendChild(area);
+  area.focus();
+  area.select();
+  area.setSelectionRange(0, text.length);
   try {
-    if (navigator.clipboard && window.isSecureContext) {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(area);
+    if (previous && typeof previous.focus === "function") previous.focus();
+  }
+}
+
+export async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.clipboard?.writeText &&
+    typeof window !== "undefined" &&
+    window.isSecureContext
+  ) {
+    try {
       await navigator.clipboard.writeText(text);
       return true;
+    } catch {
     }
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    return ok;
-  } catch (err) {
-    console.warn("Clipboard copy failed:", err);
+  }
+  try {
+    return copyWithTextarea(text);
+  } catch (error) {
+    console.warn("Clipboard copy failed:", error);
     return false;
   }
 }

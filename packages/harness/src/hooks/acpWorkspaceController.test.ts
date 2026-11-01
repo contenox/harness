@@ -16,7 +16,6 @@ import {
   type AcpWorkspaceState,
 } from './acpWorkspaceState';
 
-
 class MockTransport implements Transport {
   readonly sentRaw: string[] = [];
   private readonly messageCbs: Array<(text: string) => void> = [];
@@ -78,8 +77,12 @@ interface FocusedSessionStore {
 
 interface Harness {
   controller: AcpWorkspaceController;
-  wsStore: ReturnType<typeof makeStore<AcpWorkspaceState, Parameters<typeof acpWorkspaceReducer>[1]>>;
-  sessionsStore: ReturnType<typeof makeStore<AcpSessionsState, Parameters<typeof acpSessionsReducer>[1]>>;
+  wsStore: ReturnType<
+    typeof makeStore<AcpWorkspaceState, Parameters<typeof acpWorkspaceReducer>[1]>
+  >;
+  sessionsStore: ReturnType<
+    typeof makeStore<AcpSessionsState, Parameters<typeof acpSessionsReducer>[1]>
+  >;
   sessStore: FocusedSessionStore;
   sliceOf: (sessionId: string) => AcpSessionState | undefined;
   transports: MockTransport[];
@@ -106,7 +109,11 @@ function setup(): Harness {
       return selectFocusedSession(sessionsStore.state);
     },
     dispatch: (action: AcpSessionAction) =>
-      sessionsStore.dispatch({ type: 'session_dispatch', key: sessionsStore.state.focusedKey, action }),
+      sessionsStore.dispatch({
+        type: 'session_dispatch',
+        key: sessionsStore.state.focusedKey,
+        action,
+      }),
   };
   const sliceOf = (sessionId: string) => sessionsStore.state.slices[sessionId];
   return { controller, wsStore, sessionsStore, sessStore, sliceOf, transports };
@@ -116,7 +123,11 @@ async function connectReady(h: Harness): Promise<void> {
   const p = h.controller.connect();
   await flushMicrotasks();
   const initReq = h.transports[0].lastSent();
-  h.transports[0].feed({ jsonrpc: '2.0', id: initReq.id, result: { protocolVersion: 1, agentInfo: { name: 'contenox' } } });
+  h.transports[0].feed({
+    jsonrpc: '2.0',
+    id: initReq.id,
+    result: { protocolVersion: 1, agentInfo: { name: 'contenox' } },
+  });
   await flushMicrotasks();
   const listReq = h.transports[0].lastSent();
   h.transports[0].feed({ jsonrpc: '2.0', id: listReq.id, result: { sessions: [] } });
@@ -142,11 +153,19 @@ async function openTab(h: Harness, sessionId: string): Promise<void> {
   await p;
 }
 
-function feedAgentChunk(t: MockTransport, sessionId: string, messageId: string, text: string): void {
+function feedAgentChunk(
+  t: MockTransport,
+  sessionId: string,
+  messageId: string,
+  text: string,
+): void {
   t.feed({
     jsonrpc: '2.0',
     method: 'session/update',
-    params: { sessionId, update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text }, messageId } },
+    params: {
+      sessionId,
+      update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text }, messageId },
+    },
   });
 }
 
@@ -167,7 +186,13 @@ describe('acpWorkspaceController: connect()', () => {
   it('extracts workspace-level config options from the initialize _meta extension and exposes them on ready', async () => {
     const h = setup();
     const workspaceConfigOptions = [
-      { id: 'model', name: 'Model', type: 'select', currentValue: 'openai/gpt-5-mini', options: [] },
+      {
+        id: 'model',
+        name: 'Model',
+        type: 'select',
+        currentValue: 'openai/gpt-5-mini',
+        options: [],
+      },
       { id: 'think', name: 'Think', type: 'select', currentValue: 'high', options: [] },
     ];
     const p = h.controller.connect();
@@ -199,7 +224,11 @@ describe('acpWorkspaceController: connect()', () => {
     h.transports[0].feed({
       jsonrpc: '2.0',
       id: initReq.id,
-      result: { protocolVersion: 1, agentInfo: { name: 'contenox' }, _meta: { 'contenox.availableCommands': commands } },
+      result: {
+        protocolVersion: 1,
+        agentInfo: { name: 'contenox' },
+        _meta: { 'contenox.availableCommands': commands },
+      },
     });
     await flushMicrotasks();
     const listReq = h.transports[0].lastSent();
@@ -242,7 +271,11 @@ describe('acpWorkspaceController: connect()', () => {
     const p = h.controller.connect();
     await flushMicrotasks();
     const req = h.transports[0].lastSent();
-    h.transports[0].feed({ jsonrpc: '2.0', id: req.id, error: { code: -32000, message: 'contenox is not configured yet' } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: req.id,
+      error: { code: -32000, message: 'contenox is not configured yet' },
+    });
     await p;
     expect(h.wsStore.state.status).toBe('setup_required');
     expect(h.wsStore.state.error).toContain('not configured');
@@ -263,17 +296,29 @@ describe('acpWorkspaceController: connect()', () => {
     const h = setup();
     const p = h.controller.connect();
     await flushMicrotasks();
-    h.transports[0].feed({ jsonrpc: '2.0', id: h.transports[0].lastSent().id, result: { protocolVersion: 1 } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: h.transports[0].lastSent().id,
+      result: { protocolVersion: 1 },
+    });
     await flushMicrotasks();
 
     const page1 = h.transports[0].lastSent();
     expect(page1.params).toEqual({});
-    h.transports[0].feed({ jsonrpc: '2.0', id: page1.id, result: { sessions: [{ sessionId: 'a' }], nextCursor: 'cursor-1' } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: page1.id,
+      result: { sessions: [{ sessionId: 'a' }], nextCursor: 'cursor-1' },
+    });
     await flushMicrotasks();
 
     const page2 = h.transports[0].lastSent();
     expect(page2.params).toEqual({ cursor: 'cursor-1' });
-    h.transports[0].feed({ jsonrpc: '2.0', id: page2.id, result: { sessions: [{ sessionId: 'b' }] } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: page2.id,
+      result: { sessions: [{ sessionId: 'b' }] },
+    });
     await p;
 
     expect(h.wsStore.state.sessions.map(s => s.sessionId).sort()).toEqual(['a', 'b']);
@@ -300,7 +345,14 @@ describe('acpWorkspaceController: newSession() is lazy (D5)', () => {
     h.transports[0].feed({
       jsonrpc: '2.0',
       method: 'session/update',
-      params: { sessionId: 'sess-a', update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'hi' }, messageId: 'm1' } },
+      params: {
+        sessionId: 'sess-a',
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: 'hi' },
+          messageId: 'm1',
+        },
+      },
     });
     await flushMicrotasks();
     expect(h.sessStore.state.messages['m1']).toMatchObject({ text: 'hi' });
@@ -313,8 +365,14 @@ describe('acpWorkspaceController: newSession() is lazy (D5)', () => {
     const p = h.controller.newSession();
     await flushMicrotasks();
     const req = h.transports[0].lastSent();
-    const configOptions = [{ id: 'think', name: 'Think', type: 'boolean', currentValue: 'false', options: [] }];
-    h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { sessionId: 'sess-a', configOptions } });
+    const configOptions = [
+      { id: 'think', name: 'Think', type: 'boolean', currentValue: 'false', options: [] },
+    ];
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: req.id,
+      result: { sessionId: 'sess-a', configOptions },
+    });
     await p;
 
     expect(h.sessStore.state.configOptions).toEqual(configOptions);
@@ -378,7 +436,11 @@ describe('acpWorkspaceController: newSession() is lazy (D5)', () => {
     const p = h.controller.newSession();
     await flushMicrotasks();
     const req = h.transports[0].lastSent();
-    h.transports[0].feed({ jsonrpc: '2.0', id: req.id, error: { code: -32000, message: 'auth required' } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: req.id,
+      error: { code: -32000, message: 'auth required' },
+    });
 
     await expect(p).rejects.toThrow();
     expect(h.wsStore.state.status).toBe('setup_required');
@@ -403,7 +465,11 @@ describe('acpWorkspaceController: openSession() switching', () => {
       method: 'session/update',
       params: {
         sessionId: 'sess-b',
-        update: { sessionUpdate: 'user_message_chunk', content: { type: 'text', text: 'hi' }, messageId: 'replay-0' },
+        update: {
+          sessionUpdate: 'user_message_chunk',
+          content: { type: 'text', text: 'hi' },
+          messageId: 'replay-0',
+        },
       },
     });
     await flushMicrotasks();
@@ -424,7 +490,11 @@ describe('acpWorkspaceController: openSession() switching', () => {
       jsonrpc: '2.0',
       id: 'perm-1',
       method: 'session/request_permission',
-      params: { sessionId: 'sess-a', toolCall: { toolCallId: 'tc-1' }, options: [{ optionId: 'x', name: 'X', kind: 'allow_once' }] },
+      params: {
+        sessionId: 'sess-a',
+        toolCall: { toolCallId: 'tc-1' },
+        options: [{ optionId: 'x', name: 'X', kind: 'allow_once' }],
+      },
     });
     await flushMicrotasks();
     expect(h.sessStore.state.pendingPermission).not.toBeNull();
@@ -461,7 +531,15 @@ describe('acpWorkspaceController: openSession() switching', () => {
     const openPromise = h.controller.openSession('sess-b');
     await flushMicrotasks();
     const req = h.transports[0].lastSent();
-    const configOptions = [{ id: 'model', name: 'Model', type: 'string', currentValue: 'openvino/qwen2.5-coder-0.5b-ov', options: [] }];
+    const configOptions = [
+      {
+        id: 'model',
+        name: 'Model',
+        type: 'string',
+        currentValue: 'openvino/qwen2.5-coder-0.5b-ov',
+        options: [],
+      },
+    ];
     h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { configOptions } });
     await openPromise;
 
@@ -481,7 +559,11 @@ describe('acpWorkspaceController: openSession() explicit outcome signal (replace
 
     const req = h.transports[0].lastSent();
     expect(req.method).toBe('session/load');
-    h.transports[0].feed({ jsonrpc: '2.0', id: req.id, error: { code: -32602, message: 'load session "missing": not found' } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: req.id,
+      error: { code: -32602, message: 'load session "missing": not found' },
+    });
     await openPromise;
 
     expect(h.wsStore.state.sessionLoadState).toBe('not_found');
@@ -498,7 +580,11 @@ describe('acpWorkspaceController: openSession() explicit outcome signal (replace
     const openPromise = h.controller.openSession('sess-x');
     await flushMicrotasks();
     const req = h.transports[0].lastSent();
-    h.transports[0].feed({ jsonrpc: '2.0', id: req.id, error: { code: -32603, message: 'internal boom' } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: req.id,
+      error: { code: -32603, message: 'internal boom' },
+    });
     await openPromise;
 
     expect(h.wsStore.state.sessionLoadState).toBe('error');
@@ -512,7 +598,11 @@ describe('acpWorkspaceController: openSession() explicit outcome signal (replace
 
     const failedOpen = h.controller.openSession('missing');
     await flushMicrotasks();
-    h.transports[0].feed({ jsonrpc: '2.0', id: h.transports[0].lastSent().id, error: { code: -32602, message: 'nope' } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: h.transports[0].lastSent().id,
+      error: { code: -32602, message: 'nope' },
+    });
     await failedOpen;
     expect(h.wsStore.state.sessionLoadState).toBe('not_found');
 
@@ -532,7 +622,11 @@ describe('acpWorkspaceController: openSession() explicit outcome signal (replace
 
     const failedOpen = h.controller.openSession('missing');
     await flushMicrotasks();
-    h.transports[0].feed({ jsonrpc: '2.0', id: h.transports[0].lastSent().id, error: { code: -32602, message: 'nope' } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: h.transports[0].lastSent().id,
+      error: { code: -32602, message: 'nope' },
+    });
     await failedOpen;
     expect(h.wsStore.state.sessionLoadState).toBe('not_found');
 
@@ -591,7 +685,11 @@ describe('acpWorkspaceController: clearActiveSession() (BUG 1 — "new session" 
       jsonrpc: '2.0',
       id: 'perm-1',
       method: 'session/request_permission',
-      params: { sessionId: 'sess-a', toolCall: { toolCallId: 'tc-1' }, options: [{ optionId: 'x', name: 'X', kind: 'allow_once' }] },
+      params: {
+        sessionId: 'sess-a',
+        toolCall: { toolCallId: 'tc-1' },
+        options: [{ optionId: 'x', name: 'X', kind: 'allow_once' }],
+      },
     });
     await flushMicrotasks();
     expect(h.sessStore.state.pendingPermission).not.toBeNull();
@@ -632,7 +730,7 @@ describe('acpWorkspaceController: clearActiveSession() (BUG 1 — "new session" 
     expect(h.sessStore.state.sessionId).toBe('sess-b');
   });
 
-  it('a cleared session\'s still-in-flight turn cannot bleed its failure into the next session, nor block its first prompt', async () => {
+  it("a cleared session's still-in-flight turn cannot bleed its failure into the next session, nor block its first prompt", async () => {
     const h = setup();
     await connectReady(h);
     await createSession(h, 'sess-a');
@@ -654,11 +752,19 @@ describe('acpWorkspaceController: clearActiveSession() (BUG 1 — "new session" 
     const promptReqB = h.transports[0].sent.filter(f => f.method === 'session/prompt').at(-1)!;
     expect(promptReqB.id).not.toBe(promptReqA.id);
     expect((promptReqB.params as Record<string, unknown>).sessionId).toBe('sess-b');
-    expect(Object.values(h.sessStore.state.messages).some(m => m.role === 'user' && m.text === 'first prompt in new session')).toBe(true);
+    expect(
+      Object.values(h.sessStore.state.messages).some(
+        m => m.role === 'user' && m.text === 'first prompt in new session',
+      ),
+    ).toBe(true);
     expect(h.sessStore.state.isPrompting).toBe(true);
     expect(h.wsStore.state.activeSessionId).toBe('sess-b');
 
-    h.transports[0].feed({ jsonrpc: '2.0', id: promptReqA.id, error: { code: -32603, message: 'chain execution failed: old turn' } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: promptReqA.id,
+      error: { code: -32603, message: 'chain execution failed: old turn' },
+    });
     await flushMicrotasks();
     expect(h.sessStore.state.error).toBeNull();
     expect(h.sessStore.state.isPrompting).toBe(true);
@@ -670,7 +776,7 @@ describe('acpWorkspaceController: clearActiveSession() (BUG 1 — "new session" 
     expect(h.sessStore.state.error).toBeNull();
   });
 
-  it('a cleared session\'s late prompt_end does not bleed a stopReason into the cleared state', async () => {
+  it("a cleared session's late prompt_end does not bleed a stopReason into the cleared state", async () => {
     const h = setup();
     await connectReady(h);
     await createSession(h, 'sess-a');
@@ -741,6 +847,16 @@ describe('acpWorkspaceController: sendPrompt()', () => {
     expect(h.transports[0].sentRaw.length).toBe(sentAfterFirst);
   });
 
+  it('reports false when it cannot send, so the caller never drops the message silently', async () => {
+    const h = setup();
+    await connectReady(h);
+    expect(h.controller.sendPrompt('no session yet')).toBe(false);
+
+    await createSession(h, 'sess-a');
+    expect(h.controller.sendPrompt('first')).toBe(true);
+    expect(h.controller.sendPrompt('second while first is in flight')).toBe(false);
+  });
+
   it('sends session/prompt with no per-turn handlers — the standing subscription routes all streamed content', async () => {
     const h = setup();
     await connectReady(h);
@@ -748,7 +864,11 @@ describe('acpWorkspaceController: sendPrompt()', () => {
 
     h.controller.sendPrompt('hello there');
     expect(h.sessStore.state.isPrompting).toBe(true);
-    expect(Object.values(h.sessStore.state.messages).some(m => m.role === 'user' && m.text === 'hello there')).toBe(true);
+    expect(
+      Object.values(h.sessStore.state.messages).some(
+        m => m.role === 'user' && m.text === 'hello there',
+      ),
+    ).toBe(true);
 
     const req = h.transports[0].lastSent();
     expect(req.method).toBe('session/prompt');
@@ -757,7 +877,14 @@ describe('acpWorkspaceController: sendPrompt()', () => {
     h.transports[0].feed({
       jsonrpc: '2.0',
       method: 'session/update',
-      params: { sessionId: 'sess-a', update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'hi!' }, messageId: 'm1' } },
+      params: {
+        sessionId: 'sess-a',
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: 'hi!' },
+          messageId: 'm1',
+        },
+      },
     });
     await flushMicrotasks();
     expect(h.sessStore.state.messages['m1']).toMatchObject({ text: 'hi!' });
@@ -852,7 +979,11 @@ describe('acpWorkspaceController: refreshSessions()', () => {
     await flushMicrotasks();
     const req = h.transports[0].lastSent();
     expect(req.method).toBe('session/list');
-    h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { sessions: [{ sessionId: 'a' }, { sessionId: 'b' }] } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: req.id,
+      result: { sessions: [{ sessionId: 'a' }, { sessionId: 'b' }] },
+    });
     await p;
 
     expect(h.wsStore.state.sessions.map(s => s.sessionId).sort()).toEqual(['a', 'b']);
@@ -871,7 +1002,9 @@ describe('acpWorkspaceController: setConfigOption()', () => {
     expect(req.method).toBe('session/set_config_option');
     expect(req.params).toMatchObject({ sessionId: 'sess-a', configId: 'think', value: true });
 
-    const configOptions = [{ id: 'think', name: 'Think', type: 'boolean', currentValue: 'true', options: [] }];
+    const configOptions = [
+      { id: 'think', name: 'Think', type: 'boolean', currentValue: 'true', options: [] },
+    ];
     h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { configOptions } });
     await p;
 
@@ -893,20 +1026,40 @@ describe('acpWorkspaceController: applyConfigOptions() — empty-chat staged flu
     await flushMicrotasks();
     let req = h.transports[0].lastSent();
     expect(req.method).toBe('session/set_config_option');
-    expect(req.params).toMatchObject({ sessionId: 'sess-a', configId: 'model', value: 'openai/gpt-5-mini' });
-    expect(h.transports[0].sent.filter(f => f.method === 'session/set_config_option')).toHaveLength(1);
+    expect(req.params).toMatchObject({
+      sessionId: 'sess-a',
+      configId: 'model',
+      value: 'openai/gpt-5-mini',
+    });
+    expect(h.transports[0].sent.filter(f => f.method === 'session/set_config_option')).toHaveLength(
+      1,
+    );
 
     h.transports[0].feed({
       jsonrpc: '2.0',
       id: req.id,
-      result: { configOptions: [{ id: 'model', name: 'Model', type: 'select', currentValue: 'openai/gpt-5-mini', options: [] }] },
+      result: {
+        configOptions: [
+          {
+            id: 'model',
+            name: 'Model',
+            type: 'select',
+            currentValue: 'openai/gpt-5-mini',
+            options: [],
+          },
+        ],
+      },
     });
     await flushMicrotasks();
     req = h.transports[0].lastSent();
     expect(req.params).toMatchObject({ configId: 'think', value: 'high' });
-    expect(h.transports[0].sent.filter(f => f.method === 'session/set_config_option')).toHaveLength(2);
+    expect(h.transports[0].sent.filter(f => f.method === 'session/set_config_option')).toHaveLength(
+      2,
+    );
 
-    const finalOptions = [{ id: 'think', name: 'Think', type: 'select', currentValue: 'high', options: [] }];
+    const finalOptions = [
+      { id: 'think', name: 'Think', type: 'select', currentValue: 'high', options: [] },
+    ];
     h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { configOptions: finalOptions } });
     await p;
     expect(h.sessStore.state.configOptions).toEqual(finalOptions);
@@ -920,7 +1073,11 @@ describe('acpWorkspaceController: applyConfigOptions() — empty-chat staged flu
     const p = h.controller.applyConfigOptions([{ configId: 'model', value: 'broken/model' }]);
     await flushMicrotasks();
     const req = h.transports[0].lastSent();
-    h.transports[0].feed({ jsonrpc: '2.0', id: req.id, error: { code: -32602, message: 'unknown model option "broken/model"' } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: req.id,
+      error: { code: -32602, message: 'unknown model option "broken/model"' },
+    });
 
     await expect(p).rejects.toThrow(/unknown model option/);
     expect(h.sessStore.state.error).toContain('unknown model option');
@@ -990,13 +1147,19 @@ describe('acpWorkspaceController: reconnect supervisor (D2)', () => {
     await vi.advanceTimersByTimeAsync(1000);
     expect(h.transports).toHaveLength(2);
     const initReq = h.transports[1].lastSent();
-    h.transports[1].feed({ jsonrpc: '2.0', id: initReq.id, result: { protocolVersion: 1, agentInfo: { name: 'contenox' } } });
+    h.transports[1].feed({
+      jsonrpc: '2.0',
+      id: initReq.id,
+      result: { protocolVersion: 1, agentInfo: { name: 'contenox' } },
+    });
     await vi.advanceTimersByTimeAsync(0);
 
     const resumeReq = h.transports[1].lastSent();
     expect(resumeReq.method).toBe('session/resume');
     expect((resumeReq.params as Record<string, unknown>).sessionId).toBe('sess-a');
-    const configOptions = [{ id: 'think', name: 'Think', type: 'boolean', currentValue: 'true', options: [] }];
+    const configOptions = [
+      { id: 'think', name: 'Think', type: 'boolean', currentValue: 'true', options: [] },
+    ];
     h.transports[1].feed({ jsonrpc: '2.0', id: resumeReq.id, result: { configOptions } });
     await vi.advanceTimersByTimeAsync(0);
 
@@ -1007,7 +1170,11 @@ describe('acpWorkspaceController: reconnect supervisor (D2)', () => {
 
     const listReq = h.transports[1].lastSent();
     expect(listReq.method).toBe('session/list');
-    h.transports[1].feed({ jsonrpc: '2.0', id: listReq.id, result: { sessions: [{ sessionId: 'sess-a' }] } });
+    h.transports[1].feed({
+      jsonrpc: '2.0',
+      id: listReq.id,
+      result: { sessions: [{ sessionId: 'sess-a' }] },
+    });
     await vi.advanceTimersByTimeAsync(0);
   });
 
@@ -1023,12 +1190,20 @@ describe('acpWorkspaceController: reconnect supervisor (D2)', () => {
     await vi.advanceTimersByTimeAsync(1000);
 
     const initReq = h.transports[1].lastSent();
-    h.transports[1].feed({ jsonrpc: '2.0', id: initReq.id, result: { protocolVersion: 1, agentInfo: { name: 'contenox' } } });
+    h.transports[1].feed({
+      jsonrpc: '2.0',
+      id: initReq.id,
+      result: { protocolVersion: 1, agentInfo: { name: 'contenox' } },
+    });
     await vi.advanceTimersByTimeAsync(0);
 
     const resumeReq = h.transports[1].lastSent();
     expect(resumeReq.method).toBe('session/resume');
-    h.transports[1].feed({ jsonrpc: '2.0', id: resumeReq.id, error: { code: -32602, message: 'unknown session' } });
+    h.transports[1].feed({
+      jsonrpc: '2.0',
+      id: resumeReq.id,
+      error: { code: -32602, message: 'unknown session' },
+    });
     await vi.advanceTimersByTimeAsync(0);
 
     expect(h.sessStore.state.messages['a1']).toBeUndefined();
@@ -1041,7 +1216,11 @@ describe('acpWorkspaceController: reconnect supervisor (D2)', () => {
       method: 'session/update',
       params: {
         sessionId: 'sess-a',
-        update: { sessionUpdate: 'user_message_chunk', content: { type: 'text', text: 'replayed' }, messageId: 'replay-0' },
+        update: {
+          sessionUpdate: 'user_message_chunk',
+          content: { type: 'text', text: 'replayed' },
+          messageId: 'replay-0',
+        },
       },
     });
     await vi.advanceTimersByTimeAsync(0);
@@ -1052,7 +1231,11 @@ describe('acpWorkspaceController: reconnect supervisor (D2)', () => {
     expect(h.sessStore.state.connectionBanner).toBe('resumed');
 
     const listReq = h.transports[1].lastSent();
-    h.transports[1].feed({ jsonrpc: '2.0', id: listReq.id, result: { sessions: [{ sessionId: 'sess-a' }] } });
+    h.transports[1].feed({
+      jsonrpc: '2.0',
+      id: listReq.id,
+      result: { sessions: [{ sessionId: 'sess-a' }] },
+    });
     await vi.advanceTimersByTimeAsync(0);
   });
 
@@ -1066,7 +1249,11 @@ describe('acpWorkspaceController: reconnect supervisor (D2)', () => {
     await vi.advanceTimersByTimeAsync(1000);
 
     const initReq = h.transports[1].lastSent();
-    h.transports[1].feed({ jsonrpc: '2.0', id: initReq.id, error: { code: -32000, message: 'contenox is not configured yet' } });
+    h.transports[1].feed({
+      jsonrpc: '2.0',
+      id: initReq.id,
+      error: { code: -32000, message: 'contenox is not configured yet' },
+    });
     await vi.advanceTimersByTimeAsync(0);
 
     expect(h.wsStore.state.status).toBe('setup_required');
@@ -1114,7 +1301,11 @@ describe('acpWorkspaceController: reconnect() (manual retry, D2 follow-up)', () 
     const latest = h.transports.at(-1)!;
     const initReq = latest.lastSent();
     expect(initReq.method).toBe('initialize');
-    latest.feed({ jsonrpc: '2.0', id: initReq.id, result: { protocolVersion: 1, agentInfo: { name: 'contenox' } } });
+    latest.feed({
+      jsonrpc: '2.0',
+      id: initReq.id,
+      result: { protocolVersion: 1, agentInfo: { name: 'contenox' } },
+    });
     await vi.advanceTimersByTimeAsync(0);
     const listReq = latest.lastSent();
     expect(listReq.method).toBe('session/list');
@@ -1184,7 +1375,7 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     await openTab(h, 'sess-b');
 
     expect(h.wsStore.state.activeSessionId).toBe('sess-b');
-    expect(h.controller  && h.sliceOf('sess-a')).toBeDefined();
+    expect(h.controller && h.sliceOf('sess-a')).toBeDefined();
     expect(h.sliceOf('sess-b')).toBeDefined();
 
     feedAgentChunk(h.transports[0], 'sess-a', 'ma', 'hello A');
@@ -1215,7 +1406,9 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
 
     feedAgentChunk(h.transports[0], 'sess-a', 'am', 'streamed while backgrounded');
     await flushMicrotasks();
-    expect(h.sliceOf('sess-a')!.messages['am']).toMatchObject({ text: 'streamed while backgrounded' });
+    expect(h.sliceOf('sess-a')!.messages['am']).toMatchObject({
+      text: 'streamed while backgrounded',
+    });
     expect(h.sessStore.state.messages['am']).toBeUndefined();
 
     h.transports[0].feed({ jsonrpc: '2.0', id: promptA.id, result: { stopReason: 'end_turn' } });
@@ -1258,7 +1451,11 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     h.controller.closeSessionTab('sess-a');
     await flushMicrotasks();
 
-    const closeReq = h.transports[0].sent.find(f => f.method === 'session/close' && (f.params as Record<string, unknown>).sessionId === 'sess-a');
+    const closeReq = h.transports[0].sent.find(
+      f =>
+        f.method === 'session/close' &&
+        (f.params as Record<string, unknown>).sessionId === 'sess-a',
+    );
     expect(closeReq).toBeDefined();
     expect(h.transports[0].sent.some(f => f.method === 'session/delete')).toBe(false);
     expect(h.sliceOf('sess-a')).toBeUndefined();
@@ -1316,8 +1513,16 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
     await connectReady(h);
     await openTab(h, 'sess-a');
     await openTab(h, 'sess-b');
-    h.sessionsStore.dispatch({ type: 'session_dispatch', key: 'sess-a', action: { type: 'message_chunk', id: 'a1', text: 'A pre-drop' } });
-    h.sessionsStore.dispatch({ type: 'session_dispatch', key: 'sess-b', action: { type: 'message_chunk', id: 'b1', text: 'B pre-drop' } });
+    h.sessionsStore.dispatch({
+      type: 'session_dispatch',
+      key: 'sess-a',
+      action: { type: 'message_chunk', id: 'a1', text: 'A pre-drop' },
+    });
+    h.sessionsStore.dispatch({
+      type: 'session_dispatch',
+      key: 'sess-b',
+      action: { type: 'message_chunk', id: 'b1', text: 'B pre-drop' },
+    });
     vi.useFakeTimers();
 
     h.transports[0].fireClose();
@@ -1327,7 +1532,11 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
 
     await vi.advanceTimersByTimeAsync(1000);
     const t1 = h.transports[1];
-    t1.feed({ jsonrpc: '2.0', id: t1.lastSent().id, result: { protocolVersion: 1, agentInfo: { name: 'contenox' } } });
+    t1.feed({
+      jsonrpc: '2.0',
+      id: t1.lastSent().id,
+      result: { protocolVersion: 1, agentInfo: { name: 'contenox' } },
+    });
     await vi.advanceTimersByTimeAsync(0);
 
     const resumeA = t1.lastSent();
@@ -1349,7 +1558,11 @@ describe('acpWorkspaceController: multiplexing (workspace-tabs Slice 1)', () => 
 
     const listReq = t1.lastSent();
     expect(listReq.method).toBe('session/list');
-    t1.feed({ jsonrpc: '2.0', id: listReq.id, result: { sessions: [{ sessionId: 'sess-a' }, { sessionId: 'sess-b' }] } });
+    t1.feed({
+      jsonrpc: '2.0',
+      id: listReq.id,
+      result: { sessions: [{ sessionId: 'sess-a' }, { sessionId: 'sess-b' }] },
+    });
     await vi.advanceTimersByTimeAsync(0);
 
     feedAgentChunk(t1, 'sess-a', 'a2', 'A after');
@@ -1372,7 +1585,10 @@ describe('acpWorkspaceController: session_info_update-derived title (tab-strip/s
       method: 'session/update',
       params: {
         sessionId: 'sess-a',
-        update: { sessionUpdate: 'session_info_update', title: 'Read README.md, then update its title' },
+        update: {
+          sessionUpdate: 'session_info_update',
+          title: 'Read README.md, then update its title',
+        },
       },
     });
     await flushMicrotasks();
@@ -1392,7 +1608,10 @@ describe('acpWorkspaceController: session_info_update-derived title (tab-strip/s
       method: 'session/update',
       params: {
         sessionId: 'sess-a',
-        update: { sessionUpdate: 'session_info_update', title: 'Read README.md, then update its title' },
+        update: {
+          sessionUpdate: 'session_info_update',
+          title: 'Read README.md, then update its title',
+        },
       },
     });
     await flushMicrotasks();
@@ -1403,7 +1622,11 @@ describe('acpWorkspaceController: session_info_update-derived title (tab-strip/s
     const p = h.controller.refreshSessions();
     await flushMicrotasks();
     const req = h.transports[0].lastSent();
-    h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { sessions: [{ sessionId: 'sess-a' }] } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: req.id,
+      result: { sessions: [{ sessionId: 'sess-a' }] },
+    });
     await p;
 
     expect(h.wsStore.state.sessions.find(s => s.sessionId === 'sess-a')?.title).toBe(
@@ -1427,7 +1650,12 @@ describe('acpWorkspaceController: session_info_update-derived title (tab-strip/s
 });
 
 describe('acpWorkspaceController: inline permission card responses (explicit-only)', () => {
-  function feedPermissionRequest(t: MockTransport, rpcId: string, sessionId: string, toolCallId: string): void {
+  function feedPermissionRequest(
+    t: MockTransport,
+    rpcId: string,
+    sessionId: string,
+    toolCallId: string,
+  ): void {
     t.feed({
       jsonrpc: '2.0',
       id: rpcId,
@@ -1458,14 +1686,18 @@ describe('acpWorkspaceController: inline permission card responses (explicit-onl
 
     const responses = h.transports[0].sent.filter(f => f.id === 'perm-c');
     expect(responses).toHaveLength(1);
-    expect(responses[0]).toMatchObject({ result: { outcome: { outcome: 'selected', optionId: 'allow-1' } } });
+    expect(responses[0]).toMatchObject({
+      result: { outcome: { outcome: 'selected', optionId: 'allow-1' } },
+    });
     expect(h.sessStore.state.pendingPermission).toBeNull();
 
     h.controller.respondPermission('deny-1');
     await flushMicrotasks();
     const after = h.transports[0].sent.filter(f => f.id === 'perm-c');
     expect(after).toHaveLength(1);
-    expect(after[0]).toMatchObject({ result: { outcome: { outcome: 'selected', optionId: 'allow-1' } } });
+    expect(after[0]).toMatchObject({
+      result: { outcome: { outcome: 'selected', optionId: 'allow-1' } },
+    });
   });
 
   it('leaves an unanswered request pending and sends NO response when unrelated events arrive (no implicit deny on dismiss)', async () => {
@@ -1630,12 +1862,16 @@ describe('acpWorkspaceController: image prompt capability + image blocks', () =>
 });
 
 describe('acpWorkspaceController: session cwd on load', () => {
-  it("loads a listed session with its own cwd, not the controller default (Windows paths)", async () => {
+  it('loads a listed session with its own cwd, not the controller default (Windows paths)', async () => {
     const h = setup();
     const p = h.controller.connect();
     await flushMicrotasks();
     const initReq = h.transports[0].lastSent();
-    h.transports[0].feed({ jsonrpc: '2.0', id: initReq.id, result: { protocolVersion: 1, agentInfo: { name: 'contenox' } } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      id: initReq.id,
+      result: { protocolVersion: 1, agentInfo: { name: 'contenox' } },
+    });
     await flushMicrotasks();
     const listReq = h.transports[0].lastSent();
     const winCwd = String.raw`C:\Users\me\Contenox`;
