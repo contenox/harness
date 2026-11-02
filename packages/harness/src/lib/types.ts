@@ -420,6 +420,47 @@ export type MissionReport = {
 export type Envelope = {
   name: string;
   description: string;
+  source?: 'envelope' | 'file';
+  scope?: 'workspace';
+};
+
+export type AgentIdentity = {
+  name: string;
+  email: string;
+  key: string;
+  sign: boolean;
+  creditMe: boolean;
+  creditAs: string;
+};
+
+export type AgentKeyProblem = 'passphrase_protected' | 'unreadable' | 'unsupported_type' | 'security_key';
+
+export type AgentKey = {
+  ref: string;
+  label: string;
+  type: string;
+  fingerprint: string;
+  publicKey: string;
+  source: 'file' | 'agent';
+  usable: boolean;
+  problem?: AgentKeyProblem;
+};
+
+export type AgentIdentityState = {
+  identity: AgentIdentity;
+  me?: { name: string; email: string; source: 'git' | 'gitconfig' };
+  keys: AgentKey[];
+};
+
+export type AgentIdentityCheck = {
+  signing: { ok: boolean; fingerprint?: string; message: string };
+  host?: {
+    host: string;
+    ok: boolean;
+    account?: string;
+    reason?: 'key_unusable' | 'unknown_host' | 'unreachable' | 'key_rejected' | 'failed';
+    message: string;
+  };
 };
 
 export type DispatchRequest = {

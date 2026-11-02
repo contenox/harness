@@ -30,7 +30,6 @@ export default function MissionDispatchPage() {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const { data: agents } = useAgents();
-  const { data: envelopes } = useEnvelopes();
   const { data: cliConfig, isFetched: cliConfigFetched } = useCLIConfig(!!user);
   const { roots, defaultRoot, isAbsent: rootsAbsent } = useWorkspaceRoots();
   const dispatch = useDispatchMission();
@@ -48,6 +47,7 @@ export default function MissionDispatchPage() {
     ...dispatchPrefill(searchParams),
   }));
   const [touched, setTouched] = useState(false);
+  const { data: envelopes } = useEnvelopes(values.cwd.trim() || defaultRoot?.path);
 
   const defaultsApplied = useRef(false);
   useEffect(() => {
@@ -77,7 +77,10 @@ export default function MissionDispatchPage() {
   const policyOptions = (envelopes ?? [])
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map(envelope => ({ value: envelope.name, label: envelope.name }));
+    .map(envelope => ({
+    value: envelope.name,
+    label: envelope.scope === 'workspace' ? t('missions.envelope_workspace_option', { name: envelope.name }) : envelope.name,
+  }));
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();

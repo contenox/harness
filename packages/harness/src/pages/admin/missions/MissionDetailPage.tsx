@@ -36,6 +36,7 @@ import {
   REPORT_KIND_BADGE_VARIANT,
   REPORT_KIND_LABEL_KEY,
 } from './missionPresentation';
+import { envelopeDisplayName } from '../../../lib/envelopeName';
 
 const MissionTerminalTab = lazy(() => import('./MissionTerminalTab'));
 const MissionChangesTab = lazy(() => import('./MissionChangesTab'));
@@ -237,7 +238,7 @@ export default function MissionDetailPage() {
                   label={t('missions.facts_envelope')}
                   value={
                     <Badge variant="outline" size="sm">
-                      {m.hitlPolicyName}
+                      {envelopeDisplayName(m.hitlPolicyName)}
                     </Badge>
                   }
                 />

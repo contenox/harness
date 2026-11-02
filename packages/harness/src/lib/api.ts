@@ -14,6 +14,10 @@ import {
   DispatchRequest,
   DispatchResult,
   Envelope,
+  AgentIdentity,
+  AgentIdentityCheck,
+  AgentIdentityState,
+  AgentKey,
   FleetEntry,
   HITLApproval,
   Mission,
@@ -155,7 +159,16 @@ export const api = {
     apiFetch<ShellEnvResponse>('/api/shell-env', options('PUT', body)),
 
   listPolicies: () => apiFetch<string[]>('/api/hitl-policies/list'),
-  listEnvelopes: () => apiFetch<Envelope[]>('/api/envelopes'),
+  listEnvelopes: (workspace?: string) =>
+    apiFetch<Envelope[]>(`/api/envelopes${workspace ? `?workspace=${encodeURIComponent(workspace)}` : ''}`),
+
+  getAgentIdentity: () => apiFetch<AgentIdentityState>('/api/agent-identity'),
+  putAgentIdentity: (body: AgentIdentity) =>
+    apiFetch<AgentIdentityState>('/api/agent-identity', options('PUT', body)),
+  generateAgentKey: (comment: string) =>
+    apiFetch<AgentKey>('/api/agent-identity/keys', options('POST', { comment })),
+  checkAgentIdentity: (key: string, host: string) =>
+    apiFetch<AgentIdentityCheck>('/api/agent-identity/check', options('POST', { key, host })),
 
   getRuntimeBackendState: () => apiFetch<BackendRuntimeState[]>('/api/state'),
 

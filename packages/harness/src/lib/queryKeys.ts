@@ -85,7 +85,12 @@ export const hitlPolicyKeys = {
 
 export const envelopeKeys = {
   all: ['envelopes'] as const,
-  list: () => [...envelopeKeys.all, 'list'] as const,
+  list: (workspace = '') => [...envelopeKeys.all, 'list', workspace] as const,
+};
+
+export const agentIdentityKeys = {
+  all: ['agent-identity'] as const,
+  state: () => [...agentIdentityKeys.all, 'state'] as const,
 };
 
 export const telegramKeys = {

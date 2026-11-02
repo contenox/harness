@@ -20,6 +20,7 @@ import { useMissions } from '../../../hooks/useMissions';
 import { missionProblem } from '../../../lib/missionProblem';
 import type { InstanceStatus } from '../../../lib/types';
 import { needsYouMissionIds } from '../../../lib/unitStatus';
+import { envelopeDisplayName } from '../../../lib/envelopeName';
 
 export default function MissionListPage() {
   const { t } = useTranslation();
@@ -132,7 +133,7 @@ export default function MissionListPage() {
                       <span className="flex items-center gap-1.5">
                         {t('missions.col_envelope')}:
                         <Badge variant="outline" size="sm">
-                          {m.hitlPolicyName}
+                          {envelopeDisplayName(m.hitlPolicyName)}
                         </Badge>
                       </span>
                       <MissionActions mission={m} instance={inst} className="ml-auto" />
