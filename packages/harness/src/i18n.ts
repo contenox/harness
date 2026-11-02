@@ -147,7 +147,7 @@ const resources = {
         set_defaults: 'Default model & provider',
         model_placeholder: 'e.g. qwen2.5:7b',
         provider_placeholder: 'e.g. ollama',
-        default_chain_placeholder: 'e.g. default-chain.json',
+        default_chain_placeholder: 'e.g. my-chain.json',
         default_chain_help:
           'Optional. Same KV as contenox config set default-chain; a local task-chain path known to the runtime.',
       },
@@ -2001,7 +2001,7 @@ const resources = {
         set_defaults: 'Standard-Modell & Anbieter',
         model_placeholder: 'z. B. qwen2.5:7b',
         provider_placeholder: 'z. B. ollama',
-        default_chain_placeholder: 'z. B. default-chain.json',
+        default_chain_placeholder: 'z. B. my-chain.json',
         default_chain_help:
           'Optional. Gleicher KV-Speicher wie contenox config set default-chain; ein lokaler Task-Chain-Pfad, den die Runtime kennt.',
       },
