@@ -22,6 +22,11 @@ export function SlashCommandMenu({ menu }: { menu: SlashCommandMenuState }) {
 
 
       className="max-h-48 overflow-y-auto overscroll-contain p-0">
+      {menu.mode === 'values' && menu.values.length === 0 && menu.argumentHint !== null && (
+        <Span variant="muted" className="block px-3 py-2 font-mono text-xs">
+          {menu.argumentHint}
+        </Span>
+      )}
       {menu.mode === 'values'
         ? menu.values.map((value, index) => (
             <ValueRow

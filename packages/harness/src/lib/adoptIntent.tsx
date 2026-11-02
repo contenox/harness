@@ -4,6 +4,7 @@ export type AdoptIntent = {
   instanceId: string;
   sessionId: string;
   cwd?: string;
+  title?: string;
 };
 
 export interface AdoptIntentContextValue {

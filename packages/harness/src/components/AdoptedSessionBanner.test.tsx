@@ -4,8 +4,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import i18n from '../i18n';
-import { missionKeys } from '../lib/queryKeys';
-import type { Mission } from '../lib/types';
+import { fleetKeys, missionKeys } from '../lib/queryKeys';
+import type { FleetEntry, Mission } from '../lib/types';
 import { AdoptedSessionBanner } from './AdoptedSessionBanner';
 
 vi.mock('../lib/api', () => ({
@@ -31,9 +31,11 @@ function mission(over: Partial<Mission> & { id: string; instanceId: string }): M
 function render(
   props: { instanceId: string; controller: boolean; agentName: string | null },
   missions: Mission[] = [],
+  fleet?: FleetEntry[],
 ): string {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(missionKeys.list(), missions);
+  if (fleet) client.setQueryData(fleetKeys.list(), fleet);
   return renderToStaticMarkup(
     createElement(
       MemoryRouter,
@@ -48,12 +50,12 @@ function render(
 }
 
 describe('AdoptedSessionBanner', () => {
-  it('labels a controlling adopter "Taken over" and shows the durability caveat', () => {
+  it('labels a controlling adopter "Taken over" without claiming earlier turns are lost', () => {
     const html = render({ instanceId: 'inst-1', controller: true, agentName: 'Researcher' });
     expect(html).toContain('Taken over');
     expect(html).not.toContain('Observing');
     expect(html).toContain('Researcher');
-    expect(html).toContain('durable from take-over onward');
+    expect(html).not.toContain('durable from take-over onward');
   });
 
   it('labels an observer "Observing" (never assuming control it was not granted)', () => {
@@ -75,5 +77,74 @@ describe('AdoptedSessionBanner', () => {
       mission({ id: 'mission-9', instanceId: 'inst-other' }),
     ]);
     expect(html).not.toContain('Back to the mission');
+  });
+
+  it('shows the mission status and a Stop for the live unit', () => {
+    const fleet: FleetEntry[] = [
+      {
+        agentId: 'a-1',
+        agentName: 'Researcher',
+        kind: 'claude-code',
+        instances: [
+          {
+            id: 'inst-1',
+            agentId: 'a-1',
+            agentName: 'Researcher',
+            kind: 'claude-code',
+            state: 'running',
+            sessions: 1,
+            viewers: 1,
+            startedAt: new Date().toISOString(),
+            sessionIds: ['unit-1'],
+          },
+        ],
+      },
+    ];
+    const html = render(
+      { instanceId: 'inst-1', controller: true, agentName: 'Researcher' },
+      [mission({ id: 'mission-9', instanceId: 'inst-1' })],
+      fleet,
+    );
+    expect(html).toContain('Working');
+    expect(html).toContain('Stop instance inst-1');
+    expect(html).not.toContain('Stop this instance?');
+  });
+
+  it('offers no Stop for a finished mission whose unit is still on the board', () => {
+    const fleet: FleetEntry[] = [
+      {
+        agentId: 'a-1',
+        agentName: 'Researcher',
+        kind: 'chain',
+        instances: [
+          {
+            id: 'inst-1',
+            agentId: 'a-1',
+            agentName: 'Researcher',
+            kind: 'chain',
+            state: 'running',
+            sessions: 1,
+            viewers: 1,
+            startedAt: new Date().toISOString(),
+            sessionIds: ['unit-1'],
+          },
+        ],
+      },
+    ];
+    const html = render(
+      { instanceId: 'inst-1', controller: true, agentName: 'Researcher' },
+      [mission({ id: 'mission-9', instanceId: 'inst-1', status: 'landed' })],
+      fleet,
+    );
+    expect(html).toContain('Done');
+    expect(html).not.toContain('Stop instance inst-1');
+  });
+
+  it('offers no Stop once the unit is gone', () => {
+    const html = render({ instanceId: 'inst-1', controller: true, agentName: 'Researcher' }, [
+      mission({ id: 'mission-9', instanceId: 'inst-1', status: 'abandoned' }),
+    ]);
+    expect(html).toContain('Stopped');
+    expect(html).not.toContain('Stop instance inst-1');
   });
 });

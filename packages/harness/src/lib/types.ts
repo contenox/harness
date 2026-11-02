@@ -289,6 +289,7 @@ export type Agent = {
   source?: string;
   registryId?: string;
   registryVersion?: string;
+  missionCapable?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -352,6 +353,7 @@ export type Mission = {
   sessionId?: string;
   instanceId?: string;
   parentSessionId?: string;
+  cwd?: string;
   status: MissionStatus;
   statusReason?: string;
   plan?: MissionPlan;

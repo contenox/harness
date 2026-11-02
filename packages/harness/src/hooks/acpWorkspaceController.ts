@@ -711,6 +711,7 @@ export function createAcpWorkspaceController(
     });
     const sid = result.sessionId;
     sessionCwds.set(sid, sessionCwd);
+    const adoptedTitle = ref.title?.trim();
 
     sessionDispatch(sid, { type: 'session_reset', sessionId: sid });
     trackSubscription(sid, c, target);
@@ -718,7 +719,12 @@ export function createAcpWorkspaceController(
       sessionDispatch(sid, { type: 'config_options', configOptions: result.configOptions });
     workspaceDispatch({
       type: 'session_upserted',
-      session: { sessionId: sid, cwd: sessionCwd, _meta: result._meta },
+      session: {
+        sessionId: sid,
+        cwd: sessionCwd,
+        ...(adoptedTitle ? { title: adoptedTitle } : {}),
+        _meta: result._meta,
+      },
     });
     setFocus(sid);
     workspaceDispatch({ type: 'session_load_succeeded' });

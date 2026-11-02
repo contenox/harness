@@ -1,27 +1,40 @@
 import type { Status } from '@contenox/ui';
 import type { TranslationKey } from '../i18n';
-import type { FleetInstanceState, MissionReport, MissionStatus } from './types';
-
+import type { FleetInstanceState, HITLApproval, MissionReport, MissionStatus } from './types';
 
 export type UnitStatusFacts = {
   instanceState?: FleetInstanceState;
   missionStatus?: MissionStatus;
   lastHeartbeat?: string;
+  lastError?: string;
   blocked?: boolean;
 };
 
 export type UnitStatusBadgeVariant = 'success' | 'error' | 'warning' | 'outline' | 'secondary';
 
-export type UnitStatusAtomKind = 'blocked' | 'process' | 'verdict' | 'liveness';
+export type UnitStatusAtomKind = 'primary' | 'liveness';
+
+export type UnitPrimaryKind =
+  | 'done'
+  | 'failed'
+  | 'stuck'
+  | 'stopped'
+  | 'needs_you'
+  | 'working'
+  | 'idle'
+  | 'process'
+  | 'unknown';
 
 export type UnitStatusAtom = {
   kind: UnitStatusAtomKind;
+  primary?: UnitPrimaryKind;
   labelKey?: TranslationKey;
   label?: string;
   titleKey?: TranslationKey;
   indicator?: Status;
   variant?: UnitStatusBadgeVariant;
   heartbeat?: string;
+  reason?: string;
 };
 
 export const PROCESS_STATUS_INDICATOR: Record<FleetInstanceState, Status> = {
@@ -40,73 +53,108 @@ export const PROCESS_LABEL_KEY: Record<FleetInstanceState, TranslationKey> = {
   error: 'fleet.state.error',
 };
 
-const VERDICT: Record<
-  MissionStatus,
-  { labelKey: TranslationKey; titleKey: TranslationKey; variant: UnitStatusBadgeVariant }
+type VerdictKind = Exclude<UnitPrimaryKind, 'process' | 'unknown'>;
+
+const PRIMARY: Record<
+  VerdictKind,
+  { labelKey: TranslationKey; titleKey: TranslationKey; indicator: Status }
 > = {
-  open: { labelKey: 'unit.verdict_open', titleKey: 'unit.verdict_open_title', variant: 'outline' },
-  landed: {
-    labelKey: 'unit.verdict_landed',
+  done: {
+    labelKey: 'unit.primary_done',
     titleKey: 'unit.verdict_landed_title',
-    variant: 'success',
+    indicator: 'completed',
   },
-  derailed: {
-    labelKey: 'unit.verdict_derailed',
+  failed: {
+    labelKey: 'unit.primary_failed',
     titleKey: 'unit.verdict_derailed_title',
-    variant: 'error',
+    indicator: 'error',
   },
   stuck: {
-    labelKey: 'unit.verdict_stuck',
+    labelKey: 'unit.primary_stuck',
     titleKey: 'unit.verdict_stuck_title',
-    variant: 'warning',
+    indicator: 'warning',
   },
-  abandoned: {
-    labelKey: 'unit.verdict_abandoned',
+  stopped: {
+    labelKey: 'unit.primary_stopped',
     titleKey: 'unit.verdict_abandoned_title',
-    variant: 'secondary',
+    indicator: 'planned',
+  },
+  needs_you: {
+    labelKey: 'unit.primary_needs_you',
+    titleKey: 'unit.blocked_title',
+    indicator: 'warning',
+  },
+  working: {
+    labelKey: 'unit.primary_working',
+    titleKey: 'unit.primary_working_title',
+    indicator: 'in-progress',
+  },
+  idle: {
+    labelKey: 'unit.primary_idle',
+    titleKey: 'unit.verdict_open_title',
+    indicator: 'planned',
   },
 };
 
-const UNKNOWN_VERDICT: { titleKey: TranslationKey; variant: UnitStatusBadgeVariant } = {
-  titleKey: 'unit.verdict_unknown_title',
-  variant: 'secondary',
-};
+const WORKING_STATES: FleetInstanceState[] = ['running', 'starting', 'warning'];
+
+function verdictAtom(kind: VerdictKind, reason?: string): UnitStatusAtom {
+  const copy = PRIMARY[kind];
+  return {
+    kind: 'primary',
+    primary: kind,
+    labelKey: copy.labelKey,
+    titleKey: copy.titleKey,
+    indicator: copy.indicator,
+    ...(reason ? { reason } : {}),
+  };
+}
+
+export function deriveUnitPrimary(facts: UnitStatusFacts): UnitStatusAtom | null {
+  const reason = facts.lastError?.trim() || undefined;
+  switch (facts.missionStatus) {
+    case 'landed':
+      return verdictAtom('done');
+    case 'derailed':
+      return verdictAtom('failed', reason);
+    case 'stuck':
+      return verdictAtom('stuck', reason);
+    case 'abandoned':
+      return verdictAtom('stopped');
+    case 'open':
+      break;
+    case undefined:
+      if (facts.blocked) return verdictAtom('needs_you');
+      if (!facts.instanceState) return null;
+      return {
+        kind: 'primary',
+        primary: 'process',
+        labelKey: PROCESS_LABEL_KEY[facts.instanceState],
+        indicator: PROCESS_STATUS_INDICATOR[facts.instanceState],
+      };
+    default:
+      return {
+        kind: 'primary',
+        primary: 'unknown',
+        label: facts.missionStatus,
+        titleKey: 'unit.verdict_unknown_title',
+        indicator: 'info',
+      };
+  }
+  if (facts.blocked) return verdictAtom('needs_you');
+  if (reason || facts.instanceState === 'error') return verdictAtom('failed', reason);
+  if (facts.instanceState && WORKING_STATES.includes(facts.instanceState)) {
+    return verdictAtom('working');
+  }
+  return verdictAtom('idle');
+}
 
 export function composeUnitStatus(facts: UnitStatusFacts): UnitStatusAtom[] {
   const atoms: UnitStatusAtom[] = [];
+  const primary = deriveUnitPrimary(facts);
+  if (primary) atoms.push(primary);
 
-  if (facts.blocked) {
-    atoms.push({
-      kind: 'blocked',
-      labelKey: 'unit.blocked',
-      titleKey: 'unit.blocked_title',
-      variant: 'warning',
-    });
-  }
-
-  if (facts.instanceState) {
-    atoms.push({
-      kind: 'process',
-      indicator: PROCESS_STATUS_INDICATOR[facts.instanceState],
-      labelKey: PROCESS_LABEL_KEY[facts.instanceState],
-    });
-  }
-
-  if (facts.missionStatus) {
-    const v = VERDICT[facts.missionStatus];
-    atoms.push(
-      v
-        ? { kind: 'verdict', labelKey: v.labelKey, titleKey: v.titleKey, variant: v.variant }
-        : {
-            kind: 'verdict',
-            label: facts.missionStatus,
-            titleKey: UNKNOWN_VERDICT.titleKey,
-            variant: UNKNOWN_VERDICT.variant,
-          },
-    );
-  }
-
-  if (facts.missionStatus) {
+  if (facts.missionStatus === 'open' && primary?.primary !== 'failed') {
     atoms.push(
       facts.lastHeartbeat
         ? {
@@ -125,6 +173,33 @@ export function composeUnitStatus(facts: UnitStatusFacts): UnitStatusAtom[] {
   }
 
   return atoms;
+}
+
+export function unitAttentionRank(facts: UnitStatusFacts): number | null {
+  const primary = deriveUnitPrimary(facts)?.primary;
+  if (primary === 'failed' || facts.instanceState === 'error') return 0;
+  if (primary === 'stuck' || primary === 'needs_you' || facts.instanceState === 'warning') return 1;
+  return null;
+}
+
+export function pendingApprovalMissionIds(
+  approvals: readonly HITLApproval[] | undefined,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const approval of approvals ?? []) {
+    const missionId = approval.missionId?.trim();
+    if (approval.state === 'pending' && missionId) ids.add(missionId);
+  }
+  return ids;
+}
+
+export function needsYouMissionIds(
+  reports: MissionReport[],
+  approvals: readonly HITLApproval[] | undefined,
+): Set<string> {
+  const ids = blockedMissionIds(reports);
+  for (const id of pendingApprovalMissionIds(approvals)) ids.add(id);
+  return ids;
 }
 
 function sortableTime(iso: string): number {

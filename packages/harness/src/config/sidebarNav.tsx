@@ -5,11 +5,12 @@ export interface SidebarNavDefinition {
   path: string;
   labelKey: TranslationKey;
   Icon: LucideIcon;
+  badge?: 'needs_you';
 }
 
 /** Labeled navigation shown at the bottom of the left sidebar. */
 export const SIDEBAR_NAV: SidebarNavDefinition[] = [
-  { path: '/inbox', labelKey: 'navbar.inbox', Icon: Inbox },
+  { path: '/inbox', labelKey: 'navbar.inbox', Icon: Inbox, badge: 'needs_you' },
   { path: '/missions', labelKey: 'navbar.missions', Icon: Rocket },
   { path: '/fleet', labelKey: 'navbar.fleet', Icon: Radar },
   { path: '/backends', labelKey: 'navbar.backends', Icon: Database },

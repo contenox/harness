@@ -4,8 +4,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
-import { missionKeys } from '../../../lib/queryKeys';
-import type { Mission } from '../../../lib/types';
+import { fleetKeys, missionKeys } from '../../../lib/queryKeys';
+import type { FleetEntry, Mission } from '../../../lib/types';
 import MissionListPage from './MissionListPage';
 
 vi.mock('../../../lib/api', () => ({
@@ -32,9 +32,10 @@ function baseMission(over: Partial<Mission> & { id: string }): Mission {
   };
 }
 
-function renderList(missions: Mission[]): string {
+function renderList(missions: Mission[], fleet?: FleetEntry[]): string {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(missionKeys.list(), missions);
+  if (fleet) client.setQueryData(fleetKeys.list(), fleet);
   return renderToStaticMarkup(
     createElement(
       MemoryRouter,
@@ -64,7 +65,7 @@ describe('MissionListPage', () => {
     expect(html).toContain('href="/missions/mission-1"');
     expect(html).toContain('Investigate the flaky nightly test');
     expect(html).toContain('Researcher');
-    expect(html).toContain('Landed');
+    expect(html).toContain('Done');
     expect(html).toContain('hitl-policy-dev.json');
   });
 
@@ -98,5 +99,44 @@ describe('MissionListPage', () => {
   it('offers a Fire a mission action', () => {
     const html = renderList([baseMission({ id: 'mission-1' })]);
     expect(html).toContain('Fire a mission');
+  });
+
+  it('offers Stop only for an open mission whose unit is still on the board, and Fire again always', () => {
+    const fleet: FleetEntry[] = [
+      {
+        agentId: 'a-1',
+        agentName: 'Researcher',
+        kind: 'claude-code',
+        instances: [
+          {
+            id: 'inst-1',
+            agentId: 'a-1',
+            agentName: 'Researcher',
+            kind: 'claude-code',
+            state: 'running',
+            sessions: 1,
+            viewers: 0,
+            startedAt: new Date().toISOString(),
+            sessionIds: ['unit-1'],
+          },
+        ],
+      },
+    ];
+    const html = renderList(
+      [
+        baseMission({ id: 'open-1', intent: 'Keep going', instanceId: 'inst-1' }),
+        baseMission({ id: 'done-1', intent: 'Finished', instanceId: 'inst-1', status: 'landed' }),
+      ],
+      fleet,
+    );
+    expect(html).toContain('Stop the mission &quot;Keep going&quot;');
+    expect(html).not.toContain('Stop the mission &quot;Finished&quot;');
+    expect(html).toContain('Fire &quot;Finished&quot; again');
+    expect(html).toContain('Working');
+  });
+
+  it('gives the empty list one way to fill it', () => {
+    const html = renderList([]);
+    expect(html.match(/>Fire a mission<\/button>/g)?.length).toBe(2);
   });
 });

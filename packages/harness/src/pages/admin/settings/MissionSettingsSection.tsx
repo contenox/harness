@@ -6,6 +6,7 @@ import { useCLIConfig } from '../../../hooks/useCLIConfig';
 import { useEnvelopes } from '../../../hooks/useEnvelopes';
 import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
 import { AuthContext } from '../../../lib/authContext';
+import { missionAgentNames } from '../../../lib/missionAgents';
 import type { CLIConfigUpdateRequest } from '../../../lib/types';
 
 const uniqueSorted = (values: string[]) =>
@@ -37,20 +38,17 @@ export function MissionSettingsSection() {
     return () => window.clearTimeout(timer);
   }, [putConfig.isSuccess, putConfig.reset]);
 
-  const enabledAgentNames = useMemo(
-    () => uniqueSorted((agents ?? []).filter(a => a.enabled).map(a => a.name)),
-    [agents],
-  );
+  const missionAgents = useMemo(() => missionAgentNames(agents), [agents]);
 
   const agentOptions = useMemo(() => {
-    const values = [...enabledAgentNames];
+    const values = [...missionAgents];
     const current = agent.trim();
     if (current && !values.includes(current)) values.unshift(current);
     return [
       { value: '', label: t('settings.mission_not_set') },
       ...values.map(value => ({ value, label: value })),
     ];
-  }, [agent, enabledAgentNames, t]);
+  }, [agent, missionAgents, t]);
 
   const policyOptions = useMemo(() => {
     const values = uniqueSorted((envelopes ?? []).map(envelope => envelope.name));
@@ -65,8 +63,8 @@ export function MissionSettingsSection() {
   const agentUnresolved = useMemo(() => {
     const current = agent.trim();
     if (!current || !agents) return false;
-    return !enabledAgentNames.includes(current);
-  }, [agent, agents, enabledAgentNames]);
+    return !missionAgents.includes(current);
+  }, [agent, agents, missionAgents]);
 
   const policyUnresolved = useMemo(() => {
     const current = policy.trim();
@@ -118,7 +116,7 @@ export function MissionSettingsSection() {
                 {t('settings.mission_agent_unresolved', { name: agent.trim() })}
               </P>
             )}
-            {enabledAgentNames.length === 0 && !agentsError && (
+            {agents && missionAgents.length === 0 && !agentsError && (
               <P variant="muted" className="mt-1 text-xs">
                 {t('settings.mission_no_agents')}
               </P>

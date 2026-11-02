@@ -21,6 +21,7 @@ import {
   mergeOperatorInboxReports,
   missionsById,
   missionsByInstanceId,
+  needsYouCount,
   newestReportAt,
   runningSummary,
   stalledUnits,
@@ -313,6 +314,40 @@ describe('stalledUnits', () => {
   it('is empty for a healthy fleet', () => {
     const fleet: FleetEntry[] = [entry('A', [instance({ id: 'ok', state: 'running' })])];
     expect(stalledUnits(fleet, new Map())).toEqual([]);
+  });
+
+  it('includes a running unit whose mission failed, got stuck, or reported a blocker', () => {
+    const fleet: FleetEntry[] = [
+      entry('A', [
+        instance({ id: 'failed', state: 'running', startedAt: '2026-07-20T09:00:00Z' }),
+        instance({ id: 'stuck', state: 'running', startedAt: '2026-07-20T12:00:00Z' }),
+        instance({ id: 'blocked', state: 'running', startedAt: '2026-07-20T11:00:00Z' }),
+        instance({ id: 'busy', state: 'running' }),
+      ]),
+    ];
+    const byInstance = missionsByInstanceId([
+      mission({ id: 'm-failed', instanceId: 'failed', status: 'derailed' }),
+      mission({ id: 'm-stuck', instanceId: 'stuck', status: 'stuck' }),
+      mission({ id: 'm-blocked', instanceId: 'blocked' }),
+      mission({ id: 'm-busy', instanceId: 'busy' }),
+    ]);
+
+    const units = stalledUnits(fleet, byInstance, new Set(['m-blocked']));
+
+    expect(units.map(u => u.instance.id)).toEqual(['failed', 'stuck', 'blocked']);
+  });
+});
+
+describe('needsYouCount', () => {
+  it('counts only pending asks and approvals', () => {
+    expect(
+      needsYouCount([
+        approval({ id: 'a1' }),
+        approval({ id: 'a2', state: 'approved' }),
+        approval({ id: 'a3', toolsName: 'mission', toolName: 'mission_ask_attention' }),
+      ]),
+    ).toBe(2);
+    expect(needsYouCount(undefined)).toBe(0);
   });
 });
 

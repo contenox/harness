@@ -8,14 +8,23 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 import type { AvailableCommand, SessionConfigOption } from '@contenox/acp-client';
+import { FIRST_ARGUMENT_KEY } from '@contenox/acp-client';
 import { commandValueDomains } from '../lib/commandValueDomains';
+import {
+  mergeRuntimeValueDomains,
+  runtimeArgumentCompletions,
+  runtimeArgumentHint,
+  runtimeFlagValues,
+} from '../lib/runtimeArgumentCompletions';
 import {
   TOP_OF_LIST,
   clampIndex,
   deriveSlashArgument,
+  deriveSlashFlagArgument,
   deriveSlashMenuQuery,
   filterSlashCommands,
   filterValueDomain,
+  flagValueCompletion,
   resolveValueIndex,
   slashCompletion,
   slashMenuKeyFromEvent,
@@ -31,6 +40,7 @@ export interface SlashCommandMenuState {
   mode: SlashMenuMode;
   entries: AvailableCommand[];
   values: string[];
+  argumentHint: string | null;
   command: string | null;
   activeIndex: number;
   listboxId: string;
@@ -65,26 +75,41 @@ export function useSlashCommandMenu(
     [derivedOpen, availableCommands, query],
   );
 
-  const domains = useMemo(() => commandValueDomains(configOptions), [configOptions]);
+  const runtime = useMemo(
+    () => runtimeArgumentCompletions(availableCommands),
+    [availableCommands],
+  );
+  const domains = useMemo(
+    () => mergeRuntimeValueDomains(commandValueDomains(configOptions), runtime),
+    [configOptions, runtime],
+  );
   const argument = deriveSlashArgument(draft);
-  const argCommand = argument?.command ?? null;
-  const argText = argument?.arg ?? '';
-  const domain = argCommand === null ? null : valueDomainFor(domains, argCommand);
+  const flagArgument = argument === null ? deriveSlashFlagArgument(draft) : null;
+  const argCommand = argument?.command ?? flagArgument?.command ?? null;
+  const argKey = flagArgument?.flag ?? FIRST_ARGUMENT_KEY;
+  const argText = argument?.arg ?? flagArgument?.arg ?? '';
+  const domain =
+    argCommand === null
+      ? null
+      : flagArgument !== null
+        ? runtimeFlagValues(runtime, argCommand, argKey)
+        : valueDomainFor(domains, argCommand);
+  const argumentHint =
+    argCommand === null || domain !== null
+      ? null
+      : runtimeArgumentHint(runtime, argCommand, argKey);
   const values = useMemo(
     () => (domain === null ? [] : filterValueDomain(domain, argText)),
     [domain, argText],
   );
 
-
-
-
-  const mode: SlashMenuMode = domain === null ? 'commands' : 'values';
+  const mode: SlashMenuMode = domain === null && argumentHint === null ? 'commands' : 'values';
   const valueCommand = mode === 'values' ? argCommand : null;
-
+  const valuePrefix = flagArgument?.prefix ?? null;
 
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
   const length = mode === 'values' ? values.length : entries.length;
-  const open = length > 0 && dismissedFor !== draft;
+  const open = (length > 0 || argumentHint !== null) && dismissedFor !== draft;
 
 
   const [highlight, setHighlight] = useState<ValueHighlight>(TOP_OF_LIST);
@@ -113,10 +138,14 @@ export function useSlashCommandMenu(
   const pickValue = useCallback(
     (value: string) => {
       if (valueCommand === null) return;
-      onDraftChange(valueCompletion(valueCommand, value));
+      onDraftChange(
+        valuePrefix === null
+          ? valueCompletion(valueCommand, value)
+          : flagValueCompletion(valuePrefix, value),
+      );
       setDismissedFor(null);
     },
-    [valueCommand, onDraftChange],
+    [valueCommand, valuePrefix, onDraftChange],
   );
 
   const accept = useCallback(() => {
@@ -142,6 +171,7 @@ export function useSlashCommandMenu(
       if (!open) return;
       const action = slashMenuKeyFromEvent(event.key);
       if (action === null) return;
+      if (length === 0 && action.type !== 'close') return;
       event.preventDefault();
       if (action.type === 'move') {
         highlightAt(clampIndex(activeIndex + action.delta, length));
@@ -159,7 +189,7 @@ export function useSlashCommandMenu(
 
   const textareaAria = useMemo<SlashMenuTextareaAria>(
     () =>
-      availableCommands.length === 0 && domains.size === 0
+      availableCommands.length === 0 && domains.size === 0 && runtime.size === 0
         ? {}
         : {
             role: 'combobox',
@@ -168,7 +198,7 @@ export function useSlashCommandMenu(
             'aria-expanded': open,
             'aria-activedescendant': open ? optionId(activeIndex) : undefined,
           },
-    [availableCommands.length, domains.size, listboxId, open, optionId, activeIndex],
+    [availableCommands.length, domains.size, runtime.size, listboxId, open, optionId, activeIndex],
   );
 
   return {
@@ -176,6 +206,7 @@ export function useSlashCommandMenu(
     mode,
     entries,
     values,
+    argumentHint,
     command: valueCommand,
     activeIndex,
     listboxId,

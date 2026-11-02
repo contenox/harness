@@ -6,6 +6,7 @@ export type MenuItem = {
   path: string;
   label: string;
   icon?: ReactNode;
+  meta?: ReactNode;
 };
 
 export function SidebarNav({
@@ -28,6 +29,7 @@ export function SidebarNav({
           to={item.path}
           active={pathname === item.path || pathname.startsWith(item.path + '/')}
           icon={item.icon}
+          meta={item.meta}
           onClick={onNavigate}>
           {item.label}
         </SidebarItem>

@@ -31,7 +31,7 @@ import { useFleet } from '../../../hooks/useFleet';
 import { useMissions } from '../../../hooks/useMissions';
 import { relativeTime } from '../../../lib/relativeTime';
 import type { HITLApproval, Mission } from '../../../lib/types';
-import { blockedMissionIds } from '../../../lib/unitStatus';
+import { blockedMissionIds, needsYouMissionIds } from '../../../lib/unitStatus';
 import { cn } from '../../../lib/utils';
 import {
   APPROVAL_ANSWER_LABEL_KEY,
@@ -129,11 +129,16 @@ export default function InboxPage() {
   const fleet = fleetQuery.data ?? [];
 
   const approvalGroups = groupApprovalsByMission(approvals, missionsById(missions));
-  const stalled = stalledUnits(fleet, missionsByInstanceId(missions));
+  const missionReports = reports.items.map(i => i.report);
+  const blocked = needsYouMissionIds(missionReports, approvals);
+  const stalled = stalledUnits(
+    fleet,
+    missionsByInstanceId(missions),
+    blockedMissionIds(missionReports),
+  );
   const running = runningSummary(fleet);
   const reportGroups = groupReportsByMission(reports.items, lastSeen);
   const newReportCount = countNewReports(reports.items, lastSeen);
-  const blocked = blockedMissionIds(reports.items.map(i => i.report));
 
   const attentionClear = approvals.length === 0 && stalled.length === 0;
 
@@ -501,6 +506,7 @@ function StalledUnitRow({
               instanceState: unit.instance.state,
               missionStatus: unit.mission?.status,
               lastHeartbeat: unit.mission?.lastHeartbeat,
+              lastError: unit.mission?.lastError,
               blocked,
             }}
             className="sm:justify-end"

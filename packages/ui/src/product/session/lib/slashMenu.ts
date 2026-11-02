@@ -50,6 +50,29 @@ export function deriveSlashArgument(draft: string): SlashArgumentQuery | null {
   return { command, arg };
 }
 
+export interface SlashFlagArgumentQuery {
+  command: string;
+  flag: string;
+  arg: string;
+  prefix: string;
+}
+
+const FLAG_ARGUMENT_RE =
+  /^\/([a-zA-Z0-9_-]+)[ \t]+(?:.*[ \t])?(--[a-zA-Z0-9_-]+)[ \t]+([^ \t\n]*)$/;
+
+export function deriveSlashFlagArgument(draft: string): SlashFlagArgumentQuery | null {
+  const match = FLAG_ARGUMENT_RE.exec(draft);
+  if (match === null) return null;
+  const command = match[1] ?? '';
+  const flag = match[2] ?? '';
+  const arg = match[3] ?? '';
+  return { command, flag, arg, prefix: draft.slice(0, draft.length - arg.length) };
+}
+
+export function flagValueCompletion(prefix: string, value: string): string {
+  return `${prefix}${value} `;
+}
+
 export function valueDomainFor(
   domains: CommandValueDomains,
   command: string,

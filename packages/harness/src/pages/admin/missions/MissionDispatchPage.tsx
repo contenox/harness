@@ -1,15 +1,21 @@
-import { Button, Form, FormField, H1, Input, P, Page, Select } from '@contenox/ui';
-import { FormEvent, useState } from 'react';
+import { Button, Form, FormField, H1, InlineNotice, Input, P, Page, Select } from '@contenox/ui';
+import { FormEvent, useContext, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { RootChip } from '../../../components/workspace/RootChip';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { RootSelector } from '../../../components/workspace/RootSelector';
 import { useAgents } from '../../../hooks/useAgents';
+import { useCLIConfig } from '../../../hooks/useCLIConfig';
 import { useEnvelopes } from '../../../hooks/useEnvelopes';
 import { useDispatchMission } from '../../../hooks/useFleet';
 import { useWorkspaceRoots } from '../../../hooks/useWorkspaceRoots';
 import type { TranslationKey } from '../../../i18n';
+import { AuthContext } from '../../../lib/authContext';
 import { ApiError } from '../../../lib/fetch';
+import {
+  dispatchPrefill,
+  missionAgentNames,
+  withDispatchDefaults,
+} from '../../../lib/missionAgents';
 import { extractRefusedRoot, isWorkspaceRootRefusal } from '../../../lib/workspaceRoots';
 import {
   canSubmitDispatchForm,
@@ -22,8 +28,10 @@ const EMPTY_FORM: DispatchFormValues = { agentName: '', intent: '', hitlPolicyNa
 export default function MissionDispatchPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const { data: agents } = useAgents();
   const { data: envelopes } = useEnvelopes();
+  const { data: cliConfig, isFetched: cliConfigFetched } = useCLIConfig(!!user);
   const { roots, defaultRoot, isAbsent: rootsAbsent } = useWorkspaceRoots();
   const dispatch = useDispatchMission();
 
@@ -35,17 +43,37 @@ export default function MissionDispatchPage() {
     isWorkspaceRootRefusal(dispatchError.message);
 
   const [searchParams] = useSearchParams();
-  const [values, setValues] = useState<DispatchFormValues>(() => {
-    const agent = searchParams.get('agent');
-    return agent ? { ...EMPTY_FORM, agentName: agent } : EMPTY_FORM;
-  });
+  const [values, setValues] = useState<DispatchFormValues>(() => ({
+    ...EMPTY_FORM,
+    ...dispatchPrefill(searchParams),
+  }));
   const [touched, setTouched] = useState(false);
+
+  const defaultsApplied = useRef(false);
+  useEffect(() => {
+    if (defaultsApplied.current || (!!user && !cliConfigFetched)) return;
+    defaultsApplied.current = true;
+    setValues(v =>
+      withDispatchDefaults(v, {
+        agentName: cliConfig?.defaultMissionAgent,
+        hitlPolicyName: cliConfig?.defaultMissionPolicy,
+      }),
+    );
+  }, [user, cliConfig, cliConfigFetched]);
+
+  const cwdApplied = useRef(false);
+  useEffect(() => {
+    if (cwdApplied.current || !defaultRoot) return;
+    cwdApplied.current = true;
+    setValues(v => withDispatchDefaults(v, { cwd: defaultRoot.path }));
+  }, [defaultRoot]);
 
   const errors = validateDispatchForm(values);
   const fieldError = (key?: TranslationKey) => (touched && key ? t(key) : undefined);
 
-  const enabledAgents = (agents ?? []).filter(a => a.enabled);
-  const agentOptions = enabledAgents.map(a => ({ value: a.name, label: a.name }));
+  const missionAgents = missionAgentNames(agents);
+  const agentOptions = missionAgents.map(name => ({ value: name, label: name }));
+  const noMissionAgents = agents !== undefined && missionAgents.length === 0;
   const policyOptions = (envelopes ?? [])
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -75,12 +103,17 @@ export default function MissionDispatchPage() {
           <P variant="muted" className="mt-2">
             {t('missions.form_description')}
           </P>
-          {defaultRoot && (
-            <div className="mt-3">
-              <RootChip root={defaultRoot} />
-            </div>
-          )}
         </div>
+
+        {noMissionAgents && (
+          <InlineNotice variant="warning">
+            <p className="font-medium">{t('missions.no_mission_agents_title')}</p>
+            <p className="mt-1 text-xs">{t('missions.no_mission_agents_body')}</p>
+            <Link to="/settings" className="text-link mt-2 inline-block text-xs hover:underline">
+              {t('missions.no_mission_agents_action')}
+            </Link>
+          </InlineNotice>
+        )}
 
         <Form
           onSubmit={onSubmit}
@@ -108,7 +141,7 @@ export default function MissionDispatchPage() {
               onChange={e => setValues(v => ({ ...v, agentName: e.target.value }))}
               options={agentOptions}
               placeholder={
-                enabledAgents.length === 0
+                missionAgents.length === 0
                   ? t('missions.form_agent_empty')
                   : t('missions.form_agent_placeholder')
               }
@@ -149,6 +182,7 @@ export default function MissionDispatchPage() {
 
           <FormField
             label={t('missions.form_cwd_label')}
+            description={t('missions.form_cwd_help')}
             error={
               rootRefused
                 ? t('roots.out_of_bounds_body_path', {

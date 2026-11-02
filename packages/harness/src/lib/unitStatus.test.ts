@@ -1,79 +1,163 @@
 import { describe, expect, it } from 'vitest';
-import type { MissionReport } from './types';
-import { blockedMissionIds, composeUnitStatus } from './unitStatus';
+import type { HITLApproval, MissionReport } from './types';
+import {
+  blockedMissionIds,
+  composeUnitStatus,
+  deriveUnitPrimary,
+  needsYouMissionIds,
+  unitAttentionRank,
+} from './unitStatus';
 
-describe('composeUnitStatus — the one composed truth', () => {
+describe('deriveUnitPrimary — one plain status per unit', () => {
   it('says nothing when there is nothing to say', () => {
+    expect(deriveUnitPrimary({})).toBeNull();
     expect(composeUnitStatus({})).toEqual([]);
   });
 
-  it('renders a lone process state (an instance with no mission) as a single atom', () => {
-    const atoms = composeUnitStatus({ instanceState: 'running' });
-    expect(atoms).toHaveLength(1);
-    expect(atoms[0]).toMatchObject({ kind: 'process', labelKey: 'fleet.state.running' });
+  it('maps each terminal verdict to plain words', () => {
+    expect(deriveUnitPrimary({ missionStatus: 'landed' })?.labelKey).toBe('unit.primary_done');
+    expect(deriveUnitPrimary({ missionStatus: 'derailed' })?.labelKey).toBe('unit.primary_failed');
+    expect(deriveUnitPrimary({ missionStatus: 'stuck' })?.labelKey).toBe('unit.primary_stuck');
+    expect(deriveUnitPrimary({ missionStatus: 'abandoned' })?.labelKey).toBe(
+      'unit.primary_stopped',
+    );
   });
 
-  it('orders the atoms loudest-first: blocked, process, verdict, liveness', () => {
+  it('lets a terminal verdict win over a live process, a blocker and a heartbeat', () => {
     const atoms = composeUnitStatus({
+      missionStatus: 'derailed',
       instanceState: 'running',
+      blocked: true,
+      lastHeartbeat: '2026-07-21T09:00:00Z',
+      lastError: 'tool crashed',
+    });
+    expect(atoms).toEqual([
+      expect.objectContaining({ kind: 'primary', primary: 'failed', reason: 'tool crashed' }),
+    ]);
+  });
+
+  it('puts "needs you" above working for an open mission', () => {
+    const primary = deriveUnitPrimary({
       missionStatus: 'open',
-      lastHeartbeat: undefined,
+      instanceState: 'running',
       blocked: true,
     });
-    expect(atoms.map(a => a.kind)).toEqual(['blocked', 'process', 'verdict', 'liveness']);
+    expect(primary?.primary).toBe('needs_you');
   });
 
-  it('frames an open mission as "no result yet" (neutral), never as a health warning', () => {
-    const [verdict] = composeUnitStatus({ missionStatus: 'open' });
-    expect(verdict).toMatchObject({
-      kind: 'verdict',
-      variant: 'outline',
-      labelKey: 'unit.verdict_open',
+  it('never reads an open mission with an error as running', () => {
+    const primary = deriveUnitPrimary({
+      missionStatus: 'open',
+      instanceState: 'running',
+      lastError: 'model refused',
     });
+    expect(primary).toMatchObject({ primary: 'failed', reason: 'model refused' });
+    expect(deriveUnitPrimary({ missionStatus: 'open', instanceState: 'error' })?.primary).toBe(
+      'failed',
+    );
   });
 
-  it('gives each terminal verdict its own tone — landed good, derailed alert', () => {
-    expect(composeUnitStatus({ missionStatus: 'landed' })[0]).toMatchObject({ variant: 'success' });
-    expect(composeUnitStatus({ missionStatus: 'derailed' })[0]).toMatchObject({ variant: 'error' });
+  it('is working only while the mission is open and its unit is live', () => {
+    expect(deriveUnitPrimary({ missionStatus: 'open', instanceState: 'running' })?.primary).toBe(
+      'working',
+    );
+    expect(deriveUnitPrimary({ missionStatus: 'open', instanceState: 'starting' })?.primary).toBe(
+      'working',
+    );
+    expect(deriveUnitPrimary({ missionStatus: 'open', instanceState: 'stopped' })?.primary).toBe(
+      'idle',
+    );
+    expect(deriveUnitPrimary({ missionStatus: 'open' })?.primary).toBe('idle');
   });
 
-  it('separates stuck from derailed: attention (warning), not a verdict (error)', () => {
-    expect(composeUnitStatus({ missionStatus: 'stuck' })[0]).toMatchObject({
-      kind: 'verdict',
-      variant: 'warning',
-      labelKey: 'unit.verdict_stuck',
-    });
+  it('falls back to the process state for a unit that is not on a mission', () => {
+    expect(composeUnitStatus({ instanceState: 'running' })).toEqual([
+      expect.objectContaining({ primary: 'process', labelKey: 'fleet.state.running' }),
+    ]);
   });
 
-  it('survives a mission status this build does not know, echoing the runtime word', () => {
-    const atoms = composeUnitStatus({
+  it('echoes a mission status this build does not know', () => {
+    const primary = deriveUnitPrimary({
       missionStatus: 'quarantined' as never,
       instanceState: 'running',
     });
-    const verdict = atoms.find(a => a.kind === 'verdict');
-    expect(verdict).toMatchObject({ variant: 'secondary', label: 'quarantined' });
-    expect(verdict?.labelKey).toBeUndefined();
-    expect(atoms.map(a => a.kind)).toEqual(['process', 'verdict', 'liveness']);
+    expect(primary).toMatchObject({ primary: 'unknown', label: 'quarantined' });
+    expect(primary?.labelKey).toBeUndefined();
   });
+});
 
-  it('renders liveness as the heartbeat when present, and honestly as "never" when absent', () => {
-    const withHeartbeat = composeUnitStatus({
+describe('composeUnitStatus — heartbeat stays secondary', () => {
+  it('adds the heartbeat after the primary status of an open mission', () => {
+    const atoms = composeUnitStatus({
       missionStatus: 'open',
+      instanceState: 'running',
       lastHeartbeat: '2026-07-21T09:00:00Z',
     });
-    const liveness = withHeartbeat.find(a => a.kind === 'liveness');
-    expect(liveness?.heartbeat).toBe('2026-07-21T09:00:00Z');
-    expect(liveness?.labelKey).toBeUndefined();
+    expect(atoms.map(a => a.kind)).toEqual(['primary', 'liveness']);
+    expect(atoms[1]?.heartbeat).toBe('2026-07-21T09:00:00Z');
+  });
 
+  it('says "never reported" honestly when there was no heartbeat', () => {
     const never = composeUnitStatus({ missionStatus: 'open' }).find(a => a.kind === 'liveness');
     expect(never?.heartbeat).toBeUndefined();
     expect(never?.labelKey).toBe('missions.heartbeat_never');
   });
 
-  it('does not invent a liveness atom for a unit that is not on a mission', () => {
-    expect(composeUnitStatus({ instanceState: 'running' }).some(a => a.kind === 'liveness')).toBe(
-      false,
+  it('drops the heartbeat once the mission has an outcome', () => {
+    expect(
+      composeUnitStatus({ missionStatus: 'landed', lastHeartbeat: '2026-07-21T09:00:00Z' }).map(
+        a => a.kind,
+      ),
+    ).toEqual(['primary']);
+  });
+});
+
+describe('unitAttentionRank', () => {
+  it('ranks failures first, then units that need a human', () => {
+    expect(unitAttentionRank({ missionStatus: 'derailed', instanceState: 'stopped' })).toBe(0);
+    expect(unitAttentionRank({ instanceState: 'error' })).toBe(0);
+    expect(unitAttentionRank({ missionStatus: 'stuck', instanceState: 'running' })).toBe(1);
+    expect(
+      unitAttentionRank({ missionStatus: 'open', instanceState: 'running', blocked: true }),
+    ).toBe(1);
+    expect(unitAttentionRank({ instanceState: 'warning' })).toBe(1);
+  });
+
+  it('leaves healthy and finished units alone', () => {
+    expect(unitAttentionRank({ missionStatus: 'open', instanceState: 'running' })).toBeNull();
+    expect(unitAttentionRank({ missionStatus: 'landed', instanceState: 'running' })).toBeNull();
+    expect(unitAttentionRank({ instanceState: 'running' })).toBeNull();
+  });
+});
+
+describe('needsYouMissionIds', () => {
+  const approval = (over: Partial<HITLApproval> & { id: string }): HITLApproval => ({
+    toolsName: 'mission',
+    toolName: 'mission_ask_attention',
+    state: 'pending',
+    createdAt: '2026-07-21T10:00:00Z',
+    expiresAt: '2026-07-21T11:00:00Z',
+    ...over,
+  });
+
+  it('joins pending asks and approvals with missions whose latest report is a blocker', () => {
+    const ids = needsYouMissionIds(
+      [
+        {
+          id: 'r1',
+          missionId: 'm-blocked',
+          kind: 'blocker',
+          summary: 's',
+          createdAt: '2026-07-21T10:00:00Z',
+        },
+      ],
+      [
+        approval({ id: 'a1', missionId: 'm-ask' }),
+        approval({ id: 'a2', missionId: 'm-done', state: 'approved' }),
+        approval({ id: 'a3' }),
+      ],
     );
+    expect([...ids].sort()).toEqual(['m-ask', 'm-blocked']);
   });
 });
 

@@ -9,6 +9,7 @@ import type {
   OperatorInboxItem,
   OperatorInboxReason,
 } from '../../../lib/types';
+import { unitAttentionRank } from '../../../lib/unitStatus';
 
 
 
@@ -170,7 +171,6 @@ export type StalledUnit = {
 };
 
 const STALLED_STATES: FleetInstanceState[] = ['error', 'warning'];
-const stalledRank = (s: FleetInstanceState): number => (s === 'error' ? 0 : 1);
 
 export type RunningSummary = { running: number; starting: number; live: number };
 
@@ -179,25 +179,34 @@ const LIVE_STATES: FleetInstanceState[] = ['running', 'starting'];
 export function stalledUnits(
   fleet: FleetEntry[],
   missionByInstanceId: Map<string, Mission>,
+  needsYou: ReadonlySet<string> = new Set(),
 ): StalledUnit[] {
-  const units: StalledUnit[] = [];
+  const ranked: { unit: StalledUnit; rank: number }[] = [];
   for (const entry of fleet) {
     for (const instance of entry.instances ?? []) {
-      if (!STALLED_STATES.includes(instance.state)) continue;
-      units.push({
-        instance,
-        agentName: entry.agentName,
-        kind: entry.kind,
-        mission: missionByInstanceId.get(instance.id),
+      const mission = missionByInstanceId.get(instance.id);
+      const rank = unitAttentionRank({
+        instanceState: instance.state,
+        missionStatus: mission?.status,
+        lastError: mission?.lastError,
+        blocked: mission ? needsYou.has(mission.id) : false,
+      });
+      if (rank === null) continue;
+      ranked.push({
+        unit: { instance, agentName: entry.agentName, kind: entry.kind, mission },
+        rank,
       });
     }
   }
-  units.sort((a, b) => {
-    const byState = stalledRank(a.instance.state) - stalledRank(b.instance.state);
-    if (byState !== 0) return byState;
-    return sortableTime(b.instance.startedAt) - sortableTime(a.instance.startedAt);
+  ranked.sort((a, b) => {
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    return sortableTime(b.unit.instance.startedAt) - sortableTime(a.unit.instance.startedAt);
   });
-  return units;
+  return ranked.map(r => r.unit);
+}
+
+export function needsYouCount(approvals: readonly HITLApproval[] | undefined): number {
+  return (approvals ?? []).filter(a => a.state === 'pending').length;
 }
 
 export function runningSummary(fleet: FleetEntry[]): RunningSummary {

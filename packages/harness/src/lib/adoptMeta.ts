@@ -4,6 +4,7 @@ export const ADOPT_META_KEY = 'contenox.adopt';
 export type AdoptRef = {
   instanceId: string;
   sessionId: string;
+  title?: string;
 };
 
 export function adoptMeta(instanceId: string, sessionId: string): Record<string, unknown> {

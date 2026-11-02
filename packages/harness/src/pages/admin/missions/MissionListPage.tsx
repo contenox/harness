@@ -11,13 +11,15 @@ import {
 } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import { MissionActions } from '../../../components/MissionActions';
 import { PlanProgress } from '../../../components/PlanProgress';
 import { UnitStatus } from '../../../components/UnitStatus';
-import { useInboxReports } from '../../../hooks/useApprovals';
+import { useApprovals, useInboxReports } from '../../../hooks/useApprovals';
 import { useFleet } from '../../../hooks/useFleet';
 import { useMissions } from '../../../hooks/useMissions';
+import { missionProblem } from '../../../lib/missionProblem';
 import type { InstanceStatus } from '../../../lib/types';
-import { blockedMissionIds } from '../../../lib/unitStatus';
+import { needsYouMissionIds } from '../../../lib/unitStatus';
 
 export default function MissionListPage() {
   const { t } = useTranslation();
@@ -25,6 +27,7 @@ export default function MissionListPage() {
   const { data, isLoading, error, refetch } = useMissions();
   const fleetQuery = useFleet();
   const inboxReports = useInboxReports();
+  const { data: approvals } = useApprovals();
 
   if (isLoading) {
     return (
@@ -54,7 +57,10 @@ export default function MissionListPage() {
   for (const entry of fleetQuery.data ?? []) {
     for (const inst of entry.instances ?? []) instanceById.set(inst.id, inst);
   }
-  const blocked = blockedMissionIds(inboxReports.items.map(i => i.report));
+  const blocked = needsYouMissionIds(
+    inboxReports.items.map(i => i.report),
+    approvals,
+  );
 
   return (
     <Page bodyScroll="auto">
@@ -74,8 +80,11 @@ export default function MissionListPage() {
         {missions.length === 0 ? (
           <EmptyState
             title={t('missions.empty_title')}
-            description={t('missions.empty_description')}
-          />
+            description={t('missions.empty_description')}>
+            <Button variant="primary" size="sm" onClick={() => navigate('/missions/new')}>
+              {t('missions.fire_action')}
+            </Button>
+          </EmptyState>
         ) : (
           <Section variant="empty">
             <div className="space-y-3">
@@ -93,11 +102,11 @@ export default function MissionListPage() {
                           title={m.intent}>
                           {m.intent}
                         </Link>
-                        {m.lastError && (
+                        {missionProblem(m) && (
                           <div
                             className="text-error dark:text-dark-error max-w-full truncate text-xs"
-                            title={m.lastError}>
-                            {t('missions.last_error_label')}: {m.lastError}
+                            title={missionProblem(m)}>
+                            {t('missions.last_error_label')}: {missionProblem(m)}
                           </div>
                         )}
                       </div>
@@ -107,8 +116,10 @@ export default function MissionListPage() {
                             instanceState: inst?.state,
                             missionStatus: m.status,
                             lastHeartbeat: m.lastHeartbeat,
+                            lastError: m.lastError,
                             blocked: blocked.has(m.id),
                           }}
+                          showReason={false}
                           className="sm:justify-end"
                         />
                         <PlanProgress plan={m.plan} />
@@ -124,6 +135,7 @@ export default function MissionListPage() {
                           {m.hitlPolicyName}
                         </Badge>
                       </span>
+                      <MissionActions mission={m} instance={inst} className="ml-auto" />
                     </div>
                   </div>
                 );

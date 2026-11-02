@@ -17,6 +17,7 @@ export function useStopInstance(): UseMutationResult<string, Error, string, unkn
     mutationFn: instanceId => api.stopInstance(instanceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: fleetKeys.list() });
+      queryClient.invalidateQueries({ queryKey: missionKeys.all });
     },
   });
 }

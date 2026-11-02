@@ -292,6 +292,40 @@ export interface AvailableCommand {
   name: string;
   description: string;
   input?: AvailableCommandInput;
+  _meta?: Record<string, unknown>;
+}
+
+export const ARGUMENT_COMPLETIONS_META_KEY = 'contenox.argumentCompletions';
+
+export const FIRST_ARGUMENT_KEY = '';
+
+export interface ArgumentCompletion {
+  values: string[];
+  hint: string;
+}
+
+export function argumentCompletionsFromCommand(
+  command: Pick<AvailableCommand, '_meta'>,
+): Map<string, ArgumentCompletion> {
+  const completions = new Map<string, ArgumentCompletion>();
+  const raw = command._meta?.[ARGUMENT_COMPLETIONS_META_KEY];
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return completions;
+  for (const [rawKey, entry] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) continue;
+    const { values: rawValues, hint: rawHint } = entry as { values?: unknown; hint?: unknown };
+    const values: string[] = [];
+    if (Array.isArray(rawValues)) {
+      for (const candidate of rawValues) {
+        if (typeof candidate !== 'string') continue;
+        const value = candidate.trim();
+        if (value !== '' && !values.includes(value)) values.push(value);
+      }
+    }
+    const hint = typeof rawHint === 'string' ? rawHint.trim() : '';
+    if (values.length === 0 && hint === '') continue;
+    completions.set(rawKey.trim(), { values, hint });
+  }
+  return completions;
 }
 
 

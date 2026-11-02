@@ -50,7 +50,7 @@ const resources = {
           'What `/mission <intent>` fires when the prompt names no agent. Both are required — a mission runs as a declared agent, bounded by a HITL policy.',
         mission_agent_label: 'Default mission agent',
         mission_agent_tooltip:
-          'The declared agent a mission runs as. Only enabled agents can be fired; register agents with the contenox CLI.',
+          'The agent a mission runs as. Only agents that can run missions on their own are listed.',
         mission_policy_label: 'Default mission envelope',
         mission_policy_tooltip:
           'The HITL policy that bounds a fired mission: what its tool calls may do unattended and what waits for your approval.',
@@ -58,10 +58,10 @@ const resources = {
         mission_incomplete_notice:
           'Missions cannot be fired until both an agent and an envelope are set. Until then, /mission asks you to name one.',
         mission_agent_unresolved:
-          '"{{name}}" is not an enabled agent right now — a mission fired on it will be refused.',
+          '"{{name}}" cannot run missions right now — a mission fired on it will be refused.',
         mission_policy_unresolved:
           '"{{name}}" is not among the available HITL policies — a mission bounded by it will be refused.',
-        mission_no_agents: 'No enabled agents are declared yet.',
+        mission_no_agents: 'None of your agents can run missions yet.',
         mission_agent_options_error: 'Could not load agents: {{message}}',
         save: 'Save',
         saved: 'Saved.',
@@ -368,17 +368,15 @@ const resources = {
       },
       fleet: {
         title: 'Fleet',
-        description:
-          'Every declared agent and its live instances — state, sessions, and viewers — polled live.',
+        description: 'Units running right now and agents that are idle. Updates live.',
         loading: 'Loading fleet…',
         load_error: 'Could not load the fleet.',
-        empty_title: 'No agents declared',
-        empty_description:
-          'Declare an agent with `contenox agent` and it appears here — idle agents show up even before they run.',
+        empty_title: 'Nothing running',
+        empty_description: 'When you start a mission, its unit shows up here while it works.',
         attention_title: 'Needs attention',
-        attention_description: 'Instances reporting an error or warning, most urgent first.',
+        attention_description: 'Units that failed, got stuck, or wait for you — most urgent first.',
         idle: 'Idle',
-        idle_description: 'Declared but not running — no live instances.',
+        idle_description: 'Not running right now.',
         instances_running: '{{n}} running',
         col_state: 'State',
         col_instance: 'Instance',
@@ -421,8 +419,21 @@ const resources = {
         mission_intent_label: 'Mission',
         running_title: 'Running now',
         running_none: 'No unit is running right now.',
-        idle_agents_title: 'Declared agents',
-        idle_agents_description: 'Declared but not running. Fire a mission to bring one up.',
+        finished_title: 'Finished',
+        finished_description:
+          'The mission is done. The unit stays open so you can still take over its session. Release it when you no longer need it.',
+        release: 'Release',
+        release_aria: 'Release finished unit {{id}}',
+        release_confirm_title: 'Release this finished unit?',
+        release_confirm_body:
+          'The mission is done, and its record and reports stay. Releasing ends the unit’s process, so you can no longer take over its session.',
+        release_confirm_confirm: 'Release unit',
+        count_finished: '{{n}} finished',
+        idle_agents_title: 'Idle agents',
+        idle_agents_description:
+          'Not running right now. Agents that can run missions can start one from here.',
+        start_mission: 'Start mission',
+        start_mission_aria: 'Start a mission with {{name}}',
         count_running: '{{n}} running',
         count_idle: '{{n}} idle',
         count_attention: '{{n}} need attention',
@@ -430,7 +441,7 @@ const resources = {
       missions: {
         title: 'Missions',
         description:
-          'Fire a one-line intent at a declared agent and detach. Each mission binds one unit, is bounded by an envelope, and reports back on its own.',
+          'Give an agent a one-line task and let it work on its own. Each mission runs inside an envelope (HITL policy) and reports back.',
         loading: 'Loading missions…',
         load_error: 'Could not load missions.',
         empty_title: 'No missions yet',
@@ -444,19 +455,32 @@ const resources = {
         col_heartbeat: 'Heartbeat',
         status: {
           open: 'Open',
-          landed: 'Landed',
-          derailed: 'Derailed',
+          landed: 'Done',
+          derailed: 'Failed',
           stuck: 'Stuck',
-          abandoned: 'Abandoned',
+          abandoned: 'Stopped',
         },
         heartbeat_never: 'Never reported',
         last_error_label: 'Last error',
         open_session: 'Open session',
+        stop: 'Stop',
+        stop_aria: 'Stop the mission "{{intent}}"',
+        fire_again: 'Fire again',
+        fire_again_aria: 'Fire "{{intent}}" again',
+        session_closed_body:
+          'The unit is no longer running, so its session cannot be taken over here. Copy the session id to look it up later.',
+        copy_session_id: 'Copy session id',
+        copied: 'Copied',
+        no_mission_agents_title: 'No agent can run missions yet',
+        no_mission_agents_body:
+          'Missions need an agent that can work on its own. Enable one, then pick it here or set it as the default in Settings.',
+        no_mission_agents_action: 'Open Settings',
         back_to_list: 'Back to missions',
         not_found_title: 'Mission not found',
         not_found_description: 'It may have been deleted, or the id is wrong.',
         facts_title: 'Facts',
         facts_agent: 'Agent',
+        facts_cwd: 'Project folder',
         facts_status_reason: 'Reason',
         facts_status: 'Status',
         facts_envelope: 'Envelope',
@@ -483,7 +507,7 @@ const resources = {
           'Brings the agent up, opens a session, and runs the intent as its first turn — detached. The intent IS the prompt; there is no separate field for it.',
         form_agent_label: 'Agent',
         form_agent_placeholder: 'Choose an agent…',
-        form_agent_empty: 'No enabled agents. Declare one with `contenox agent` first.',
+        form_agent_empty: 'No agent can run missions yet.',
         form_intent_label: 'Intent',
         form_intent_placeholder: 'e.g. Investigate the failing nightly build and report back',
         form_intent_help: 'A single line — it’s the unit’s first turn, not a note.',
@@ -492,7 +516,7 @@ const resources = {
         form_envelope_help: 'Bounds what the unit may do while it runs unattended.',
         form_envelope_empty: 'No envelopes found.',
         form_cwd_label: 'Working directory',
-        form_cwd_placeholder: 'optional — defaults to the project root',
+        form_cwd_help: 'The mission works in this folder. Your current project is preselected.',
         form_submit: 'Fire mission',
         form_submitting: 'Firing…',
         form_error_agent: 'Choose an agent.',
@@ -504,7 +528,8 @@ const resources = {
       inbox: {
         title: 'Inbox',
         description:
-          'Run the batch from here: the asks blocking your units, what fell over overnight, and what came back — grouped by mission so a night of concurrent work does not blur together. Answer an ask without attaching to the session that raised it.',
+          'What waits for your answer, what failed or got stuck, and what your missions reported back.',
+        nav_badge_title: '{{n}} waiting for your answer',
         loading: 'Loading the inbox…',
         just_now: 'just now',
         count_pending: '{{n}} need you',
@@ -534,7 +559,7 @@ const resources = {
         answer_error: 'Could not answer this ask. It may have already been resolved or expired.',
         stalled_title: 'Stalled or failed units',
         stalled_description:
-          'Units that crashed or gave up while unattended. Stop or inspect them on the fleet board.',
+          'Units that failed, got stuck, or reported a blocker. Inspect or stop them on the Fleet page.',
         stalled_view_on_board: 'View on the fleet board',
         all_clear_title: 'No unit needs you.',
         all_clear_body: '{{running}} still running.',
@@ -555,22 +580,23 @@ const resources = {
         running_view_board: 'Open the fleet board',
       },
       unit: {
-        blocked: 'Waiting for approval',
-        blocked_title: 'This unit reported a blocker and is waiting for your input or approval.',
-        verdict_open: 'No result yet',
-        verdict_open_title:
-          'The mission is still open — it has produced no result yet. This is not a health signal.',
-        verdict_landed: 'Landed',
+        primary_done: 'Done',
+        primary_failed: 'Failed',
+        primary_stuck: 'Stuck — needs you',
+        primary_stopped: 'Stopped',
+        primary_needs_you: 'Needs you',
+        primary_working: 'Working',
+        primary_working_title: 'The mission is open and its unit is running.',
+        primary_idle: 'Not running',
+        blocked_title: 'This unit is waiting for your answer or approval.',
+        verdict_open_title: 'The mission is still open, but its unit is not running right now.',
         verdict_landed_title: 'The mission reported a successful result.',
-        verdict_derailed: 'Derailed',
-        verdict_derailed_title: 'The mission ended without landing its result.',
-        verdict_stuck: 'Stuck',
+        verdict_derailed_title: 'The mission failed and its unit stopped.',
         verdict_stuck_title:
           'The mission hit a boundary it could not pass on its own — it is waiting for a human to judge, nudge, or replan it. Not a failure.',
         verdict_unknown_title:
           'A mission status this build of Contenox does not know — shown as the runtime reported it. The app is likely older than the runtime serving it.',
-        verdict_abandoned: 'Abandoned',
-        verdict_abandoned_title: 'The mission was given up before it landed.',
+        verdict_abandoned_title: 'The mission was stopped before it finished.',
         liveness_prefix: 'Heartbeat',
         liveness_title: 'When the unit last reported it was alive.',
         liveness_never_title:
@@ -1454,8 +1480,6 @@ const resources = {
         adopted_observer_title:
           'You are observing — another viewer controls this session and answers its permission requests.',
         adopted_mission_link: 'Back to the mission',
-        adopted_durability_notice:
-          'History is durable from take-over onward — earlier turns are only in the live journal and are lost if the unit stops.',
       },
       signin: {
         title: 'Sign in with ChatGPT',
@@ -1868,7 +1892,7 @@ const resources = {
         default_chain_label: 'Standard-Task-Chain',
         hitl_policy_label: 'HITL-Policy',
         hitl_policy_tooltip:
-          'Bestimmt, welche Tool- und Chain-Aktionen automatisch laufen und welche auf Ihre Freigabe warten. Presets reichen von freizügig (dev) bis streng (verweigern, sofern nicht ausdrücklich erlaubt).',
+          'Bestimmt, welche Tool- und Chain-Aktionen automatisch laufen und welche auf deine Freigabe warten. Presets reichen von freizügig (dev) bis streng (verweigern, sofern nicht ausdrücklich erlaubt).',
         inherit_runtime_default: 'Runtime-Standard erben',
         inherited_value: 'Geerbt: {{value}}',
         chain_options_error: 'Task-Chains konnten nicht geladen werden: {{message}}',
@@ -1878,18 +1902,18 @@ const resources = {
           'Was `/mission <Auftrag>` startet, wenn im Prompt kein Agent genannt wird. Beides ist erforderlich — eine Mission läuft als deklarierter Agent, begrenzt durch eine HITL-Policy.',
         mission_agent_label: 'Standard-Missions-Agent',
         mission_agent_tooltip:
-          'Der deklarierte Agent, als der eine Mission läuft. Nur aktivierte Agenten können gestartet werden; Agenten werden über die contenox-CLI registriert.',
-        mission_policy_label: 'Standard-Missions-Envelope',
+          'Der Agent, als der eine Mission läuft. Aufgelistet sind nur Agenten, die Missionen selbstständig ausführen können.',
+        mission_policy_label: 'Standard-Missions-Hülle',
         mission_policy_tooltip:
-          'Die HITL-Policy, die eine gestartete Mission begrenzt: was ihre Tool-Aufrufe unbeaufsichtigt dürfen und was auf Ihre Freigabe wartet.',
+          'Die Hülle (HITL-Policy), die eine gestartete Mission begrenzt: was ihre Tool-Aufrufe unbeaufsichtigt dürfen und was auf deine Freigabe wartet.',
         mission_not_set: 'Nicht gesetzt',
         mission_incomplete_notice:
-          'Missionen können erst gestartet werden, wenn Agent und Envelope gesetzt sind. Bis dahin fordert /mission Sie auf, eines davon zu benennen.',
+          'Missionen können erst gestartet werden, wenn Agent und Hülle gesetzt sind. Bis dahin fordert dich /mission auf, eines davon zu nennen.',
         mission_agent_unresolved:
-          '„{{name}}“ ist derzeit kein aktivierter Agent — eine damit gestartete Mission wird abgelehnt.',
+          '„{{name}}“ kann gerade keine Missionen ausführen — eine damit gestartete Mission wird abgelehnt.',
         mission_policy_unresolved:
           '„{{name}}“ ist keine der verfügbaren HITL-Policies — eine damit begrenzte Mission wird abgelehnt.',
-        mission_no_agents: 'Es sind noch keine aktivierten Agenten deklariert.',
+        mission_no_agents: 'Noch kann keiner deiner Agenten Missionen ausführen.',
         mission_agent_options_error: 'Agenten konnten nicht geladen werden: {{message}}',
         save: 'Speichern',
         saved: 'Gespeichert.',
@@ -1971,7 +1995,7 @@ const resources = {
           'Prüft auf neuere contenox-Releases. Standardmäßig an; für Zero-Trust-/Air-Gapped-Umgebungen deaktivieren.',
       },
       setup: {
-        banner_title: 'Einrichtung abschließen, bevor Sie chatten',
+        banner_title: 'Schließ die Einrichtung ab, bevor du chattest',
         banner_title_warnings: 'Empfohlen: LLM-Backend hinzufügen',
         open_fix: '{{path}} öffnen',
         set_defaults: 'Standard-Modell & Anbieter',
@@ -1995,7 +2019,7 @@ const resources = {
         script_type: 'Skripttyp',
         script: 'Skript',
         no_functions: 'Keine Funktionen gefunden',
-        delete_confirm: 'Sind Sie sicher, dass Sie diese Funktion löschen möchten?',
+        delete_confirm: 'Willst du diese Funktion wirklich löschen?',
         created_at: 'Erstellt',
         updated_at: 'Aktualisiert',
         name_required: 'Funktionsname ist erforderlich',
@@ -2003,16 +2027,16 @@ const resources = {
         placeholder_name: 'meine-funktion',
         placeholder_description: 'Verarbeite Benutzerdaten und sende Willkommens-E-Mail',
         placeholder_script:
-          '// JavaScript-Code hier\nfunction handleEvent(event) {\n  // Ihre Logik hier\n  return { success: true };\n}',
+          '// JavaScript-Code hier\nfunction handleEvent(event) {\n  // deine Logik hier\n  return { success: true };\n}',
 
         loading: 'Lade Funktionen...',
         loading_error: 'Fehler beim Laden der Funktionen',
         no_functions_description:
-          'Noch keine Funktionen erstellt. Erstellen Sie Ihre erste Funktion, um zu beginnen.',
+          'Noch keine Funktionen. Erstelle deine erste Funktion, um loszulegen.',
         script_length: 'Skriptlänge',
         view_script: 'Skript anzeigen',
-        function_name_description: 'Ein eindeutiger Name für Ihre Funktion',
-        description_description: 'Beschreiben Sie, was diese Funktion tut',
+        function_name_description: 'Ein eindeutiger Name für deine Funktion',
+        description_description: 'Beschreibe, was diese Funktion tut',
         script_description:
           'JavaScript-Code, der ausgeführt wird, wenn die Funktion aufgerufen wird',
       },
@@ -2026,7 +2050,7 @@ const resources = {
         event_type: 'Ereignistyp',
         function_name: 'Funktionsname',
         no_triggers: 'Keine Ereignisauslöser gefunden',
-        delete_confirm: 'Sind Sie sicher, dass Sie diesen Auslöser löschen möchten?',
+        delete_confirm: 'Willst du diesen Auslöser wirklich löschen?',
         name_required: 'Auslösername ist erforderlich',
         event_type_required: 'Ereignistyp ist erforderlich',
         function_required: 'Funktion ist erforderlich',
@@ -2099,7 +2123,7 @@ const resources = {
         aggregate_type_field: 'Aggregattyp-Feld',
         event_type_field: 'Ereignistyp-Feld',
         metadata_mapping: 'Metadaten-Zuordnung',
-        confirm_delete_mapping: 'Sind Sie sicher, dass Sie diese Zuordnung löschen möchten?',
+        confirm_delete_mapping: 'Willst du diese Zuordnung wirklich löschen?',
         ingest_event: 'Ereignis erfassen',
         ingesting: 'Erfasse...',
         replay_event: 'Ereignis wiedergeben',
@@ -2116,15 +2140,15 @@ const resources = {
         loading_mappings: 'Lade Zuordnungen...',
         loading_error: 'Fehler beim Laden der Ereignisse',
         no_mappings_description:
-          'Keine Ereigniszuordnungen konfiguriert. Erstellen Sie Ihre erste Zuordnung, um zu beginnen.',
+          'Keine Ereigniszuordnungen konfiguriert. Erstelle deine erste Zuordnung, um loszulegen.',
         field_mappings: 'Feldzuordnungen',
         metadata: 'Metadaten',
-        confirm_delete_events: 'Sind Sie sicher, dass Sie diese Ereignisse löschen möchten?',
+        confirm_delete_events: 'Willst du diese Ereignisse wirklich löschen?',
         viewing_by_aggregate: 'Zeige Ereignisse nach Aggregat',
         viewing_by_type: 'Zeige Ereignisse nach Typ',
         viewing_by_source: 'Zeige Ereignisse nach Quelle',
         loading_events: 'Lade Ereignisse...',
-        no_events_description: 'Keine Ereignisse gefunden, die Ihren Kriterien entsprechen.',
+        no_events_description: 'Keine Ereignisse gefunden, die deinen Kriterien entsprechen.',
       },
       agentsView: {
         description: 'Agenten sind Markdown-Dateien im Agents-Ordner der Runtime. Bearbeite sie hier oder öffne den Ordner.',
@@ -2168,16 +2192,17 @@ const resources = {
       fleet: {
         title: 'Flotte',
         description:
-          'Jeder deklarierte Agent und seine laufenden Instanzen — Status, Sitzungen und Betrachter — live abgefragt.',
+          'Einheiten, die gerade laufen, und Agenten, die untätig sind. Wird live aktualisiert.',
         loading: 'Flotte wird geladen…',
         load_error: 'Die Flotte konnte nicht geladen werden.',
-        empty_title: 'Keine Agenten deklariert',
+        empty_title: 'Gerade läuft nichts',
         empty_description:
-          'Deklariere einen Agenten mit `contenox agent`, dann erscheint er hier — untätige Agenten werden schon vor dem Start angezeigt.',
+          'Wenn du eine Mission startest, erscheint ihre Einheit hier, solange sie arbeitet.',
         attention_title: 'Erfordert Aufmerksamkeit',
-        attention_description: 'Instanzen mit Fehler oder Warnung, die dringendsten zuerst.',
+        attention_description:
+          'Einheiten, die fehlgeschlagen sind, feststecken oder auf dich warten — die dringendsten zuerst.',
         idle: 'Untätig',
-        idle_description: 'Deklariert, aber nicht laufend — keine aktiven Instanzen.',
+        idle_description: 'Läuft gerade nicht.',
         instances_running: '{{n}} laufend',
         col_state: 'Status',
         col_instance: 'Instanz',
@@ -2220,9 +2245,21 @@ const resources = {
         mission_intent_label: 'Mission',
         running_title: 'Läuft gerade',
         running_none: 'Gerade läuft keine Einheit.',
-        idle_agents_title: 'Deklarierte Agenten',
+        finished_title: 'Fertig',
+        finished_description:
+          'Die Mission ist erledigt. Die Einheit bleibt offen, damit du ihre Sitzung noch übernehmen kannst. Gib sie frei, wenn du sie nicht mehr brauchst.',
+        release: 'Freigeben',
+        release_aria: 'Fertige Einheit {{id}} freigeben',
+        release_confirm_title: 'Diese fertige Einheit freigeben?',
+        release_confirm_body:
+          'Die Mission ist erledigt, ihr Eintrag und ihre Berichte bleiben erhalten. Freigeben beendet den Prozess der Einheit, danach kannst du ihre Sitzung nicht mehr übernehmen.',
+        release_confirm_confirm: 'Einheit freigeben',
+        count_finished: '{{n}} fertig',
+        idle_agents_title: 'Untätige Agenten',
         idle_agents_description:
-          'Deklariert, aber nicht laufend. Starte eine Mission, um einen hochzufahren.',
+          'Laufen gerade nicht. Agenten, die Missionen ausführen können, startest du direkt hier.',
+        start_mission: 'Mission starten',
+        start_mission_aria: 'Mission mit {{name}} starten',
         count_running: '{{n}} laufend',
         count_idle: '{{n}} untätig',
         count_attention: '{{n}} brauchen Aufmerksamkeit',
@@ -2230,7 +2267,7 @@ const resources = {
       missions: {
         title: 'Missionen',
         description:
-          'Ein einzeiliges Intent an einen deklarierten Agenten senden und loslassen. Jede Mission bindet eine Einheit, ist durch eine Hülle begrenzt und meldet sich von selbst zurück.',
+          'Gib einem Agenten eine einzeilige Aufgabe und lass ihn selbstständig arbeiten. Jede Mission läuft in einer Hülle (HITL-Policy) und meldet sich zurück.',
         loading: 'Missionen werden geladen…',
         load_error: 'Die Missionen konnten nicht geladen werden.',
         empty_title: 'Noch keine Missionen',
@@ -2244,19 +2281,32 @@ const resources = {
         col_heartbeat: 'Herzschlag',
         status: {
           open: 'Offen',
-          landed: 'Gelandet',
-          derailed: 'Entgleist',
-          stuck: 'Feststeckend',
-          abandoned: 'Aufgegeben',
+          landed: 'Erledigt',
+          derailed: 'Fehlgeschlagen',
+          stuck: 'Steckt fest',
+          abandoned: 'Gestoppt',
         },
         heartbeat_never: 'Noch nie gemeldet',
         last_error_label: 'Letzter Fehler',
         open_session: 'Sitzung öffnen',
+        stop: 'Stoppen',
+        stop_aria: 'Mission „{{intent}}“ stoppen',
+        fire_again: 'Erneut starten',
+        fire_again_aria: '„{{intent}}“ erneut starten',
+        session_closed_body:
+          'Die Einheit läuft nicht mehr, deshalb kannst du ihre Sitzung hier nicht übernehmen. Kopiere die Sitzungs-ID, um sie später nachzuschlagen.',
+        copy_session_id: 'Sitzungs-ID kopieren',
+        copied: 'Kopiert',
+        no_mission_agents_title: 'Noch kann kein Agent Missionen ausführen',
+        no_mission_agents_body:
+          'Missionen brauchen einen Agenten, der selbstständig arbeiten kann. Aktiviere einen und wähle ihn hier aus oder lege ihn in den Einstellungen als Standard fest.',
+        no_mission_agents_action: 'Einstellungen öffnen',
         back_to_list: 'Zurück zu den Missionen',
         not_found_title: 'Mission nicht gefunden',
         not_found_description: 'Sie wurde eventuell gelöscht, oder die ID ist falsch.',
         facts_title: 'Fakten',
         facts_agent: 'Agent',
+        facts_cwd: 'Projektordner',
         facts_status_reason: 'Grund',
         facts_status: 'Status',
         facts_envelope: 'Hülle',
@@ -2283,8 +2333,7 @@ const resources = {
           'Bringt den Agenten hoch, öffnet eine Sitzung und führt das Intent als ersten Zug aus — losgelöst. Das Intent IST der Prompt; es gibt kein separates Feld dafür.',
         form_agent_label: 'Agent',
         form_agent_placeholder: 'Agent wählen…',
-        form_agent_empty:
-          'Keine aktivierten Agenten. Zuerst einen mit `contenox agent` deklarieren.',
+        form_agent_empty: 'Noch kann kein Agent Missionen ausführen.',
         form_intent_label: 'Intent',
         form_intent_placeholder:
           'z. B. Den fehlschlagenden nächtlichen Build untersuchen und zurückmelden',
@@ -2295,7 +2344,8 @@ const resources = {
           'Begrenzt, was die Einheit tun darf, während sie unbeaufsichtigt läuft.',
         form_envelope_empty: 'Keine Hüllen gefunden.',
         form_cwd_label: 'Arbeitsverzeichnis',
-        form_cwd_placeholder: 'optional — Standard ist das Projekt-Wurzelverzeichnis',
+        form_cwd_help:
+          'Die Mission arbeitet in diesem Ordner. Vorausgewählt ist dein aktuelles Projekt.',
         form_submit: 'Mission starten',
         form_submitting: 'Wird gestartet…',
         form_error_agent: 'Wähle einen Agenten.',
@@ -2307,7 +2357,8 @@ const resources = {
       inbox: {
         title: 'Eingang',
         description:
-          'Steuere den Batch von hier: die Anfragen, die deine Einheiten blockieren, was über Nacht umgefallen ist und was zurückkam – nach Mission gruppiert, damit eine Nacht paralleler Arbeit nicht verschwimmt. Beantworte eine Anfrage, ohne dich an die auslösende Sitzung anzuhängen.',
+          'Was auf deine Antwort wartet, was fehlgeschlagen ist oder feststeckt und was deine Missionen zurückgemeldet haben.',
+        nav_badge_title: '{{n}} warten auf deine Antwort',
         loading: 'Eingang wird geladen…',
         just_now: 'gerade eben',
         count_pending: '{{n}} brauchen dich',
@@ -2320,9 +2371,9 @@ const resources = {
         approvals_load_error: 'Der Freigabe-Eingang konnte nicht geladen werden.',
         unattributed_group: 'Keiner Mission zugeordnet',
         approval_card_title: 'Berechtigung angefragt',
-        attention_card_title: 'Eine Einheit fragt Sie',
+        attention_card_title: 'Eine Einheit fragt dich',
         reply_placeholder:
-          'Antworten Sie der Einheit — sie arbeitet mit dem weiter, was Sie hier schreiben',
+          'Antworte der Einheit — sie arbeitet mit dem weiter, was du hier schreibst',
         reply_action: 'Antwort senden',
         reply_aria: 'Die Frage beantworten: {{question}}',
         approval_policy_label: 'Policy, die dies gesperrt hat',
@@ -2339,7 +2390,7 @@ const resources = {
           'Diese Anfrage konnte nicht beantwortet werden. Sie wurde möglicherweise bereits aufgelöst oder ist abgelaufen.',
         stalled_title: 'Hängende oder fehlgeschlagene Einheiten',
         stalled_description:
-          'Einheiten, die unbeaufsichtigt abgestürzt sind oder aufgegeben haben. Stoppe oder prüfe sie auf der Flotten-Übersicht.',
+          'Einheiten, die fehlgeschlagen sind, feststecken oder eine Blockade gemeldet haben. Prüfe oder stoppe sie auf der Flotten-Seite.',
         stalled_view_on_board: 'Auf der Flotten-Übersicht ansehen',
         all_clear_title: 'Keine Einheit braucht dich.',
         all_clear_body: '{{running}} laufen noch.',
@@ -2360,23 +2411,23 @@ const resources = {
         running_view_board: 'Flotten-Übersicht öffnen',
       },
       unit: {
-        blocked: 'Wartet auf Freigabe',
-        blocked_title:
-          'Diese Einheit hat eine Blockade gemeldet und wartet auf deine Eingabe oder Freigabe.',
-        verdict_open: 'Noch kein Ergebnis',
-        verdict_open_title:
-          'Die Mission ist noch offen — sie hat noch kein Ergebnis geliefert. Das ist kein Gesundheitszeichen.',
-        verdict_landed: 'Gelandet',
+        primary_done: 'Erledigt',
+        primary_failed: 'Fehlgeschlagen',
+        primary_stuck: 'Steckt fest — braucht dich',
+        primary_stopped: 'Gestoppt',
+        primary_needs_you: 'Braucht dich',
+        primary_working: 'Arbeitet',
+        primary_working_title: 'Die Mission ist offen und ihre Einheit läuft.',
+        primary_idle: 'Läuft nicht',
+        blocked_title: 'Diese Einheit wartet auf deine Antwort oder Freigabe.',
+        verdict_open_title: 'Die Mission ist noch offen, aber ihre Einheit läuft gerade nicht.',
         verdict_landed_title: 'Die Mission hat ein erfolgreiches Ergebnis gemeldet.',
-        verdict_derailed: 'Entgleist',
-        verdict_derailed_title: 'Die Mission endete, ohne ihr Ergebnis zu landen.',
-        verdict_stuck: 'Feststeckend',
+        verdict_derailed_title: 'Die Mission ist fehlgeschlagen und ihre Einheit wurde gestoppt.',
         verdict_stuck_title:
           'Die Mission stieß an eine Grenze, die sie allein nicht überwinden kann — sie wartet auf eine menschliche Einschätzung, einen Anstoß oder eine Neuplanung. Kein Fehlschlag.',
         verdict_unknown_title:
           'Ein Missionsstatus, den dieser Contenox-Build nicht kennt — angezeigt, wie die Runtime ihn gemeldet hat. Die App ist wahrscheinlich älter als die Runtime, die sie bedient.',
-        verdict_abandoned: 'Aufgegeben',
-        verdict_abandoned_title: 'Die Mission wurde aufgegeben, bevor sie landete.',
+        verdict_abandoned_title: 'Die Mission wurde gestoppt, bevor sie fertig war.',
         liveness_prefix: 'Herzschlag',
         liveness_title: 'Wann die Einheit zuletzt gemeldet hat, dass sie lebt.',
         liveness_never_title:
@@ -2634,7 +2685,7 @@ const resources = {
         create: 'Terminal öffnen',
         no_session: 'Keine Terminal-Sitzung',
         connect_failed:
-          'Verbindung zum Terminal nach mehreren Versuchen fehlgeschlagen. Prüfen Sie, ob das Backend erreichbar ist, und versuchen Sie es erneut.',
+          'Verbindung zum Terminal nach mehreren Versuchen fehlgeschlagen. Prüf, ob das Backend erreichbar ist, und versuch es erneut.',
         attach_output: 'Letzte Terminal-Ausgabe als Kontext für die nächste Nachricht anhängen',
         attached_label: 'Terminal-Ausgabe angehängt',
         attached_pill: 'Angehängt',
@@ -2643,7 +2694,7 @@ const resources = {
         toggle_label: 'Terminal-Bereich umschalten',
         collapse: 'Terminal einklappen',
         empty:
-          'Noch keine Terminal-Ausgabe. Geben Sie ! gefolgt von einem Befehl ein, um ihn hier auszuführen.',
+          'Noch keine Terminal-Ausgabe. Gib ! gefolgt von einem Befehl ein, um ihn hier auszuführen.',
         card_label: 'Terminal-Ausgabe',
       },
       canvas: {
@@ -2722,7 +2773,7 @@ const resources = {
         hint_openvino:
           'Pfad zu einem Verzeichnis mit OpenVINO-IR-Modellordnern. Wird vom selben Modeld-Daemon wie GGUF bedient; auf einer Maschine ist jeweils nur eine Engine aktiv.',
         hint_modeld:
-          'Ein Modeld-Daemon, lokal oder remote. Lassen Sie die URL auf "local" für diese Maschine, oder geben Sie host:port ein, um einen Modeld-Daemon auf einer anderen Maschine zu erreichen (z. B. einen GPU-Rechner). Nach der Registrierung können Sie unten eine GGUF-Datei dorthin übertragen oder `contenox model push` verwenden.',
+          'Ein Modeld-Daemon, lokal oder remote. Lass die URL auf "local" für diese Maschine, oder gib host:port ein, um einen Modeld-Daemon auf einer anderen Maschine zu erreichen (z. B. einen GPU-Rechner). Nach der Registrierung kannst du unten eine GGUF-Datei dorthin übertragen oder `contenox model push` verwenden.',
         push_toggle: 'Modell übertragen',
         push_name_label: 'Modellname',
         push_name_placeholder: 'my-qwen',
@@ -2733,7 +2784,7 @@ const resources = {
           'Bereits auf diesem Knoten vorhanden — geprüft und unverändert gelassen.',
         push_error: 'Übertragung fehlgeschlagen',
         empty_description:
-          'Keine Backends konfiguriert. Erstellen Sie Ihr erstes Backend, um zu beginnen.',
+          'Keine Backends konfiguriert. Erstelle dein erstes Backend, um loszulegen.',
         loading: 'Lade Backends...',
         status: {
           available: 'Verfügbar',
@@ -2857,7 +2908,7 @@ const resources = {
         runtime_error: 'Laufzeitstatus konnte nicht geladen werden.',
         runtime_empty_title: 'Noch keine Laufzeitzeilen',
         runtime_empty_desc:
-          'Sobald die Laufzeit Backends registriert, erscheinen sie hier mit Sync-Status. Legen Sie Backends im Tab „Backends“ an, wenn die Liste leer bleibt.',
+          'Sobald die Laufzeit Backends registriert, erscheinen sie hier mit Sync-Status. Leg Backends im Tab „Backends“ an, wenn die Liste leer bleibt.',
         col_backend: 'Backend',
         col_type: 'Typ',
         col_url: 'Basis-URL',
@@ -3074,13 +3125,13 @@ const resources = {
         create_form_title: 'Aus Ziel erstellen',
         create_submit: 'Plan erstellen',
         goal_label: 'Ziel',
-        goal_placeholder: 'Beschreiben Sie, was der Plan erreichen soll',
+        goal_placeholder: 'Beschreibe, was der Plan erreichen soll',
         planner_chain_label: 'Planer-Kette',
         select_planner_chain: 'Planer-Kette wählen…',
         chain_id_hint:
-          'Wählen Sie eine Kette, deren Tasks ein JSON-Array von Schritt-Strings liefern. Pfade sind lokale Task-Chain-Pfade, zum Beispiel my-planner-chain.json.',
+          'Wähle eine Kette, deren Tasks ein JSON-Array von Schritt-Strings liefern. Pfade sind lokale Task-Chain-Pfade, zum Beispiel my-planner-chain.json.',
         list_title: 'Alle Pläne',
-        list_empty: 'Noch keine Pläne. Erstellen Sie oben einen.',
+        list_empty: 'Noch keine Pläne. Erstelle oben einen.',
         col_name: 'Name',
         col_goal: 'Ziel',
         col_status: 'Status',
@@ -3091,7 +3142,7 @@ const resources = {
         active_title: 'Aktiver Plan',
         active_loading: 'Aktiver Plan wird geladen…',
         no_active:
-          'Kein aktiver Plan. Aktivieren Sie einen aus der Liste oder erstellen Sie einen neuen.',
+          'Kein aktiver Plan. Aktiviere einen aus der Liste oder erstelle einen neuen.',
         active_error_banner: 'Aktiver Plan konnte nicht geladen werden',
         run_next_step: 'Nächsten Schritt ausführen',
         executor_chain_label: 'Executor-Kette',
@@ -3149,9 +3200,9 @@ const resources = {
         copy: 'Kopieren',
         copied: 'Kopiert!',
         mission_ask_hint:
-          'Eine Missions-Einheit ist bei dieser Frage blockiert — Ihre Antwort geht direkt an sie zurück.',
+          'Eine Missions-Einheit ist bei dieser Frage blockiert — deine Antwort geht direkt an sie zurück.',
         mission_ask_hint_named:
-          'Einheit {{agent}} ist bei dieser Frage blockiert — Ihre Antwort geht direkt an sie zurück.',
+          'Einheit {{agent}} ist bei dieser Frage blockiert — deine Antwort geht direkt an sie zurück.',
         mission_ask_placeholder: 'Der Einheit antworten…',
         mission_ask_send: 'Antwort senden',
         mission_ask_aria: 'Der Einheit antworten: {{question}}',
@@ -3246,8 +3297,6 @@ const resources = {
         adopted_observer_title:
           'Du beobachtest nur — ein anderer Betrachter steuert diese Sitzung und beantwortet ihre Berechtigungsanfragen.',
         adopted_mission_link: 'Zurück zur Mission',
-        adopted_durability_notice:
-          'Der Verlauf ist ab der Übernahme dauerhaft — frühere Züge liegen nur im Live-Journal und gehen verloren, wenn die Einheit stoppt.',
       },
       signin: {
         title: 'Bei ChatGPT anmelden',
@@ -3299,7 +3348,7 @@ const resources = {
         pending_permission: 'Freigabe erforderlich',
         mission_session_badge: 'Missions-Einheit',
         mission_session_title:
-          'Diese Sitzung ist eine Fleet-Missions-Einheit (Mission {{id}}), kein von Ihnen gestarteter Chat.',
+          'Diese Sitzung ist eine Missions-Einheit der Flotte (Mission {{id}}), kein von dir gestarteter Chat.',
         projects: 'Projekte',
         workspace: 'Arbeitsbereich',
         new_project: 'Neues Projekt',

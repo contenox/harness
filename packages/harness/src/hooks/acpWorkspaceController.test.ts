@@ -1890,3 +1890,41 @@ describe('acpWorkspaceController: session cwd on load', () => {
     await open;
   });
 });
+
+describe('acpWorkspaceController: adoptSession()', () => {
+  it('opens the take-over in the mission folder and titles it with the intent', async () => {
+    const h = setup();
+    await connectReady(h);
+    const p = h.controller.adoptSession(
+      { instanceId: 'inst-1', sessionId: 'unit-1', title: 'Fix the nightly build' },
+      '/work/project-a',
+    );
+    await flushMicrotasks();
+    const req = h.transports[0].lastSent();
+    expect(req.method).toBe('session/new');
+    const params = req.params as Record<string, unknown>;
+    expect(params.cwd).toBe('/work/project-a');
+    expect(params._meta).toEqual({
+      'contenox.adopt': { instanceId: 'inst-1', sessionId: 'unit-1' },
+    });
+    h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { sessionId: 'adopted-1' } });
+    await p;
+    expect(h.wsStore.state.sessions.find(s => s.sessionId === 'adopted-1')).toMatchObject({
+      cwd: '/work/project-a',
+      title: 'Fix the nightly build',
+    });
+  });
+
+  it('falls back to the default folder and leaves the title to the runtime', async () => {
+    const h = setup();
+    await connectReady(h);
+    const p = h.controller.adoptSession({ instanceId: 'inst-1', sessionId: 'unit-1' });
+    await flushMicrotasks();
+    const req = h.transports[0].lastSent();
+    expect((req.params as Record<string, unknown>).cwd).toBe('/work');
+    h.transports[0].feed({ jsonrpc: '2.0', id: req.id, result: { sessionId: 'adopted-2' } });
+    await p;
+    const adopted = h.wsStore.state.sessions.find(s => s.sessionId === 'adopted-2');
+    expect(adopted?.title).toBeUndefined();
+  });
+});

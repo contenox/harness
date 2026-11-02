@@ -25,7 +25,10 @@ export function WorkspaceTabs() {
     adoptingRef.current = true;
     const intent = adoptIntent;
     setAdoptIntent(null);
-    void adoptSession({ instanceId: intent.instanceId, sessionId: intent.sessionId }, intent.cwd)
+    void adoptSession(
+      { instanceId: intent.instanceId, sessionId: intent.sessionId, title: intent.title },
+      intent.cwd,
+    )
       .then(sid => {
         open(sid);
       })

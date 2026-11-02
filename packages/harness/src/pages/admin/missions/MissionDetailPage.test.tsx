@@ -108,7 +108,7 @@ describe('MissionDetailPage — facts', () => {
     expect(html).toContain('Migrate the staging database');
     expect(html).toContain('Researcher');
     expect(html).toContain('hitl-policy-dev.json');
-    expect(html).toContain('Landed');
+    expect(html).toContain('Done');
   });
 
   it('shows session and instance ids when bound, and a plain placeholder when not', () => {

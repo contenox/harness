@@ -4,8 +4,14 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
-import { fleetKeys, missionKeys } from '../../../lib/queryKeys';
-import type { FleetEntry, FleetInstanceState, InstanceStatus, Mission } from '../../../lib/types';
+import { agentKeys, fleetKeys, missionKeys } from '../../../lib/queryKeys';
+import type {
+  Agent,
+  FleetEntry,
+  FleetInstanceState,
+  InstanceStatus,
+  Mission,
+} from '../../../lib/types';
 import FleetPage, { createStopFlow, stopConfirmCopy } from './FleetPage';
 
 vi.mock('../../../lib/api', () => ({
@@ -50,10 +56,11 @@ function mission(over: Partial<Mission> & { id: string; instanceId: string }): M
   };
 }
 
-function renderBoard(fleet: FleetEntry[], missions: Mission[] = []): string {
+function renderBoard(fleet: FleetEntry[], missions: Mission[] = [], agents?: Agent[]): string {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(fleetKeys.list(), fleet);
   client.setQueryData(missionKeys.list(), missions);
+  if (agents) client.setQueryData(agentKeys.list({ limit: 100, cursor: undefined }), agents);
   return renderToStaticMarkup(
     createElement(
       MemoryRouter,
@@ -199,6 +206,14 @@ describe('FleetPage — the Stop confirm gate', () => {
 });
 
 describe('stopConfirmCopy — honest about which cost is being paid', () => {
+  it('a finished unit gets the release copy, whatever its process state', () => {
+    expect(stopConfirmCopy('running', true)).toEqual({
+      title: 'fleet.release_confirm_title',
+      body: 'fleet.release_confirm_body',
+      confirm: 'fleet.release_confirm_confirm',
+    });
+  });
+
   it('a live instance gets the kill-a-working-agent copy', () => {
     for (const state of ['running', 'starting'] as FleetInstanceState[]) {
       expect(stopConfirmCopy(state)).toEqual({
@@ -364,5 +379,96 @@ describe('FleetPage — open session (adopt) + plan progress', () => {
       ],
     );
     expect(html).toContain('1/3 steps');
+  });
+});
+
+describe('FleetPage — honest status and starting missions', () => {
+  function agent(over: Partial<Agent> & { name: string }): Agent {
+    return {
+      id: over.name,
+      kind: 'claude-code',
+      enabled: true,
+      configJson: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...over,
+    };
+  }
+
+  it('hoists a unit whose mission failed into Needs attention even while its process runs', () => {
+    const html = renderBoard(
+      [
+        {
+          agentId: 'agent-1',
+          agentName: 'Researcher',
+          kind: 'claude-code',
+          instances: [instance({ id: 'inst-1', state: 'running' })],
+        },
+      ],
+      [
+        mission({
+          id: 'mission-1',
+          instanceId: 'inst-1',
+          status: 'derailed',
+          lastError: 'tool crashed',
+        }),
+      ],
+    );
+    expect(html).toContain('Needs attention');
+    expect(html).toContain('Failed');
+    expect(html).toContain('tool crashed');
+    expect(html.indexOf('Needs attention')).toBeLessThan(html.indexOf('inst-1'));
+  });
+
+  it('moves a unit whose mission is done out of Running now into Finished, with Release instead of Stop', () => {
+    const html = renderBoard(
+      [
+        {
+          agentId: 'agent-1',
+          agentName: 'Researcher',
+          kind: 'claude-code',
+          instances: [
+            instance({ id: 'inst-done', state: 'running', sessions: 1, sessionIds: ['sess-done'] }),
+            instance({ id: 'inst-work', state: 'running' }),
+          ],
+        },
+      ],
+      [
+        mission({ id: 'mission-done', instanceId: 'inst-done', status: 'landed' }),
+        mission({ id: 'mission-work', instanceId: 'inst-work', status: 'open' }),
+      ],
+    );
+    expect(html).toContain('1 running');
+    expect(html).toContain('1 finished');
+    const runningAt = html.indexOf('Running now');
+    const finishedAt = html.indexOf('>Finished<');
+    expect(runningAt).toBeGreaterThan(-1);
+    expect(finishedAt).toBeGreaterThan(runningAt);
+    expect(html.indexOf('inst-work')).toBeLessThan(finishedAt);
+    expect(html.indexOf('inst-done')).toBeGreaterThan(finishedAt);
+    expect(html).toContain('Release finished unit inst-done');
+    expect(html).toContain('Stop instance inst-work');
+    expect(html).not.toContain('Stop instance inst-done');
+    expect(html).not.toContain('Cancel the in-flight turn on session sess-done');
+  });
+
+  it('invites starting a mission only on idle agents that can run one', () => {
+    const html = renderBoard(
+      [
+        { agentId: 'a-1', agentName: 'coder', kind: 'claude-code', instances: null },
+        { agentId: 'a-2', agentName: 'chat-chain', kind: 'chain', instances: null },
+      ],
+      [],
+      [agent({ name: 'coder', missionCapable: true }), agent({ name: 'chat-chain' })],
+    );
+    expect(html).toContain('Start a mission with coder');
+    expect(html).not.toContain('Start a mission with chat-chain');
+  });
+
+  it('describes what it shows and offers one way to fill an empty board', () => {
+    const html = renderBoard([]);
+    expect(html).toContain('Nothing running');
+    expect(html).toContain('Fire a mission');
+    expect(html).not.toContain('contenox agent');
   });
 });

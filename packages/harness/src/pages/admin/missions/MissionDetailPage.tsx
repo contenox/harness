@@ -2,6 +2,7 @@ import {
   Badge,
   Button,
   Collapsible,
+  CopyValueButton,
   ErrorState,
   H1,
   InlineNotice,
@@ -15,17 +16,19 @@ import {
 import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { MissionActions } from '../../../components/MissionActions';
 import { MissionPlanPanel } from '../../../components/MissionPlanPanel';
 import { MissionRevisionFeed } from '../../../components/MissionRevisionFeed';
 import { ScopeAnomalyChip, ScopeBadge } from '../../../components/ScopeStatus';
 import { UnitStatus } from '../../../components/UnitStatus';
+import { useApprovals } from '../../../hooks/useApprovals';
 import { useFleet } from '../../../hooks/useFleet';
 import { useMissionChanges } from '../../../hooks/useMissionChanges';
 import { useMission, useMissionReports } from '../../../hooks/useMissions';
 import { startAdoptSession, useAdoptIntent } from '../../../lib/adoptIntent';
 import { relativeTime } from '../../../lib/relativeTime';
-import type { FleetInstanceState } from '../../../lib/types';
-import { blockedMissionIds } from '../../../lib/unitStatus';
+import type { InstanceStatus } from '../../../lib/types';
+import { needsYouMissionIds } from '../../../lib/unitStatus';
 import { MissionInspectorTabs } from './MissionInspectorTabs';
 import { MISSION_INSPECTOR_TABS, useInspectorTab } from './inspectorTabs';
 import {
@@ -46,6 +49,7 @@ export default function MissionDetailPage() {
   const missionQuery = useMission(id ?? '');
   const reportsQuery = useMissionReports(id ?? '');
   const fleetQuery = useFleet();
+  const { data: approvals } = useApprovals();
   const changes = useMissionChanges(id ?? '');
   const [activeTab, setActiveTab] = useInspectorTab();
   const [focusChangePath, setFocusChangePath] = useState<string | null>(null);
@@ -82,13 +86,14 @@ export default function MissionDetailPage() {
   const m = missionQuery.data;
   const reports = reportsQuery.data ?? [];
 
-  let instanceState: FleetInstanceState | undefined;
+  let instance: InstanceStatus | undefined;
   for (const entry of fleetQuery.data ?? []) {
     for (const inst of entry.instances ?? []) {
-      if (inst.id === m.instanceId) instanceState = inst.state;
+      if (inst.id === m.instanceId) instance = inst;
     }
   }
-  const blocked = blockedMissionIds(reports).has(m.id);
+  const instanceState = instance?.state;
+  const blocked = needsYouMissionIds(reports, approvals).has(m.id);
   const scope = changes.data?.scope;
   const changedFiles = changes.data?.files ?? [];
   const openInChanges = (absolutePath: string) => {
@@ -99,10 +104,17 @@ export default function MissionDetailPage() {
   const openSession = () => {
     if (!m.instanceId || !m.sessionId) return;
     startAdoptSession(
-      { instanceId: m.instanceId, sessionId: m.sessionId },
+      {
+        instanceId: m.instanceId,
+        sessionId: m.sessionId,
+        ...(m.cwd ? { cwd: m.cwd } : {}),
+        title: m.intent,
+      },
       { setAdoptIntent, navigate },
     );
   };
+  const sessionClosed =
+    !canAdopt && !!m.sessionId && (m.status === 'derailed' || m.status === 'stuck');
 
   return (
     <Page bodyScroll="auto">
@@ -124,8 +136,10 @@ export default function MissionDetailPage() {
                 instanceState,
                 missionStatus: m.status,
                 lastHeartbeat: m.lastHeartbeat,
+                lastError: m.lastError,
                 blocked,
               }}
+              showReason={false}
             />
             {scope && <ScopeAnomalyChip scope={scope} />}
             {scope && <ScopeBadge scope={scope} />}
@@ -149,12 +163,27 @@ export default function MissionDetailPage() {
               )}
             </InlineNotice>
           )}
-          {canAdopt && (
-            <div className="mt-4">
+          <div className="mt-4 flex flex-wrap items-start gap-2">
+            {canAdopt && (
               <Button variant="primary" size="sm" onClick={openSession}>
                 {t('missions.open_session')}
               </Button>
-            </div>
+            )}
+            <MissionActions mission={m} instance={instance} />
+          </div>
+          {sessionClosed && m.sessionId && (
+            <InlineNotice variant="info" className="mt-3">
+              <p>{t('missions.session_closed_body')}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="font-mono text-xs break-all">{m.sessionId}</span>
+                <CopyValueButton
+                  value={m.sessionId}
+                  label={t('missions.copy_session_id')}
+                  copiedLabel={t('missions.copied')}
+                  size="xs"
+                />
+              </div>
+            </InlineNotice>
           )}
         </div>
 
@@ -194,6 +223,12 @@ export default function MissionDetailPage() {
             <Section title={t('missions.facts_title')}>
               <div className="mt-2 space-y-1">
                 <KeyValue label={t('missions.facts_agent')} value={m.agentName} />
+                {m.cwd && (
+                  <KeyValue
+                    label={t('missions.facts_cwd')}
+                    value={<span className="font-mono text-xs break-all">{m.cwd}</span>}
+                  />
+                )}
 
                 {m.statusReason && (
                   <KeyValue label={t('missions.facts_status_reason')} value={m.statusReason} />

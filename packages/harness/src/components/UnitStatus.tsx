@@ -1,4 +1,4 @@
-import { Badge, cn, StatusIndicator } from '@contenox/ui';
+import { Badge, cn, Span, StatusIndicator } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
 import { relativeTime } from '../lib/relativeTime';
 import { composeUnitStatus, type UnitStatusFacts } from '../lib/unitStatus';
@@ -7,10 +7,12 @@ export function UnitStatus({
   facts,
   className,
   size = 'sm',
+  showReason = true,
 }: {
   facts: UnitStatusFacts;
   className?: string;
   size?: 'sm' | 'md';
+  showReason?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const atoms = composeUnitStatus(facts);
@@ -20,26 +22,25 @@ export function UnitStatus({
     <div className={cn('flex flex-wrap items-center gap-x-2 gap-y-1', className)}>
       {atoms.map((atom, i) => {
         const title = atom.titleKey ? t(atom.titleKey) : undefined;
+        const label = atom.labelKey ? t(atom.labelKey) : (atom.label ?? '');
 
-        if (atom.kind === 'process' && atom.indicator) {
+        if (atom.kind === 'primary' && atom.indicator) {
           return (
-            <span key={i} className="shrink-0" title={title}>
-              <StatusIndicator
-                status={atom.indicator}
-                label={atom.labelKey ? t(atom.labelKey) : undefined}
-                showIcon
-                size={size}
-              />
+            <span key={i} className="flex max-w-full min-w-0 items-center gap-2" title={title}>
+              <StatusIndicator status={atom.indicator} label={label} showIcon size={size} />
+              {showReason && atom.reason && (
+                <Span variant="muted" className="min-w-0 truncate text-xs" title={atom.reason}>
+                  {atom.reason}
+                </Span>
+              )}
             </span>
           );
         }
 
-        const label =
+        const badgeLabel =
           atom.kind === 'liveness' && atom.heartbeat
             ? `${t('unit.liveness_prefix')}: ${relativeTime(atom.heartbeat, i18n.language, t('common.just_now'))}`
-            : atom.labelKey
-              ? t(atom.labelKey)
-              : (atom.label ?? '');
+            : label;
 
         return (
           <Badge
@@ -47,8 +48,8 @@ export function UnitStatus({
             variant={atom.variant ?? 'secondary'}
             size="sm"
             title={title}
-            className={cn('shrink-0', atom.kind === 'blocked' && 'font-semibold')}>
-            {atom.kind === 'blocked' ? `⚠ ${label}` : label}
+            className="shrink-0">
+            {badgeLabel}
           </Badge>
         );
       })}

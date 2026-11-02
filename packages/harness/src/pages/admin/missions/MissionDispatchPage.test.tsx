@@ -25,6 +25,7 @@ function agent(over: Partial<Agent> & { name: string }): Agent {
     id: over.name,
     kind: 'external_acp',
     enabled: true,
+    missionCapable: true,
     configJson: {},
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -32,14 +33,14 @@ function agent(over: Partial<Agent> & { name: string }): Agent {
   };
 }
 
-function renderForm(agents: Agent[], envelopes: Envelope[]): string {
+function renderForm(agents: Agent[], envelopes: Envelope[], entry = '/missions/new'): string {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(agentKeys.list({ limit: 100, cursor: undefined }), agents);
   client.setQueryData(envelopeKeys.list(), envelopes);
   return renderToStaticMarkup(
     createElement(
       MemoryRouter,
-      null,
+      { initialEntries: [entry] },
       createElement(QueryClientProvider, { client }, createElement(MissionDispatchPage)),
     ),
   );
@@ -56,6 +57,41 @@ describe('MissionDispatchPage', () => {
     );
     expect(html).toContain('researcher');
     expect(html).not.toContain('retired-agent');
+  });
+
+  it('offers only agents the runtime marks as mission capable', () => {
+    const html = renderForm(
+      [
+        agent({ name: 'coder', missionCapable: true }),
+        agent({ name: 'chat-chain', missionCapable: false }),
+        agent({ name: 'unflagged', missionCapable: undefined }),
+      ],
+      [{ name: 'dev', description: 'development' }],
+    );
+    expect(html).toContain('value="coder"');
+    expect(html).not.toContain('chat-chain');
+    expect(html).not.toContain('unflagged');
+  });
+
+  it('explains how to get a mission-capable agent instead of CLI instructions when there is none', () => {
+    const html = renderForm(
+      [agent({ name: 'chat-chain', missionCapable: false })],
+      [{ name: 'dev', description: 'development' }],
+    );
+    expect(html).toContain('No agent can run missions yet');
+    expect(html).toContain('href="/settings"');
+    expect(html).not.toContain('contenox agent');
+  });
+
+  it('pre-fills agent, envelope and intent from the query for Fire again', () => {
+    const html = renderForm(
+      [agent({ name: 'coder' })],
+      [{ name: 'strict', description: 'locked down' }],
+      '/missions/new?agent=coder&envelope=strict&intent=Fix%20the%20build',
+    );
+    expect(html).toMatch(/<option[^>]*value="coder"[^>]*selected=""/);
+    expect(html).toMatch(/<option[^>]*value="strict"[^>]*selected=""/);
+    expect(html).toContain('value="Fix the build"');
   });
 
   it('offers every declared envelope as a choice', () => {

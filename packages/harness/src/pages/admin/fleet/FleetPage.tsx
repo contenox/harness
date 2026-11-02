@@ -1,12 +1,10 @@
 import {
   Badge,
   Button,
-  Dialog,
   EmptyState,
   ErrorState,
   H1,
   InlineNotice,
-  KeyValue,
   LoadingState,
   P,
   Page,
@@ -18,9 +16,11 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlanProgress } from '../../../components/PlanProgress';
+import { StopConfirmDialog } from '../../../components/StopConfirmDialog';
 import { UnitStatus } from '../../../components/UnitStatus';
 import { startAdoptSession, useAdoptIntent } from '../../../lib/adoptIntent';
-import { useInboxReports } from '../../../hooks/useApprovals';
+import { useAgents } from '../../../hooks/useAgents';
+import { useApprovals, useInboxReports } from '../../../hooks/useApprovals';
 import {
   useCancelInstance,
   useFleet,
@@ -28,103 +28,25 @@ import {
   type CancelInstanceInput,
 } from '../../../hooks/useFleet';
 import { useMissions } from '../../../hooks/useMissions';
-import type { TranslationKey } from '../../../i18n';
+import { isMissionCapable, startMissionPath } from '../../../lib/missionAgents';
 import { relativeTime } from '../../../lib/relativeTime';
+import { createStopFlow, stopConfirmCopy } from '../../../lib/stopFlow';
 import type { FleetInstanceState, InstanceStatus, Mission } from '../../../lib/types';
-import { blockedMissionIds, PROCESS_LABEL_KEY } from '../../../lib/unitStatus';
-
-const ATTENTION_STATES: FleetInstanceState[] = ['error', 'warning'];
-const attentionRank = (s: FleetInstanceState): number => (s === 'error' ? 0 : 1);
+import {
+  needsYouMissionIds,
+  unitAttentionRank,
+  type UnitStatusFacts,
+} from '../../../lib/unitStatus';
 
 const LIVE_STATES: FleetInstanceState[] = ['running', 'starting'];
 
-export function stopConfirmCopy(state: FleetInstanceState): {
-  title: TranslationKey;
-  body: TranslationKey;
-  confirm: TranslationKey;
-} {
-  return LIVE_STATES.includes(state)
-    ? {
-        title: 'fleet.stop_confirm_title',
-        body: 'fleet.stop_confirm_body',
-        confirm: 'fleet.stop_confirm_confirm',
-      }
-    : {
-        title: 'fleet.stop_confirm_title_dead',
-        body: 'fleet.stop_confirm_body_dead',
-        confirm: 'fleet.stop_confirm_confirm_dead',
-      };
+const FINISHED_MISSION_STATUSES: Mission['status'][] = ['landed', 'abandoned'];
+
+function isFinishedMission(mission?: Mission): boolean {
+  return !!mission && FINISHED_MISSION_STATUSES.includes(mission.status);
 }
 
-export function createStopFlow(
-  stop: (instanceId: string) => void,
-  setTarget: (instance: InstanceStatus | null) => void,
-) {
-  return {
-    request: (instance: InstanceStatus) => setTarget(instance),
-    confirm: (instance: InstanceStatus) => {
-      stop(instance.id);
-      setTarget(null);
-    },
-    dismiss: () => setTarget(null),
-  };
-}
-
-export function StopConfirmDialog({
-  instance,
-  pending,
-  onConfirm,
-  onClose,
-}: {
-  instance: InstanceStatus;
-  pending: boolean;
-  onConfirm: () => void;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const copy = stopConfirmCopy(instance.state);
-
-  return (
-    <Dialog
-      open
-      onClose={onClose}
-      title={t(copy.title)}
-      closeLabel={t('fleet.stop_confirm_close')}
-      className="w-[min(32rem,90vw)]">
-      <P>{t(copy.body)}</P>
-      <div className="mt-4 space-y-1">
-        <KeyValue label={t('fleet.stop_confirm_agent')} value={instance.agentName} />
-        <KeyValue
-          label={t('fleet.stop_confirm_instance')}
-          value={<span className="font-mono text-xs break-all">{instance.id}</span>}
-        />
-        <KeyValue
-          label={t('fleet.stop_confirm_state')}
-          value={t(PROCESS_LABEL_KEY[instance.state])}
-        />
-      </div>
-      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button
-          variant="outline"
-          palette="neutral"
-          size="sm"
-          className="w-full sm:w-auto"
-          onClick={onClose}>
-          {t('fleet.stop_confirm_decline')}
-        </Button>
-        <Button
-          variant="danger"
-          size="sm"
-          className="w-full sm:w-auto"
-          isLoading={pending}
-          disabled={pending}
-          onClick={onConfirm}>
-          {t(copy.confirm)}
-        </Button>
-      </div>
-    </Dialog>
-  );
-}
+export { createStopFlow, stopConfirmCopy, StopConfirmDialog };
 
 type StopMutation = UseMutationResult<string, Error, string, unknown>;
 type CancelMutation = UseMutationResult<string, Error, CancelInstanceInput, unknown>;
@@ -135,6 +57,7 @@ function InstanceRow({
   mission,
   blocked,
   tone,
+  finished = false,
   stopMutation,
   cancelMutation,
   onRequestStop,
@@ -143,7 +66,8 @@ function InstanceRow({
   inst: InstanceStatus;
   mission?: Mission;
   blocked: boolean;
-  tone?: 'attention';
+  tone?: 'failed' | 'attention';
+  finished?: boolean;
   stopMutation: StopMutation;
   cancelMutation: CancelMutation;
   onRequestStop: (inst: InstanceStatus) => void;
@@ -154,7 +78,15 @@ function InstanceRow({
   const sessionIds = inst.sessionIds ?? [];
   const canAdopt = inst.state === 'running';
   const openSession = (sessionId: string) =>
-    startAdoptSession({ instanceId: inst.id, sessionId }, { setAdoptIntent, navigate });
+    startAdoptSession(
+      {
+        instanceId: inst.id,
+        sessionId,
+        ...(mission?.cwd ? { cwd: mission.cwd } : {}),
+        ...(mission?.intent ? { title: mission.intent } : {}),
+      },
+      { setAdoptIntent, navigate },
+    );
 
   const absoluteTime = (iso: string) => {
     const parsed = Date.parse(iso);
@@ -171,11 +103,11 @@ function InstanceRow({
     cancelMutation.error !== null && cancelMutation.variables?.instanceId === inst.id;
 
   const border =
-    tone === 'attention'
-      ? inst.state === 'error'
-        ? 'border-l-4 border-l-error dark:border-l-dark-error'
-        : 'border-l-4 border-l-warning dark:border-l-dark-warning'
-      : '';
+    tone === 'failed'
+      ? 'border-l-4 border-l-error dark:border-l-dark-error'
+      : tone === 'attention'
+        ? 'border-l-4 border-l-warning dark:border-l-dark-warning'
+        : '';
 
   return (
     <div
@@ -203,6 +135,7 @@ function InstanceRow({
               instanceState: inst.state,
               missionStatus: mission?.status,
               lastHeartbeat: mission?.lastHeartbeat,
+              lastError: mission?.lastError,
               blocked,
             }}
             className="sm:justify-end"
@@ -255,17 +188,19 @@ function InstanceRow({
                     {t('fleet.open_session')}
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  palette="neutral"
-                  size="xs"
-                  className="w-full sm:w-auto"
-                  aria-label={t('fleet.cancel_session_aria', { id: sessionId })}
-                  isLoading={cancelPending(sessionId)}
-                  disabled={cancelPending(sessionId)}
-                  onClick={() => cancelMutation.mutate({ instanceId: inst.id, sessionId })}>
-                  {t('fleet.cancel_session')}
-                </Button>
+                {!finished && (
+                  <Button
+                    variant="outline"
+                    palette="neutral"
+                    size="xs"
+                    className="w-full sm:w-auto"
+                    aria-label={t('fleet.cancel_session_aria', { id: sessionId })}
+                    isLoading={cancelPending(sessionId)}
+                    disabled={cancelPending(sessionId)}
+                    onClick={() => cancelMutation.mutate({ instanceId: inst.id, sessionId })}>
+                    {t('fleet.cancel_session')}
+                  </Button>
+                )}
               </div>
             </li>
           ))}
@@ -274,7 +209,7 @@ function InstanceRow({
 
       <div className="flex flex-wrap items-center justify-end gap-2">
 
-        {sessionIds.length > 1 && (
+        {!finished && sessionIds.length > 1 && (
           <Button
             variant="outline"
             palette="neutral"
@@ -288,13 +223,18 @@ function InstanceRow({
         )}
 
         <Button
-          variant="danger"
+          variant={finished ? 'outline' : 'danger'}
+          palette={finished ? 'neutral' : undefined}
           size="xs"
-          aria-label={t('fleet.stop_aria', { id: inst.id })}
+          aria-label={
+            finished
+              ? t('fleet.release_aria', { id: inst.id })
+              : t('fleet.stop_aria', { id: inst.id })
+          }
           isLoading={stopPending}
           disabled={stopPending}
           onClick={() => onRequestStop(inst)}>
-          {t('fleet.stop')}
+          {finished ? t('fleet.release') : t('fleet.stop')}
         </Button>
       </div>
 
@@ -311,8 +251,11 @@ function InstanceRow({
 
 export default function FleetPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data, isLoading, error, refetch } = useFleet();
   const { data: missionsData } = useMissions();
+  const { data: agentsData } = useAgents();
+  const { data: approvals } = useApprovals();
   const inboxReports = useInboxReports();
   const stopInstance = useStopInstance();
   const cancelInstance = useCancelInstance();
@@ -344,22 +287,41 @@ export default function FleetPage() {
       .filter((m): m is Mission & { instanceId: string } => !!m.instanceId)
       .map(m => [m.instanceId, m]),
   );
-  const blocked = blockedMissionIds(inboxReports.items.map(i => i.report));
+  const blocked = needsYouMissionIds(
+    inboxReports.items.map(i => i.report),
+    approvals,
+  );
+  const missionCapable = new Set(
+    (agentsData ?? []).filter(isMissionCapable).map(agent => agent.name),
+  );
 
-  const attention: { entry: (typeof fleet)[number]; inst: InstanceStatus }[] = [];
+  const unitFacts = (inst: InstanceStatus): UnitStatusFacts => {
+    const mission = missionByInstanceId.get(inst.id);
+    return {
+      instanceState: inst.state,
+      missionStatus: mission?.status,
+      lastError: mission?.lastError,
+      blocked: mission ? blocked.has(mission.id) : false,
+    };
+  };
+
+  const attention: { entry: (typeof fleet)[number]; inst: InstanceStatus; rank: number }[] = [];
   const live: { entry: (typeof fleet)[number]; inst: InstanceStatus }[] = [];
+  const finished: { entry: (typeof fleet)[number]; inst: InstanceStatus }[] = [];
   for (const entry of fleet) {
     for (const inst of entry.instances ?? []) {
-      if (ATTENTION_STATES.includes(inst.state)) attention.push({ entry, inst });
+      const rank = unitAttentionRank(unitFacts(inst));
+      if (rank !== null) attention.push({ entry, inst, rank });
+      else if (isFinishedMission(missionByInstanceId.get(inst.id))) finished.push({ entry, inst });
       else live.push({ entry, inst });
     }
   }
   attention.sort((a, b) => {
-    const byState = attentionRank(a.inst.state) - attentionRank(b.inst.state);
-    if (byState !== 0) return byState;
+    if (a.rank !== b.rank) return a.rank - b.rank;
     return Date.parse(b.inst.startedAt) - Date.parse(a.inst.startedAt);
   });
   live.sort((a, b) => Date.parse(b.inst.startedAt) - Date.parse(a.inst.startedAt));
+  finished.sort((a, b) => Date.parse(b.inst.startedAt) - Date.parse(a.inst.startedAt));
 
   const idleEntries = fleet.filter(entry => (entry.instances ?? []).length === 0);
   const runningCount = live.filter(x => LIVE_STATES.includes(x.inst.state)).length;
@@ -369,7 +331,8 @@ export default function FleetPage() {
   const renderRow = (
     entry: (typeof fleet)[number],
     inst: InstanceStatus,
-    rowTone?: 'attention',
+    rowTone?: 'failed' | 'attention',
+    rowFinished = false,
   ) => {
     const mission = missionByInstanceId.get(inst.id);
     return (
@@ -380,6 +343,7 @@ export default function FleetPage() {
         mission={mission}
         blocked={isBlocked(mission)}
         tone={rowTone}
+        finished={rowFinished}
         stopMutation={stopInstance}
         cancelMutation={cancelInstance}
         onRequestStop={stopFlow.request}
@@ -403,6 +367,11 @@ export default function FleetPage() {
               <Badge variant={attention.length > 0 ? 'error' : 'secondary'} size="sm">
                 {t('fleet.count_attention', { n: attention.length })}
               </Badge>
+              {finished.length > 0 && (
+                <Badge variant="secondary" size="sm">
+                  {t('fleet.count_finished', { n: finished.length })}
+                </Badge>
+              )}
               <Badge variant="secondary" size="sm">
                 {t('fleet.count_idle', { n: idleEntries.length })}
               </Badge>
@@ -411,7 +380,11 @@ export default function FleetPage() {
         </div>
 
         {fleet.length === 0 ? (
-          <EmptyState title={t('fleet.empty_title')} description={t('fleet.empty_description')} />
+          <EmptyState title={t('fleet.empty_title')} description={t('fleet.empty_description')}>
+            <Button variant="primary" size="sm" onClick={() => navigate('/missions/new')}>
+              {t('missions.fire_action')}
+            </Button>
+          </EmptyState>
         ) : (
           <>
             {attention.length > 0 && (
@@ -419,7 +392,9 @@ export default function FleetPage() {
                 title={t('fleet.attention_title')}
                 description={t('fleet.attention_description')}>
                 <div className="mt-4 space-y-3">
-                  {attention.map(({ entry, inst }) => renderRow(entry, inst, 'attention'))}
+                  {attention.map(({ entry, inst, rank }) =>
+                    renderRow(entry, inst, rank === 0 ? 'failed' : 'attention'),
+                  )}
                 </div>
               </Section>
             )}
@@ -434,6 +409,16 @@ export default function FleetPage() {
               </div>
             </Section>
 
+            {finished.length > 0 && (
+              <Section
+                title={t('fleet.finished_title')}
+                description={t('fleet.finished_description')}>
+                <div className="mt-4 space-y-3">
+                  {finished.map(({ entry, inst }) => renderRow(entry, inst, undefined, true))}
+                </div>
+              </Section>
+            )}
+
             {idleEntries.length > 0 && (
               <Section
                 title={t('fleet.idle_agents_title')}
@@ -445,8 +430,18 @@ export default function FleetPage() {
                       <Badge variant="secondary" size="sm">
                         {entry.kind}
                       </Badge>
-                      <span className="ml-auto">
+                      <span className="ml-auto flex items-center gap-2">
                         <StatusIndicator status="planned" label={t('fleet.idle')} size="sm" />
+                        {missionCapable.has(entry.agentName) && (
+                          <Button
+                            variant="outline"
+                            palette="neutral"
+                            size="xs"
+                            aria-label={t('fleet.start_mission_aria', { name: entry.agentName })}
+                            onClick={() => navigate(startMissionPath(entry.agentName))}>
+                            {t('fleet.start_mission')}
+                          </Button>
+                        )}
                       </span>
                     </li>
                   ))}
@@ -460,6 +455,7 @@ export default function FleetPage() {
           <StopConfirmDialog
             instance={stopTarget}
             pending={stopInstance.isPending && stopInstance.variables === stopTarget.id}
+            finished={isFinishedMission(missionByInstanceId.get(stopTarget.id))}
             onClose={stopFlow.dismiss}
             onConfirm={() => stopFlow.confirm(stopTarget)}
           />
