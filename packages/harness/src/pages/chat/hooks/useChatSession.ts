@@ -1,6 +1,8 @@
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { initialAcpSessionState } from '../../../hooks/acpSessionState';
+import { useAgentTitles } from '../../../hooks/useAgentTitles';
 import { EMPTY_SESSION_KEY } from '../../../hooks/acpWorkspaceState';
 import { useChatPane } from '../../../hooks/chatPaneStore';
 import { useAcpWorkspace } from '../../../hooks/useAcpWorkspace';
@@ -80,7 +82,10 @@ export function useChatSession(
   const sessionAgentName = externalAgentFromMeta(sessionInfo?._meta);
   const adopted = adoptResultFromMeta(sessionInfo?._meta);
   const stagedExternalAgent = onEmptyChat ? stagedAgent : null;
-  const attributionAgentName = sessionAgentName ?? workspace.agentName;
+  const titleOf = useAgentTitles();
+  const attributionAgentName = titleOf(sessionAgentName ?? workspace.agentName);
+  const sessionAgentTitle = titleOf(sessionAgentName);
+  const stagedAgentTitle = titleOf(stagedExternalAgent);
 
   const [stagedConfig, setStagedConfig] = useState<Record<string, SessionConfigOptionValue>>({});
   const { stagedRoot: launchRoot, setStagedRoot: setLaunchRoot } = useStagedRoot();
@@ -199,9 +204,16 @@ export function useChatSession(
     void controller.refreshWorkspaceConfigOptions();
   }, [controller]);
 
+  const stagedAgentOptions = useQuery({
+    queryKey: ['agent-config-options', stagedExternalAgent, workspaceRoot],
+    queryFn: () => controller.agentConfigOptions(stagedExternalAgent ?? '', workspaceRoot ?? undefined),
+    enabled: !!stagedExternalAgent,
+    staleTime: 30_000,
+  });
+
   const sourceOptions = onEmptyChat
     ? stagedExternalAgent
-      ? undefined
+      ? overlayStagedValues(stagedAgentOptions.data ?? [], stagedConfig)
       : overlayStagedValues(workspace.workspaceConfigOptions, stagedConfig)
     : sessionAgentName == null
       ? withLiveModelValues(session.configOptions, workspace.workspaceConfigOptions)
@@ -215,6 +227,8 @@ export function useChatSession(
     workspaceStatus: workspace.status,
     attributionAgentName,
     sessionAgentName,
+    sessionAgentTitle,
+    stagedAgentTitle,
     adopted,
     stagedExternalAgent,
     workspaceRoot,

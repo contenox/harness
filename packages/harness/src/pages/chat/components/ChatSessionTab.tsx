@@ -102,7 +102,7 @@ export const ChatSessionTab = memo(function ChatSessionTab({
       header={
         <SessionHeaderArea
           adopted={chat.adopted}
-          agentName={chat.sessionAgentName}
+          agentName={chat.sessionAgentTitle}
           workspaceStatus={chat.workspaceStatus}
           connectionBanner={session.connectionBanner}
           error={session.error}
@@ -114,7 +114,7 @@ export const ChatSessionTab = memo(function ChatSessionTab({
         <TranscriptArea
           session={session}
           agentName={chat.attributionAgentName}
-          stagedAgent={chat.stagedExternalAgent}
+          stagedAgent={chat.stagedAgentTitle}
           onRespondPermission={chat.respondPermission}
           onOpenFile={chat.openFile}
           canOpenFile={chat.canOpenFile}

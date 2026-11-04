@@ -598,6 +598,11 @@ export class AcpClient {
     return configOptionsOf(result);
   }
 
+  async agentConfigOptions(agent: string, cwd?: string): Promise<SessionConfigOption[] | null> {
+    const result = await this.call<unknown>('_contenox/agents/configOptions', cwd ? { agent, cwd } : { agent });
+    return configOptionsOf(result);
+  }
+
   /** What the runtime says about the agent declaration folder: its path, file states, problems. */
   async agentProblems(): Promise<AgentsProblemsInfo | null> {
     const result = await this.call<unknown>('_contenox/agents/problems', {});

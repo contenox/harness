@@ -80,6 +80,7 @@ export interface AcpWorkspaceController {
   reconnect(): Promise<void>;
   /** Re-reads the workspace config options through the ext-method adapter (no-op without one). */
   refreshWorkspaceConfigOptions(): Promise<void>;
+  agentConfigOptions(agent: string, cwd?: string): Promise<SessionConfigOption[]>;
   /** Replaces the workspace config options (e.g. from a change notification). */
   setWorkspaceConfigOptions(configOptions: SessionConfigOption[]): void;
   dispose(): void;
@@ -503,6 +504,15 @@ export function createAcpWorkspaceController(
         workspaceDispatch({ type: 'workspace_config_options', configOptions: options });
     } catch {
       // Optional ext method: the options from initialize stay.
+    }
+  }
+
+  async function agentConfigOptions(agent: string, cwd?: string): Promise<SessionConfigOption[]> {
+    if (disposed || !client) return [];
+    try {
+      return (await client.agentConfigOptions(agent, cwd)) ?? [];
+    } catch {
+      return [];
     }
   }
 
@@ -995,6 +1005,7 @@ export function createAcpWorkspaceController(
     applyConfigOptions,
     reconnect,
     refreshWorkspaceConfigOptions,
+    agentConfigOptions,
     setWorkspaceConfigOptions,
     dispose,
   };

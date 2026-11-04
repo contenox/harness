@@ -226,3 +226,11 @@ export const agentsConfigKeys = {
   toolsets: (workspace = '') => [...agentsConfigKeys.all, 'toolsets', workspace] as const,
   document: (workspace = '') => [...agentsConfigKeys.all, 'document', workspace] as const,
 };
+
+export const externalAgentKeys = {
+  all: ['external-agents'] as const,
+  list: () => [...externalAgentKeys.all, 'list'] as const,
+  presets: () => [...externalAgentKeys.all, 'presets'] as const,
+  check: (name: string) => [...externalAgentKeys.all, 'check', name] as const,
+  login: (name: string) => [...externalAgentKeys.all, 'login', name] as const,
+};

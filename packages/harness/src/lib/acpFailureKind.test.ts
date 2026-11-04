@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { acpFailureCopyKeys, classifyAcpExecutionError, classifySetupIssueCode } from './acpFailureKind';
+import { acpFailureCopyKeys, classifyAcpExecutionError, classifySetupIssueCode, failedAgentName } from './acpFailureKind';
 
 describe('classifyAcpExecutionError', () => {
   it('classifies the runtime-state-empty resolver error as backend_unreachable', () => {
@@ -88,5 +88,32 @@ describe('classifySetupIssueCode', () => {
     expect(classifySetupIssueCode('no_chat_models')).toBe('generic');
     expect(classifySetupIssueCode(null)).toBe('generic');
     expect(classifySetupIssueCode(undefined)).toBe('generic');
+  });
+});
+
+describe('external agent failures', () => {
+  it('recognises an agent that needs a sign-in and names it', () => {
+    const message = 'claude-code needs you to sign in before it can answer';
+    expect(classifyAcpExecutionError(message)).toBe('agent_sign_in');
+    expect(failedAgentName(message)).toBe('claude-code');
+    expect(acpFailureCopyKeys('agent_sign_in').titleKey).toBe('acp_recovery.agent_sign_in_title');
+  });
+
+  it('recognises an agent that could not be started and names it', () => {
+    const message =
+      'acpsvc: start agent "my-agent" instance: agentinstance: start agent "my-agent": agenthost: spawn external ACP agent "x": file does not exist';
+    expect(classifyAcpExecutionError(message)).toBe('agent_unavailable');
+    expect(failedAgentName(message)).toBe('my-agent');
+  });
+
+  it('keeps the workspace error ahead of the agent one', () => {
+    expect(
+      classifyAcpExecutionError('acpsvc: spawn agent "a": cwd is required to confine the agent (the wall needs a workspace)'),
+    ).toBe('workspace_required');
+  });
+
+  it('finds no agent name in unrelated errors', () => {
+    expect(failedAgentName('connection refused')).toBeNull();
+    expect(failedAgentName(undefined)).toBeNull();
   });
 });

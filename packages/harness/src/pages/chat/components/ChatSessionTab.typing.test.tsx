@@ -1,4 +1,5 @@
 import '../../../test/fakeDomGlobals';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement, Profiler, type ProfilerOnRenderCallback } from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -79,6 +80,7 @@ vi.mock('../../../hooks/useWorkspaceFiles', () => {
   };
 });
 vi.mock('../../../lib/ThemeProvider', () => ({ useTheme: () => ({ theme: 'light' }) }));
+vi.mock('../../../hooks/useAgentTitles', () => ({ useAgentTitles: () => (name: string | null | undefined) => name ?? null }));
 vi.mock('../../../components/workspace/NewProjectDialog', () => ({ NewProjectDialog: () => null }));
 vi.mock('./TerminalPane', () => ({ TerminalPane: () => null }));
 vi.mock('./FilesPane', () => ({ FilesPane: () => null }));
@@ -129,15 +131,19 @@ describe('ChatSessionTab typing performance', () => {
     await act(async () => {
       root.render(
         createElement(
-          MemoryRouter,
-          null,
+          QueryClientProvider,
+          { client: new QueryClient() },
           createElement(
-            SlashCommandRegistryProvider,
+            MemoryRouter,
             null,
             createElement(
-              Profiler,
-              { id: 'chat', onRender },
-              createElement(ChatSessionTab, { sessionId: 's1', onSessionCreated: () => {} }),
+              SlashCommandRegistryProvider,
+              null,
+              createElement(
+                Profiler,
+                { id: 'chat', onRender },
+                createElement(ChatSessionTab, { sessionId: 's1', onSessionCreated: () => {} }),
+              ),
             ),
           ),
         ),

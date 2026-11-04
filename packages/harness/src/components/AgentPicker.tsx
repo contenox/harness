@@ -1,6 +1,7 @@
 import { Dropdown } from '@contenox/ui';
 import type { MouseEventHandler, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAgentTitles } from '../hooks/useAgentTitles';
 import { useAgents } from '../hooks/useAgents';
 
 export const AGENT_PICKER_CONTENT_CLASSNAME =
@@ -16,6 +17,7 @@ export interface AgentPickerProps {
 export function AgentPicker({ value, onSelect, trigger, hideWhenEmpty = true }: AgentPickerProps) {
   const { t } = useTranslation();
   const { data } = useAgents();
+  const titleOf = useAgentTitles();
 
   const agents = (data ?? []).filter(a => a.enabled && a.name.toLowerCase() !== 'contenox');
 
@@ -23,7 +25,7 @@ export function AgentPicker({ value, onSelect, trigger, hideWhenEmpty = true }: 
 
   const options = [
     { value: '', label: t('acp_chat.agent_native') },
-    ...agents.map(a => ({ value: a.name, label: a.name })),
+    ...agents.map(a => ({ value: a.name, label: titleOf(a.name) ?? a.name })),
   ];
 
   return (

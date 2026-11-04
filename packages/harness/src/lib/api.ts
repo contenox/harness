@@ -14,6 +14,11 @@ import {
   DispatchRequest,
   DispatchResult,
   Envelope,
+  ExternalAgent,
+  ExternalAgentCheck,
+  ExternalAgentInput,
+  ExternalAgentLogin,
+  ExternalAgentPresetStatus,
   AgentIdentity,
   AgentIdentityCheck,
   AgentIdentityState,
@@ -84,6 +89,40 @@ export const api = {
     apiFetch<Agent>(`/api/agents/by-name/${encodeURIComponent(name)}`),
 
   getFleet: () => apiFetch<FleetEntry[]>('/api/fleet'),
+  listExternalAgents: () => apiFetch<ExternalAgent[]>('/api/external-agents'),
+  createExternalAgent: (input: ExternalAgentInput) =>
+    apiFetch<ExternalAgent>('/api/external-agents', options('POST', input)),
+  updateExternalAgent: (name: string, input: ExternalAgentInput) =>
+    apiFetch<ExternalAgent>(`/api/external-agents/${encodeURIComponent(name)}`, options('PUT', input)),
+  deleteExternalAgent: (name: string) =>
+    apiFetch<void>(`/api/external-agents/${encodeURIComponent(name)}`, options('DELETE')),
+  setExternalAgentEnabled: (name: string, enabled: boolean) =>
+    apiFetch<ExternalAgent>(
+      `/api/external-agents/${encodeURIComponent(name)}/${enabled ? 'enable' : 'disable'}`,
+      options('POST'),
+    ),
+  checkExternalAgent: (name: string) =>
+    apiFetch<ExternalAgentCheck>(`/api/external-agents/${encodeURIComponent(name)}/check`, options('POST')),
+  startExternalAgentLogin: (name: string, methodId: string) =>
+    apiFetch<ExternalAgentLogin>(
+      `/api/external-agents/${encodeURIComponent(name)}/login`,
+      options('POST', { methodId }),
+    ),
+  getExternalAgentLogin: (name: string) =>
+    apiFetch<ExternalAgentLogin>(`/api/external-agents/${encodeURIComponent(name)}/login`),
+  submitExternalAgentLoginCode: (name: string, code: string) =>
+    apiFetch<ExternalAgentLogin>(
+      `/api/external-agents/${encodeURIComponent(name)}/login/code`,
+      options('POST', { code }),
+    ),
+  cancelExternalAgentLogin: (name: string) =>
+    apiFetch<ExternalAgentLogin>(`/api/external-agents/${encodeURIComponent(name)}/login`, options('DELETE')),
+  listExternalAgentPresets: () => apiFetch<ExternalAgentPresetStatus[]>('/api/external-agent-presets'),
+  installExternalAgentPreset: (id: string) =>
+    apiFetch<ExternalAgentPresetStatus>(
+      `/api/external-agent-presets/${encodeURIComponent(id)}/install`,
+      options('POST'),
+    ),
   stopInstance: (instanceId: string) =>
     apiFetch<string>(`/api/fleet/${encodeURIComponent(instanceId)}`, options('DELETE')),
   cancelInstance: (instanceId: string, sessionId?: string) =>

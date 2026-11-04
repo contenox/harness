@@ -72,11 +72,11 @@ describe('submitChatTurn: orchestration', () => {
     expect(d.sendPrompt).toHaveBeenCalled();
   });
 
-  it('skips staged config for an external agent and clears the staged agent', async () => {
+  it('applies picks staged for an external agent after its session starts, and clears the staged agent', async () => {
     const d = deps({ stagedExternalAgent: 'claude', stagedConfig: { model: 'm1' } });
     await submitChatTurn(d, prompt());
     expect(d.newSession).toHaveBeenCalledWith('C:/work/proj', 'claude');
-    expect(d.applyConfigOptions).not.toHaveBeenCalled();
+    expect(d.applyConfigOptions).toHaveBeenCalledWith([{ configId: 'model', value: 'm1' }]);
     expect(d.clearStagedAgent).toHaveBeenCalled();
   });
 

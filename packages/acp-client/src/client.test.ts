@@ -1118,6 +1118,17 @@ describe('AcpClient: workspace config options', () => {
     await expect(pending).resolves.toEqual(options);
   });
 
+  it("requests an agent's remembered options for a folder", async () => {
+    const transport = new MockTransport();
+    const client = new AcpClient(transport);
+    const pending = client.agentConfigOptions('claude-code', 'C:/work/proj');
+    const req = transport.lastSent();
+    expect(req.method).toBe('_contenox/agents/configOptions');
+    expect(req.params).toEqual({ agent: 'claude-code', cwd: 'C:/work/proj' });
+    transport.feed({ jsonrpc: '2.0', id: req.id, result: { configOptions: options } });
+    await expect(pending).resolves.toEqual(options);
+  });
+
   it('notifies listeners when the agent reports changed options, until unsubscribed', () => {
     const transport = new MockTransport();
     const client = new AcpClient(transport);

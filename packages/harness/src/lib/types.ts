@@ -620,3 +620,96 @@ export type AgentPresetInstallResult = {
   reason?: string;
   agent?: { id: string; name: string; kind: string; enabled: boolean } | null;
 };
+
+export type ExternalAgentPath = {
+  path: string;
+  mode: 'ro' | 'rw';
+  needs: string;
+};
+
+export type ExternalAgent = {
+  id: string;
+  name: string;
+  title: string;
+  enabled: boolean;
+  preset?: string;
+  version?: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  paths: ExternalAgentPath[];
+  modes: string[];
+  mcpServers: string[];
+  sandbox: { readsLimited: boolean };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExternalAgentInput = {
+  name: string;
+  enabled?: boolean;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  paths: ExternalAgentPath[];
+  modes: string[];
+  mcpServers: string[];
+};
+
+export type ExternalAgentProblem = {
+  kind: string;
+  message: string;
+  detail?: string;
+};
+
+export type ExternalAgentNode = {
+  found: boolean;
+  path?: string;
+  version?: string;
+  major?: number;
+};
+
+export type ExternalAgentPresetStatus = {
+  id: string;
+  title: string;
+  agentName: string;
+  package: string;
+  version: string;
+  minNode: number;
+  modes: string[];
+  homepage: string;
+  installed: boolean;
+  installState: 'idle' | 'installing' | 'installed' | 'failed';
+  installProblem?: ExternalAgentProblem;
+  agent?: ExternalAgent;
+  updateReady: boolean;
+  node: ExternalAgentNode;
+};
+
+export type ExternalAgentAuthMethod = {
+  id: string;
+  name: string;
+  description?: string;
+  type?: string;
+};
+
+export type ExternalAgentCheck = {
+  ready: boolean;
+  agent?: { name?: string; title?: string; version?: string };
+  authMethods: ExternalAgentAuthMethod[];
+  signedIn?: boolean;
+  authLabel?: string;
+  problem?: ExternalAgentProblem;
+  checkedAt: string;
+};
+
+export type ExternalAgentLogin = {
+  id: string;
+  agent: string;
+  methodId: string;
+  state: 'running' | 'waiting_for_code' | 'succeeded' | 'failed' | 'cancelled';
+  url?: string;
+  output?: string;
+  problem?: ExternalAgentProblem;
+  startedAt: string;
+};

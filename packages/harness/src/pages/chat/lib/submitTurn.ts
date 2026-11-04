@@ -43,7 +43,7 @@ async function ensureSession(deps: SubmitTurnDeps, applyStagedConfig: boolean): 
   if (deps.sessionId) return deps.sessionId;
   const cwd = deps.workspaceRoot ?? undefined;
   const sid = await deps.newSession(cwd, deps.stagedExternalAgent);
-  if (applyStagedConfig && !deps.stagedExternalAgent) {
+  if (applyStagedConfig) {
     const staged = Object.entries(deps.stagedConfig)
       .filter(([configId]) => configId !== WORKSPACE_ROOT_CONFIG_ID)
       .map(([configId, value]) => ({ configId, value }));
