@@ -25,6 +25,7 @@ describe('provider catalog', () => {
     const providers = ONBOARDING_PROVIDER_SETUPS.map(setup => setup.provider);
     expect(providers).toContain('openai-codex');
     expect(providers).toContain('deepseek');
+    expect(providers).not.toContain('github-copilot');
   });
 });
 
@@ -48,6 +49,7 @@ describe('provider groups and metadata', () => {
       providersInGroup(g).map(s => s.provider),
     );
     expect(listed).not.toContain('openai-codex');
+    expect(listed).not.toContain('github-copilot');
     expect(listed).toHaveLength(10);
   });
 

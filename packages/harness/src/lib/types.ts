@@ -98,6 +98,7 @@ export type CLIConfigUpdateResponse = {
   hitlPolicyName: string;
   telemetryEnabled?: string;
   updateCheck?: string;
+  unofficialSignIns?: string;
   defaultMissionAgent?: string;
   defaultMissionPolicy?: string;
   resolvedFrom?: ConfigResolvedFrom;
@@ -118,6 +119,7 @@ export type CLIConfigUpdateRequest = {
   'hitl-policy-name'?: string;
   'telemetry-enabled'?: string;
   'update-check'?: string;
+  'unofficial-sign-ins'?: string;
   'default-mission-agent'?: string;
   'default-mission-policy'?: string;
 };
@@ -172,6 +174,7 @@ export type CloudProviderType =
   | 'ollama'
   | 'openai'
   | 'openai-codex'
+  | 'github-copilot'
   | 'openrouter'
   | 'deepseek'
   | 'anthropic'
@@ -691,6 +694,7 @@ export type ExternalAgentAuthMethod = {
   name: string;
   description?: string;
   type?: string;
+  unofficial?: boolean;
 };
 
 export type ExternalAgentCheck = {

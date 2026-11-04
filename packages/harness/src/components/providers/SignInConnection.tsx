@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConnectionLoginFlow } from '../../hooks/useProviderLoginFlow';
 import { connectionStatus } from '../../lib/connectionStatus';
+import { signInAccountName } from '../../lib/providerCatalog';
 import type { Connection } from '../../lib/types';
 import { DeviceCodeSteps } from '../setup/DeviceCodeSteps';
 import { useBrowserHandoff } from '../setup/useBrowserHandoff';
@@ -10,7 +11,7 @@ import { ConnectionDeleteConfirm } from './ConnectionDeleteConfirm';
 import { ConnectionMenu } from './ConnectionMenu';
 import { ConnectionRename } from './ConnectionRename';
 
-export type ChatGptConnectionProps = {
+export type SignInConnectionProps = {
   connection: Connection;
   /** Start the device-code sign-in right away (a connection that was just created). */
   autoStart?: boolean;
@@ -18,11 +19,12 @@ export type ChatGptConnectionProps = {
 };
 
 /**
- * One ChatGPT connection: signed in (with "Abmelden"), or the device-code steps. Cancel stops
+ * One sign-in connection (ChatGPT, GitHub Copilot): signed in (with "Abmelden"), or the device-code steps. Cancel stops
  * only the pending attempt; sign out is the explicit action that removes the session.
  */
-export function ChatGptConnection({ connection, autoStart, onSignedIn }: ChatGptConnectionProps) {
+export function SignInConnection({ connection, autoStart, onSignedIn }: SignInConnectionProps) {
   const { t } = useTranslation();
+  const name = signInAccountName(t, connection.providerType);
   const flow = useConnectionLoginFlow(connection, onSignedIn);
   const codeCopied = useBrowserHandoff(flow.deviceUrl, flow.deviceCode);
   const waiting = flow.pending && flow.deviceUrl && flow.deviceCode;
@@ -42,7 +44,7 @@ export function ChatGptConnection({ connection, autoStart, onSignedIn }: ChatGpt
       <SettingsGroup>
         <SettingsRow
           title={connection.name}
-          description={flow.signedIn ? t('connections.chatgpt.signed_in') : undefined}
+          description={flow.signedIn ? t('connections.sign_in.signed_in', { name }) : undefined}
           trailing={
             <>
               <StatusDot
@@ -62,7 +64,7 @@ export function ChatGptConnection({ connection, autoStart, onSignedIn }: ChatGpt
                   size="sm"
                   isLoading={flow.loggingOut}
                   onClick={flow.logout}>
-                  {t('connections.chatgpt.sign_out')}
+                  {t('connections.sign_in.sign_out')}
                 </Button>
               )}
               <ConnectionMenu
@@ -100,7 +102,7 @@ export function ChatGptConnection({ connection, autoStart, onSignedIn }: ChatGpt
         ) : (
           <div>
             <Button type="button" size="sm" isLoading={flow.starting} onClick={flow.start}>
-              {t('connections.chatgpt.sign_in')}
+              {t('connections.sign_in.sign_in', { name })}
             </Button>
           </div>
         ))}

@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCheckConnection, useConnections } from '../../hooks/useConnections';
 import { withFallbackCode } from '../../lib/chatRecovery';
-import { getCloudProviderSetup, isCloudProviderType } from '../../lib/providerCatalog';
+import { getCloudProviderSetup, isCloudProviderType, signInAccountName } from '../../lib/providerCatalog';
 import type { Connection } from '../../lib/types';
-import { ChatGptConnection } from './ChatGptConnection';
+import { SignInConnection } from './SignInConnection';
 import { ConnectionRecovery } from './ConnectionRecovery';
 import { ProviderSetupForm } from './ProviderSetupForm';
 
@@ -29,7 +29,7 @@ export type ConnectionRepairProps = {
 /**
  * A recovery card that can fix things where it stands: "Erneut prüfen" runs the connection
  * check, "Konfigurieren" / "Schlüssel ersetzen" open the setup form for that connection in a
- * dialog, "Bei ChatGPT anmelden" opens the device-code steps. Never leaves the current page.
+ * dialog, "Anmelden" opens the device-code steps. Never leaves the current page.
  */
 export function ConnectionRepair({
   connection,
@@ -93,10 +93,10 @@ export function ConnectionRepair({
       <Dialog
         open={dialog === 'signIn' && canSignIn}
         onClose={close}
-        title={t('recovery.dialog_sign_in')}
+        title={t('recovery.dialog_sign_in', { name: signInAccountName(t, connection.providerType) })}
         closeLabel={t('common.close')}
         className="w-[min(32rem,calc(100vw-2rem))]">
-        <ChatGptConnection
+        <SignInConnection
           connection={live}
           autoStart
           onSignedIn={() => check.mutate(connection.id, { onSettled: resolved })}

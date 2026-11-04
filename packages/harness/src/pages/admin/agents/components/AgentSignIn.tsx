@@ -24,7 +24,10 @@ export function AgentSignIn({ name, title, methods }: Props) {
   const { t } = useTranslation();
   const { login, start, submit, cancel } = useExternalAgentLogin(name);
   const [code, setCode] = useState('');
-  const runnable = methods.filter(m => m.type === 'terminal');
+  const runnable = methods
+    .filter(m => m.type === 'terminal')
+    .sort((a, b) => Number(!!a.unofficial) - Number(!!b.unofficial));
+  const unofficial = runnable.filter(m => m.unofficial);
   const active = login && (login.state === 'running' || login.state === 'waiting_for_code');
 
   if (login?.state === 'succeeded') {
@@ -120,6 +123,11 @@ export function AgentSignIn({ name, title, methods }: Props) {
           ))}
         </div>
       )}
+      {unofficial.map(m => (
+        <InlineNotice key={m.id} variant="warning">
+          {t('external_agents.signin.unofficial_note', { method: m.name })}
+        </InlineNotice>
+      ))}
     </div>
   );
 }

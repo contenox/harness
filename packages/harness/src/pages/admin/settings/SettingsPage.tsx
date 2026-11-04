@@ -9,6 +9,7 @@ import { ResponseSettingsSection } from './ResponseSettingsSection';
 import { ProvidersLinkSection } from './ProvidersLinkSection';
 import { ShellEnvSettingsSection } from './ShellEnvSettingsSection';
 import { TelemetrySettingsSection } from './TelemetrySettingsSection';
+import { UnofficialSignInsSection } from './UnofficialSignInsSection';
 import { WorkspaceSettingsSection } from './WorkspaceSettingsSection';
 
 export default function SettingsPage() {
@@ -32,6 +33,7 @@ export default function SettingsPage() {
         <ShellEnvSettingsSection />
         <TelemetrySettingsSection />
         <AccessSettingsSection />
+        <UnofficialSignInsSection />
         <ProvidersLinkSection />
       </div>
     </Page>

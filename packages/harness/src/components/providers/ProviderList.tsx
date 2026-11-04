@@ -1,8 +1,9 @@
 import { Disclosure, InlineNotice, SettingsGroup, SettingsRow, Spinner } from '@contenox/ui';
-import { MessageCircle } from 'lucide-react';
-import { useReducer } from 'react';
+import { useContext, useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCLIConfig } from '../../hooks/useCLIConfig';
 import { useConnections } from '../../hooks/useConnections';
+import { AuthContext } from '../../lib/authContext';
 import {
   getCloudProviderSetup,
   providersInGroup,
@@ -15,14 +16,14 @@ import {
   initialProviderListState,
   providerListReducer,
 } from '../../lib/providerListState';
-import type { Connection } from '../../lib/types';
-import { ChatGptSection } from './ChatGptSection';
+import type { CloudProviderType, Connection } from '../../lib/types';
 import { ProviderBody } from './ProviderBody';
 import { RowStatus } from './RowStatus';
+import { SignInSection } from './SignInSection';
 
 export type ProviderListProps = {
-  /** Show the ChatGPT subscription row (first run has it on its own screen instead). */
-  includeChatGpt?: boolean;
+  /** Show the sign-in rows (first run has ChatGPT on its own screen instead). */
+  includeSignIns?: boolean;
   /** A connection was saved and verified available (or ChatGPT signed in). */
   onConnected?: (connection: Connection) => void;
 };
@@ -38,8 +39,15 @@ const GROUP_TITLE = {
  * time. Each provider keeps its unsaved draft while other rows are opened; a successful save
  * clears it.
  */
-export function ProviderList({ includeChatGpt = false, onConnected }: ProviderListProps) {
+export function ProviderList({ includeSignIns = false, onConnected }: ProviderListProps) {
   const { t } = useTranslation();
+  const { user } = useContext(AuthContext);
+  const { data: config } = useCLIConfig(includeSignIns && !!user);
+  const signInProviders: CloudProviderType[] = includeSignIns
+    ? config?.unofficialSignIns === 'true'
+      ? ['openai-codex', 'github-copilot']
+      : ['openai-codex']
+    : [];
   const [state, dispatch] = useReducer(providerListReducer, initialProviderListState);
   const { data, isLoading, error } = useConnections();
   const byType = groupConnections(data ?? []);
@@ -69,26 +77,26 @@ export function ProviderList({ includeChatGpt = false, onConnected }: ProviderLi
     );
   };
 
-  const chatGptRow = () => {
-    const connections = byType.get('openai-codex') ?? [];
-    const codex = getCloudProviderSetup('openai-codex');
+  const signInRow = (provider: CloudProviderType) => {
+    const connections = byType.get(provider) ?? [];
+    const setup = getCloudProviderSetup(provider);
     return (
       <SettingsRow
-        key="openai-codex"
-        icon={<MessageCircle />}
-        title={t('cloud_providers.codex.title')}
-        description={t(codex.shortKey)}
+        key={provider}
+        icon={<setup.icon />}
+        title={t(setup.titleKey)}
+        description={t(setup.shortKey)}
         trailing={<RowStatus connections={connections} />}
-        expanded={state.expanded === 'openai-codex'}
-        onExpandedChange={expanded => dispatch({ type: 'expand', provider: 'openai-codex', expanded })}>
-        <ChatGptSection connections={connections} onConnected={onConnected} />
+        expanded={state.expanded === provider}
+        onExpandedChange={expanded => dispatch({ type: 'expand', provider, expanded })}>
+        <SignInSection provider={provider} connections={connections} onConnected={onConnected} />
       </SettingsRow>
     );
   };
 
   const group = (id: Exclude<ProviderGroup, 'more'>) => {
     const rows = providersInGroup(id).map(row);
-    if (id === 'recommended' && includeChatGpt) rows.unshift(chatGptRow());
+    if (id === 'recommended') rows.unshift(...signInProviders.map(signInRow));
     return <SettingsGroup title={t(GROUP_TITLE[id])}>{rows}</SettingsGroup>;
   };
 

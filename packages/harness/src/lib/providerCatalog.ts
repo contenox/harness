@@ -4,6 +4,7 @@ import {
   Brain,
   Cloud,
   Gem,
+  Github,
   Layers,
   MessageCircle,
   Monitor,
@@ -22,7 +23,7 @@ export type ProviderGroup = 'recommended' | 'cloud' | 'local' | 'more';
 
 export type CloudProviderSetup = {
   provider: CloudProviderType;
-  /** Section in the provider list; ChatGPT (openai-codex) is handled separately. */
+  /** Section in the provider list; sign-in providers (ChatGPT, GitHub Copilot) are handled separately. */
   group: ProviderGroup;
   icon: LucideIcon;
   /** Where users create an API key for this provider (opened externally). */
@@ -43,6 +44,8 @@ export type CloudProviderSetup = {
   baseUrlRequired?: boolean;
   defaultBaseUrl?: string;
   loginRequired?: boolean;
+  accountKey?: TranslationKey;
+  unofficial?: boolean;
 };
 
 export const CLOUD_PROVIDER_SETUPS: CloudProviderSetup[] = [
@@ -84,9 +87,22 @@ export const CLOUD_PROVIDER_SETUPS: CloudProviderSetup[] = [
     icon: MessageCircle,
     titleKey: 'cloud_providers.codex.title',
     shortKey: 'providers.codex.short',
+    accountKey: 'cloud_providers.codex.account',
     secretKind: 'none',
     secretRequired: false,
     loginRequired: true,
+  },
+  {
+    provider: 'github-copilot',
+    group: 'recommended',
+    icon: Github,
+    titleKey: 'cloud_providers.copilot.title',
+    shortKey: 'providers.copilot.short',
+    accountKey: 'cloud_providers.copilot.account',
+    secretKind: 'none',
+    secretRequired: false,
+    loginRequired: true,
+    unofficial: true,
   },
   {
     provider: 'openrouter',
@@ -209,11 +225,16 @@ export const CLOUD_PROVIDER_SETUPS: CloudProviderSetup[] = [
 ];
 
 export const ONBOARDING_PROVIDER_SETUPS = CLOUD_PROVIDER_SETUPS.filter(
-  setup => setup.provider !== 'ollama',
+  setup => setup.provider !== 'ollama' && !setup.unofficial,
 );
 
 export const getCloudProviderSetup = (provider: CloudProviderType): CloudProviderSetup =>
   CLOUD_PROVIDER_SETUPS.find(setup => setup.provider === provider) ?? CLOUD_PROVIDER_SETUPS[0];
+
+export function signInAccountName(t: (key: TranslationKey) => string, provider: string): string {
+  const setup = CLOUD_PROVIDER_SETUPS.find(s => s.provider === provider);
+  return setup?.accountKey ? t(setup.accountKey) : provider;
+}
 
 export const isCloudProviderType = (provider: string): provider is CloudProviderType =>
   CLOUD_PROVIDER_SETUPS.some(setup => setup.provider === provider);

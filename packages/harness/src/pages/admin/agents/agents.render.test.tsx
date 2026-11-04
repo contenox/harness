@@ -86,6 +86,22 @@ describe('AgentDetails', () => {
     expect(html).toContain('Sign in with Anthropic Console');
   });
 
+  it('lists an unofficial sign-in last, with a warning', () => {
+    const check = checkOf({
+      ready: false,
+      signedIn: false,
+      authMethods: [
+        { id: 'claude-ai-login', name: 'Claude Subscription', type: 'terminal', unofficial: true },
+        { id: 'console-login', name: 'Anthropic Console', type: 'terminal' },
+      ],
+      checkedAt: '',
+    });
+    const status = agentRowStatus({ agent, check: check.data });
+    const html = render(<AgentDetails agent={agent} title="Claude Code" status={status} check={check} />);
+    expect(html.indexOf('Sign in with Anthropic Console')).toBeLessThan(html.indexOf('Sign in with Claude Subscription'));
+    expect(html).toContain('Claude Subscription is an unofficial sign-in you turned on in Settings.');
+  });
+
   it('names the problem in plain words and keeps the raw error under details', () => {
     const check = checkOf({
       ready: false,

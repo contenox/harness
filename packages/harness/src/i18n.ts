@@ -209,6 +209,22 @@ const resources = {
         update_check_label: 'Automatic update checks',
         update_check_description:
           'Checks for newer contenox releases. On by default; turn off for zero-trust/air-gapped environments.',
+        unofficial_section_title: 'Unofficial sign-ins',
+        unofficial_section_description:
+          'Sign in with accounts whose makers have not approved Contenox: your Claude subscription in Claude Code, and GitHub Copilot as a model provider. Off by default.',
+        unofficial_warning_title: 'Use at your own risk',
+        unofficial_warning_body:
+          'These sign-ins connect the way other apps do. Anthropic does not allow third-party apps to offer Claude subscription sign-in without its approval, and GitHub has not approved Contenox for Copilot. Either service can block these sign-ins or limit your account.',
+        unofficial_label: 'Allow unofficial sign-ins',
+        unofficial_off_description: 'Claude Code offers only Anthropic Console sign-in, and GitHub Copilot is not listed under Providers.',
+        unofficial_on_description:
+          'Claude Code uses your Claude sign-in from ~/.claude, and GitHub Copilot is listed under Providers. Turning this off stops both until you turn it on again.',
+        unofficial_confirm_title: 'Turn on unofficial sign-ins?',
+        unofficial_confirm_body:
+          'Your Claude or GitHub account may be limited or suspended for using these sign-ins, and Contenox cannot undo that. Use them only if you accept that risk.',
+        unofficial_confirm_ack: 'I understand this may break the services’ terms and put my accounts at risk.',
+        unofficial_confirm_cancel: 'Keep off',
+        unofficial_confirm_accept: 'Turn on',
       },
       setup: {
         banner_title: 'Finish setup before using chat',
@@ -850,6 +866,11 @@ const resources = {
       cloud_providers: {
         codex: {
           title: 'ChatGPT subscription (Codex)',
+          account: 'ChatGPT',
+        },
+        copilot: {
+          title: 'GitHub Copilot',
+          account: 'GitHub',
         },
         deepseek: {
           title: 'DeepSeek',
@@ -1964,6 +1985,8 @@ const resources = {
         },
         signin: {
           with: 'Sign in with {{method}}',
+          unofficial_note:
+            '{{method}} is an unofficial sign-in you turned on in Settings. Its maker has not approved it for Contenox and may limit your account for using it.',
           step_open: 'Open the sign-in page',
           step_open_desc: 'Sign in there, then copy the code it shows:',
           step_code: 'Paste the code',
@@ -2064,6 +2087,9 @@ const resources = {
         codex: {
           short: 'With your ChatGPT subscription',
         },
+        copilot: {
+          short: 'Unofficial · your Copilot plan',
+        },
         connect: 'Connect',
         save: 'Save',
         cancel: 'Cancel',
@@ -2120,22 +2146,24 @@ const resources = {
           unavailable: 'Unavailable',
           unknown: 'Not checked yet',
         },
-        chatgpt: {
-          add: 'Add ChatGPT account',
-          signed_in: 'Signed in with ChatGPT',
-          sign_in: 'Sign in with ChatGPT',
+        sign_in: {
+          add: 'Add {{name}} account',
+          signed_in: 'Signed in with {{name}}',
+          sign_in: 'Sign in with {{name}}',
           sign_out: 'Sign out',
+          unofficial:
+            'GitHub has not approved Contenox for Copilot. You turned this sign-in on in Settings; GitHub may block it or limit your account.',
         },
       },
       recovery: {
         retry: 'Check again',
         configure: 'Configure',
         replace_key: 'Replace key',
-        sign_in: 'Sign in with ChatGPT',
+        sign_in: 'Sign in with {{name}}',
         choose_model: 'Choose model',
         details: 'Technical details',
         dialog_configure: 'Configure {{name}}',
-        dialog_sign_in: 'Sign in with ChatGPT',
+        dialog_sign_in: 'Sign in with {{name}}',
         unreachable: {
           title: '{{provider}} unreachable',
           text: 'Contenox cannot reach {{provider}} at {{address}}. Check that the service is running and the address is correct.',
@@ -2368,6 +2396,22 @@ const resources = {
         update_check_label: 'Automatische Update-Prüfung',
         update_check_description:
           'Prüft auf neuere contenox-Releases. Standardmäßig an; für Zero-Trust-/Air-Gapped-Umgebungen deaktivieren.',
+        unofficial_section_title: 'Inoffizielle Anmeldungen',
+        unofficial_section_description:
+          'Anmelden mit Konten, deren Anbieter Contenox nicht freigegeben haben: dein Claude-Abo in Claude Code und GitHub Copilot als Modellanbieter. Standardmäßig aus.',
+        unofficial_warning_title: 'Auf eigenes Risiko',
+        unofficial_warning_body:
+          'Diese Anmeldungen verbinden sich so wie andere Apps. Anthropic erlaubt Drittanbieter-Apps die Anmeldung mit dem Claude-Abo nur mit Freigabe, und GitHub hat Contenox für Copilot nicht freigegeben. Beide Dienste können diese Anmeldungen sperren oder dein Konto einschränken.',
+        unofficial_label: 'Inoffizielle Anmeldungen erlauben',
+        unofficial_off_description: 'Claude Code bietet nur die Anmeldung über die Anthropic Console an, und GitHub Copilot erscheint nicht unter Anbieter.',
+        unofficial_on_description:
+          'Claude Code nutzt deine Claude-Anmeldung aus ~/.claude, und GitHub Copilot erscheint unter Anbieter. Ausschalten stoppt beides, bis du es wieder einschaltest.',
+        unofficial_confirm_title: 'Inoffizielle Anmeldungen einschalten?',
+        unofficial_confirm_body:
+          'Dein Claude- oder GitHub-Konto kann wegen dieser Anmeldungen eingeschränkt oder gesperrt werden, und Contenox kann das nicht rückgängig machen. Nutze sie nur, wenn du dieses Risiko akzeptierst.',
+        unofficial_confirm_ack: 'Ich verstehe, dass das gegen die Bedingungen der Dienste verstoßen und meine Konten gefährden kann.',
+        unofficial_confirm_cancel: 'Aus lassen',
+        unofficial_confirm_accept: 'Einschalten',
       },
       setup: {
         banner_title: 'Schließ die Einrichtung ab, bevor du chattest',
@@ -2980,6 +3024,11 @@ const resources = {
       cloud_providers: {
         codex: {
           title: 'ChatGPT-Abo (Codex)',
+          account: 'ChatGPT',
+        },
+        copilot: {
+          title: 'GitHub Copilot',
+          account: 'GitHub',
         },
         deepseek: {
           title: 'DeepSeek',
@@ -4090,6 +4139,8 @@ const resources = {
         },
         signin: {
           with: 'Mit {{method}} anmelden',
+          unofficial_note:
+            '{{method}} ist eine inoffizielle Anmeldung, die du in den Einstellungen eingeschaltet hast. Der Anbieter hat sie für Contenox nicht freigegeben und kann dein Konto deswegen einschränken.',
           step_open: 'Anmeldeseite öffnen',
           step_open_desc: 'Melde dich dort an und kopiere den angezeigten Code:',
           step_code: 'Code einfügen',
@@ -4190,6 +4241,9 @@ const resources = {
         codex: {
           short: 'Mit deinem ChatGPT-Abo',
         },
+        copilot: {
+          short: 'Inoffiziell · dein Copilot-Plan',
+        },
         connect: 'Verbinden',
         save: 'Speichern',
         cancel: 'Abbrechen',
@@ -4247,22 +4301,24 @@ const resources = {
           unavailable: 'Nicht verfügbar',
           unknown: 'Noch nicht geprüft',
         },
-        chatgpt: {
-          add: 'ChatGPT-Konto hinzufügen',
-          signed_in: 'Bei ChatGPT angemeldet',
-          sign_in: 'Bei ChatGPT anmelden',
+        sign_in: {
+          add: '{{name}}-Konto hinzufügen',
+          signed_in: 'Bei {{name}} angemeldet',
+          sign_in: 'Bei {{name}} anmelden',
           sign_out: 'Abmelden',
+          unofficial:
+            'GitHub hat Contenox für Copilot nicht freigegeben. Du hast diese Anmeldung in den Einstellungen eingeschaltet; GitHub kann sie sperren oder dein Konto einschränken.',
         },
       },
       recovery: {
         retry: 'Erneut prüfen',
         configure: 'Konfigurieren',
         replace_key: 'Schlüssel ersetzen',
-        sign_in: 'Bei ChatGPT anmelden',
+        sign_in: 'Bei {{name}} anmelden',
         choose_model: 'Modell wählen',
         details: 'Technische Details',
         dialog_configure: '{{name}} konfigurieren',
-        dialog_sign_in: 'Bei ChatGPT anmelden',
+        dialog_sign_in: 'Bei {{name}} anmelden',
         unreachable: {
           title: '{{provider}} nicht erreichbar',
           text: 'Contenox kann {{provider}} unter {{address}} nicht erreichen. Prüfe, ob der Dienst läuft und die Adresse stimmt.',

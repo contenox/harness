@@ -7,6 +7,7 @@ import {
   recoveryFor,
   type RecoveryAction,
 } from '../../lib/backendErrors';
+import { signInAccountName } from '../../lib/providerCatalog';
 import type { Connection } from '../../lib/types';
 
 export type ConnectionRecoveryProps = {
@@ -79,7 +80,7 @@ export function ConnectionRecovery({
                 size="sm"
                 isLoading={action === 'retry' && retrying}
                 onClick={handlers[action]}>
-                {t(RECOVERY_ACTION_LABEL[action])}
+                {t(RECOVERY_ACTION_LABEL[action], { name: signInAccountName(t, connection.providerType) })}
               </Button>
             ))}
           </>

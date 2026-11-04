@@ -23,7 +23,7 @@ export default function BackendsPage() {
     {
       id: 'providers',
       label: t('backends.tab_providers'),
-      content: <ProviderList includeChatGpt />,
+      content: <ProviderList includeSignIns />,
     },
     {
       id: 'backends',
