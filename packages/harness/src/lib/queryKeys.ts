@@ -219,3 +219,10 @@ export const planKeys = {
   compilePreview: (planId: string, executorChainId: string, stepsDigest: string) =>
     [...planKeys.compilePreviewPrefix(), planId, executorChainId, stepsDigest] as const,
 };
+
+export const agentsConfigKeys = {
+  all: ['agents-config'] as const,
+  envelopes: (workspace = '') => [...agentsConfigKeys.all, 'envelopes', workspace] as const,
+  toolsets: (workspace = '') => [...agentsConfigKeys.all, 'toolsets', workspace] as const,
+  document: (workspace = '') => [...agentsConfigKeys.all, 'document', workspace] as const,
+};

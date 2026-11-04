@@ -1,5 +1,6 @@
 import { IconButton, SidebarSection, Span, Spinner } from '@contenox/ui';
 import { Plus } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SessionInfo } from '../../lib/acp';
 import type { WorkspaceRoot } from '../../lib/types';
@@ -22,6 +23,7 @@ type Props = {
   onDeleteSession: (session: SessionInfo) => void;
   onNewProject: () => void;
   onNewSessionIn: (path: string) => void;
+  onOpenPermissions: (path: string) => void;
   onRenameProject: (root: WorkspaceRoot) => void;
   onRemoveProject: (root: WorkspaceRoot, sessionCount: number) => void;
   removeFailed: boolean;
@@ -30,6 +32,7 @@ type Props = {
 export function ProjectsSection(props: Props) {
   const { t } = useTranslation();
   const { groups } = props;
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   const empty = groups.projects.length === 0 && groups.other.length === 0;
   const list = {
     activeSessionId: props.activeSessionId,
@@ -66,12 +69,28 @@ export function ProjectsSection(props: Props) {
                 title={name}
                 open={props.isGroupOpen(root.path)}
                 onToggle={() => props.onToggleGroup(root.path)}
+                onContextMenu={e => {
+                  e.preventDefault();
+                  setMenuFor(root.path);
+                }}
                 actions={
                   <ProjectActions
                     name={name}
+                    menuOpen={menuFor === root.path}
+                    onMenuOpenChange={open => setMenuFor(open ? root.path : null)}
                     onNewSession={() => props.onNewSessionIn(root.path)}
-                    onRename={() => props.onRenameProject(root)}
-                    onRemove={() => props.onRemoveProject(root, sessions.length)}
+                    onPermissions={() => {
+                      setMenuFor(null);
+                      props.onOpenPermissions(root.path);
+                    }}
+                    onRename={() => {
+                      setMenuFor(null);
+                      props.onRenameProject(root);
+                    }}
+                    onRemove={() => {
+                      setMenuFor(null);
+                      props.onRemoveProject(root, sessions.length);
+                    }}
                   />
                 }>
                 <SessionList sessions={sessions} {...list} />

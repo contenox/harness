@@ -4,6 +4,7 @@ import {
   Radar,
   Rocket,
   Settings,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { lazy } from 'react';
@@ -20,6 +21,8 @@ const MissionDetailPage = lazy(() => import('../pages/admin/missions/MissionDeta
 const MissionDispatchPage = lazy(() => import('../pages/admin/missions/MissionDispatchPage.tsx'));
 const InboxPage = lazy(() => import('../pages/admin/inbox/InboxPage.tsx'));
 const ControlPlanePage = lazy(() => import('../pages/admin/control/ControlPlanePage.tsx'));
+const PermissionsPage = lazy(() => import('../pages/admin/permissions/PermissionsPage.tsx'));
+const PermissionSetPage = lazy(() => import('../pages/admin/permissions/PermissionSetPage.tsx'));
 const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage.tsx'));
 const ByePage = lazy(() => import('../pages/public/bye/Bye.tsx'));
 const AuthPage = lazy(() => import('../pages/public/login/AuthPage.tsx'));
@@ -61,6 +64,7 @@ const adminRouteDefinitions: AdminRouteDefinition[] = [
   { path: '/missions', element: MissionListPage, labelKey: 'navbar.missions', Icon: Rocket },
   { path: '/inbox', element: InboxPage, labelKey: 'navbar.inbox', Icon: Inbox },
   { path: '/backends', element: BackendsPage, labelKey: 'navbar.backends', Icon: Database },
+  { path: '/permissions', element: PermissionsPage, labelKey: 'navbar.permissions', Icon: ShieldCheck },
   { path: '/settings', element: SettingsPage, labelKey: 'navbar.settings', Icon: Settings },
 ];
 
@@ -194,6 +198,14 @@ export const routes: RouteConfig[] = [
     showInShelf: false,
   },
   ...adminRoutes,
+  {
+    path: '/permissions/:name',
+    element: PermissionSetPage,
+    label: '',
+    showInNav: false,
+    protected: true,
+    showInShelf: false,
+  },
   {
     path: '/missions/new',
     element: MissionDispatchPage,

@@ -49,6 +49,7 @@ export interface AcpWorkspaceControllerDeps {
    * replaces the options from `initialize`.
    */
   fetchWorkspaceConfigOptions?: (client: AcpClient) => Promise<SessionConfigOption[] | null>;
+  onAgentDeclarationsChanged?: () => void;
 }
 
 export interface AcpWorkspaceController {
@@ -469,6 +470,7 @@ export function createAcpWorkspaceController(
     currentTransport = transport;
     transport.onClose(() => handleTransportClose(transport));
     c.onWorkspaceConfigOptionsChanged?.(setWorkspaceConfigOptions);
+    if (deps.onAgentDeclarationsChanged) c.onAgentDeclarationsChanged?.(deps.onAgentDeclarationsChanged);
   }
 
   async function refreshSessionsInternal(c: AcpClient): Promise<void> {

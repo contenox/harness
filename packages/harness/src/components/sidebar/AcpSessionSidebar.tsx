@@ -3,6 +3,7 @@ import { useMatch, useNavigate } from 'react-router-dom';
 import { useAcpWorkspace } from '../../hooks/useAcpWorkspace';
 import { useProjectActions } from '../../hooks/useProjectActions';
 import { useWorkspaceRoots } from '../../hooks/useWorkspaceRoots';
+import { permissionsPath } from '../../pages/admin/permissions/usePermissionScope';
 import { useStagedAgent } from '../../lib/stagedAgent';
 import { useStagedRoot } from '../../lib/stagedRoot';
 import type { WorkspaceRoot } from '../../lib/types';
@@ -64,6 +65,10 @@ export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) =>
         onDeleteSession={actions.confirmDeleteSession}
         onNewProject={() => setNewProjectOpen(true)}
         onNewSessionIn={openSessionIn}
+        onOpenPermissions={path => {
+          navigate(permissionsPath(undefined, path));
+          closeSidebar();
+        }}
         onRenameProject={setRenaming}
         onRemoveProject={actions.confirmRemoveProject}
         removeFailed={actions.removeProjectFailed}

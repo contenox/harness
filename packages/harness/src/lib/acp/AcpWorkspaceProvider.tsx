@@ -14,6 +14,8 @@ import {
   type AcpWorkspaceState,
 } from '../../hooks/acpWorkspaceState';
 import { WebSocketTransport } from '@contenox/acp-client';
+import { useQueryClient } from '@tanstack/react-query';
+import { agentsConfigKeys, envelopeKeys, workspaceAccessKeys } from '../queryKeys';
 import {
   acpWsUrl,
   ensureProjectPrefix,
@@ -55,6 +57,7 @@ export interface AcpWorkspaceProviderProps {
 export function AcpWorkspaceProvider({ children }: AcpWorkspaceProviderProps) {
   const [workspace, workspaceDispatch] = useReducer(acpWorkspaceReducer, initialAcpWorkspaceState);
   const [sessions, sessionsDispatch] = useReducer(acpSessionsReducer, initialAcpSessionsState);
+  const queryClient = useQueryClient();
 
   const controllerRef = useRef<AcpWorkspaceController | null>(null);
   if (!controllerRef.current) {
@@ -66,6 +69,11 @@ export function AcpWorkspaceProvider({ children }: AcpWorkspaceProviderProps) {
         },
         resolveProject: hasProjectBridge() ? projectPathForCwd : undefined,
         fetchWorkspaceConfigOptions: client => client.workspaceConfigOptions(),
+        onAgentDeclarationsChanged: () => {
+          void queryClient.invalidateQueries({ queryKey: agentsConfigKeys.all });
+          void queryClient.invalidateQueries({ queryKey: envelopeKeys.all });
+          void queryClient.invalidateQueries({ queryKey: workspaceAccessKeys.all });
+        },
       },
       workspaceDispatch,
       sessionsDispatch,
