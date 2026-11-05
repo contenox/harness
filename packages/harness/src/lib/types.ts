@@ -177,6 +177,7 @@ export type CloudProviderType =
   | 'github-copilot'
   | 'openrouter'
   | 'deepseek'
+  | 'alibaba-cloud'
   | 'anthropic'
   | 'gemini'
   | 'mistral'

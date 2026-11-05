@@ -21,10 +21,27 @@ describe('provider catalog', () => {
     expect(deepseek.defaultBaseUrl).toBe('https://api.deepseek.com');
   });
 
+  it('offers Alibaba Cloud Model Studio with an API key, the international endpoint and the vendor key variable', () => {
+    const alibaba = getCloudProviderSetup('alibaba-cloud');
+    expect(alibaba.group).toBe('recommended');
+    expect(alibaba.secretKind).toBe('api-key');
+    expect(alibaba.secretRequired).toBe(true);
+    expect(alibaba.defaultBaseUrl).toBe('https://dashscope-intl.aliyuncs.com/compatible-mode/v1');
+    expect(alibaba.baseUrlPlaceholder).toBe('https://dashscope-intl.aliyuncs.com/compatible-mode/v1');
+    expect(alibaba.keyUrl).toBe(
+      'https://modelstudio.console.alibabacloud.com/ap-southeast-1/model/settings/api-key',
+    );
+    const { primary, advanced } = fieldsFor(alibaba);
+    expect(primary.map(f => f.id)).toEqual(['apiKey']);
+    expect(advanced.map(f => f.id)).toEqual(['baseUrl', 'apiKeyEnv']);
+    expect(advanced[1].placeholder).toBe('DASHSCOPE_API_KEY');
+  });
+
   it('lists both in the onboarding wizard', () => {
     const providers = ONBOARDING_PROVIDER_SETUPS.map(setup => setup.provider);
     expect(providers).toContain('openai-codex');
     expect(providers).toContain('deepseek');
+    expect(providers).toContain('alibaba-cloud');
     expect(providers).not.toContain('github-copilot');
   });
 });
@@ -35,7 +52,7 @@ describe('provider groups and metadata', () => {
 
   it('groups providers for the list', () => {
     expect(group('recommended')).toEqual(
-      expect.arrayContaining(['deepseek', 'anthropic', 'gemini']),
+      expect.arrayContaining(['deepseek', 'alibaba-cloud', 'anthropic', 'gemini']),
     );
     expect(group('cloud')).toEqual(['vertex-google', 'bedrock', 'vllm']);
     expect(group('local')).toEqual(['ollama']);
@@ -50,7 +67,7 @@ describe('provider groups and metadata', () => {
     );
     expect(listed).not.toContain('openai-codex');
     expect(listed).not.toContain('github-copilot');
-    expect(listed).toHaveLength(10);
+    expect(listed).toHaveLength(11);
   });
 
   it('knows where to create a key', () => {

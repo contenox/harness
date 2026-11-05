@@ -190,6 +190,7 @@ contenox-runtime backend add myvllm --type vllm --url http://gpu-host:8000
 # Commercial cloud providers
 contenox-runtime backend add openai    --type openai    --api-key-env OPENAI_API_KEY
 contenox-runtime backend add deepseek  --type deepseek  --api-key-env DEEPSEEK_API_KEY
+contenox-runtime backend add alibaba   --type alibaba-cloud --api-key-env DASHSCOPE_API_KEY
 contenox-runtime backend add anthropic --type anthropic --api-key-env ANTHROPIC_API_KEY
 contenox-runtime backend add gemini    --type gemini    --api-key-env GEMINI_API_KEY
 
@@ -203,7 +204,7 @@ contenox-runtime config set default-provider  ollama
 
 ```
 
-The same providers appear in the app's Setup wizard and in Backends → Cloud Providers, where the ChatGPT subscription signs in with a device code and DeepSeek takes an API key.
+The same providers appear in the app's Setup wizard and in Backends → Cloud Providers, where the ChatGPT subscription signs in with a device code and DeepSeek and Alibaba Cloud Model Studio take an API key.
 
 ---
 

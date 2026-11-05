@@ -875,6 +875,10 @@ const resources = {
         deepseek: {
           title: 'DeepSeek',
         },
+        alibaba_cloud: {
+          title: 'Alibaba Cloud Model Studio',
+          name: 'Alibaba Cloud',
+        },
         ollama: {
           title: 'Ollama / Ollama Cloud',
           name: 'Ollama',
@@ -2072,6 +2076,9 @@ const resources = {
         deepseek: {
           short: 'DeepSeek models via API',
         },
+        alibaba_cloud: {
+          short: 'Qwen models via API',
+        },
         mistral: {
           short: 'Mistral models via API',
         },
@@ -3032,6 +3039,10 @@ const resources = {
         },
         deepseek: {
           title: 'DeepSeek',
+        },
+        alibaba_cloud: {
+          title: 'Alibaba Cloud Model Studio',
+          name: 'Alibaba Cloud',
         },
         ollama: {
           title: 'Ollama / Ollama Cloud',
@@ -4225,6 +4236,9 @@ const resources = {
         },
         deepseek: {
           short: 'DeepSeek-Modelle per API',
+        },
+        alibaba_cloud: {
+          short: 'Qwen-Modelle per API',
         },
         mistral: {
           short: 'Mistral-Modelle per API',

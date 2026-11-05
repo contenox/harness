@@ -5,6 +5,7 @@ import {
   Cloud,
   Gem,
   Github,
+  Globe,
   Layers,
   MessageCircle,
   Monitor,
@@ -43,6 +44,8 @@ export type CloudProviderSetup = {
   baseUrlPlaceholder?: string;
   baseUrlRequired?: boolean;
   defaultBaseUrl?: string;
+  /** Vendor's own name for the key variable when it is not `<PROVIDER>_API_KEY`. */
+  apiKeyEnv?: string;
   loginRequired?: boolean;
   accountKey?: TranslationKey;
   unofficial?: boolean;
@@ -133,6 +136,23 @@ export const CLOUD_PROVIDER_SETUPS: CloudProviderSetup[] = [
     baseUrlLabelKey: 'cloud_providers.base_url_optional',
     baseUrlPlaceholder: 'https://api.deepseek.com',
     defaultBaseUrl: 'https://api.deepseek.com',
+  },
+  {
+    provider: 'alibaba-cloud',
+    group: 'recommended',
+    icon: Globe,
+    keyUrl: 'https://modelstudio.console.alibabacloud.com/ap-southeast-1/model/settings/api-key',
+    titleKey: 'cloud_providers.alibaba_cloud.title',
+    nameKey: 'cloud_providers.alibaba_cloud.name',
+    shortKey: 'providers.alibaba_cloud.short',
+    secretKind: 'api-key',
+    secretRequired: true,
+    secretLabelKey: 'cloud_providers.api_key',
+    secretPlaceholderKey: 'cloud_providers.api_key_placeholder',
+    baseUrlLabelKey: 'cloud_providers.base_url_optional',
+    baseUrlPlaceholder: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    defaultBaseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    apiKeyEnv: 'DASHSCOPE_API_KEY',
   },
   {
     provider: 'anthropic',
@@ -293,7 +313,7 @@ export function fieldsFor(setup: CloudProviderSetup): {
         id: 'apiKeyEnv',
         kind: 'text',
         labelKey: 'cloud_providers.api_key_env',
-        placeholder: `${setup.provider.toUpperCase().replace(/-/g, '_')}_API_KEY`,
+        placeholder: setup.apiKeyEnv ?? `${setup.provider.toUpperCase().replace(/-/g, '_')}_API_KEY`,
         required: false,
       },
       false,
