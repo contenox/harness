@@ -172,6 +172,13 @@ export function useSlashCommandMenu(
       const action = slashMenuKeyFromEvent(event.key);
       if (action === null) return;
       if (length === 0 && action.type !== 'close') return;
+      if (
+        action.type === 'accept' &&
+        mode === 'values' &&
+        values[activeIndex]?.toLowerCase() === argText.trim().toLowerCase()
+      ) {
+        return;
+      }
       event.preventDefault();
       if (action.type === 'move') {
         highlightAt(clampIndex(activeIndex + action.delta, length));
@@ -181,7 +188,7 @@ export function useSlashCommandMenu(
         setDismissedFor(draft);
       }
     },
-    [open, activeIndex, length, highlightAt, accept, draft],
+    [open, activeIndex, length, highlightAt, accept, draft, mode, values, argText],
   );
 
   const valueCount = useCallback((name: string) => domains.get(name)?.length ?? 0, [domains]);

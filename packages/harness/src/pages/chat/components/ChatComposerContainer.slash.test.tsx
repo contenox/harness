@@ -3,7 +3,7 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
-import { clickOn, findAll, installFakeDom, typeInto, type FakeDomHandle } from '../../../test/fakeDom';
+import { clickOn, findAll, fireEvent, installFakeDom, typeInto, type FakeDomHandle } from '../../../test/fakeDom';
 import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
 import type { ComposerFiles } from '../hooks/useComposerController';
 import { ChatComposerContainer } from './ChatComposerContainer';
@@ -96,6 +96,86 @@ describe('ChatComposerContainer slash pickers', () => {
     expect(valueList).toBeDefined();
     const rows = findAll(valueList, n => n.tagName === 'BUTTON').map(n => n.textContent);
     expect(rows).toContain('deepseek/deepseek-flash');
+    await act(async () => root.unmount());
+  });
+
+  it('sends an advertised command with its argument as the prompt instead of swallowing it', async () => {
+    const onSubmit = vi.fn(async () => {});
+    const root = createRoot(dom.container as unknown as Element);
+    await act(async () => {
+      root.render(
+        createElement(ChatComposerContainer, {
+          files: FILES,
+          availableCommands: COMMANDS,
+          configOptions: [
+            ...CONFIG_OPTIONS,
+            {
+              id: 'think',
+              name: 'Think',
+              type: 'select',
+              currentValue: 'high',
+              options: [
+                { value: 'auto', name: 'auto' },
+                { value: 'high', name: 'high' },
+              ],
+            },
+          ],
+          isPrompting: false,
+          disabled: false,
+          ready: true,
+          imagesSupported: false,
+          audioSupported: false,
+          projectChip: null,
+          footerEnd: null,
+          onSubmit,
+          onCancel: () => {},
+        }),
+      );
+    });
+    const textarea = findAll(dom.container, n => n.tagName === 'TEXTAREA')[0];
+    typeInto(dom.container, textarea, '/think auto', fn => {
+      void act(fn);
+    });
+    const form = findAll(dom.container, n => n.tagName === 'FORM')[0];
+    await act(async () => {
+      fireEvent(dom.container, form, 'submit');
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ kind: 'prompt', text: '/think auto' });
+    await act(async () => root.unmount());
+  });
+
+  it('sends a command whose argument only has a usage hint', async () => {
+    const onSubmit = vi.fn(async () => {});
+    const root = createRoot(dom.container as unknown as Element);
+    await act(async () => {
+      root.render(
+        createElement(ChatComposerContainer, {
+          files: FILES,
+          availableCommands: COMMANDS,
+          configOptions: CONFIG_OPTIONS,
+          isPrompting: false,
+          disabled: false,
+          ready: true,
+          imagesSupported: false,
+          audioSupported: false,
+          projectChip: null,
+          footerEnd: null,
+          onSubmit,
+          onCancel: () => {},
+        }),
+      );
+    });
+    const textarea = findAll(dom.container, n => n.tagName === 'TEXTAREA')[0];
+    typeInto(dom.container, textarea, '/think auto', fn => {
+      void act(fn);
+    });
+    const form = findAll(dom.container, n => n.tagName === 'FORM')[0];
+    await act(async () => {
+      fireEvent(dom.container, form, 'submit');
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ kind: 'prompt', text: '/think auto' });
     await act(async () => root.unmount());
   });
 

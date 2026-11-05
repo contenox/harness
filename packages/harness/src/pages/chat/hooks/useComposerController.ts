@@ -100,7 +100,7 @@ export function useComposerController({
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
       e.preventDefault();
-      if (slashMenu.open || mentionMenu.open) return;
+      if (mentionMenu.open || slashMenu.acceptOnSubmit()) return;
       // Stop is its own button (ChatComposer.onStop); a submit while the turn
       // is running must not send the draft as a second prompt.
       if (isPrompting) return;
@@ -149,7 +149,7 @@ export function useComposerController({
       }
     },
     [
-      slashMenu.open,
+      slashMenu,
       mentionMenu.open,
       isPrompting,
       draft,
