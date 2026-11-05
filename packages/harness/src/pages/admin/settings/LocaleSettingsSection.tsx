@@ -5,10 +5,11 @@ import { useCLIConfig } from '../../../hooks/useCLIConfig';
 import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
 import { AuthContext } from '../../../lib/authContext';
 import type { CLIConfigUpdateRequest } from '../../../lib/types';
+import { applyUiLanguage } from '../../../lib/uiLanguage';
 import { isValidLocale, resolveLocaleOverride } from './settingsValidation';
 
 export function LocaleSettingsSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useContext(AuthContext);
   const { data } = useCLIConfig(!!user);
   const putConfig = usePutCLIConfig();
@@ -38,7 +39,17 @@ export function LocaleSettingsSection() {
       return;
     }
     const body: CLIConfigUpdateRequest = { locale: trimmed };
-    putConfig.mutate(body);
+    putConfig.mutate(body, {
+      onSuccess: () => {
+        void applyUiLanguage(
+          i18n,
+          trimmed,
+          data?.detectedLocale ?? '',
+          typeof window === 'undefined' ? null : window.localStorage,
+          typeof navigator === 'undefined' ? '' : navigator.language,
+        );
+      },
+    });
   };
 
   const detected = data?.detectedLocale ?? '';
