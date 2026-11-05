@@ -10,6 +10,7 @@ export interface ChatErrorCardProps {
   /** Title used when the failure kind has none of its own. */
   fallbackTitleKey: 'acp_chat.error_banner_headline' | 'acp_chat.turn_failed_label';
   actions?: (kind: ReturnType<typeof classifyAcpExecutionError>) => ReactNode;
+  onDismiss?: () => void;
 }
 
 function AgentRecoveryAction({ agent, kind }: { agent: string; kind: AcpFailureKind }) {
@@ -23,24 +24,29 @@ function AgentRecoveryAction({ agent, kind }: { agent: string; kind: AcpFailureK
 }
 
 /** A failed turn: connection problems go through ConnectionRepair, everything else is a RecoveryCard. */
-export function ChatErrorCard({ message, fallbackTitleKey, actions }: ChatErrorCardProps) {
+export function ChatErrorCard({ message, fallbackTitleKey, actions, onDismiss }: ChatErrorCardProps) {
   const { t } = useTranslation();
   const kind = classifyAcpExecutionError(message);
   const copy = acpFailureCopyKeys(kind);
   const agent = kind === 'agent_sign_in' || kind === 'agent_unavailable' ? failedAgentName(message) : null;
+  const extra = actions?.(kind);
+  const dismiss = onDismiss ? (
+    <Button type="button" variant="ghost" size="sm" onClick={onDismiss}>
+      {t('acp_chat.error_dismiss')}
+    </Button>
+  ) : null;
   const card = (
     <RecoveryCard
       tone="error"
       title={copy.titleKey ? t(copy.titleKey as never, { name: agent ?? '' }) : t(fallbackTitleKey)}
       actions={
-        agent ? (
+        agent || extra || dismiss ? (
           <>
-            <AgentRecoveryAction agent={agent} kind={kind} />
-            {actions?.(kind)}
+            {agent && <AgentRecoveryAction agent={agent} kind={kind} />}
+            {extra}
+            {dismiss}
           </>
-        ) : (
-          actions?.(kind)
-        )
+        ) : undefined
       }
       details={message || undefined}
       detailsLabel={t('acp_chat.error_details_label')}

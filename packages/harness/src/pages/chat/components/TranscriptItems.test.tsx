@@ -81,7 +81,7 @@ describe('TranscriptItems: failed-turn cards', () => {
   const CWD_REQUIRED_MESSAGE =
     'acpsvc: start agent "claude" instance: agentinstance: start agent "claude": agenthost: sandbox external ACP agent "/home/naro/.contenox/claude-code-acp.sh": cwd is required to confine the agent (the wall needs a workspace; it will not default to the whole filesystem)';
 
-  it('skips the in-transcript card for the CURRENT session.error — it is already shown by the top ExecutionErrorBanner (ChatSessionTab), so rendering it here too would show the same failure twice', () => {
+  it('renders the CURRENT session.error as a dismissible card at the point of failure, not as a banner', () => {
     const session: AcpSessionState = {
       ...initialAcpSessionState,
       sessionId: 'sess-1',
@@ -90,8 +90,9 @@ describe('TranscriptItems: failed-turn cards', () => {
       error: CWD_REQUIRED_MESSAGE,
     };
     const html = render(session);
-    expect(html).not.toContain('This agent needs a workspace');
-    expect(html).not.toContain('cwd is required to confine the agent');
+    expect(html).toContain('This agent needs a workspace');
+    expect(html).toContain('cwd is required to confine the agent');
+    expect(html).toContain('Dismiss');
   });
 
   it('renders the card once session.error is cleared (next prompt_start/session_reset) — history is preserved, with a legible headline instead of the raw wrapped wire string', () => {
@@ -107,7 +108,7 @@ describe('TranscriptItems: failed-turn cards', () => {
     expect(html).toContain('cwd is required to confine the agent');
   });
 
-  it('keeps every OLDER failed turn visible even while the latest one is deduped against the top banner', () => {
+  it('keeps every failed turn visible in the transcript, older and latest alike', () => {
     const session: AcpSessionState = {
       ...initialAcpSessionState,
       sessionId: 'sess-1',
@@ -122,8 +123,30 @@ describe('TranscriptItems: failed-turn cards', () => {
       error: CWD_REQUIRED_MESSAGE,
     };
     const html = render(session);
-    expect(html).toContain('This request failed');
-    expect(html).not.toContain('This agent needs a workspace');
+    expect(html).toContain('Execution failed');
+    expect(html).toContain('This agent needs a workspace');
+  });
+});
+
+describe('TranscriptItems: thinking tags in answer text', () => {
+  it('renders a leading <thinking> block as the collapsed thoughts box and the rest as the answer', () => {
+    const session: AcpSessionState = {
+      ...initialAcpSessionState,
+      sessionId: 'sess-1',
+      items: [{ kind: 'message', id: 'a1' }],
+      messages: {
+        a1: {
+          id: 'a1',
+          role: 'assistant',
+          text: '<thinking> I need to read the README.md file </thinking>\n\nThe project is a CLI.',
+        },
+      },
+    };
+    const html = render(session);
+    expect(html).toContain('Thoughts');
+    expect(html).toContain('I need to read the README.md file');
+    expect(html).toContain('The project is a CLI.');
+    expect(html).not.toContain('&lt;thinking&gt;');
   });
 });
 

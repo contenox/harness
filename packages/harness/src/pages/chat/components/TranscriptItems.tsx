@@ -19,7 +19,7 @@ import {
   type ToolCallCardProps,
 } from '@contenox/ui';
 import { toolCallError } from '@contenox/ui/session-lib';
-import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -37,6 +37,7 @@ import {
   shouldShowStreamingPlaceholder,
   shouldShowWaitingForModel,
 } from '../lib/streamingPresentation';
+import { splitLeadingThinking } from '../lib/thinkingTags';
 import { ChatErrorCard } from './ChatErrorCard';
 import { MissionAskCard } from './MissionAskCard';
 import { PermissionCard } from './PermissionCard';
@@ -130,6 +131,10 @@ const TranscriptMessage = memo(function TranscriptMessage({
   const isUser = message.role === 'user';
   const roleLabel = isUser ? t('acp_chat.role_user') : (agentName ?? t('acp_chat.role_agent'));
   const showRoleLabel = !isUser && !!agentName && !/contenox/i.test(agentName);
+  const inline = isUser ? { thinking: null, answer: message.text } : splitLeadingThinking(message.text);
+  const thinking = [message.thinking, inline.thinking].filter(Boolean).join('\n\n');
+  const thinkingStreaming =
+    message.thinkingStreaming || (inline.thinking !== null && inline.answer === '' && !!message.streaming);
 
   return (
     <ChatMessage
@@ -139,21 +144,21 @@ const TranscriptMessage = memo(function TranscriptMessage({
       showRoleLabel={showRoleLabel}
       isLatest={isLatest}
       collapsible={false}
-      copyText={message.text || undefined}
+      copyText={inline.answer || undefined}
       copyLabel={t('acp_chat.copy')}
       copiedLabel={t('acp_chat.copied')}>
-      {message.thinking && (
+      {thinking && (
         <Collapsible
           defaultOpen={false}
-          title={<ThinkingHeader streaming={message.thinkingStreaming} />}
+          title={<ThinkingHeader streaming={thinkingStreaming} />}
           className="mb-2">
-          <ChatStreamThinkingBox className="mt-1">{message.thinking}</ChatStreamThinkingBox>
+          <ChatStreamThinkingBox className="mt-1">{thinking}</ChatStreamThinkingBox>
         </Collapsible>
       )}
-      {message.text ? (
+      {inline.answer ? (
         <>
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={chatTranscriptMarkdownComponents}>
-            {message.text}
+            {inline.answer}
           </ReactMarkdown>
           {shouldShowStreamingCaret(message) && <ChatStreamingCaret />}
         </>
@@ -348,8 +353,30 @@ const TranscriptTerminal = memo(function TranscriptTerminal({ card }: { card: Ac
   );
 });
 
-const TranscriptError = memo(function TranscriptError({ card }: { card: AcpErrorCard }) {
-  return <ChatErrorCard message={card.message} fallbackTitleKey="acp_chat.turn_failed_label" />;
+const TranscriptError = memo(function TranscriptError({
+  card,
+  onDismiss,
+  onOpenSettings,
+}: {
+  card: AcpErrorCard;
+  onDismiss: () => void;
+  onOpenSettings?: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <ChatErrorCard
+      message={card.message}
+      fallbackTitleKey="acp_chat.error_banner_headline"
+      onDismiss={onDismiss}
+      actions={kind =>
+        kind === 'model_unavailable' && onOpenSettings ? (
+          <Button type="button" variant="secondary" size="sm" onClick={onOpenSettings}>
+            {t('acp_recovery.model_unavailable_action')}
+          </Button>
+        ) : null
+      }
+    />
+  );
 });
 
 export interface TranscriptItemsProps {
@@ -358,29 +385,34 @@ export interface TranscriptItemsProps {
   onRespondPermission: (optionId: string) => void;
   onOpenFile?: (path: string) => void;
   canOpenFile?: (path: string) => boolean;
+  onOpenSettings?: () => void;
 }
 
 interface RenderItemContext {
   session: AcpSessionState;
   agentName: string | null;
-  latestErrorItemId: string | null;
+  dismissedErrors: ReadonlySet<string>;
+  dismissError: (id: string) => void;
   pending: AcpSessionState['pendingPermission'];
   anchorId: string | null;
   onRespondPermission: (optionId: string) => void;
   onOpenFile?: (path: string) => void;
   canOpenFile?: (path: string) => boolean;
+  onOpenSettings?: () => void;
 }
 
 function renderItem(item: AcpTimelineItem, isLatest: boolean, ctx: RenderItemContext): ReactNode {
   const {
     session,
     agentName,
-    latestErrorItemId,
+    dismissedErrors,
+    dismissError,
     pending,
     anchorId,
     onRespondPermission,
     onOpenFile,
     canOpenFile,
+    onOpenSettings,
   } = ctx;
   let rendered: ReactNode = null;
   if (item.kind === 'message') {
@@ -394,7 +426,14 @@ function renderItem(item: AcpTimelineItem, isLatest: boolean, ctx: RenderItemCon
   } else if (item.kind === 'error') {
     const card = session.errorCards[item.id];
     rendered =
-      card && item.id !== latestErrorItemId ? <TranscriptError key={`e-${item.id}`} card={card} /> : null;
+      card && !dismissedErrors.has(item.id) ? (
+        <TranscriptError
+          key={`e-${item.id}`}
+          card={card}
+          onDismiss={() => dismissError(item.id)}
+          onOpenSettings={onOpenSettings}
+        />
+      ) : null;
   } else {
     const toolCall = session.toolCalls[item.id];
     rendered = toolCall ? (
@@ -439,6 +478,7 @@ export const TranscriptItems = memo(function TranscriptItems({
   onRespondPermission,
   onOpenFile,
   canOpenFile,
+  onOpenSettings,
 }: TranscriptItemsProps) {
   const { t } = useTranslation();
   const pending = session.pendingPermission;
@@ -449,20 +489,22 @@ export const TranscriptItems = memo(function TranscriptItems({
       ? pendingToolCallId
       : null;
 
-  const latestErrorItemId = useMemo(
-    () =>
-      session.error != null ? ([...session.items].reverse().find(it => it.kind === 'error')?.id ?? null) : null,
-    [session.error, session.items],
+  const [dismissedErrors, setDismissedErrors] = useState<ReadonlySet<string>>(() => new Set());
+  const dismissError = useCallback(
+    (id: string) => setDismissedErrors(prev => new Set([...prev, id])),
+    [],
   );
   const groups = useMemo(() => groupByTurn(session.items), [session.items]);
 
   const ctx: RenderItemContext = {
     session,
     agentName,
-    latestErrorItemId,
+    dismissedErrors,
+    dismissError,
     pending,
     anchorId,
     onRespondPermission,
+    onOpenSettings,
     onOpenFile,
     canOpenFile,
   };
