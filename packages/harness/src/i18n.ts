@@ -45,6 +45,16 @@ const resources = {
         inherited_value: 'Inherited: {{value}}',
         chain_options_error: 'Could not load task chains: {{message}}',
         policy_options_error: 'Could not load HITL policies: {{message}}',
+        locale_section_title: 'Language',
+        locale_section_description:
+          'Agents see this as {var:locale} in their prompt and reply in that language unless you ask for another. Leave it empty to use the language of your operating system.',
+        locale_label: 'Locale',
+        locale_tooltip:
+          'A language tag such as en-US or de-DE. Empty means the one detected from your operating system.',
+        locale_placeholder: 'Detected: {{value}}',
+        locale_invalid: 'Enter a language tag such as en-US or de-DE.',
+        locale_applies:
+          'Applies to sessions started after saving. A running session keeps the language it started with.',
         agent_identity_title: 'Agent identity',
         agent_identity_description:
           'Commits your agents make are authored by this identity, so their work is easy to tell apart from yours and you can review it like a colleague’s. The same SSH key signs their commits and pushes their branches.',
@@ -2234,6 +2244,16 @@ const resources = {
         inherited_value: 'Geerbt: {{value}}',
         chain_options_error: 'Task-Chains konnten nicht geladen werden: {{message}}',
         policy_options_error: 'HITL-Policies konnten nicht geladen werden: {{message}}',
+        locale_section_title: 'Sprache',
+        locale_section_description:
+          'Agenten sehen das als {var:locale} in ihrem Prompt und antworten in dieser Sprache, sofern du keine andere verlangst. Leer lassen, um die Sprache deines Betriebssystems zu verwenden.',
+        locale_label: 'Gebietsschema',
+        locale_tooltip:
+          'Ein Sprach-Tag wie en-US oder de-DE. Leer bedeutet: der aus deinem Betriebssystem erkannte Wert.',
+        locale_placeholder: 'Erkannt: {{value}}',
+        locale_invalid: 'Gib einen Sprach-Tag wie en-US oder de-DE ein.',
+        locale_applies:
+          'Gilt für Sitzungen, die nach dem Speichern starten. Eine laufende Sitzung behält die Sprache, mit der sie begonnen hat.',
         agent_identity_title: 'Agent-Identität',
         agent_identity_description:
           'Commits deiner Agenten stammen von dieser Identität. So erkennst du ihre Arbeit sofort und kannst sie prüfen wie die eines Kollegen. Derselbe SSH-Schlüssel signiert ihre Commits und pusht ihre Branches.',

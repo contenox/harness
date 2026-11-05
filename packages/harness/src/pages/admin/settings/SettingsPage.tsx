@@ -4,6 +4,7 @@ import { AccessSettingsSection } from './AccessSettingsSection';
 import { AgentIdentitySection } from './AgentIdentitySection';
 import { AutocompleteSettingsSection } from './AutocompleteSettingsSection';
 import { GlobalSettingsSection } from './GlobalSettingsSection';
+import { LocaleSettingsSection } from './LocaleSettingsSection';
 import { MissionSettingsSection } from './MissionSettingsSection';
 import { ResponseSettingsSection } from './ResponseSettingsSection';
 import { ProvidersLinkSection } from './ProvidersLinkSection';
@@ -26,6 +27,7 @@ export default function SettingsPage() {
         </div>
         <GlobalSettingsSection />
         <ResponseSettingsSection />
+        <LocaleSettingsSection />
         <AutocompleteSettingsSection />
         <WorkspaceSettingsSection />
         <MissionSettingsSection />

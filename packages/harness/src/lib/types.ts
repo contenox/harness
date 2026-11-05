@@ -71,6 +71,7 @@ export type SetupBackendCheck = {
 export type ConfigResolvedFrom = {
   defaultChain?: 'workspace' | 'global';
   hitlPolicyName?: 'workspace' | 'global';
+  locale?: 'set' | 'detected';
 };
 
 export type SetupStatus = {
@@ -101,6 +102,8 @@ export type CLIConfigUpdateResponse = {
   unofficialSignIns?: string;
   defaultMissionAgent?: string;
   defaultMissionPolicy?: string;
+  locale?: string;
+  detectedLocale?: string;
   resolvedFrom?: ConfigResolvedFrom;
 };
 
@@ -122,6 +125,7 @@ export type CLIConfigUpdateRequest = {
   'unofficial-sign-ins'?: string;
   'default-mission-agent'?: string;
   'default-mission-policy'?: string;
+  locale?: string;
 };
 
 export type ShellEnvResponse = {
