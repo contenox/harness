@@ -42,14 +42,33 @@ export function buildChoiceEntries(option: SessionConfigOption, query = ''): Cho
   const keep = (i: ChoiceItem) => q === '' || matches(i, q);
   const raw = Array.isArray(option.options) ? option.options : [];
   if (isGroupedOptions(option.options)) {
-    return option.options.flatMap((g, gi) => {
-      const items = (g.options ?? []).map(v => itemOf(v, g.name || g.group)).filter(keep);
+    const groups = new Map<string, { key: string; label: string; items: ChoiceItem[] }>();
+    option.options.forEach((g, gi) => {
+      const id = g.group || g.name;
+      let bucket = groups.get(id);
+      if (!bucket) {
+        bucket = { key: `${gi}:${g.group}`, label: g.name || g.group, items: [] };
+        groups.set(id, bucket);
+      }
+      const seen = new Set(bucket.items.map(i => i.value));
+      for (const v of g.options ?? []) {
+        if (seen.has(v.value)) continue;
+        seen.add(v.value);
+        bucket.items.push(itemOf(v, bucket.label));
+      }
+    });
+    return [...groups.values()].flatMap(bucket => {
+      const items = bucket.items.filter(keep);
       return items.length === 0
         ? []
-        : [{ kind: 'header' as const, key: `${gi}:${g.group}`, label: g.name || g.group }, ...items];
+        : [{ kind: 'header' as const, key: bucket.key, label: bucket.label }, ...items];
     });
   }
-  return (raw as SessionConfigValue[]).map(v => itemOf(v)).filter(keep);
+  const seen = new Set<string>();
+  return (raw as SessionConfigValue[])
+    .filter(v => !seen.has(v.value) && !!seen.add(v.value))
+    .map(v => itemOf(v))
+    .filter(keep);
 }
 
 /** Values only, in display order: what keyboard navigation walks (headers are skipped). */

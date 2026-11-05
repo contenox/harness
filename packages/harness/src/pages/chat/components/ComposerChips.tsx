@@ -110,7 +110,10 @@ export function SelectChip({ option, onChange, onOpen, align = 'end' }: SelectCh
         )}
         {entries.map(entry =>
           entry.kind === 'header' ? (
-            <DropdownLabel key={`h:${entry.key}`} role="presentation">
+            <DropdownLabel
+              key={`h:${entry.key}`}
+              role="presentation"
+              className="bg-raised sticky top-0 z-10 border-b border-line">
               {entry.label}
             </DropdownLabel>
           ) : (

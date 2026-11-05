@@ -43,6 +43,53 @@ describe('buildChoiceEntries', () => {
       'weird/va/lue',
     ]);
   });
+  it('lists a value once per group even when the runtime repeats it, and merges repeated groups', () => {
+    const o: SessionConfigOption = {
+      id: 'model',
+      name: 'Model',
+      type: 'select',
+      currentValue: '',
+      options: [
+        { group: 'any', name: 'Any provider', options: [{ value: 'any/claude-sonnet-5-5', name: 'claude-sonnet-5-5' }] },
+        {
+          group: 'bedrock-1',
+          name: 'Bedrock',
+          options: [
+            { value: 'connection:bedrock-1/claude-sonnet-5-5', name: 'claude-sonnet-5-5' },
+            { value: 'connection:bedrock-1/claude-sonnet-5-5', name: 'claude-sonnet-5-5' },
+          ],
+        },
+        { group: 'any', name: 'Any provider', options: [{ value: 'any/claude-sonnet-5-5', name: 'claude-sonnet-5-5' }] },
+        {
+          group: 'bedrock-1',
+          name: 'Bedrock',
+          options: [{ value: 'connection:bedrock-1/us.anthropic.claude-sonnet-5-5', name: 'us.anthropic.claude-sonnet-5-5' }],
+        },
+      ],
+    };
+    expect(buildChoiceEntries(o, 'sonnet-5-5').map(x => (x.kind === 'header' ? `# ${x.label}` : x.value))).toEqual([
+      '# Any provider',
+      'any/claude-sonnet-5-5',
+      '# Bedrock',
+      'connection:bedrock-1/claude-sonnet-5-5',
+      'connection:bedrock-1/us.anthropic.claude-sonnet-5-5',
+    ]);
+    expect(summarizeChoice({ ...o, currentValue: 'connection:bedrock-1/claude-sonnet-5-5' })).toEqual({
+      label: 'claude-sonnet-5-5',
+      badge: 'Bedrock',
+      title: 'Bedrock · claude-sonnet-5-5',
+    });
+  });
+  it('lists a flat value once', () => {
+    const o: SessionConfigOption = {
+      id: 'think',
+      name: 'T',
+      type: 'select',
+      currentValue: 'a',
+      options: [{ value: 'a', name: 'A' }, { value: 'a', name: 'A' }, { value: 'b', name: 'B' }],
+    };
+    expect(choiceItems(buildChoiceEntries(o)).map(i => i.value)).toEqual(['a', 'b']);
+  });
   it('flat options have no headers', () => {
     const o: SessionConfigOption = { id: 'think', name: 'T', type: 'select', currentValue: 'a', options: [{ value: 'a', name: 'A' }] };
     expect(buildChoiceEntries(o).every(e => e.kind === 'item')).toBe(true);
