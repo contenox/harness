@@ -23,7 +23,7 @@ jobs:
             platform: linux-amd64
           - os: windows-latest
             platform: windows-amd64
-          - os: macos-14
+          - os: macos-15
             platform: macos-arm64
     runs-on: ${{ matrix.os }}
     env:
