@@ -29,6 +29,7 @@ export interface ChatComposerContainerProps {
   /** The only thing that leaves the composer: a finished turn. Rejects if it could not be sent. */
   onSubmit: (payload: SubmitPayload) => Promise<void>;
   onCancel: () => void;
+  onOpenConnectors?: () => void;
 }
 
 /**
@@ -48,6 +49,7 @@ export function ChatComposerContainer({
   footerEnd,
   onSubmit,
   onCancel,
+  onOpenConnectors,
 }: ChatComposerContainerProps) {
   const { t } = useTranslation();
   const c = useComposerController({
@@ -135,6 +137,7 @@ export function ChatComposerContainer({
             onStartRecording={onStartRecording}
             onStopRecording={audioAttachments.stopRecording}
             onCancelRecording={audioAttachments.cancelRecording}
+            onOpenConnectors={onOpenConnectors}
           />
         }
         footerEnd={footerEnd}

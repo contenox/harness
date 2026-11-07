@@ -7,6 +7,7 @@ import { ConnectionDeleteConfirm } from './ConnectionDeleteConfirm';
 import { ConnectionRecovery } from './ConnectionRecovery';
 import { ConnectionRename } from './ConnectionRename';
 import { ConnectionRow } from './ConnectionRow';
+import { HiddenModelsNotice } from './HiddenModelsNotice';
 import { ProviderSetupForm } from './ProviderSetupForm';
 
 type Mode = { id: string; kind: 'edit' | 'rename' | 'delete' };
@@ -61,6 +62,7 @@ export function ConnectionList({ connections, onVerified }: Props) {
                 onCancel={close}
               />
             )}
+            {active === null && <HiddenModelsNotice connection={connection} />}
             {active === null && (
               <ConnectionRecovery
                 connection={connection}

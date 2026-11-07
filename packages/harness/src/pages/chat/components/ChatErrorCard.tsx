@@ -3,10 +3,15 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { acpFailureCopyKeys, classifyAcpExecutionError, failedAgentName, type AcpFailureKind } from '../../../lib/acpFailureKind';
+import { translateRuntimeText } from '../../../lib/runtimeTexts';
 import { ChatFailureRecovery } from './ChatFailureRecovery';
 
 export interface ChatErrorCardProps {
   message: string;
+  /** Short reason shown instead of the generic description. */
+  summary?: string;
+  /** Technical details shown instead of the message. */
+  details?: string;
   /** Title used when the failure kind has none of its own. */
   fallbackTitleKey: 'acp_chat.error_banner_headline' | 'acp_chat.turn_failed_label';
   actions?: (kind: ReturnType<typeof classifyAcpExecutionError>) => ReactNode;
@@ -24,7 +29,7 @@ function AgentRecoveryAction({ agent, kind }: { agent: string; kind: AcpFailureK
 }
 
 /** A failed turn: connection problems go through ConnectionRepair, everything else is a RecoveryCard. */
-export function ChatErrorCard({ message, fallbackTitleKey, actions, onDismiss }: ChatErrorCardProps) {
+export function ChatErrorCard({ message, summary, details, fallbackTitleKey, actions, onDismiss }: ChatErrorCardProps) {
   const { t } = useTranslation();
   const kind = classifyAcpExecutionError(message);
   const copy = acpFailureCopyKeys(kind);
@@ -48,10 +53,14 @@ export function ChatErrorCard({ message, fallbackTitleKey, actions, onDismiss }:
           </>
         ) : undefined
       }
-      details={message || undefined}
+      details={details ?? (message || undefined)}
       detailsLabel={t('acp_chat.error_details_label')}
       className="my-1 min-w-0 [overflow-wrap:anywhere]">
-      {copy.descriptionKey ? t(copy.descriptionKey as never, { name: agent ?? '' }) : t('acp_chat.error_generic_description')}
+      {copy.descriptionKey
+        ? t(copy.descriptionKey as never, { name: agent ?? '' })
+        : summary
+          ? translateRuntimeText(summary, t)
+          : t('acp_chat.error_generic_description')}
     </RecoveryCard>
   );
   return <ChatFailureRecovery kind={kind} message={message} fallback={card} />;

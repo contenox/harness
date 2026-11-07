@@ -7,6 +7,8 @@ import {
   recoveryFor,
   type RecoveryAction,
 } from '../../lib/backendErrors';
+import { redactProject } from '../../lib/displayUrl';
+import { translateRuntimeText } from '../../lib/runtimeTexts';
 import { signInAccountName } from '../../lib/providerCatalog';
 import type { Connection } from '../../lib/types';
 
@@ -49,7 +51,7 @@ export function ConnectionRecovery({
 
   const recovery = recoveryFor(recoveryCodeOf(connection), {
     providerTitle,
-    baseUrl: connection.baseUrl,
+    baseUrl: connection.displayUrl || redactProject(connection.baseUrl),
     connectionName: connection.name,
   });
 
@@ -61,13 +63,18 @@ export function ConnectionRecovery({
     chooseModel: onChooseModel,
   };
   const actions = recovery.actions.filter(action => handlers[action]);
+  const headline =
+    connection.errorCode === 'misconfigured' && connection.error?.trim()
+      ? connection.error.trim()
+      : undefined;
+  const technical = headline ? details || undefined : details || connection.error || undefined;
 
   return (
     <RecoveryCard
       className={className}
       tone={recovery.tone}
       title={t(recovery.titleKey, recovery.values)}
-      details={details || connection.error || undefined}
+      details={technical ? redactProject(technical) : undefined}
       detailsLabel={t('recovery.details')}
       actions={
         actions.length > 0 ? (
@@ -86,7 +93,7 @@ export function ConnectionRecovery({
           </>
         ) : undefined
       }>
-      {t(recovery.textKey, recovery.values)}
+      {headline ? translateRuntimeText(redactProject(headline), t) : t(recovery.textKey, recovery.values)}
     </RecoveryCard>
   );
 }

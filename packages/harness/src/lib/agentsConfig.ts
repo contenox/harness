@@ -158,3 +158,54 @@ export async function removeEnvelope(scope: ConfigScope, name: string, revision:
     await deleteEnvelope(scope, name, fresh.revision);
   }
 }
+
+export type ToolsPolicyItem = {
+  name: string;
+  inLayer: boolean;
+  layer: Record<string, string> | null;
+  effective: Record<string, string> | null;
+  revision: string;
+};
+
+function policyPath(name: string): string {
+  return `/tools_policies/${encodeURIComponent(name)}`;
+}
+
+export async function getToolsPolicy(scope: ConfigScope, name: string): Promise<ToolsPolicyItem> {
+  try {
+    return await call<ToolsPolicyItem>(scope, configUrl(policyPath(name), scope));
+  } catch (err) {
+    if (!(err instanceof ApiError) || err.status !== 404) throw err;
+    const doc = await getConfigDocument(scope);
+    return { name, inLayer: false, layer: null, effective: null, revision: doc.revision };
+  }
+}
+
+export async function saveToolsPolicy(
+  scope: ConfigScope,
+  name: string,
+  value: Record<string, string>,
+  known: { inLayer: boolean; revision: string },
+): Promise<void> {
+  const empty = Object.keys(value).length === 0;
+  if (empty) {
+    if (known.inLayer) {
+      await call<unknown>(scope, configUrl(policyPath(name), scope), {
+        method: 'DELETE',
+        headers: { 'If-Match': `"${known.revision}"` },
+      });
+    }
+    return;
+  }
+  if (known.inLayer) {
+    await call<unknown>(scope, configUrl(policyPath(name), scope), {
+      method: 'PUT',
+      body: JSON.stringify({ value, revision: known.revision }),
+    });
+    return;
+  }
+  await call<unknown>(scope, configUrl('/tools_policies', scope), {
+    method: 'POST',
+    body: JSON.stringify({ name, value, revision: known.revision }),
+  });
+}

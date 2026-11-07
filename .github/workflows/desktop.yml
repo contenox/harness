@@ -61,6 +61,18 @@ jobs:
       - run: npm run install-web
       - run: npm run package
 
+      - name: Build Microsoft Store package
+        if: runner.os == 'Windows'
+        run: npm --prefix desktop run package:store
+
+      - name: Keep the Microsoft Store package
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: contenox-microsoft-store
+          path: desktop/dist/Contenox-*-store-*.appx
+          if-no-files-found: error
+
       - name: Import release signing key
         if: runner.os == 'Linux'
         env:

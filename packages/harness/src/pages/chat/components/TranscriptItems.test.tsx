@@ -1,9 +1,10 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { initialAcpSessionState, type AcpSessionState } from '../../../hooks/acpSessionState';
 import i18n from '../../../i18n';
 import { ThemeProvider } from '../../../lib/ThemeProvider';
+import { failureTurnKey, saveDismissedErrors } from '../../../lib/dismissedErrors';
 import { TranscriptItems } from './TranscriptItems';
 
 beforeAll(async () => {
@@ -221,5 +222,75 @@ describe('TranscriptItems: collapsed log tail', () => {
     expect(html).toContain('tool-call-preview');
     expect(html).toContain('l3\nl4\nl5\nl6');
     expect(html).not.toContain('l2');
+  });
+});
+
+describe('TranscriptItems: dismissed failure cards after a reload', () => {
+  const FAILURE = '[step "chain-acp-route" (route) failed: provider error (status 400): model refused]';
+  const session: AcpSessionState = {
+    ...initialAcpSessionState,
+    sessionId: 'sess-dismiss',
+    items: [
+      { kind: 'message', id: 'u1' },
+      { kind: 'message', id: 'a1' },
+    ],
+    messages: {
+      u1: { id: 'u1', role: 'user', text: 'hi' },
+      a1: { id: 'a1', role: 'assistant', text: FAILURE },
+    },
+  };
+
+  function stub(): Map<string, string> {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+    });
+    return store;
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('shows the card until it was dismissed, then keeps it hidden', () => {
+    stub();
+    expect(render(session)).toContain('role="alert"');
+
+    saveDismissedErrors('sess-dismiss', new Set([failureTurnKey(1)]));
+    expect(render(session)).not.toContain('role="alert"');
+    expect(render({ ...session, sessionId: 'other' })).toContain('role="alert"');
+  });
+
+  it('hides a replayed failure whose message ids and text differ from the dismissed live card', () => {
+    stub();
+    saveDismissedErrors('sess-dismiss', new Set([failureTurnKey(1)]));
+    const replayed: AcpSessionState = {
+      ...session,
+      items: [
+        { kind: 'message', id: 'r-77' },
+        { kind: 'message', id: 'r-78' },
+      ],
+      messages: {
+        'r-77': { id: 'r-77', role: 'user', text: 'hi' },
+        'r-78': { id: 'r-78', role: 'assistant', text: '[step "x" (route) failed: another text entirely]' },
+      },
+    };
+    expect(render(replayed)).not.toContain('role="alert"');
+  });
+
+  it('keeps a failure after a different user turn visible', () => {
+    stub();
+    saveDismissedErrors('sess-dismiss', new Set([failureTurnKey(1)]));
+    const later: AcpSessionState = {
+      ...session,
+      items: [...session.items, { kind: 'message', id: 'u2' }, { kind: 'message', id: 'a2' }],
+      messages: {
+        ...session.messages,
+        u2: { id: 'u2', role: 'user', text: 'again' },
+        a2: { id: 'a2', role: 'assistant', text: FAILURE },
+      },
+    };
+    expect(render(later)).toContain('role="alert"');
   });
 });

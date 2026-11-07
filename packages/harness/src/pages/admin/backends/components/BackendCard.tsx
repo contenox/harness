@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionRepair } from '../../../../components/providers/ConnectionRepair';
 import { connectionFromBackend } from '../../../../lib/chatRecovery';
+import { backendDisplayUrl } from '../../../../lib/displayUrl';
 import { Backend } from '../../../../lib/types';
 import { ModelStatusDisplay } from './ModelStatusDisplay';
 
@@ -45,7 +46,7 @@ export function BackendCard({ backend, onEdit, onDelete }: BackendCardProps) {
   return (
     <ResourceCard
       title={backend.name}
-      subtitle={backend.baseUrl}
+      subtitle={backendDisplayUrl(backend)}
       status={backend.error ? 'error' : 'default'}
       actions={{
         edit: () => onEdit(backend),

@@ -1,5 +1,7 @@
 import { Button, Form, FormField, Input, Panel, Section, Select, Spinner } from '@contenox/ui';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isHttpUrl } from '../../../../lib/providerSetupValues';
 import { Backend } from '../../../../lib/types';
 
 type BackendFormProps = {
@@ -31,7 +33,20 @@ export default function BackendForm({
 }: BackendFormProps) {
   const { t } = useTranslation();
 
-  const isFormValid = name.trim() && baseURL.trim() && configType.trim();
+  const [urlTouched, setUrlTouched] = useState(false);
+
+  const trimmedURL = baseURL.trim();
+  const urlMustBeHttp = configType === 'ollama' || configType === 'vllm';
+  const urlError = !trimmedURL
+    ? urlTouched || name.trim()
+      ? t('backends.error_url_required')
+      : undefined
+    : urlMustBeHttp && !isHttpUrl(trimmedURL)
+      ? t('providers.field.url_invalid')
+      : undefined;
+  const urlInvalid = !trimmedURL || (urlMustBeHttp && !isHttpUrl(trimmedURL));
+
+  const isFormValid = name.trim() && !urlInvalid && configType.trim();
 
   return (
     <Section>
@@ -77,10 +92,18 @@ export default function BackendForm({
           />
         </FormField>
 
-        <FormField label={t('backends.form_url')} required tooltip={t('backends.tooltip_url')}>
+        <FormField
+          label={t('backends.form_url')}
+          required
+          tooltip={t('backends.tooltip_url')}
+          error={urlError}>
           <Input
             value={baseURL}
-            onChange={e => setBaseURL(e.target.value)}
+            onChange={e => {
+              setUrlTouched(true);
+              setBaseURL(e.target.value);
+            }}
+            error={!!urlError}
             placeholder={
               configType === 'local'
                 ? '~/.contenox/models/'

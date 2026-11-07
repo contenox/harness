@@ -380,6 +380,47 @@ describe('AcpClient: session/request_permission', () => {
     await expect(promptPromise).resolves.toEqual({ stopReason: 'end_turn' });
   });
 
+  it('withdraws a pending permission request on $/cancel_request without answering it', async () => {
+    const transport = new MockTransport();
+    const client = new AcpClient(transport);
+
+    let rejectPending: ((err: Error) => void) | null = null;
+    const onPermissionRequest = vi.fn(
+      () =>
+        new Promise<string>((_, reject) => {
+          rejectPending = reject;
+        }),
+    );
+    const onPermissionCancelled = vi.fn(() => rejectPending?.(new Error('withdrawn')));
+    const promptPromise = client.prompt('sess-6', [{ type: 'text', text: 'npm install' }], {
+      onPermissionRequest,
+      onPermissionCancelled,
+    });
+    const promptReq = transport.lastSent();
+
+    transport.feed({
+      jsonrpc: '2.0',
+      id: 12,
+      method: 'session/request_permission',
+      params: {
+        sessionId: 'sess-6',
+        toolCall: { toolCallId: 'tc-3', title: 'npm install', kind: 'execute', status: 'pending' },
+        options: [{ optionId: 'opt-allow', name: 'Allow', kind: 'allow_once' }],
+      },
+    });
+    await flushMicrotasks();
+    expect(onPermissionRequest).toHaveBeenCalledTimes(1);
+
+    transport.feed({ jsonrpc: '2.0', method: '$/cancel_request', params: { requestId: 12 } });
+    await flushMicrotasks();
+
+    expect(onPermissionCancelled).toHaveBeenCalledTimes(1);
+    expect(transport.sent.find(m => (m as Record<string, unknown>).id === 12)).toBeUndefined();
+
+    transport.feed({ jsonrpc: '2.0', id: promptReq.id, result: { stopReason: 'end_turn' } });
+    await expect(promptPromise).resolves.toEqual({ stopReason: 'end_turn' });
+  });
+
   it('responds with outcome cancelled if the permission handler rejects', async () => {
     const transport = new MockTransport();
     const client = new AcpClient(transport);

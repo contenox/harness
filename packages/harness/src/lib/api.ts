@@ -1,3 +1,11 @@
+import type {
+  Connector,
+  HiddenTools,
+  McpServer,
+  McpServerInput,
+  RemoteToolsEntry,
+  RemoteToolsInput,
+} from './connectorTypes';
 import { apiFetch } from './fetch';
 import {
   Agent,
@@ -89,6 +97,32 @@ export const api = {
     apiFetch<Agent>(`/api/agents/by-name/${encodeURIComponent(name)}`),
 
   getFleet: () => apiFetch<FleetEntry[]>('/api/fleet'),
+  listConnectors: () => apiFetch<Connector[]>('/api/connectors'),
+  checkConnector: (name: string) =>
+    apiFetch<Connector>(`/api/connectors/${encodeURIComponent(name)}/check`, options('POST')),
+  getHiddenTools: () => apiFetch<HiddenTools>('/api/connectors/hidden-tools'),
+  setHiddenTools: (name: string, tools: string[], workspace?: string) =>
+    apiFetch<HiddenTools>(
+      `/api/connectors/${encodeURIComponent(name)}/hidden-tools`,
+      options('PUT', { tools, workspace }),
+    ),
+  getMcpServer: (id: string) => apiFetch<McpServer>(`/api/mcp-servers/${encodeURIComponent(id)}`),
+  createMcpServer: (input: McpServerInput) => apiFetch<McpServer>('/api/mcp-servers', options('POST', input)),
+  updateMcpServer: (id: string, input: McpServerInput) =>
+    apiFetch<McpServer>(`/api/mcp-servers/${encodeURIComponent(id)}`, options('PUT', input)),
+  deleteMcpServer: (id: string) => apiFetch<void>(`/api/mcp-servers/${encodeURIComponent(id)}`, options('DELETE')),
+  startMcpOAuth: (id: string, redirectBase: string) =>
+    apiFetch<{ authorizationUrl: string }>(
+      `/api/mcp-servers/${encodeURIComponent(id)}/oauth/start`,
+      options('POST', { redirectBase }),
+    ),
+  getRemoteTools: (id: string) => apiFetch<RemoteToolsEntry>(`/api/tools/remote/${encodeURIComponent(id)}`),
+  createRemoteTools: (input: RemoteToolsInput) =>
+    apiFetch<RemoteToolsEntry>('/api/tools/remote', options('POST', input)),
+  updateRemoteTools: (id: string, input: RemoteToolsInput) =>
+    apiFetch<RemoteToolsEntry>(`/api/tools/remote/${encodeURIComponent(id)}`, options('PUT', input)),
+  deleteRemoteTools: (id: string) =>
+    apiFetch<void>(`/api/tools/remote/${encodeURIComponent(id)}`, options('DELETE')),
   listExternalAgents: () => apiFetch<ExternalAgent[]>('/api/external-agents'),
   createExternalAgent: (input: ExternalAgentInput) =>
     apiFetch<ExternalAgent>('/api/external-agents', options('POST', input)),
@@ -256,6 +290,13 @@ export const api = {
       `/api/providers/connections/${encodeURIComponent(id)}/check`,
       // A synchronous discovery cycle can take up to 30s on the runtime side.
       { ...options('POST'), timeoutMs: 45_000 },
+    ),
+  clearHiddenModels: (id: string, model?: string) =>
+    apiFetch<Connection>(
+      `/api/providers/connections/${encodeURIComponent(id)}/hidden-models${
+        model ? `?model=${encodeURIComponent(model)}` : ''
+      }`,
+      { ...options('DELETE'), timeoutMs: 45_000 },
     ),
   startConnectionLogin: (id: string) =>
     apiFetch<ProviderLoginStart>(

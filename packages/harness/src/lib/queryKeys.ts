@@ -227,6 +227,14 @@ export const agentsConfigKeys = {
   document: (workspace = '') => [...agentsConfigKeys.all, 'document', workspace] as const,
 };
 
+export const connectorKeys = {
+  all: ['connectors'] as const,
+  list: () => [...connectorKeys.all, 'list'] as const,
+  mcp: (id: string) => [...connectorKeys.all, 'mcp', id] as const,
+  remote: (id: string) => [...connectorKeys.all, 'remote', id] as const,
+  session: (sessionId: string) => [...connectorKeys.all, 'session', sessionId] as const,
+};
+
 export const externalAgentKeys = {
   all: ['external-agents'] as const,
   list: () => [...externalAgentKeys.all, 'list'] as const,

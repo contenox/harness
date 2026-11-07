@@ -1,159 +1,90 @@
 # Contenox
 
-**A desktop app for demanding work — and the people accountable for it.**
+**YOLO speed on your code — without the YOLO horror story.**
 
-An open-source, vendor-neutral harness for policy-enforced AI agent orchestration.
+Contenox is a free, open-source desktop app. Point an agent at one of your projects and let it read, write and run your code at full speed. Bring your own AI — a subscription you already pay for, a cloud key, or a model running on your own machine.
 
-Contenox runs authored agent workflows as a local process. The policy that gates
-each tool call is a file the operator wrote, enforced by the harness before
-anything runs. Backends are configuration; sessions, approvals and per-step
-records stay on disk.
+Your edits, your build and your tests just run, no prompts. The agent only stops for the handful of moves that could actually burn you, and it can never reach your keys or your machine. Nothing to switch off, nothing to regret.
 
-Contenox ships as a desktop app with a bundled runtime. The app is the cockpit:
-sessions, missions, approvals, projects and backends. The runtime serves the CLI,
-the HTTP API and ACP; editors attach over ACP; and the model named in a request
-is the model that serves it — or the run stops with the candidates it could have used.
-
-> **What Contenox is not:** it is not an autonomous coding employee, not a hosted
-> autopilot, and not a vendor's harness. It is a local runtime for AI-assisted
-> work that keeps the operator accountable for what runs.
-
-Docs: **[contenox.com](https://contenox.com)**
+Docs, downloads and guides: **[contenox.com](https://contenox.com)**. Made by Alexander Ertli.
 
 ---
 
-## For Work That Touches Real Systems
+## Why you won't switch it off
 
-Contenox is purpose-built for high-consequence engineering environments: production repositories, internal APIs, infrastructure scripts, operational dashboards, release pipelines, and systems of record.
+Most AI coding tools ask before every edit and every command, so the first thing people do is turn the asking off — and then one bad run leaks a key or wipes a folder. Contenox asks only when it matters. There's nothing worth switching off, and the moves that could hurt you stay blocked even when you're racing.
 
-In these environments, an "AI agent" cannot mean "give a model broad credentials and hope for the best." It requires a strict runtime boundary:
+![A Contenox chat: the agent ran git status and read package.json on its own, then stopped to ask before npm install](docs/screenshots/chat-permission.png)
 
-* **Explicit tools & policies** to govern actions.
-* **Local state** to preserve privacy.
-* **Human-in-the-loop (HITL) approval** for execution.
-* **Reviewable evidence** for auditing.
+The shipped **Default** set:
 
-The core issue is not that agents can act; it is agents acting outside a boundary the operator authors. The model can reason, inspect, and propose—but the **Chain** decides what it may touch, and the **operator** decides what it may change.
+* **Reads and edits the project without asking.** The agent is confined to the open project folder. `.env` files and keys ask before they are read.
+* **Runs the project's own loop without asking.** `go test`, `npm run build`, `cargo check`, `pytest`, `make test`, git reads, and plain readers such as `grep`, `ls` or `Get-Content`, including pipelines of them (`git log --oneline | head -n 20`).
+* **Asks before anything that reaches further.** Installs, deletes, moves, `git commit`, `git push`, anything with a redirect or a `$(...)`, and every command the list above doesn't name.
+* **Refuses what no agent needs.** SSH and GPG keys, cloud credentials, OS keychains, password managers, wallet files, browser profiles and shell history cannot be read or written. Shell startup files, login items, git hooks and the permission policy itself cannot be written, so an agent can't widen its own permissions.
+
+Other sets ship beside it: **Ask always**, **Read only**, **Strict** (refuse what isn't named), and **Dev** (your own machine, still asking before risky commands). Switch per chat from the chip above the composer, edit any set on the **Permissions** page, or open `agents.toml` and edit it as text. There is no "always allow" and no bypass mode.
+
+---
+
+## What you get
+
+* **Chat in a project.** Sessions are grouped by project in the sidebar; each keeps its own model, permission set and connectors.
+* **Approval cards, not pop-ups.** When something needs you, a card shows the exact path or command, with **Allow** and **Deny**. The agent waits.
+* **Any provider.** Ollama (local or cloud), OpenAI, a ChatGPT subscription, Anthropic, Google Gemini and Vertex AI, DeepSeek, Alibaba Cloud Model Studio, Mistral, OpenRouter, AWS Bedrock and any vLLM or OpenAI-compatible endpoint. API keys live in your local database; the model named in a chat is the model that answers.
+* **Connectors.** Add MCP servers (local or remote) and OpenAPI services, switch single tools on or off, and choose which chats see them.
+* **Other agents, same rules.** Claude Code can run inside Contenox; its edits go through the same approval cards.
+* **Your editor, same runtime.** The bundled `contenox-runtime` speaks the [Agent Client Protocol](https://agentclientprotocol.com) over stdio for Zed, JetBrains and AionUi.
+* **Everything local.** Sessions, settings, approvals and provider connections are SQLite files in your user profile. Nothing is proxied through a Contenox server.
 
 ---
 
 ## Install
 
-**Desktop app:** download the installer for your platform from **[contenox.com](https://contenox.com)** —
-Linux (`.deb`, `.rpm`), macOS (`.dmg`, `.zip`), Windows (`.exe`, `.zip`). Every release ships a
-`SHA256SUMS` file and a detached GPG signature; the RPM is signed.
+Download the installer for your system from **[contenox.com](https://contenox.com)**: Windows (`.exe`), macOS (`.dmg`), Linux (`.deb`, `.rpm`). Every release ships a `SHA256SUMS` file and a detached GPG signature.
 
-**Runtime only (CLI, servers, CI):** the runtime is its own repository,
-[contenox/runtime](https://github.com/contenox/runtime). Its
-[releases](https://github.com/contenox/runtime/releases) carry `contenox-runtime-<os>-<arch>`
-binaries, `SHA256SUMS` and a signed manifest; the desktop app pins one of these versions in
-`runtime.lock.json`.
+The app bundles the runtime. To use the command line as well, choose **File → Install ‘contenox-runtime’ Command in PATH** in the app, or install the runtime on its own from [contenox/runtime](https://github.com/contenox/runtime). The [install guide](https://contenox.com/docs/cli/install/) covers both.
 
 ---
 
-## Quick Start
+## The command line
 
-Contenox installs two commands:
-
-- `contenox` — the desktop app. `contenox .` opens the folder you are standing in as a project; add or switch projects from the sidebar at any time.
-- `contenox-runtime` — the runtime CLI: chat, sessions, backends, `serve`, and ACP.
+The same runtime, the same database, no app window:
 
 ```bash
-contenox .                        # Open this folder as a project in the desktop app
-contenox-runtime setup                    # Choose a provider/model for this machine
-contenox-runtime "say hello world in python"    # Query directly from the CLI
-contenox-runtime chat -e                         # Open $EDITOR to compose a rich prompt
-
+contenox-runtime setup                              # pick a provider, a model and an API key
+contenox-runtime "explain the build in this folder" # chat in the current project
+contenox-runtime session list                       # past chats, per project
+contenox-runtime serve                              # HTTP API and ACP WebSocket for local clients
+contenox-runtime acp                                # ACP over stdio, for editors
 ```
 
-Manage past contexts effortlessly using `contenox-runtime session list` and `contenox-runtime session switch <name>`.
-
-### Separate Model Roles
-
-Chat and completion are separate roles, each with its own provider and model. A frontier model can serve chat while a small local model serves completion requests:
+Backends are configuration, not code:
 
 ```bash
-# Rich chat routed to a hosted model
-contenox-runtime config set default-provider          openai
-contenox-runtime config set default-model             gpt-5-mini
+contenox-runtime backend add ollama   --type ollama
+contenox-runtime backend add openai   --type openai   --api-key-env OPENAI_API_KEY
+contenox-runtime backend add deepseek --type deepseek --api-key-env DEEPSEEK_API_KEY
+contenox-runtime backend add alibaba  --type alibaba-cloud --api-key-env DASHSCOPE_API_KEY
+contenox-runtime backend add chatgpt  --type openai-codex && contenox-runtime backend login chatgpt
 
-# Ghost text routed to a small, fast model
-contenox-runtime config set default-autocomplete-provider ollama
-contenox-runtime config set default-autocomplete-model    qwen2.5-coder:7b
-
+contenox-runtime config set default-provider ollama
+contenox-runtime config set default-model    qwen3:8b
 ```
 
----
-
-## Core Use Cases
-
-Contenox excels when workflows are specific, repeatable, and require explicit guardrails:
-
-* **Reviewing Diffs:** Run tests, summarize architectural risks, and gate destructive operations behind manual approvals.
-* **Drafting Release Evidence:** Automatically aggregate git logs, PRs, issue tickets, and CI outputs into clean changelogs, deployment checklists, and reviewer packets.
-* **Wrapping Internal APIs:** Safely expose subsets of OpenAPI specs while masking sensitive tenant/environment arguments and requiring authorization for mutating calls.
-* **Automating Repo Chores:** Ingest an issue tracking item, generate a patch, run local validation checks, and draft the PR description.
-* **Inspecting Live Operations:** Query diagnostic dashboards, shell scripts, or Model Context Protocol (MCP) tools via tightly scoped policies rather than broad, persistent credentials.
-
-The exact same Chain runs seamlessly across the **Terminal, Zed, JetBrains, AionUi,** or any standard ACP client.
-
----
-
-## Security & Runtime Protection
-
-| Identified Risk | Contenox Mitigation |
-| --- | --- |
-| **Fleeting Agent History** | Chains are declarative files: easily reviewable, version-controlled, and repeatable. |
-| **Unbounded Agent Access** | Enforced via strict tool allowlists, localized command policies, and tightly scoped API definitions. |
-| **Post-Damage Review** | Destructive actions are systematically blocked by human-in-the-loop approval gates prior to execution. |
-| **Leaky Internal APIs** | Curated OpenAPI subsets encapsulate hidden environment variables, auth tokens, and tenant arguments. |
-| **Vendor Lock-in** | Provider and model routing live in configuration files, entirely decoupled from application logic. |
-| **Frontier Model Budget Burn** | Routine tasks and linting checks are automatically routed to local or private-network infrastructure. |
-| **Exfiltration of Team Data** | All interactive sessions, states, configs, and runtime logs remain completely local. |
-
----
-
-## Architectural Fit
-
-Contenox serves as the local agent runtime layer running between your interface and your infrastructure.
-
-| Ecosystem | The Contenox Paradigm |
-| --- | --- |
-| **IDE Copilots** | Editor assistance is only one piece of the puzzle. Workflows must execute uniformly across the terminal, IDEs, and independent headless scripts. |
-| **CLI Coding Agents** | A single coding loop is not a structured runtime. Contenox adds multi-session persistence, strict tool authorization, explicit model routing, and human gates. |
-| **LangChain / Frameworks** | Software development libraries are not end-user products. Contenox provides an out-of-the-box executable runtime tailored for engineers and teams. |
-| **Dify / n8n / Web Tools** | Workflows touching local source code and specialized internal infrastructure should never depend on a third-party SaaS control plane. |
-| **Ollama Wrappers** | A model provider is not a workflow boundary. Contenox introduces native Chains, secure tool definitions, and dynamic routing across hybrid infrastructure. |
-
----
-
-## Connect Your Stack
-
-Any asset accessible via an OpenAPI spec, a shell command, or an MCP server can be transformed into a secure tool inside a Contenox Chain:
+Connect tools:
 
 ```bash
-# Connect any Model Context Protocol (MCP) server
-contenox-runtime mcp add notion https://mcp.notion.com/mcp --auth-type oauth
-
-# Wrap an internal HTTP API using its OpenAPI specification
-contenox-runtime tools add erp_billing \
-  --url https://erp.internal.example.com \
-  --spec ./billing-subset.yaml
-
-# Bind the local shell under a strictly defined Chain policy
-contenox-runtime --shell "check Proxmox and flag anything red"
-
+contenox-runtime mcp add fs --transport stdio --command npx --args "-y,@modelcontextprotocol/server-filesystem,/tmp"
+contenox-runtime mcp add remote --transport http --url https://mcp.example.com/mcp
+contenox-runtime tools add weather --url https://api.weather.gov
 ```
 
----
+Full reference: [contenox.com/docs/cli/reference](https://contenox.com/docs/cli/reference/).
 
-## Editor Integration
+### Zed
 
-Contenox natively communicates via the [Agent Client Protocol (ACP)](https://github.com/zed-industries/agent-client-protocol) over standard I/O.
-
-### Zed Integration
-
-Add the following snippet to your `~/.config/zed/settings.json`:
+Add to `~/.config/zed/settings.json`:
 
 ```json
 {
@@ -165,80 +96,30 @@ Add the following snippet to your `~/.config/zed/settings.json`:
     }
   }
 }
-
 ```
 
-Tool invocations render dynamically as interactive UI cards showing the underlying paths, human-in-the-loop prompts hook directly into the editor's native permissions, and full session history replays automatically upon reopening projects.
-
-### Other Environments
-
-* **Desktop app:** the cockpit shows your sessions, missions, approvals, projects and backends for the runtime it bundles. `contenox-runtime serve` exposes the same HTTP API and ACP WebSocket for other local clients.
-
-*Step-by-step guides:* [Zed](https://contenox.com/docs/integrations/editors/zed/) | [JetBrains](https://contenox.com/docs/integrations/editors/jetbrains/) | [AionUi](https://contenox.com/docs/integrations/editors/aionui/).
+Approval cards show up as the editor's own permission prompts. Guides: [Zed](https://contenox.com/docs/integrations/editors/zed/), [JetBrains](https://contenox.com/docs/integrations/editors/jetbrains/), [AionUi](https://contenox.com/docs/integrations/editors/aionui/).
 
 ---
 
-## Managing Backends
+## Building from source
 
-Routing rules are treated as system configuration, not application logic. Add hosted, local, or private network backends seamlessly:
+This repository is the desktop app and its UI (Electron, React). The runtime is Go and lives in [contenox/runtime](https://github.com/contenox/runtime); this repository pins a released runtime version in `runtime.lock.json` and downloads it.
+
+You need **Node.js 22+** and npm.
 
 ```bash
-# Private infrastructure & local inference
-contenox-runtime backend add ollama --type ollama
-contenox-runtime backend add myvllm --type vllm --url http://gpu-host:8000
-
-# Commercial cloud providers
-contenox-runtime backend add openai    --type openai    --api-key-env OPENAI_API_KEY
-contenox-runtime backend add deepseek  --type deepseek  --api-key-env DEEPSEEK_API_KEY
-contenox-runtime backend add alibaba   --type alibaba-cloud --api-key-env DASHSCOPE_API_KEY
-contenox-runtime backend add anthropic --type anthropic --api-key-env ANTHROPIC_API_KEY
-contenox-runtime backend add gemini    --type gemini    --api-key-env GEMINI_API_KEY
-
-# ChatGPT subscription: device login, no API key
-contenox-runtime backend add chatgpt --type openai-codex
-contenox-runtime backend login chatgpt
-
-# Set global operational routing defaults
-contenox-runtime config set default-model     qwen2.5:7b
-contenox-runtime config set default-provider  ollama
-
+git clone https://github.com/contenox/harness
+cd harness
+npm run ci               # install, build, typecheck, lint, test
+npm run runtime-fetch    # download and verify the pinned runtime
+npm run package-dir      # unpacked desktop app for this machine
+npm run package          # installers for this machine
 ```
 
-The same providers appear in the app's Setup wizard and in Backends → Cloud Providers, where the ChatGPT subscription signs in with a device code and DeepSeek and Alibaba Cloud Model Studio take an API key.
+The scripts at the repository root only run `scripts/tasks.mjs`; nothing is installed at the root. `npm run help` lists every task. Options go after `--`, for example `npm run qa -- --runtime-bin=<path>`. `make <task>` is an alias for the same tasks.
 
----
-
-## Building From Source
-
-This repository is the desktop app and its cockpit (Electron, React). The runtime is
-[contenox/runtime](https://github.com/contenox/runtime) (Go).
-
-### Desktop app
-
-* **Node.js 22+** and npm
-
-```bash
-git clone https://github.com/contenox/contenox-v0
-cd contenox-v0
-npm run ci                # install, build, typecheck, lint, test
-npm run runtime-fetch     # download and verify the pinned runtime
-npm run package-dir       # unpacked desktop app for this host
-npm run package           # host installers
-```
-
-The npm scripts at the repository root only run `scripts/tasks.mjs` (no dependencies, no
-`npm install` at the root). `npm run help` lists every task. Options go after `--`, for example
-`npm run qa -- --runtime-bin=<path>`. `make <task>` is an optional alias for the same tasks.
-
-### Runtime
-
-The `contenox-runtime` CLI (Go) is a separate project: [contenox/runtime](https://github.com/contenox/runtime). Build it from its own README; this repository only consumes the binary.
-
----
-
-## Core Dependencies
-
-The runtime is pure Go; its dependencies live in `go.mod` of [contenox/runtime](https://github.com/contenox/runtime). The desktop app is Electron with a React cockpit; its dependencies live in the `package-lock.json` files of `desktop/` and `packages/*`.
+To run the UI against a runtime you built yourself, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -256,4 +137,6 @@ Small releases, no dates.
 
 ---
 
-Questions? Reach out at **hello@contenox.com**
+## License
+
+Apache-2.0. See [LICENSE](LICENSE), [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).

@@ -546,6 +546,56 @@ describe('acpSessionReducer: terminal stream + cards', () => {
   });
 });
 
+describe('acpSessionReducer: tool call meta', () => {
+  it('keeps annotations from earlier updates when a later update brings its own', () => {
+    const state = run(
+      { type: 'session_reset', sessionId: 's1' },
+      { type: 'prompt_start' },
+      {
+        type: 'tool_call',
+        event: { updateKind: 'tool_call', toolCallId: 'tc-1', kind: 'execute', status: 'pending' },
+      },
+      {
+        type: 'tool_call',
+        event: {
+          updateKind: 'tool_call_update',
+          toolCallId: 'tc-1',
+          meta: { 'contenox.approval': { decidedBy: 'oracle', approved: true, note: 'ok' } },
+        },
+      },
+      {
+        type: 'tool_call',
+        event: {
+          updateKind: 'tool_call_update',
+          toolCallId: 'tc-1',
+          status: 'failed',
+          meta: { error: 'exit 1' },
+        },
+      },
+    );
+    expect(state.toolCalls['tc-1'].meta).toEqual({
+      'contenox.approval': { decidedBy: 'oracle', approved: true, note: 'ok' },
+      error: 'exit 1',
+    });
+  });
+
+  it('leaves the annotations alone when an update carries none', () => {
+    const state = run(
+      { type: 'session_reset', sessionId: 's1' },
+      { type: 'prompt_start' },
+      {
+        type: 'tool_call',
+        event: { updateKind: 'tool_call', toolCallId: 'tc-1', status: 'pending', meta: { a: 1 } },
+      },
+      {
+        type: 'tool_call',
+        event: { updateKind: 'tool_call_update', toolCallId: 'tc-1', status: 'completed' },
+      },
+    );
+    expect(state.toolCalls['tc-1'].meta).toEqual({ a: 1 });
+  });
+});
+
 describe('acpSessionReducer: permission gate', () => {
   it('sets and clears pendingPermission', () => {
     const withRequest = run(

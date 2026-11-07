@@ -141,7 +141,7 @@ describe('ChatComposerContainer slash pickers', () => {
       fireEvent(dom.container, form, 'submit');
     });
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit.mock.calls[0][0]).toMatchObject({ kind: 'prompt', text: '/think auto' });
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'prompt', text: '/think auto' }));
     await act(async () => root.unmount());
   });
 
@@ -175,7 +175,7 @@ describe('ChatComposerContainer slash pickers', () => {
       fireEvent(dom.container, form, 'submit');
     });
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit.mock.calls[0][0]).toMatchObject({ kind: 'prompt', text: '/think auto' });
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'prompt', text: '/think auto' }));
     await act(async () => root.unmount());
   });
 

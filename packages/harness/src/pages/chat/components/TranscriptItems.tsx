@@ -18,8 +18,8 @@ import {
   ToolCallCard,
   type ToolCallCardProps,
 } from '@contenox/ui';
-import { toolCallError } from '@contenox/ui/session-lib';
-import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { approvalDecisionFromMeta, toolCallError } from '@contenox/ui/session-lib';
+import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -31,6 +31,11 @@ import type {
   AcpTimelineItem,
   AcpToolCallState,
 } from '../../../hooks/acpSessionState';
+import { translateRoutingLabel, translateRuntimeText } from '../../../lib/runtimeTexts';
+import { failureTurnKey } from '../../../lib/dismissedErrors';
+import { translateCommandConfirmation } from '../../../lib/commandConfirmations';
+import { useDismissedErrors } from '../../../hooks/useDismissedErrors';
+import { describePersistedFailures, isPersistedFailure } from '../../../lib/persistedFailure';
 import { shellCommandLine, shellOutputLines } from '../../../lib/shellExecution';
 import {
   shouldShowStreamingCaret,
@@ -131,7 +136,9 @@ const TranscriptMessage = memo(function TranscriptMessage({
   const isUser = message.role === 'user';
   const roleLabel = isUser ? t('acp_chat.role_user') : (agentName ?? t('acp_chat.role_agent'));
   const showRoleLabel = !isUser && !!agentName && !/contenox/i.test(agentName);
-  const inline = isUser ? { thinking: null, answer: message.text } : splitLeadingThinking(message.text);
+  const inline = isUser
+    ? { thinking: null, answer: message.text }
+    : splitLeadingThinking(translateCommandConfirmation(message.text, t));
   const thinking = [message.thinking, inline.thinking].filter(Boolean).join('\n\n');
   const thinkingStreaming =
     message.thinkingStreaming || (inline.thinking !== null && inline.answer === '' && !!message.streaming);
@@ -210,12 +217,21 @@ function ToolCallDetail({
     </InlineNotice>
   ) : null;
 
+  const decision = approvalDecisionFromMeta(toolCall.meta);
+  const decisionNotice =
+    decision && decision.note !== '' ? (
+      <InlineNotice variant={decision.approved ? 'info' : 'warning'}>
+        {translateRuntimeText(decision.note, t)}
+      </InlineNotice>
+    ) : null;
+
   const shellLines =
     toolCall.kind === 'execute' && other.length === 0 ? shellOutputLines(toolCall.rawOutput) : null;
   if (shellLines) {
     const commandLine = shellCommandLine(toolCall.rawInput);
     return (
       <div className="space-y-3">
+        {decisionNotice}
         {errorNotice}
         <TerminalOutput
           lines={commandLine ? [commandLine, ...shellLines] : shellLines}
@@ -227,6 +243,7 @@ function ToolCallDetail({
 
   return (
     <div className="space-y-3">
+      {decisionNotice}
       {errorNotice}
       {diffs.map((d, i) => (
         <DiffView
@@ -293,6 +310,7 @@ const TranscriptToolCall = memo(function TranscriptToolCall({
   const other = (toolCall.content ?? []).filter(c => c.type !== 'diff');
   const hasDetail =
     toolCallError(toolCall) != null ||
+    approvalDecisionFromMeta(toolCall.meta) != null ||
     diffs.length > 0 ||
     other.length > 0 ||
     toolCall.rawInput != null ||
@@ -314,7 +332,7 @@ const TranscriptToolCall = memo(function TranscriptToolCall({
   return (
     <ToolCallCard
       tool={toolCall.kind ?? 'tool'}
-      title={toolCall.title ?? toolCall.toolCallId}
+      title={translateRoutingLabel(toolCall.title ?? toolCall.toolCallId, t)}
       status={toolCallCardStatus(toolCall.status)}
       statusLabels={{
         pending: t('acp_chat.tool_status_pending'),
@@ -349,6 +367,25 @@ const TranscriptTerminal = memo(function TranscriptTerminal({ card }: { card: Ac
       toggleDetailLabel={t('acp_chat.tool_toggle_detail')}
       detail={<TerminalOutput lines={lines} maxHeight="15rem" autoScroll={false} />}
       preview={tailLines(lines, 1).length > 0 ? <LogTail lines={lines} /> : undefined}
+    />
+  );
+});
+
+const TranscriptPersistedFailure = memo(function TranscriptPersistedFailure({
+  texts,
+  onDismiss,
+}: {
+  texts: string[];
+  onDismiss: () => void;
+}) {
+  const { summary, details } = describePersistedFailures(texts);
+  return (
+    <ChatErrorCard
+      message={details}
+      summary={summary}
+      details={details}
+      fallbackTitleKey="acp_chat.error_banner_headline"
+      onDismiss={onDismiss}
     />
   );
 });
@@ -392,7 +429,7 @@ interface RenderItemContext {
   session: AcpSessionState;
   agentName: string | null;
   dismissedErrors: ReadonlySet<string>;
-  dismissError: (id: string) => void;
+  dismissError: (id: string, turnKey?: string) => void;
   pending: AcpSessionState['pendingPermission'];
   anchorId: string | null;
   onRespondPermission: (optionId: string) => void;
@@ -401,7 +438,28 @@ interface RenderItemContext {
   onOpenSettings?: () => void;
 }
 
-function renderItem(item: AcpTimelineItem, isLatest: boolean, ctx: RenderItemContext): ReactNode {
+function persistedFailureText(session: AcpSessionState, item: AcpTimelineItem | undefined): string | null {
+  if (!item || item.kind !== 'message') return null;
+  const message = session.messages[item.id];
+  if (!message || message.role !== 'assistant' || message.streaming) return null;
+  return isPersistedFailure(message.text) ? message.text : null;
+}
+
+function userTurnOrdinal(session: AcpSessionState, index: number): number {
+  let count = 0;
+  for (let i = 0; i <= index && i < session.items.length; i += 1) {
+    const item = session.items[i];
+    if (item.kind === 'message' && session.messages[item.id]?.role === 'user') count += 1;
+  }
+  return count;
+}
+
+function renderItem(
+  item: AcpTimelineItem,
+  index: number,
+  isLatest: boolean,
+  ctx: RenderItemContext,
+): ReactNode {
   const {
     session,
     agentName,
@@ -415,7 +473,19 @@ function renderItem(item: AcpTimelineItem, isLatest: boolean, ctx: RenderItemCon
     onOpenSettings,
   } = ctx;
   let rendered: ReactNode = null;
-  if (item.kind === 'message') {
+  if (item.kind === 'message' && persistedFailureText(session, item) !== null) {
+    if (persistedFailureText(session, session.items[index - 1]) !== null) return null;
+    const texts: string[] = [];
+    for (let i = index; i < session.items.length; i += 1) {
+      const text = persistedFailureText(session, session.items[i]);
+      if (text === null) break;
+      texts.push(text);
+    }
+    const id = failureTurnKey(userTurnOrdinal(session, index));
+    rendered = dismissedErrors.has(id) ? null : (
+      <TranscriptPersistedFailure key={`f-${item.id}`} texts={texts} onDismiss={() => dismissError(id)} />
+    );
+  } else if (item.kind === 'message') {
     const message = session.messages[item.id];
     rendered = message ? (
       <TranscriptMessage key={`m-${item.id}`} message={message} agentName={agentName} isLatest={isLatest} />
@@ -430,7 +500,7 @@ function renderItem(item: AcpTimelineItem, isLatest: boolean, ctx: RenderItemCon
         <TranscriptError
           key={`e-${item.id}`}
           card={card}
-          onDismiss={() => dismissError(item.id)}
+          onDismiss={() => dismissError(item.id, failureTurnKey(userTurnOrdinal(session, index)))}
           onOpenSettings={onOpenSettings}
         />
       ) : null;
@@ -489,11 +559,11 @@ export const TranscriptItems = memo(function TranscriptItems({
       ? pendingToolCallId
       : null;
 
-  const [dismissedErrors, setDismissedErrors] = useState<ReadonlySet<string>>(() => new Set());
-  const dismissError = useCallback(
-    (id: string) => setDismissedErrors(prev => new Set([...prev, id])),
-    [],
-  );
+  const { dismissedErrors, dismissError: dismissOne } = useDismissedErrors(session.sessionId);
+  const dismissError = (id: string, turnKey?: string) => {
+    dismissOne(id);
+    if (turnKey) dismissOne(turnKey);
+  };
   const groups = useMemo(() => groupByTurn(session.items), [session.items]);
 
   const ctx: RenderItemContext = {
@@ -509,7 +579,7 @@ export const TranscriptItems = memo(function TranscriptItems({
     canOpenFile,
   };
   const render = (entry: { item: AcpTimelineItem; index: number }) =>
-    renderItem(entry.item, entry.index === session.items.length - 1, ctx);
+    renderItem(entry.item, entry.index, entry.index === session.items.length - 1, ctx);
 
   return (
     <>

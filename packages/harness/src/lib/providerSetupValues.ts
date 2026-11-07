@@ -49,6 +49,15 @@ export function buildConnectionPayload(
   return payload;
 }
 
+export function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '';
+  } catch {
+    return false;
+  }
+}
+
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const KEY_PREFIXES = ['sk-', 'sk_', 'AIza', 'gsk_', 'xai-', 'pk-', 'or-'];
 const ENV_NAME_MAX = 64;
@@ -77,6 +86,8 @@ export function validateSetupValues(
 
   if ((setup.baseUrlRequired || setup.baseUrlPrimary) && !trimmed(values.baseUrl)) {
     errors.baseUrl = 'providers.field.required';
+  } else if (setup.provider !== 'bedrock' && trimmed(values.baseUrl) && !isHttpUrl(values.baseUrl ?? '')) {
+    errors.baseUrl = 'providers.field.url_invalid';
   }
   if (setup.secretKind === 'api-key') {
     if (env && looksLikeSecret(env)) errors.apiKeyEnv = 'cloud_providers.api_key_env_looks_like_key';

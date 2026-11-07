@@ -1,7 +1,10 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+const distributionArg = process.argv.find(arg => arg.startsWith('--contenox-distribution='));
+
 contextBridge.exposeInMainWorld('contenoxDesktop', {
   platform: process.platform,
+  distribution: distributionArg ? distributionArg.slice('--contenox-distribution='.length) : 'direct',
   // Recolors the Windows caption-button overlay to match the renderer theme ('dark' | 'light').
   setTitleBarTheme: theme => ipcRenderer.send('contenox:set-titlebar-theme', theme),
   selectDirectory: () => ipcRenderer.invoke('contenox:select-directory'),

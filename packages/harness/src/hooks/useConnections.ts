@@ -64,6 +64,14 @@ export function useCheckConnection() {
   });
 }
 
+export function useClearHiddenModels() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, model }: { id: string; model?: string }) => api.clearHiddenModels(id, model),
+    onSettled: () => refreshConnections(queryClient),
+  });
+}
+
 export function useConnectionLoginStatus(id: string) {
   return useQuery<ProviderLoginStatus, Error>({
     queryKey: connectionKeys.login(id),

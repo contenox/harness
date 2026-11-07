@@ -53,3 +53,22 @@ State is a fresh database, because that is the first-run state a reviewer sees.
 Surfaces that need a configured model (chat, missions) render their empty or
 setup state; give the serve process a seeded `$HOME` if a richer capture is
 wanted.
+
+## Functional suite (L3)
+
+`tests/functional.e2e.ts` drives the UI against the same seeded stack and asserts state
+(files on disk, runtime API responses, UI text), not screenshots. It covers the L3 rows of
+`release-test-plan.md`; rows 4, 5, 7 and 26 are skipped as "live lane only".
+
+```bash
+CONTENOX_RUNTIME_BIN=/path/to/contenox-runtime packages/harness/e2e/run.sh tests/functional.e2e.ts
+HARNESS_SKIP_BUILD=1 ...   # reuse packages/harness/dist
+```
+
+`run.sh` exports `HARNESS_*` variables (runtime URL and port, binary, throwaway home, work
+folder, scripted dialog, echo MCP fixture) that the tests read. Each test rewrites the scripted
+dialog (`HARNESS_DIALOG`) to script the turns it needs: one `"general"` turn for the router,
+then the agent turns, including `tool_calls` such as `local_fs.write_file`. `mock-openai.mjs`
+is an OpenAI-compatible server for the provider rows (it can fail chat requests on demand);
+`proc.mjs` finds and stops processes by port, which row 1 (empty home) and row 23 (restart of
+`serve`) use. The runtime log of the last run is kept in `packages/harness/test-results/runtime-serve.log`.

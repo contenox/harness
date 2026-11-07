@@ -45,7 +45,7 @@ export function flattenGroups(groups: SelectControlGroup[]): SelectControlOption
 
 export function toControlProps(option: SessionConfigOption): ConfigControlProps {
   if (option.type === 'boolean') {
-    return { kind: 'boolean', checked: option.currentValue === 'true' };
+    return { kind: 'boolean', checked: String(option.currentValue) === 'true' };
   }
   if (isGroupedOptions(option.options)) {
     return {

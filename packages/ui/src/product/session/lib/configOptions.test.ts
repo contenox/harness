@@ -83,6 +83,14 @@ describe('toControlProps', () => {
       kind: 'boolean',
       checked: false,
     });
+    expect(toControlProps({ ...STREAM, currentValue: true as unknown as string })).toEqual({
+      kind: 'boolean',
+      checked: true,
+    });
+    expect(toControlProps({ ...STREAM, currentValue: false as unknown as string })).toEqual({
+      kind: 'boolean',
+      checked: false,
+    });
   });
 
   it('survives an option whose values are missing entirely', () => {

@@ -8,6 +8,7 @@ import {
   TableRow,
 } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
+import { backendDisplayUrl } from '../../../../lib/displayUrl';
 import type { BackendRuntimeState } from '../../../../lib/types';
 
 type RuntimeStateSectionProps = {
@@ -57,7 +58,7 @@ export default function RuntimeStateSection({
               <TableCell className="font-medium">{row.name}</TableCell>
               <TableCell>{row.backend?.type ?? '—'}</TableCell>
               <TableCell className="max-w-[220px] truncate font-mono text-xs">
-                {row.backend?.baseUrl ?? '—'}
+                {row.backend ? backendDisplayUrl(row.backend) : '—'}
               </TableCell>
               <TableCell className="max-w-[300px]">
                 {row.error?.trim() ? (

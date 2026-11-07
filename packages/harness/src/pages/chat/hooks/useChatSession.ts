@@ -222,6 +222,7 @@ export function useChatSession(
 
   return {
     sessionId,
+    controller,
     onEmptyChat,
     session,
     workspaceStatus: workspace.status,

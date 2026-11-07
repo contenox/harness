@@ -13,6 +13,8 @@ export function TelemetrySettingsSection() {
   const { data } = useCLIConfig(!!user);
   const putConfig = usePutCLIConfig();
   const formId = useId();
+  const storeBuild =
+    typeof window !== 'undefined' && window.contenoxDesktop?.distribution === 'store';
 
   const [telemetryEnabled, setTelemetryEnabled] = useState(false);
   const [updateCheckEnabled, setUpdateCheckEnabled] = useState(true);
@@ -34,7 +36,7 @@ export function TelemetrySettingsSection() {
     putConfig.reset();
     const body: CLIConfigUpdateRequest = {
       'telemetry-enabled': telemetryEnabled ? 'true' : 'false',
-      'update-check': updateCheckEnabled ? 'true' : 'false',
+      ...(storeBuild ? {} : { 'update-check': updateCheckEnabled ? 'true' : 'false' }),
     };
     putConfig.mutate(body);
   };
@@ -60,16 +62,22 @@ export function TelemetrySettingsSection() {
             </P>
           </div>
 
-          <div className="space-y-1">
-            <Checkbox
-              label={t('settingsAdvanced.update_check_label')}
-              checked={updateCheckEnabled}
-              onChange={e => setUpdateCheckEnabled(e.target.checked)}
-            />
-            <P variant="muted" className="pl-6 text-xs">
-              {t('settingsAdvanced.update_check_description')}
+          {storeBuild ? (
+            <P variant="muted" className="text-xs">
+              {t('settingsAdvanced.update_check_store')}
             </P>
-          </div>
+          ) : (
+            <div className="space-y-1">
+              <Checkbox
+                label={t('settingsAdvanced.update_check_label')}
+                checked={updateCheckEnabled}
+                onChange={e => setUpdateCheckEnabled(e.target.checked)}
+              />
+              <P variant="muted" className="pl-6 text-xs">
+                {t('settingsAdvanced.update_check_description')}
+              </P>
+            </div>
+          )}
 
           {putConfig.isError && <P className="text-error text-sm">{putConfig.error.message}</P>}
           {putConfig.isSuccess && <P className="text-text-muted text-sm">{t('settings.saved')}</P>}

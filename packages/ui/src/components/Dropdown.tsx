@@ -97,7 +97,9 @@ export function Dropdown({
   };
 
   const toggle = () => setOpen(!isOpen);
-  const close = () => setOpen(false);
+  const close = () => {
+    if (isOpen) setOpen(false);
+  };
 
   const closeRef = useRef(close);
   closeRef.current = close;

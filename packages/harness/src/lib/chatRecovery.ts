@@ -1,5 +1,6 @@
 import type { AcpFailureKind } from './acpFailureKind';
 import { needsRecovery, recoveryCodeOf } from './backendErrors';
+import { backendDisplayUrl } from './displayUrl';
 import type { Backend, Connection, SetupStatus } from './types';
 
 /** Setup issue codes that mean the default model (not the connection) is the problem. */
@@ -77,6 +78,7 @@ export function connectionFromBackend(backend: Backend): Connection {
     name: backend.name,
     providerType: backend.type,
     baseUrl: backend.baseUrl,
+    displayUrl: backendDisplayUrl(backend),
     configState: 'configured',
     authState: backend.errorCode === 'login_required' ? 'login_required' : 'not_required',
     health: failing ? 'unavailable' : 'unknown',

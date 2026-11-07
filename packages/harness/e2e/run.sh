@@ -30,13 +30,15 @@ else
   BIN="$ROOT/.runtime/$VERSION/contenox-runtime-$OS-$ARCH"
 fi
 
-echo "==> building @contenox/ui"
-[ -d "$ROOT/packages/ui/node_modules" ] || (cd "$ROOT/packages/ui" && npm ci --no-audit --no-fund >/dev/null)
-(cd "$ROOT/packages/ui" && npm run build >/dev/null)
+if [ -z "${HARNESS_SKIP_BUILD:-}" ]; then
+  echo "==> building @contenox/ui"
+  [ -d "$ROOT/packages/ui/node_modules" ] || (cd "$ROOT/packages/ui" && npm ci --no-audit --no-fund >/dev/null)
+  (cd "$ROOT/packages/ui" && npm run build >/dev/null)
 
-echo "==> building harness UI (writes packages/harness/dist)"
-[ -d "$HARNESS_DIR/node_modules" ] || (cd "$HARNESS_DIR" && npm ci --no-audit --no-fund >/dev/null)
-(cd "$HARNESS_DIR" && npm run build >/dev/null)
+  echo "==> building harness UI (writes packages/harness/dist)"
+  [ -d "$HARNESS_DIR/node_modules" ] || (cd "$HARNESS_DIR" && npm ci --no-audit --no-fund >/dev/null)
+  (cd "$HARNESS_DIR" && npm run build >/dev/null)
+fi
 
 echo "==> resolving contenox-runtime $VERSION"
 if [ -z "${CONTENOX_RUNTIME_BIN:-}" ]; then
@@ -54,10 +56,18 @@ if [ "$OS" = "windows" ]; then
 fi
 WORK_DIR="$TMP_HOME/work"
 mkdir -p "$WORK_DIR"
+stop_pid() {
+  [ -n "${1:-}" ] || return 0
+  kill -f "$1" 2>/dev/null || kill "$1" 2>/dev/null || true
+}
 cleanup() {
-  [ -n "${SERVE_PID:-}" ] && kill "$SERVE_PID" 2>/dev/null || true
-  [ -n "${UI_PID:-}" ] && kill "$UI_PID" 2>/dev/null || true
-  rm -rf "$TMP_HOME"
+  stop_pid "${SERVE_PID:-}"
+  stop_pid "${UI_PID:-}"
+  [ -n "${SERVE_PID:-}" ] && node "$E2E_DIR/proc.mjs" stop "$RUNTIME_PORT" "$PORT" 2>/dev/null || true
+  sleep 1
+  mkdir -p "$HARNESS_DIR/test-results"
+  cat "$TMP_HOME/serve.log" "$TMP_HOME/serve-restarted.log" > "$HARNESS_DIR/test-results/runtime-serve.log" 2>/dev/null || true
+  rm -rf "$TMP_HOME" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -137,7 +147,7 @@ done
 
 echo "==> starting runtime on ${RUNTIME_URL}"
 cd "$WORK_DIR"
-HOME="$TMP_HOME" PORT="$RUNTIME_PORT" "$BIN" serve >"$TMP_HOME/serve.log" 2>&1 &
+HOME="$TMP_HOME" APPDATA="$TMP_HOME/appdata" LOCALAPPDATA="$TMP_HOME/localappdata" PORT="$RUNTIME_PORT" "$BIN" serve >"$TMP_HOME/serve.log" 2>&1 &
 SERVE_PID=$!
 cd "$ROOT"
 
@@ -162,8 +172,11 @@ wait_healthy() { # url pid log
 wait_healthy "$RUNTIME_URL" "$SERVE_PID" "$TMP_HOME/serve.log"
 wait_healthy "$BASE_URL" "$UI_PID" "$TMP_HOME/ui.log"
 
-echo "==> capturing screenshots"
-HARNESS_BASE_URL="$BASE_URL" npx --prefix "$HARNESS_DIR" playwright test \
+native() { if [ "$OS" = "windows" ]; then cygpath -w "$1"; else echo "$1"; fi; }
+mkdir -p "$TMP_HOME/appdata" "$TMP_HOME/localappdata"
+
+echo "==> running Playwright"
+HARNESS_BASE_URL="$BASE_URL" HARNESS_RUNTIME_URL="$RUNTIME_URL" HARNESS_RUNTIME_PORT="$RUNTIME_PORT" HARNESS_UI_PORT="$PORT" HARNESS_RUNTIME_BIN="$(native "$BIN")" HARNESS_HOME="$(native "$TMP_HOME")" HARNESS_WORK="$(native "$WORK_DIR")" HARNESS_DIALOG="$(native "$DIALOG")" HARNESS_UI_DIR="$(native "$HARNESS_DIR/dist")" HARNESS_UI_SERVER="$(native "$E2E_DIR/serve-ui.mjs")" HARNESS_ECHO_SERVER="$(native "$ROOT/../runtime/apitests/fixtures/mcp_echo_server.py")" HARNESS_PYTHON="$PYTHON" npx --prefix "$HARNESS_DIR" playwright test \
   --config "$E2E_DIR/playwright.config.ts" "$@"
 
 echo "==> screenshots in $E2E_DIR/screenshots"

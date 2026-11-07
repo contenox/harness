@@ -58,6 +58,20 @@ win:
   target:
     - nsis
     - zip
+appx:
+  identityName: ertli.com.Contenox
+  publisher: CN=98E2B3E0-E130-4215-9BDA-0819AB12CEF4
+  publisherDisplayName: ertli.com
+  applicationId: Contenox
+  displayName: Contenox
+  backgroundColor: '#0d0d0a'
+  showNameOnTiles: false
+  languages:
+    - en-US
+    - de-DE
+  customManifestPath: appxmanifest.xml
+  customExtensionsPath: build/appx-extensions.xml
+  artifactName: Contenox-${version}-store-${arch}.${ext}
 mac:
   icon: build/icons/contenox.icns
   target:

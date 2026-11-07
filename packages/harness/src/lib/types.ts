@@ -5,6 +5,7 @@ export type Backend = {
   id: string;
   name: string;
   baseUrl: string;
+  displayUrl?: string;
   type: string;
   models: string[];
   pulledModels: ObservedModel[];
@@ -223,6 +224,7 @@ export type Connection = {
   name: string;
   providerType: string;
   baseUrl: string;
+  displayUrl?: string;
   configState: ConnectionConfigState;
   authState: ConnectionAuthState;
   health: ConnectionHealth;
@@ -233,6 +235,7 @@ export type Connection = {
   secretPresent: boolean;
   apiKeyEnv?: string;
   modelCount: number;
+  hiddenModels?: string[];
   createdAt?: string;
   updatedAt?: string;
 };

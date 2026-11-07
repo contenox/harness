@@ -1,16 +1,16 @@
 import type { SessionConfigOptionValue } from '@contenox/acp-client';
-import { Dropdown, DropdownItem, IconButton } from '@contenox/ui';
+import { Dropdown, DropdownItem, DropdownSeparator, IconButton } from '@contenox/ui';
 import { AttachAudioButtons } from '@contenox/ui/session-ui';
-import { Mic, Music, Plus, ImagePlus } from 'lucide-react';
+import { ImagePlus, Mic, Music, Plug, Plus } from 'lucide-react';
 import { memo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FOOTER_ATTACH_MENU_BELOW, footerEndLayout } from '../lib/footerLayout';
-import { useParentWidth } from '../../../hooks/useParentWidth';
 import type { AcpUsageState } from '../../../hooks/acpSessionState';
+import { useParentWidth } from '../../../hooks/useParentWidth';
 import type { ComposerChipOptions } from '../lib/composerChips';
+import { FOOTER_ATTACH_MENU_BELOW, footerEndLayout } from '../lib/footerLayout';
+import { effectiveUsageMax } from '../lib/usageLimit';
 import { OverflowChip, SelectChip } from './ComposerChips';
 import { AttachImageButton } from './ComposerImageAttachments';
-import { effectiveUsageMax } from '../lib/usageLimit';
 import { UsageMeter } from './UsageMeter';
 
 type AudioButtonProps = React.ComponentProps<typeof AttachAudioButtons>;
@@ -27,6 +27,7 @@ export interface ComposerFooterStartProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   onCancelRecording: () => void;
+  onOpenConnectors?: () => void;
 }
 
 /** Left side of the composer footer: project chip and attach buttons. Memoized: it never changes while typing. */
@@ -41,6 +42,7 @@ export const ComposerFooterStart = memo(function ComposerFooterStart({
   onStartRecording,
   onStopRecording,
   onCancelRecording,
+  onOpenConnectors,
 }: ComposerFooterStartProps) {
   const { t } = useTranslation();
   const audioLabels = {
@@ -51,7 +53,9 @@ export const ComposerFooterStart = memo(function ComposerFooterStart({
   };
   const [probe, width] = useParentWidth<HTMLSpanElement>();
   const narrow = width !== null && width > 0 && width < FOOTER_ATTACH_MENU_BELOW;
-  const menuOnly = narrow && !recording && (imagesSupported || audioSupported);
+  const menuOnly =
+    !recording &&
+    (narrow ? imagesSupported || audioSupported || !!onOpenConnectors : !!onOpenConnectors);
   return (
     <>
       <span ref={probe} hidden aria-hidden />
@@ -64,9 +68,12 @@ export const ComposerFooterStart = memo(function ComposerFooterStart({
           onImageFiles={onImageFiles}
           onAudioFiles={onAudioFiles}
           onStartRecording={onStartRecording}
+          onOpenConnectors={onOpenConnectors}
         />
       )}
-      {!menuOnly && imagesSupported && <AttachImageButton onFiles={onImageFiles} disabled={disabled} />}
+      {!menuOnly && imagesSupported && (
+        <AttachImageButton onFiles={onImageFiles} disabled={disabled} />
+      )}
       {!menuOnly && audioSupported && (
         <AttachAudioButtons
           labels={audioLabels}
@@ -89,6 +96,7 @@ interface AttachMenuProps {
   onImageFiles: (files: File[]) => void;
   onAudioFiles: AudioButtonProps['onFiles'];
   onStartRecording: () => void;
+  onOpenConnectors?: () => void;
 }
 
 /** "+" menu that holds the attach actions when the footer is too narrow for separate buttons. */
@@ -99,6 +107,7 @@ function AttachMenu({
   onImageFiles,
   onAudioFiles,
   onStartRecording,
+  onOpenConnectors,
 }: AttachMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -144,7 +153,8 @@ function AttachMenu({
             size="sm"
             type="button"
             label={t('acp_chat.attach_menu_label')}
-            title={t('acp_chat.attach_menu_label')}
+            title={open ? undefined : t('acp_chat.attach_menu_label')}
+            noTooltip={open}
             disabled={disabled}
             data-testid="composer-attach-menu">
             <Plus className="size-4" />
@@ -180,6 +190,18 @@ function AttachMenu({
             {t('acp_chat.record_audio_label')}
           </DropdownItem>
         )}
+        {onOpenConnectors && (imagesSupported || audioSupported) && <DropdownSeparator />}
+        {onOpenConnectors && (
+          <DropdownItem
+            icon={<Plug />}
+            data-testid="composer-connectors"
+            onClick={() => {
+              setOpen(false);
+              onOpenConnectors();
+            }}>
+            {t('connectors.chat.menu_item')}
+          </DropdownItem>
+        )}
       </Dropdown>
     </>
   );
@@ -201,14 +223,24 @@ export const ComposerFooterEnd = memo(function ComposerFooterEnd({
   onModelOpen,
 }: ComposerFooterEndProps) {
   const [probe, width] = useParentWidth<HTMLSpanElement>();
-  const { compactUsage: compact, chipsInOverflow, overflowOptions } = footerEndLayout(width, options);
+  const {
+    compactUsage: compact,
+    chipsInOverflow,
+    overflowOptions,
+  } = footerEndLayout(width, options);
   return (
     <>
       {/* The probe must be a sibling of the group below: it measures the footer row, not the group. */}
       <span ref={probe} hidden aria-hidden />
       <span className="ml-auto flex min-w-0 shrink items-center gap-1">
-        <UsageMeter usage={usage} max={usage ? effectiveUsageMax(usage.size, options.rest) : undefined} compact={compact} />
-        {!chipsInOverflow && options.mode && <SelectChip option={options.mode} onChange={onChange} />}
+        <UsageMeter
+          usage={usage}
+          max={usage ? effectiveUsageMax(usage.size, options.rest) : undefined}
+          compact={compact}
+        />
+        {!chipsInOverflow && options.mode && (
+          <SelectChip option={options.mode} onChange={onChange} />
+        )}
         {!chipsInOverflow && options.model && (
           <SelectChip option={options.model} onChange={onChange} onOpen={onModelOpen} />
         )}

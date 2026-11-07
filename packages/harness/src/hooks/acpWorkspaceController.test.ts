@@ -1671,6 +1671,26 @@ describe('acpWorkspaceController: inline permission card responses (explicit-onl
     });
   }
 
+  it('a withdrawn permission request clears the card without answering it', async () => {
+    const h = setup();
+    await connectReady(h);
+    await createSession(h, 'sess-a');
+
+    feedPermissionRequest(h.transports[0], 'perm-w', 'sess-a', 'tc-w');
+    await flushMicrotasks();
+    expect(h.sessStore.state.pendingPermission).not.toBeNull();
+
+    h.transports[0].feed({ jsonrpc: '2.0', method: '$/cancel_request', params: { requestId: 'perm-w' } });
+    await flushMicrotasks();
+
+    expect(h.sessStore.state.pendingPermission).toBeNull();
+    expect(h.transports[0].sent.filter(f => f.id === 'perm-w')).toHaveLength(0);
+
+    h.controller.respondPermission('allow-1');
+    await flushMicrotasks();
+    expect(h.transports[0].sent.filter(f => f.id === 'perm-w')).toHaveLength(0);
+  });
+
   it('respondPermission answers exactly once with the chosen optionId and clears the pending request', async () => {
     const h = setup();
     await connectReady(h);

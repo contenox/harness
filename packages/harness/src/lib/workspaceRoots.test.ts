@@ -163,6 +163,17 @@ describe('projectName', () => {
   });
 });
 
+describe('projectName for the default project', () => {
+  it('shows the stored name, not a translated label', () => {
+    expect(
+      projectName({ path: 'C:/Users/me/Contenox Scratchpad', default: true, name: 'Contenox Scratchpad' }),
+    ).toBe('Contenox Scratchpad');
+    expect(projectName({ path: 'C:/Users/me/Contenox Scratchpad', default: true })).toBe(
+      'Contenox Scratchpad',
+    );
+  });
+});
+
 describe('workspaceNameForCwd', () => {
   const roots: WorkspaceRoot[] = [
     { path: '/a', default: false, name: 'Alpha' },

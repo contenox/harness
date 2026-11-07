@@ -1,0 +1,5 @@
+        <uap3:Extension Category="windows.appExecutionAlias" Executable="app\Contenox.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap3:AppExecutionAlias>
+            <desktop:ExecutionAlias Alias="contenox.exe" />
+          </uap3:AppExecutionAlias>
+        </uap3:Extension>

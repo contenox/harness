@@ -27,6 +27,8 @@
     "package-dir": "node scripts/tasks.mjs package-dir",
     "package": "node scripts/tasks.mjs package",
     "package-local": "node scripts/tasks.mjs package-local",
+    "package-store": "node scripts/tasks.mjs package-store",
+    "package-store-local": "node scripts/tasks.mjs package-store-local",
     "qa": "node scripts/tasks.mjs qa",
     "verify": "node scripts/tasks.mjs verify",
     "checksums": "node scripts/tasks.mjs checksums",

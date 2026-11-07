@@ -1,4 +1,5 @@
 import { Button, Collapsible, diffLinesFromTexts, DiffView, P, Span } from '@contenox/ui';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { PermissionOption, RequestPermissionRequest } from '../../../lib/acp';
 import { orderedPermissionOptions } from '../lib/permissionKeymap';
@@ -7,6 +8,12 @@ function optionVariant(kind: PermissionOption['kind']): 'primary' | 'danger' | '
   if (kind === 'allow_once' || kind === 'allow_always') return 'primary';
   if (kind === 'reject_once' || kind === 'reject_always') return 'danger';
   return 'outline';
+}
+
+function permissionOptionLabel(option: PermissionOption, t: TFunction): string {
+  if (option.kind === 'allow_once' && option.name === 'Allow') return t('acp_chat.permission_allow');
+  if (option.kind === 'reject_once' && option.name === 'Deny') return t('acp_chat.permission_deny');
+  return option.name;
 }
 
 export interface PermissionCardProps {
@@ -74,7 +81,7 @@ export function PermissionCard({ permission, onRespond }: PermissionCardProps) {
             size="lg"
             className="w-full font-semibold sm:w-auto sm:min-w-[120px]"
             onClick={() => onRespond(option.optionId)}>
-            {option.name}
+            {permissionOptionLabel(option, t)}
           </Button>
         ))}
       </div>

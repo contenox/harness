@@ -136,3 +136,17 @@ describe('advancedNeedsAttention', () => {
     ).toBe(true);
   });
 });
+
+describe('base URL shape', () => {
+  it('rejects a malformed address for URL providers', () => {
+    expect(validateSetupValues(ollama, { baseUrl: 'not a url' }, { secretStored: false })).toEqual({
+      baseUrl: 'providers.field.url_invalid',
+    });
+    expect(validateSetupValues(ollama, { baseUrl: 'ftp://x' }, { secretStored: false })).toEqual({
+      baseUrl: 'providers.field.url_invalid',
+    });
+    expect(
+      validateSetupValues(ollama, { baseUrl: 'https://ollama.com/api' }, { secretStored: false }),
+    ).toEqual({});
+  });
+});

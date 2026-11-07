@@ -436,6 +436,17 @@ export function createAcpWorkspaceController(
           }
           sessionDispatch(sid, { type: 'permission_request', request });
         }),
+      onPermissionCancelled: () => {
+        const entry = openSessions.get(sid);
+        const reject = entry?.permissionReject;
+        if (entry) {
+          entry.permissionResolve = null;
+          entry.permissionReject = null;
+        }
+        sessionDispatch(sid, { type: 'permission_resolved' });
+        reject?.(new Error('permission request withdrawn by the agent'));
+        armStallTimer(sid);
+      },
     };
   }
 

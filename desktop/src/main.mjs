@@ -15,6 +15,13 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 app.setPath('userData', path.join(app.getPath('appData'), 'ContenoxHarness'));
 
+const storeBuild = process.platform === 'win32' && process.windowsStore === true;
+
+function runtimeEnv(extra = {}) {
+  const store = storeBuild ? { CONTENOX_UPDATE_CHECK: 'false' } : {};
+  return { ...process.env, HOME: os.homedir(), ...store, ...extra };
+}
+
 const configPath = path.join(app.getPath('userData'), 'workspace.json');
 const logDir = path.join(app.getPath('userData'), 'logs');
 const runtimeLogPath = path.join(logDir, 'runtime.log');
@@ -157,7 +164,7 @@ function initRuntimeOnce() {
       fs.mkdirSync(logDir, { recursive: true });
       try {
         execFileSync(binary, ['--data-dir', data, '--db', db, 'init'], {
-          env: { ...process.env, HOME: os.homedir() },
+          env: runtimeEnv(),
           stdio: ['ignore', 'pipe', 'pipe'],
           encoding: 'utf8',
           timeout: INIT_TIMEOUT_MS,
@@ -185,7 +192,7 @@ async function startInstance(inst) {
   fs.writeSync(log, `\n=== ${new Date().toISOString()} serve ${inst.path} [${inst.key}]\n`);
   const child = spawn(binary, ['--data-dir', data, '--db', db, 'serve', inst.path], {
     cwd: inst.path,
-    env: { ...process.env, HOME: os.homedir(), ADDR: '127.0.0.1', PORT: String(port) },
+    env: runtimeEnv({ ADDR: '127.0.0.1', PORT: String(port) }),
     stdio: ['ignore', log, log],
     windowsHide: true,
   });
@@ -414,6 +421,12 @@ function applyTitleBarTheme(window, theme) {
   window.setBackgroundColor(colors.color);
 }
 
+function windowIcon() {
+  if (app.isPackaged) return undefined;
+  const file = process.platform === 'win32' ? 'contenox.ico' : '512x512.png';
+  return path.join(here, '..', 'build', 'icons', file);
+}
+
 function windowOptions(extra = {}) {
   return {
     ...titleBarOptions(),
@@ -422,6 +435,7 @@ function windowOptions(extra = {}) {
     minWidth: 960,
     minHeight: 640,
     title: 'Contenox',
+    icon: windowIcon(),
     autoHideMenuBar: true,
     backgroundColor: '#0a0a0a',
     webPreferences: {
@@ -429,6 +443,7 @@ function windowOptions(extra = {}) {
       nodeIntegration: false,
       sandbox: true,
       preload: path.join(here, 'preload.cjs'),
+      additionalArguments: [`--contenox-distribution=${storeBuild ? 'store' : 'direct'}`],
     },
     ...extra,
   };
@@ -497,8 +512,12 @@ function buildMenu() {
     {
       label: 'File',
       submenu: [
-        { label: 'Install ‘contenox’ Command in PATH', enabled: app.isPackaged, click: () => void installCommandLineTool('contenox', app.getPath('exe')) },
-        { label: 'Install ‘contenox-runtime’ Command in PATH', enabled: app.isPackaged, click: () => void installCommandLineTool('contenox-runtime', runtimeBinary()) },
+        ...(storeBuild
+          ? [{ label: 'Command Line Tools…', click: () => void showStoreCommandLineTools() }]
+          : [
+              { label: 'Install ‘contenox’ Command in PATH', enabled: app.isPackaged, click: () => void installCommandLineTool('contenox', app.getPath('exe')) },
+              { label: 'Install ‘contenox-runtime’ Command in PATH', enabled: app.isPackaged, click: () => void installCommandLineTool('contenox-runtime', runtimeBinary()) },
+            ]),
         { label: 'Open Logs Folder', click: () => void shell.openPath(logDir) },
         { type: 'separator' },
         isMac ? { role: 'close' } : { role: 'quit' },
@@ -582,6 +601,12 @@ async function installCommandLineTool(name, target) {
   } catch (error) {
     showErrorDialog(error);
   }
+}
+
+function showStoreCommandLineTools() {
+  return showInfo(
+    'The Microsoft Store installed contenox and contenox-runtime for you. Open a new terminal and run contenox-runtime --help. They update together with the app.',
+  );
 }
 
 function showInfo(detail) {

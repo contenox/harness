@@ -133,6 +133,7 @@ export interface SessionEventHandlers {
   onSessionInfo?: (info: SessionInfoEvent) => void;
   onTerminalOutput?: (payload: TerminalOutputPayload) => void;
   onPermissionRequest?: (request: RequestPermissionRequest) => Promise<string>;
+  onPermissionCancelled?: (request: RequestPermissionRequest) => void;
 }
 
 export type PromptHandlers = SessionEventHandlers;
@@ -394,14 +395,19 @@ export class AcpClient {
       );
       return;
     }
+    const key = String(req.id);
+    let withdrawn = false;
+    this.permissionCancels.set(key, () => {
+      withdrawn = true;
+      handlers.onPermissionCancelled?.(params);
+    });
     try {
       const optionId = await handlers.onPermissionRequest(params);
-      this.respondResult(req.id, { outcome: { outcome: 'selected', optionId } });
+      if (!withdrawn) this.respondResult(req.id, { outcome: { outcome: 'selected', optionId } });
     } catch {
-
-
-
-      this.respondResult(req.id, { outcome: { outcome: 'cancelled' } });
+      if (!withdrawn) this.respondResult(req.id, { outcome: { outcome: 'cancelled' } });
+    } finally {
+      this.permissionCancels.delete(key);
     }
   }
 
@@ -419,6 +425,11 @@ export class AcpClient {
       if (options) for (const listener of this.workspaceConfigListeners) listener(options);
       return;
     }
+    if (n.method === '$/cancel_request') {
+      const requestId = (n.params as { requestId?: JsonRpcId } | undefined)?.requestId;
+      if (requestId != null) this.permissionCancels.get(String(requestId))?.();
+      return;
+    }
     if (n.method !== 'session/update') return;
     const params = n.params as SessionNotification;
     if (!params) return;
@@ -429,6 +440,8 @@ export class AcpClient {
     this.routeSessionUpdate(params.update, handlers);
   }
 
+
+  private readonly permissionCancels = new Map<string, () => void>();
 
   private handlersFor(sessionId: SessionId): SessionEventHandlers | undefined {
     return this.subscriptions.get(sessionId) ?? this.activePrompts.get(sessionId);
@@ -590,6 +603,40 @@ export class AcpClient {
       sessionId,
       command,
     });
+  }
+
+  async sessionConnectors<T>(sessionId: SessionId): Promise<T[]> {
+    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors', { sessionId });
+    return result?.connectors ?? [];
+  }
+
+  async setSessionConnector<T>(sessionId: SessionId, name: string, enabled: boolean): Promise<T[]> {
+    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors/set', {
+      sessionId,
+      name,
+      enabled,
+    });
+    return result?.connectors ?? [];
+  }
+
+  async setSessionConnectorTool<T>(sessionId: SessionId, name: string, tool: string, enabled: boolean): Promise<T[]> {
+    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors/tools/set', {
+      sessionId,
+      name,
+      tool,
+      enabled,
+    });
+    return result?.connectors ?? [];
+  }
+
+  async addSessionConnector<T>(sessionId: SessionId, server: unknown): Promise<T[]> {
+    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors/add', { sessionId, server });
+    return result?.connectors ?? [];
+  }
+
+  async removeSessionConnector<T>(sessionId: SessionId, name: string): Promise<T[]> {
+    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors/remove', { sessionId, name });
+    return result?.connectors ?? [];
   }
 
   /** Current workspace-level config options (Contenox extension; other agents reject it). */

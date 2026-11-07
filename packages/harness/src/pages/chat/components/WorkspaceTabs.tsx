@@ -90,6 +90,7 @@ export function WorkspaceTabs() {
           <TabPanel key={id} tabId={id} activeTab={activeId ?? EMPTY_PANEL_ID}>
             <ChatSessionTab
               sessionId={id}
+              active={(activeId ?? EMPTY_PANEL_ID) === id}
               onSessionCreated={handleSessionCreated}
                 />
           </TabPanel>
@@ -97,6 +98,7 @@ export function WorkspaceTabs() {
         <TabPanel key={`empty-${emptyKeyRef.current}`} tabId={EMPTY_PANEL_ID} activeTab={activeId ?? EMPTY_PANEL_ID}>
           <ChatSessionTab
             sessionId={null}
+            active={activeId === null}
             onSessionCreated={handleSessionCreated}
             />
         </TabPanel>

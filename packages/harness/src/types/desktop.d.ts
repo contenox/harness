@@ -5,6 +5,7 @@ declare global {
     contenoxDesktop?: {
       /** Node `process.platform` of the desktop shell ('win32', 'darwin', ...). */
       platform: string;
+      distribution?: 'store' | 'direct';
       /** Recolor the native caption-button overlay (Windows) to the renderer theme. */
       setTitleBarTheme(theme: 'dark' | 'light'): void;
       selectDirectory(): Promise<string | null>;

@@ -7,6 +7,8 @@ import { getCloudProviderSetup } from '../../lib/providerCatalog';
 import type { Connection } from '../../lib/types';
 import { ConnectionRecovery } from './ConnectionRecovery';
 import { ConnectionRow } from './ConnectionRow';
+import { HiddenModelsNotice } from './HiddenModelsNotice';
+import BackendForm from '../../pages/admin/backends/components/BackendForm';
 import { ProviderSetupForm } from './ProviderSetupForm';
 
 vi.mock('../../lib/api', () => ({ api: {} }));
@@ -52,6 +54,20 @@ describe('ConnectionRecovery', () => {
     expect(html).toContain('Configure');
     expect(html).toContain('Technical details');
     expect(html.indexOf('dial tcp')).toBeGreaterThan(html.indexOf('Technical details'));
+  });
+
+  it('makes the runtime message the headline of a misconfigured connection', () => {
+    const vertex = {
+      ...connection,
+      providerType: 'vertex-google',
+      errorCode: 'misconfigured',
+      error: 'Vertex AI needs Google credentials. Paste a service account key JSON.',
+    };
+    const html = render(
+      <ConnectionRecovery connection={vertex} providerTitle="Vertex AI" onConfigure={() => undefined} />,
+    );
+    expect(html).toContain('Vertex AI needs Google credentials');
+    expect(html).not.toContain('Technical details');
   });
 
   it('offers only the actions that have a handler', () => {
@@ -124,5 +140,99 @@ describe('ProviderSetupForm', () => {
     expect(html).toContain('API key stored');
     expect(html).toContain('Replace');
     expect(html).toContain('Save');
+  });
+});
+
+describe('BackendForm base URL', () => {
+  const renderForm = (name: string, baseURL: string, configType = 'ollama') =>
+    render(
+      <BackendForm
+        editingBackend={null}
+        onCancel={() => undefined}
+        onSubmit={() => undefined}
+        isPending={false}
+        error={false}
+        name={name}
+        setName={() => undefined}
+        baseURL={baseURL}
+        setBaseURL={() => undefined}
+        configType={configType}
+        setConfigType={() => undefined}
+      />,
+    );
+
+  it('says why Create is disabled when the URL is empty', () => {
+    const html = renderForm('nourl', '');
+    expect(html).toContain('Enter the base URL for this backend.');
+    expect(html).toMatch(/<button[^>]* disabled=""/);
+  });
+
+  it('stays quiet on a pristine form', () => {
+    expect(renderForm('', '')).not.toContain('Enter the base URL for this backend.');
+  });
+
+  it('rejects a malformed URL and disables Create', () => {
+    const html = renderForm('nourl', 'not a url');
+    expect(html).toContain('Enter a full address that starts with http:// or https://.');
+    expect(html).toMatch(/<button[^>]* disabled=""/);
+  });
+
+  it('accepts an http URL and enables Create', () => {
+    const html = renderForm('ok', 'http://localhost:11434');
+    expect(html).not.toContain('Enter a full address');
+    expect(html).not.toMatch(/<button[^>]* disabled=""/);
+  });
+
+  it('does not require http for local paths', () => {
+    expect(renderForm('m', '~/.contenox/models/', 'local')).not.toContain('Enter a full address');
+  });
+});
+
+describe('HiddenModelsNotice', () => {
+  it('names the hidden models and offers to show each again', () => {
+    const html = render(
+      <HiddenModelsNotice
+        connection={{ ...connection, hiddenModels: ['us.anthropic.claude-sonnet-5-5'] }}
+      />,
+    );
+    expect(html).toContain('Hidden because this account has no access to them');
+    expect(html).toContain('us.anthropic.claude-sonnet-5-5');
+    expect(html).toContain('Show us.anthropic.claude-sonnet-5-5 again');
+  });
+
+  it('renders nothing without hidden models', () => {
+    expect(render(<HiddenModelsNotice connection={connection} />)).toBe('');
+  });
+});
+
+describe('Vertex connections never print the project', () => {
+  const vertex: Connection = {
+    ...connection,
+    providerType: 'vertex-google',
+    baseUrl: 'https://aiplatform.googleapis.com/v1/projects/secret-project-123/locations/global',
+    displayUrl: 'https://aiplatform.googleapis.com/v1/projects/…/locations/global',
+    errorCode: 'unreachable',
+    error: 'Post "https://aiplatform.googleapis.com/v1/projects/secret-project-123/locations/global:x": dial tcp: refused',
+  };
+
+  it('uses the display URL on the row', () => {
+    const html = render(
+      <ConnectionRow
+        connection={vertex}
+        onCheck={() => undefined}
+        onEdit={() => undefined}
+        onRename={() => undefined}
+        onDelete={() => undefined}
+      />,
+    );
+    expect(html).toContain('projects/…/locations/global');
+    expect(html).not.toContain('secret-project-123');
+  });
+
+  it('redacts the project in the recovery card and its details', () => {
+    const html = render(
+      <ConnectionRecovery connection={vertex} providerTitle="Vertex AI" onRetry={() => undefined} />,
+    );
+    expect(html).not.toContain('secret-project-123');
   });
 });

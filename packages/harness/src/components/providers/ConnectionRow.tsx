@@ -1,6 +1,7 @@
 import { IconButton, SettingsGroup, SettingsRow, StatusDot } from '@contenox/ui';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { backendDisplayUrl } from '../../lib/displayUrl';
 import { connectionStatus } from '../../lib/connectionStatus';
 import type { Connection } from '../../lib/types';
 import { ConnectionMenu } from './ConnectionMenu';
@@ -32,7 +33,7 @@ export function ConnectionRow({
     <SettingsGroup>
       <SettingsRow
         title={connection.name}
-        description={connection.baseUrl || undefined}
+        description={backendDisplayUrl(connection) || undefined}
         trailing={
           <>
             <StatusDot status={status.statusDot} label={t(status.summaryKey)} />

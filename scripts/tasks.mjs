@@ -36,6 +36,8 @@ Everyday
 Packaging and QA
   package-dir        unpacked desktop app in desktop/dist with the pinned runtime, then verify
   package            host installers with the pinned runtime, then verify and write SHA256SUMS
+  package-store      Microsoft Store package for upload to Partner Center (Windows)
+  package-store-local  Store package with a local test identity, to install and check on this machine
   package-local      unpacked desktop app bundling contenox-runtime from PATH (or --runtime-bin)
   qa                 package-local, then launch the packaged app
                      npm run qa -- --runtime-bin=<path-to-contenox-runtime>
@@ -305,6 +307,14 @@ const tasks = {
     await desktopRun('package');
     await desktopRun('verify:package');
     await desktopRun('checksums');
+  },
+  'package-store': async () => {
+    await need('stage');
+    await desktopRun('package:store');
+  },
+  'package-store-local': async () => {
+    await need('stage');
+    await desktopRun('package:store:local');
   },
 
   'sign-rpm': async () => {
