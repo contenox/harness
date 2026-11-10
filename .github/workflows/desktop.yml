@@ -72,6 +72,7 @@ jobs:
           name: contenox-microsoft-store
           path: desktop/dist/Contenox-*-store-*.appx
           if-no-files-found: error
+          retention-days: 1
 
       - name: Import release signing key
         if: runner.os == 'Linux'
@@ -110,6 +111,17 @@ jobs:
           S3_RELEASE_PREFIX: ${{ vars.S3_RELEASE_PREFIX }}
           S3_PUBLIC_BASE: ${{ vars.S3_PUBLIC_BASE }}
         run: python scripts/publish-platform.py
+
+      - name: Publish the Microsoft Store package to S3
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          S3_RELEASE_PREFIX: ${{ vars.S3_RELEASE_PREFIX }}
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "'v' + require('./desktop/package.json').version")
+          aws s3 cp desktop/dist/ "s3://${S3_BUCKET}/${S3_RELEASE_PREFIX}/${VERSION}/windows-store/" --recursive --exclude "*" --include "Contenox-*-store-*.appx"
 
   index:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
