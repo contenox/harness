@@ -37,21 +37,5 @@
       </uap:VisualElements>
       ${extensions}
     </Application>
-    <Application Id="ContenoxRuntime" Executable="app\resources\runtime\contenox-runtime.exe" EntryPoint="Windows.FullTrustApplication">
-      <uap:VisualElements
-       AppListEntry="none"
-       BackgroundColor="${backgroundColor}"
-       DisplayName="Contenox runtime"
-       Square150x150Logo="${square150x150Logo}"
-       Square44x44Logo="${square44x44Logo}"
-       Description="Contenox runtime command line tool" />
-      <Extensions>
-        <uap3:Extension Category="windows.appExecutionAlias">
-          <uap3:AppExecutionAlias>
-            <desktop:ExecutionAlias Alias="contenox-runtime.exe" />
-          </uap3:AppExecutionAlias>
-        </uap3:Extension>
-      </Extensions>
-    </Application>
   </Applications>
 </Package>

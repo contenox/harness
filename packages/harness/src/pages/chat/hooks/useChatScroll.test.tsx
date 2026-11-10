@@ -42,7 +42,22 @@ function scrollNode(): FakeNode {
 }
 
 describe('useChatScroll', () => {
-  it('attaches the scroll listener once the empty chat gets its first message and respects scroll-up', async () => {
+  it('keeps following when the list moves without the reader touching it', async () => {
+    const follow = vi.spyOn(FakeNode.prototype, 'scrollIntoView');
+    const root = await renderProbe(true, 0);
+    const el = scrollNode();
+    el.scrollHeight = 1000;
+    el.clientHeight = 100;
+    el.scrollTop = 0;
+    await act(async () => fireEvent(dom.container, el, 'scroll'));
+    follow.mockClear();
+
+    await act(async () => root.render(createElement(Probe, { show: true, tick: 1 })));
+    expect(follow).toHaveBeenCalledWith({ behavior: 'auto' });
+    await act(async () => root.unmount());
+  });
+
+  it('attaches the scroll listener once the empty chat gets its first message and respects a wheel scroll-up', async () => {
     const follow = vi.spyOn(FakeNode.prototype, 'scrollIntoView');
     const root = await renderProbe(false, 0);
     await act(async () => root.render(createElement(Probe, { show: true, tick: 1 })));
@@ -51,6 +66,7 @@ describe('useChatScroll', () => {
     el.scrollHeight = 1000;
     el.clientHeight = 100;
     el.scrollTop = 0;
+    await act(async () => fireEvent(dom.container, el, 'wheel'));
     await act(async () => fireEvent(dom.container, el, 'scroll'));
     follow.mockClear();
 

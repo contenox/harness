@@ -27,6 +27,7 @@ export function useChatScroll({
   // Those must not be read as the reader scrolling away.
   const programmaticRef = useRef(false);
   const programmaticTimerRef = useRef<number | null>(null);
+  const userIntentUntilRef = useRef(0);
 
   const checkNearBottom = useCallback(() => {
     const el = containerRef.current;
@@ -61,21 +62,39 @@ export function useChatScroll({
       const near = checkNearBottom();
       setIsNearBottom(near);
       if (programmaticRef.current) return;
-      stickRef.current = near;
+      if (near) {
+        stickRef.current = true;
+        return;
+      }
+      if (Date.now() <= userIntentUntilRef.current) stickRef.current = false;
     };
     const handleUserScroll = () => {
       programmaticRef.current = false;
+      userIntentUntilRef.current = Date.now() + 1000;
+    };
+    const handlePointerDown = () => {
+      programmaticRef.current = false;
+      userIntentUntilRef.current = Number.POSITIVE_INFINITY;
+    };
+    const handlePointerUp = () => {
+      userIntentUntilRef.current = Date.now() + 300;
     };
 
     el.addEventListener("scroll", handleScroll, { passive: true });
     el.addEventListener("wheel", handleUserScroll, { passive: true });
     el.addEventListener("touchmove", handleUserScroll, { passive: true });
     el.addEventListener("keydown", handleUserScroll);
+    el.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
     return () => {
       el.removeEventListener("scroll", handleScroll);
       el.removeEventListener("wheel", handleUserScroll);
       el.removeEventListener("touchmove", handleUserScroll);
       el.removeEventListener("keydown", handleUserScroll);
+      el.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
     };
     // The listener must attach when the transcript first gets content: the
     // container does not exist while the empty state is rendered.
