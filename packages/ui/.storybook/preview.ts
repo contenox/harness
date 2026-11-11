@@ -15,16 +15,12 @@ const preview: Preview = {
     backgrounds: { disable: true },
   },
   decorators: [
-
-
     withThemeByClassName({
       themes: { light: "", dark: "dark" },
       defaultTheme: "dark",
       parentSelector: "html",
     }),
     (Story) =>
-
-
       React.createElement(
         "div",
         {

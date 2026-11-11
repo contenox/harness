@@ -8,7 +8,11 @@ describe('envelopeDisplayName', () => {
   });
 
   it('drops the workspace folder a workspace envelope is stored under', () => {
-    expect(envelopeDisplayName('workspaces/6f1c/hitl-policy-review_only.json')).toBe('hitl-policy-review_only.json');
-    expect(envelopeDisplayName('  workspaces\\6f1c\\hitl-policy-dev.json ')).toBe('hitl-policy-dev.json');
+    expect(envelopeDisplayName('workspaces/6f1c/hitl-policy-review_only.json')).toBe(
+      'hitl-policy-review_only.json',
+    );
+    expect(envelopeDisplayName('  workspaces\\6f1c\\hitl-policy-dev.json ')).toBe(
+      'hitl-policy-dev.json',
+    );
   });
 });

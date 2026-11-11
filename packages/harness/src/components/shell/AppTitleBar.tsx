@@ -2,7 +2,7 @@ import { Button, TitleBar } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useTitleBarInsets } from '../../hooks/useTitleBarInsets';
-import { useNavbarSlotValue } from '../NavbarSlot';
+import { useNavbarSlotValue } from '../navbarSlotState';
 import { TopBarTitle } from '../TopBarTitle';
 import { SidebarToggleButton } from './SidebarToggleButton';
 
@@ -16,7 +16,13 @@ type Props = {
 };
 
 /** Window title bar: sidebar toggle, page title, the page-claimed navbar slot, caption-button space. */
-export function AppTitleBar({ signedIn, showSidebarToggle, sidebarOpen, onToggleSidebar, showLogin }: Props) {
+export function AppTitleBar({
+  signedIn,
+  showSidebarToggle,
+  sidebarOpen,
+  onToggleSidebar,
+  showLogin,
+}: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const navbarSlot = useNavbarSlotValue();
@@ -27,7 +33,9 @@ export function AppTitleBar({ signedIn, showSidebarToggle, sidebarOpen, onToggle
       reserveStart={insets.start}
       reserveEnd={insets.end}
       start={
-        showSidebarToggle ? <SidebarToggleButton isOpen={sidebarOpen} onToggle={onToggleSidebar} /> : undefined
+        showSidebarToggle ? (
+          <SidebarToggleButton isOpen={sidebarOpen} onToggle={onToggleSidebar} />
+        ) : undefined
       }
       end={
         <>

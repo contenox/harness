@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from "react";
 import type {
   Account,
   AccountMembership,
@@ -39,8 +39,8 @@ import type {
   UpdateMeRequest,
   Usage,
   User,
-} from './lib/api/types';
-import type { AskBoard } from './lib/asks';
+} from "./lib/api/types";
+import type { AskBoard } from "./lib/asks";
 
 export interface ProductRoutes {
   signIn: string;
@@ -100,7 +100,7 @@ export interface ProductAuth {
 export interface ProductAskState {
   board: AskBoard;
   waiting: Ask[];
-  stream: 'connecting' | 'live' | 'reconnecting';
+  stream: "connecting" | "live" | "reconnecting";
   isPending: boolean;
   isFetching: boolean;
   error: unknown;
@@ -201,6 +201,6 @@ export function ProductPortsProvider({
 
 export function useProductPorts(): ProductPorts {
   const ports = useContext(ProductPortsContext);
-  if (ports === null) throw new Error('ProductPortsProvider is required');
+  if (ports === null) throw new Error("ProductPortsProvider is required");
   return ports;
 }

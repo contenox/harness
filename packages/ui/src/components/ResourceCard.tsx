@@ -40,9 +40,7 @@ export function ResourceCard({
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-0.5">
           <H2 className="text-base break-words">{title}</H2>
-          {subtitle && (
-            <div className="text-[13px] text-text-muted">{subtitle}</div>
-          )}
+          {subtitle && <div className="text-[13px] text-text-muted">{subtitle}</div>}
         </div>
         {badge && <div className="shrink-0">{badge}</div>}
       </div>
@@ -54,12 +52,7 @@ export function ResourceCard({
           <ButtonGroup className="flex flex-wrap items-center justify-between">
             <div className="flex flex-wrap gap-2">
               {actions.edit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={actions.edit}
-                  disabled={isLoading}
-                >
+                <Button variant="outline" size="sm" onClick={actions.edit} disabled={isLoading}>
                   {actionLabels.edit}
                 </Button>
               )}
@@ -67,12 +60,7 @@ export function ResourceCard({
             </div>
 
             {actions.delete && (
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={actions.delete}
-                isLoading={isLoading}
-              >
+              <Button variant="danger" size="sm" onClick={actions.delete} isLoading={isLoading}>
                 {isLoading ? actionLabels.deleting : actionLabels.delete}
               </Button>
             )}

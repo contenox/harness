@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { filesUrl } from './useWorkspaceFiles';
 import { ROOT_DIR } from '../pages/chat/lib/workspaceTree';
+import { filesUrl } from './useWorkspaceFiles';
 
 describe('filesUrl', () => {
   const parse = (url: string) => new URLSearchParams(url.split('?')[1]);

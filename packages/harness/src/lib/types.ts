@@ -444,7 +444,11 @@ export type AgentIdentity = {
   creditAs: string;
 };
 
-export type AgentKeyProblem = 'passphrase_protected' | 'unreadable' | 'unsupported_type' | 'security_key';
+export type AgentKeyProblem =
+  | 'passphrase_protected'
+  | 'unreadable'
+  | 'unsupported_type'
+  | 'security_key';
 
 export type AgentKey = {
   ref: string;

@@ -1,25 +1,19 @@
-
-import type { ImagePart, PromptCapabilities } from '@contenox/acp-client';
-
+import type { ImagePart, PromptCapabilities } from "@contenox/acp-client";
 
 export const WS_READ_LIMIT_BYTES = 1 << 20;
 
-
 export const PROMPT_ENVELOPE_RESERVE_BYTES = 96 * 1024;
-
 
 export const IMAGE_PAYLOAD_BUDGET_BYTES = WS_READ_LIMIT_BYTES - PROMPT_ENVELOPE_RESERVE_BYTES;
 
-
 export const MAX_IMAGE_EDGE_PX = 1568;
 
-
 const ATTACHABLE_IMAGE_TYPES = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'image/gif',
-  'image/bmp',
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/bmp",
 ]);
 
 export function canAttachImages(capabilities: PromptCapabilities | undefined): boolean {
@@ -35,12 +29,12 @@ export interface PendingImageAttachment extends ImagePart {
   name: string;
 }
 
-export type ImageAttachmentErrorReason = 'unsupported' | 'too_large' | 'process_failed';
+export type ImageAttachmentErrorReason = "unsupported" | "too_large" | "process_failed";
 
 export class ImageAttachmentError extends Error {
   constructor(readonly reason: ImageAttachmentErrorReason) {
     super(`image attachment rejected: ${reason}`);
-    this.name = 'ImageAttachmentError';
+    this.name = "ImageAttachmentError";
   }
 }
 
@@ -55,7 +49,7 @@ export function imageFilesFromDataTransfer(dt: DataTransferLike | null | undefin
   if (dt.items && dt.items.length > 0) {
     for (let i = 0; i < dt.items.length; i++) {
       const item = dt.items[i];
-      if (item.kind !== 'file' || !isAttachableImageType(item.type)) continue;
+      if (item.kind !== "file" || !isAttachableImageType(item.type)) continue;
       const file = item.getAsFile();
       if (file) out.push(file);
     }
@@ -76,16 +70,16 @@ export function dataTransferHasImages(
   if (!dt?.items) return false;
   for (let i = 0; i < dt.items.length; i++) {
     const item = dt.items[i];
-    if (item.kind === 'file' && isAttachableImageType(item.type)) return true;
+    if (item.kind === "file" && isAttachableImageType(item.type)) return true;
   }
   return false;
 }
 
 export function base64ByteLength(b64: string): number {
-  if (b64 === '') return 0;
+  if (b64 === "") return 0;
   let padding = 0;
-  if (b64.endsWith('==')) padding = 2;
-  else if (b64.endsWith('=')) padding = 1;
+  if (b64.endsWith("==")) padding = 2;
+  else if (b64.endsWith("=")) padding = 1;
   return (b64.length * 3) / 4 - padding;
 }
 
@@ -93,14 +87,11 @@ export function base64LengthForBytes(bytes: number): number {
   return Math.ceil(bytes / 3) * 4;
 }
 
-
 function utf8Bytes(value: string): number {
   return new TextEncoder().encode(value).length;
 }
 
-
 const IMAGE_BLOCK_OVERHEAD_BYTES = 96;
-
 
 const JSON_RPC_SCAFFOLD_BYTES = 256;
 
@@ -130,19 +121,19 @@ export function imagePartFromDataUrl(dataUrl: string): ImagePart | null {
 
 export interface EncodeAttempt {
   maxEdgePx: number;
-  mimeType: 'image/png' | 'image/jpeg';
+  mimeType: "image/png" | "image/jpeg";
   quality?: number;
 }
 
 export function encodeLadderFor(sourceType: string): EncodeAttempt[] {
   const jpeg: EncodeAttempt[] = [
-    { maxEdgePx: MAX_IMAGE_EDGE_PX, mimeType: 'image/jpeg', quality: 0.85 },
-    { maxEdgePx: 1120, mimeType: 'image/jpeg', quality: 0.8 },
-    { maxEdgePx: 800, mimeType: 'image/jpeg', quality: 0.7 },
-    { maxEdgePx: 560, mimeType: 'image/jpeg', quality: 0.6 },
+    { maxEdgePx: MAX_IMAGE_EDGE_PX, mimeType: "image/jpeg", quality: 0.85 },
+    { maxEdgePx: 1120, mimeType: "image/jpeg", quality: 0.8 },
+    { maxEdgePx: 800, mimeType: "image/jpeg", quality: 0.7 },
+    { maxEdgePx: 560, mimeType: "image/jpeg", quality: 0.6 },
   ];
-  if (sourceType !== 'image/png') return jpeg;
-  return [{ maxEdgePx: MAX_IMAGE_EDGE_PX, mimeType: 'image/png' }, ...jpeg];
+  if (sourceType !== "image/png") return jpeg;
+  return [{ maxEdgePx: MAX_IMAGE_EDGE_PX, mimeType: "image/png" }, ...jpeg];
 }
 
 export function scaledSize(
@@ -163,7 +154,7 @@ export function canPassThrough(
   height: number,
   budgetBytes: number,
 ): boolean {
-  if (file.type !== 'image/png' && file.type !== 'image/jpeg') return false;
+  if (file.type !== "image/png" && file.type !== "image/jpeg") return false;
   if (Math.max(width, height) > MAX_IMAGE_EDGE_PX) return false;
   return base64LengthForBytes(file.size) <= budgetBytes;
 }
@@ -181,16 +172,14 @@ export interface ImageCodec {
   readAsDataUrl(file: File): Promise<string>;
 }
 
-
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(reader.error ?? new Error('file read failed'));
+    reader.onerror = () => reject(reader.error ?? new Error("file read failed"));
     reader.onload = () => resolve(String(reader.result));
     reader.readAsDataURL(file);
   });
 }
-
 
 export const browserImageCodec: ImageCodec = {
   async decode(file) {
@@ -203,15 +192,14 @@ export const browserImageCodec: ImageCodec = {
     };
   },
   encode(image, width, height, attempt) {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new ImageAttachmentError('process_failed');
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new ImageAttachmentError("process_failed");
 
-
-    if (attempt.mimeType === 'image/jpeg') {
-      ctx.fillStyle = '#ffffff';
+    if (attempt.mimeType === "image/jpeg") {
+      ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, width, height);
     }
     ctx.drawImage(image.source as CanvasImageSource, 0, 0, width, height);
@@ -236,23 +224,21 @@ export async function prepareImageAttachment(
   file: File,
   options: PrepareImageOptions = {},
 ): Promise<PendingImageAttachment> {
-  if (!isAttachableImageType(file.type)) throw new ImageAttachmentError('unsupported');
+  if (!isAttachableImageType(file.type)) throw new ImageAttachmentError("unsupported");
   const budgetBytes = options.budgetBytes ?? IMAGE_PAYLOAD_BUDGET_BYTES;
   const codec = options.codec ?? browserImageCodec;
-  if (budgetBytes <= 0) throw new ImageAttachmentError('too_large');
+  if (budgetBytes <= 0) throw new ImageAttachmentError("too_large");
 
   let image: DecodedImage;
   try {
     image = await codec.decode(file);
   } catch {
-    throw new ImageAttachmentError('process_failed');
+    throw new ImageAttachmentError("process_failed");
   }
 
   try {
     if (canPassThrough(file, image.width, image.height, budgetBytes)) {
       const part = imagePartFromDataUrl(await codec.readAsDataUrl(file));
-
-
 
       if (part && part.data.length <= budgetBytes) {
         return { id: nextAttachmentId(), name: file.name, ...part };
@@ -265,13 +251,13 @@ export async function prepareImageAttachment(
       try {
         part = imagePartFromDataUrl(codec.encode(image, width, height, attempt));
       } catch {
-        throw new ImageAttachmentError('process_failed');
+        throw new ImageAttachmentError("process_failed");
       }
       if (part && part.data.length <= budgetBytes) {
         return { id: nextAttachmentId(), name: file.name, ...part };
       }
     }
-    throw new ImageAttachmentError('too_large');
+    throw new ImageAttachmentError("too_large");
   } finally {
     image.close();
   }

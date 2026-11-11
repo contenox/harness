@@ -161,7 +161,10 @@ describe('applyMentionAscend', () => {
     const q = deriveMentionQuery(draft, draft.length);
     const { text, caret } = applyMentionAscend(draft, q);
     expect(text).toBe('x @src/');
-    expect(splitMentionQuery(deriveMentionQuery(text, caret).query)).toEqual({ dir: 'src', leaf: '' });
+    expect(splitMentionQuery(deriveMentionQuery(text, caret).query)).toEqual({
+      dir: 'src',
+      leaf: '',
+    });
   });
   it('ascends from a top-level directory to the root (bare @)', () => {
     const draft = 'x @src/comp';
@@ -204,7 +207,9 @@ describe('mentionToken — quoting', () => {
     expect(mentionToken({ path: 'src/app.ts', name: 'app.ts' })).toBe('@src/app.ts');
   });
   it('quotes a path containing a space', () => {
-    expect(mentionToken({ path: 'my docs/plan a.md', name: 'plan a.md' })).toBe('@"my docs/plan a.md"');
+    expect(mentionToken({ path: 'my docs/plan a.md', name: 'plan a.md' })).toBe(
+      '@"my docs/plan a.md"',
+    );
   });
 });
 
@@ -257,7 +262,12 @@ describe('mentionCandidatesForScope', () => {
   ];
 
   it('lists directories before files, each group alphabetical, for an empty leaf', () => {
-    expect(mentionCandidatesForScope(entries, '').map(e => e.name)).toEqual(['assets', 'components', 'app.ts', 'z.ts']);
+    expect(mentionCandidatesForScope(entries, '').map(e => e.name)).toEqual([
+      'assets',
+      'components',
+      'app.ts',
+      'z.ts',
+    ]);
   });
 
   it('filters by leaf across both groups, prefix-matches ranked first', () => {

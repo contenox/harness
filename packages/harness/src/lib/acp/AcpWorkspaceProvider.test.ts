@@ -5,8 +5,7 @@ import {
   selectFocusedSession,
   selectOpenSessionIds,
 } from '../../hooks/acpWorkspaceState';
-import { createDeferredDisposer } from './AcpWorkspaceProvider';
-
+import { createDeferredDisposer } from './acpWorkspaceContext';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -67,9 +66,21 @@ describe('AcpWorkspaceProvider context-value composition (multiplexing wiring)',
       sessions = acpSessionsReducer(sessions, action);
     };
 
-    dispatch({ type: 'session_dispatch', key: 'sess-a', action: { type: 'session_reset', sessionId: 'sess-a' } });
-    dispatch({ type: 'session_dispatch', key: 'sess-b', action: { type: 'session_reset', sessionId: 'sess-b' } });
-    dispatch({ type: 'session_dispatch', key: 'sess-a', action: { type: 'message_chunk', id: 'ma', text: 'A background' } });
+    dispatch({
+      type: 'session_dispatch',
+      key: 'sess-a',
+      action: { type: 'session_reset', sessionId: 'sess-a' },
+    });
+    dispatch({
+      type: 'session_dispatch',
+      key: 'sess-b',
+      action: { type: 'session_reset', sessionId: 'sess-b' },
+    });
+    dispatch({
+      type: 'session_dispatch',
+      key: 'sess-a',
+      action: { type: 'message_chunk', id: 'ma', text: 'A background' },
+    });
     dispatch({ type: 'session_focused', key: 'sess-b' });
 
     expect(selectFocusedSession(sessions).sessionId).toBe('sess-b');

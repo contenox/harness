@@ -5,11 +5,17 @@ import { RecoveryCard } from "./RecoveryCard";
 
 describe("RecoveryCard", () => {
   it("alerts on error and uses status otherwise", () => {
-    expect(renderToStaticMarkup(createElement(RecoveryCard, { title: "t" }))).toContain('role="alert"');
-    expect(renderToStaticMarkup(createElement(RecoveryCard, { title: "t", tone: "info" }))).toContain('role="status"');
+    expect(renderToStaticMarkup(createElement(RecoveryCard, { title: "t" }))).toContain(
+      'role="alert"',
+    );
+    expect(
+      renderToStaticMarkup(createElement(RecoveryCard, { title: "t", tone: "info" })),
+    ).toContain('role="status"');
   });
   it("renders the details toggle only when details exist", () => {
-    const without = renderToStaticMarkup(createElement(RecoveryCard, { title: "t", detailsLabel: "Details" }));
+    const without = renderToStaticMarkup(
+      createElement(RecoveryCard, { title: "t", detailsLabel: "Details" }),
+    );
     expect(without).not.toContain("Details");
     const withDetails = renderToStaticMarkup(
       createElement(RecoveryCard, { title: "t", detailsLabel: "Details", details: "raw error" }),

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useListChains } from '../../../hooks/useChains';
 import { useListPolicies } from '../../../hooks/usePolicies';
 import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
+import { useResetAfterSuccess } from '../../../hooks/useResetAfterSuccess';
 import { useSetupStatus } from '../../../hooks/useSetupStatus';
 import { AuthContext } from '../../../lib/authContext';
 import type { CLIConfigUpdateRequest } from '../../../lib/types';
@@ -34,11 +35,7 @@ export function WorkspaceSettingsSection() {
     setPolicy(policyScope === 'workspace' ? data.hitlPolicyName || '' : '');
   }, [chainScope, data, policyScope]);
 
-  useEffect(() => {
-    if (!putConfig.isSuccess) return;
-    const timer = window.setTimeout(() => putConfig.reset(), 3000);
-    return () => window.clearTimeout(timer);
-  }, [putConfig.isSuccess, putConfig.reset]);
+  useResetAfterSuccess(putConfig.isSuccess, putConfig.reset);
 
   const chainOptions = useMemo(() => {
     const values = uniqueSorted(chains ?? []);

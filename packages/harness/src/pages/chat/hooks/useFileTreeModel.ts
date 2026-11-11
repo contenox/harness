@@ -8,7 +8,11 @@ import { useWorkspaceAccess } from '../../../hooks/useWorkspaceAccess';
 import type { UseWorkspaceFilesResult } from '../../../hooks/useWorkspaceFiles';
 import { useWorkspaceFind } from '../../../hooks/useWorkspaceFind';
 import { workspaceAccessKeys } from '../../../lib/queryKeys';
-import { availableFilterTypes, buildTreeFromMatches, type WorkspaceFilterType } from '../lib/workspaceFilter';
+import {
+  availableFilterTypes,
+  buildTreeFromMatches,
+  type WorkspaceFilterType,
+} from '../lib/workspaceFilter';
 import {
   toFileTreeNodes,
   verdictToAccess,
@@ -84,7 +88,10 @@ export function useFileTreeModel(root: string | null, files: UseWorkspaceFilesRe
 
   const activeType: WorkspaceFilterType | undefined =
     filterTypes.find(ft => ft.id === filterTypeId) ?? filterTypes[0];
-  const query = useMemo(() => activeType?.toQuery(appliedValue) ?? null, [activeType, appliedValue]);
+  const query = useMemo(
+    () => activeType?.toQuery(appliedValue) ?? null,
+    [activeType, appliedValue],
+  );
   const filterActive = filterPanel.open && query !== null;
 
   const findGlobs = useMemo(
@@ -97,7 +104,12 @@ export function useFileTreeModel(root: string | null, files: UseWorkspaceFilesRe
     () => (filterActive ? find.entries.map(e => e.path) : cachePaths),
     [filterActive, find.entries, cachePaths],
   );
-  const access = useWorkspaceAccess({ root, policy: files.hitlPolicyName, paths: accessPaths, enabled: agentView });
+  const access = useWorkspaceAccess({
+    root,
+    policy: files.hitlPolicyName,
+    paths: accessPaths,
+    enabled: agentView,
+  });
 
   const decorate = useCallback<NodeDecorator>(
     path => {

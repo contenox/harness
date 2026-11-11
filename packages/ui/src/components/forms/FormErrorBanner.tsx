@@ -1,5 +1,5 @@
-import { Button } from '../Button';
-import { InlineNotice } from '../InlineNotice';
+import { Button } from "../Button";
+import { InlineNotice } from "../InlineNotice";
 
 export function FormErrorBanner({
   message,
@@ -22,7 +22,8 @@ export function FormErrorBanner({
             size="sm"
             className="shrink-0"
             onClick={onRetry}
-            disabled={pending}>
+            disabled={pending}
+          >
             Try again
           </Button>
         )}

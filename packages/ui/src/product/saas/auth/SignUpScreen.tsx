@@ -1,41 +1,37 @@
-import { Button, InlineNotice, P, Small } from '@contenox/ui';
-import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import {
-  CheckboxField,
-  EmailField,
-  PasswordField,
-  SelectField,
-  TextField,
-} from '@contenox/ui';
-import { ScreenLoading } from '../ScreenState';
-import { ApiError } from '../../lib/apiError';
-import type { AccountType, BusinessDetails, InvitePreview, SignupRequest } from '../../lib/api/types';
-import { roleLabel } from '../../lib/roles';
-import { useProductPorts } from '../../ports';
-import { partitionFormError } from './formErrors';
-import { AuthForm, AuthLink, AuthScreen, ProductIntro } from './AuthScreen';
-
+import { Button, InlineNotice, P, Small } from "@contenox/ui";
+import { useState } from "react";
+import { Navigate } from "react-router-dom";
+import { CheckboxField, EmailField, PasswordField, SelectField, TextField } from "@contenox/ui";
+import { ScreenLoading } from "../ScreenState";
+import { ApiError } from "../../lib/apiError";
+import type {
+  AccountType,
+  BusinessDetails,
+  InvitePreview,
+  SignupRequest,
+} from "../../lib/api/types";
+import { roleLabel } from "../../lib/roles";
+import { useProductPorts } from "../../ports";
+import { partitionFormError } from "./formErrors";
+import { AuthForm, AuthLink, AuthScreen, ProductIntro } from "./AuthScreen";
 
 const MIN_PASSWORD_LENGTH = 12;
 
-
 const FIELDS = [
-  'display_name',
-  'email',
-  'password',
-  'account_type',
-  'business',
-  'consent.terms_version',
-  'consent.privacy_version',
-  'consent.withdrawal_waiver_version',
+  "display_name",
+  "email",
+  "password",
+  "account_type",
+  "business",
+  "consent.terms_version",
+  "consent.privacy_version",
+  "consent.withdrawal_waiver_version",
 ] as const;
 
 const ACCOUNT_TYPE_OPTIONS: { value: AccountType; label: string }[] = [
-  { value: 'consumer', label: 'Myself' },
-  { value: 'business', label: 'A business' },
+  { value: "consumer", label: "Myself" },
+  { value: "business", label: "A business" },
 ];
-
 
 interface BusinessForm {
   legalName: string;
@@ -48,26 +44,24 @@ interface BusinessForm {
 }
 
 const EMPTY_BUSINESS: BusinessForm = {
-  legalName: '',
-  vatID: '',
-  addressLine1: '',
-  addressLine2: '',
-  postalCode: '',
-  city: '',
-  country: '',
+  legalName: "",
+  vatID: "",
+  addressLine1: "",
+  addressLine2: "",
+  postalCode: "",
+  city: "",
+  country: "",
 };
-
 
 function businessComplete(form: BusinessForm): boolean {
   return (
-    form.legalName.trim() !== '' &&
-    form.addressLine1.trim() !== '' &&
-    form.postalCode.trim() !== '' &&
-    form.city.trim() !== '' &&
-    form.country.trim() !== ''
+    form.legalName.trim() !== "" &&
+    form.addressLine1.trim() !== "" &&
+    form.postalCode.trim() !== "" &&
+    form.city.trim() !== "" &&
+    form.country.trim() !== ""
   );
 }
-
 
 function businessPayload(form: BusinessForm): BusinessDetails {
   const details: BusinessDetails = {
@@ -77,8 +71,8 @@ function businessPayload(form: BusinessForm): BusinessDetails {
     city: form.city.trim(),
     country: form.country.trim().toUpperCase(),
   };
-  if (form.vatID.trim() !== '') details.vat_id = form.vatID.trim();
-  if (form.addressLine2.trim() !== '') details.address_line2 = form.addressLine2.trim();
+  if (form.vatID.trim() !== "") details.vat_id = form.vatID.trim();
+  if (form.addressLine2.trim() !== "") details.address_line2 = form.addressLine2.trim();
   return details;
 }
 
@@ -93,30 +87,22 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
     useSwapAuthGate,
   } = useProductPorts();
   const { user } = useAuth();
-  const joining = inviteToken !== '';
-
-
+  const joining = inviteToken !== "";
 
   const joinPath = `${routes.signUp}?token=${encodeURIComponent(inviteToken)}`;
 
-  const [accountType, setAccountType] = useState<AccountType>('consumer');
-  const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [accountType, setAccountType] = useState<AccountType>("consumer");
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [business, setBusiness] = useState<BusinessForm>(EMPTY_BUSINESS);
   const [acceptedDocuments, setAcceptedDocuments] = useState(false);
   const [acceptedWithdrawal, setAcceptedWithdrawal] = useState(false);
-
-
 
   const [acknowledged, setAcknowledged] = useState(false);
   const swapGate = useSwapAuthGate();
   const signUp = useSignUp();
   const preview = useInvitePreview(inviteToken);
-
-
-
-
 
   if (signUp.data?.contact_pending === true && !acknowledged) {
     return (
@@ -129,25 +115,11 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
     );
   }
 
-
-
-
-
-
-
   if (user && !joining) return <Navigate to={routes.session} replace />;
-
-
-
-
-
-
 
   if (joining && preview.error instanceof ApiError && preview.error.status === 404) {
     return <InvalidInviteScreen />;
   }
-
-
 
   if (joining && preview.isPending) {
     return (
@@ -156,9 +128,6 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
       </AuthScreen>
     );
   }
-
-
-
 
   if (user) {
     return (
@@ -172,16 +141,13 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
     );
   }
 
+  const waiverApplies = !joining && accountType === "consumer";
+  const businessApplies = !joining && accountType === "business";
 
-
-
-  const waiverApplies = !joining && accountType === 'consumer';
-  const businessApplies = !joining && accountType === 'business';
-
-  const tooShort = password !== '' && password.length < MIN_PASSWORD_LENGTH;
+  const tooShort = password !== "" && password.length < MIN_PASSWORD_LENGTH;
   const canSubmit =
-    displayName.trim() !== '' &&
-    email.trim() !== '' &&
+    displayName.trim() !== "" &&
+    email.trim() !== "" &&
     password.length >= MIN_PASSWORD_LENGTH &&
     acceptedDocuments &&
     (!waiverApplies || acceptedWithdrawal) &&
@@ -215,21 +181,20 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
     <AuthScreen
       intro={<ProductIntro />}
       footer={
-
-
         <AuthLink to={routes.signIn} state={joining ? { from: joinPath } : undefined}>
           Already have an account? Sign in
         </AuthLink>
-      }>
+      }
+    >
       <AuthForm
-        title={joining ? 'Join the account' : 'Create an account'}
-        submitLabel={joining ? 'Join' : 'Create account'}
+        title={joining ? "Join the account" : "Create an account"}
+        submitLabel={joining ? "Join" : "Create account"}
         errors={errors}
         pending={busy}
         canSubmit={canSubmit}
-        onSubmit={submit}>
+        onSubmit={submit}
+      >
         {joining && <JoiningNotice preview={preview.data} />}
-
 
         {joining && signUp.error instanceof ApiError && signUp.error.status === 409 && (
           <InlineNotice variant="warning">
@@ -242,7 +207,7 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
           label="Name"
           required
           value={displayName}
-          onChange={e => setDisplayName(e.target.value)}
+          onChange={(e) => setDisplayName(e.target.value)}
           disabled={busy}
           autoComplete="name"
           error={errors.fields.display_name}
@@ -251,7 +216,7 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
           label="Email"
           required
           value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={(e) => setEmail(e.target.value)}
           disabled={busy}
           error={errors.fields.email}
         />
@@ -259,13 +224,10 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
           label="Password"
           required
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           disabled={busy}
           autoComplete="new-password"
           hint={`${MIN_PASSWORD_LENGTH}+ characters`}
-
-
-
           error={tooShort ? `At least ${MIN_PASSWORD_LENGTH} characters.` : errors.fields.password}
         />
 
@@ -274,7 +236,7 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
             <SelectField
               label="Signing up as"
               value={accountType}
-              onChange={e => setAccountType(e.target.value as AccountType)}
+              onChange={(e) => setAccountType(e.target.value as AccountType)}
               disabled={busy}
               options={ACCOUNT_TYPE_OPTIONS}
               error={errors.fields.account_type}
@@ -297,9 +259,10 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
           checked={acceptedDocuments}
           onChange={setAcceptedDocuments}
           disabled={busy}
-          error={errors.fields['consent.terms_version'] ?? errors.fields['consent.privacy_version']}>
+          error={errors.fields["consent.terms_version"] ?? errors.fields["consent.privacy_version"]}
+        >
           <DocumentLink href={authLegal.termsURL}>Terms of service</DocumentLink>
-          {' · '}
+          {" · "}
           <DocumentLink href={authLegal.privacyURL}>Privacy policy</DocumentLink>
         </CheckboxField>
 
@@ -309,7 +272,8 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
             checked={acceptedWithdrawal}
             onChange={setAcceptedWithdrawal}
             disabled={busy}
-            error={errors.fields['consent.withdrawal_waiver_version']}>
+            error={errors.fields["consent.withdrawal_waiver_version"]}
+          >
             <DocumentLink href={authLegal.withdrawalURL}>
               {authLegal.withdrawalVersionLabel}
             </DocumentLink>
@@ -320,10 +284,9 @@ export function SignUpScreen({ inviteToken }: { inviteToken: string }) {
   );
 }
 
-
 function JoiningNotice({
   preview,
-  action = 'Signing up here joins it',
+  action = "Signing up here joins it",
 }: {
   preview: InvitePreview | undefined;
 
@@ -339,16 +302,15 @@ function JoiningNotice({
   }
   return (
     <InlineNotice variant="info">
-      You&rsquo;re joining <strong>{preview.account_name}</strong> as{' '}
+      You&rsquo;re joining <strong>{preview.account_name}</strong> as{" "}
       <strong>{roleLabel(preview.role)}</strong>
-      {preview.inviter_name !== undefined && preview.inviter_name !== ''
+      {preview.inviter_name !== undefined && preview.inviter_name !== ""
         ? `, invited by ${preview.inviter_name}`
-        : ''}
+        : ""}
       . {action} — no new account is created, and its billing and machines are unchanged.
     </InlineNotice>
   );
 }
-
 
 function AcceptInviteScreen({
   token,
@@ -361,28 +323,26 @@ function AcceptInviteScreen({
   email: string;
   preview: InvitePreview | undefined;
   routes: { session: string };
-  useAcceptInvite: ReturnType<typeof useProductPorts>['useAcceptInvite'];
+  useAcceptInvite: ReturnType<typeof useProductPorts>["useAcceptInvite"];
 }) {
   const accept = useAcceptInvite();
   const status = accept.error instanceof ApiError ? accept.error.status : undefined;
-
-
 
   if (accept.isSuccess) return <Navigate to={routes.session} replace />;
 
   return (
     <AuthScreen
       intro={<ProductIntro />}
-      footer={<AuthLink to={routes.session}>Not now — go to my sessions</AuthLink>}>
+      footer={<AuthLink to={routes.session}>Not now — go to my sessions</AuthLink>}
+    >
       <AuthForm
         title="Join the account"
         submitLabel="Join"
-
-
         errors={partitionFormError(accept.error, [])}
         pending={accept.isPending}
         canSubmit
-        onSubmit={() => accept.mutate({ token })}>
+        onSubmit={() => accept.mutate({ token })}
+      >
         <JoiningNotice
           preview={preview}
           action="Joining adds it to the account you are signed in as"
@@ -391,11 +351,10 @@ function AcceptInviteScreen({
           You are signed in as {email}. An invitation is only valid for the address it was sent to.
         </Small>
 
-
         {status === 404 && (
           <InlineNotice variant="warning">
-            It may have been used, revoked or expired — or sent to an address other than {email},
-            in which case sign out and sign in as that one.
+            It may have been used, revoked or expired — or sent to an address other than {email}, in
+            which case sign out and sign in as that one.
           </InlineNotice>
         )}
         {status === 409 && (
@@ -405,7 +364,6 @@ function AcceptInviteScreen({
     </AuthScreen>
   );
 }
-
 
 function InvalidInviteScreen() {
   const { routes } = useProductPorts();
@@ -417,18 +375,18 @@ function InvalidInviteScreen() {
           <AuthLink to={routes.signUp}>Create an account of your own</AuthLink>
           <AuthLink to={routes.signIn}>Already have an account? Sign in</AuthLink>
         </>
-      }>
+      }
+    >
       <div className="flex flex-col gap-4">
         <P className="text-lg font-semibold">That invitation is no longer valid</P>
         <P className="text-sm">
-          It may have been used already, been revoked, or expired. Ask the person who invited you
-          to send a new one.
+          It may have been used already, been revoked, or expired. Ask the person who invited you to
+          send a new one.
         </P>
       </div>
     </AuthScreen>
   );
 }
-
 
 function DocumentLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
@@ -436,12 +394,12 @@ function DocumentLink({ href, children }: { href: string; children: React.ReactN
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline">
+      className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline"
+    >
       {children}
     </a>
   );
 }
-
 
 function BusinessFields({
   value,
@@ -467,7 +425,7 @@ function BusinessFields({
         label="Legal name"
         required
         value={value.legalName}
-        onChange={e => set({ legalName: e.target.value })}
+        onChange={(e) => set({ legalName: e.target.value })}
         disabled={disabled}
         autoComplete="organization"
         hint="The registered company name."
@@ -475,25 +433,27 @@ function BusinessFields({
       <TextField
         label="VAT ID"
         value={value.vatID}
-        onChange={e => set({ vatID: e.target.value })}
+        onChange={(e) => set({ vatID: e.target.value })}
         disabled={disabled}
         autoCapitalize="characters"
         autoCorrect="off"
         hint="Optional"
       />
-      <Small>A business below the registration threshold has no VAT ID and is still a business.</Small>
+      <Small>
+        A business below the registration threshold has no VAT ID and is still a business.
+      </Small>
       <TextField
         label="Address"
         required
         value={value.addressLine1}
-        onChange={e => set({ addressLine1: e.target.value })}
+        onChange={(e) => set({ addressLine1: e.target.value })}
         disabled={disabled}
         autoComplete="address-line1"
       />
       <TextField
         label="Address line 2"
         value={value.addressLine2}
-        onChange={e => set({ addressLine2: e.target.value })}
+        onChange={(e) => set({ addressLine2: e.target.value })}
         disabled={disabled}
         autoComplete="address-line2"
       />
@@ -501,7 +461,7 @@ function BusinessFields({
         label="Postal code"
         required
         value={value.postalCode}
-        onChange={e => set({ postalCode: e.target.value })}
+        onChange={(e) => set({ postalCode: e.target.value })}
         disabled={disabled}
         autoComplete="postal-code"
       />
@@ -509,7 +469,7 @@ function BusinessFields({
         label="City"
         required
         value={value.city}
-        onChange={e => set({ city: e.target.value })}
+        onChange={(e) => set({ city: e.target.value })}
         disabled={disabled}
         autoComplete="address-level2"
       />
@@ -517,7 +477,7 @@ function BusinessFields({
         label="Country"
         required
         value={value.country}
-        onChange={e => set({ country: e.target.value })}
+        onChange={(e) => set({ country: e.target.value })}
         disabled={disabled}
         autoComplete="country"
         autoCapitalize="characters"
@@ -525,13 +485,10 @@ function BusinessFields({
         maxLength={2}
         hint="e.g. DE"
       />
-      <Small>
-        Two letters, ISO 3166-1. It is what decides whether the reverse charge applies.
-      </Small>
+      <Small>Two letters, ISO 3166-1. It is what decides whether the reverse charge applies.</Small>
     </div>
   );
 }
-
 
 function ContactPendingNotice({ onContinue }: { onContinue: () => void }) {
   const { authLegal } = useProductPorts();

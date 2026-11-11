@@ -1,4 +1,3 @@
-
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../utils";
 import { Button } from "./Button";
@@ -11,16 +10,9 @@ type PaginationProps = {
   className?: string;
 };
 
-export function Pagination({
-  currentPage,
-  totalPages,
-  onPageChange,
-  className,
-}: PaginationProps) {
+export function Pagination({ currentPage, totalPages, onPageChange, className }: PaginationProps) {
   return (
-    <div
-      className={cn("flex items-center justify-between px-4 py-3", className)}
-    >
+    <div className={cn("flex items-center justify-between px-4 py-3", className)}>
       <Button
         variant="ghost"
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}

@@ -1,4 +1,3 @@
-
 import type { ChatContextArtifact } from '../types';
 
 export const ARTIFACT_KINDS = [

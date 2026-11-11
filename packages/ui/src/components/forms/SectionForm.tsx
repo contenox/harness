@@ -1,7 +1,7 @@
-import { Form } from '../Form';
-import type { ReactNode } from 'react';
-import { FormErrorBanner } from './FormErrorBanner';
-import { SubmitButton } from './SubmitButton';
+import { Form } from "../Form";
+import type { ReactNode } from "react";
+import { FormErrorBanner } from "./FormErrorBanner";
+import { SubmitButton } from "./SubmitButton";
 
 export type SectionFormErrors = {
   message?: string;
@@ -37,7 +37,8 @@ export function SectionForm({
         <SubmitButton pending={pending} disabled={!canSubmit}>
           {submitLabel}
         </SubmitButton>
-      }>
+      }
+    >
       {children}
       {note}
       <FormErrorBanner

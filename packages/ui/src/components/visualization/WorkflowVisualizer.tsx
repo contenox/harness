@@ -75,10 +75,7 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
     setViewBox(fitBox);
   }, [fitBox.x, fitBox.y, fitBox.width, fitBox.height, scrollOnOverflow]);
 
-  const gridId = useMemo(
-    () => `grid-${Math.random().toString(36).slice(2)}`,
-    [],
-  );
+  const gridId = useMemo(() => `grid-${Math.random().toString(36).slice(2)}`, []);
 
   const DebugViewBoxRect = debug ? (
     <rect
@@ -124,16 +121,11 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
   };
 
   const zoomForRender = scrollOnOverflow ? 1 : zoom;
-  const sceneW = scrollOnOverflow
-    ? Math.max(1, fitBox.width * zoom)
-    : undefined;
-  const sceneH = scrollOnOverflow
-    ? Math.max(1, fitBox.height * zoom)
-    : undefined;
+  const sceneW = scrollOnOverflow ? Math.max(1, fitBox.width * zoom) : undefined;
+  const sceneH = scrollOnOverflow ? Math.max(1, fitBox.height * zoom) : undefined;
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
-
       <div className="z-10 flex flex-wrap items-center justify-between gap-2 border-b border-surface-300 px-3 py-2 dark:border-dark-surface-300">
         <h3 className="flex min-w-0 items-center gap-2 text-lg font-semibold text-text dark:text-dark-text">
           <svg
@@ -229,7 +221,6 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
         </div>
       </div>
 
-
       <div
         ref={containerRef}
         className={cn(
@@ -257,12 +248,7 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
               preserveAspectRatio="xMidYMid meet"
             >
               <defs>
-                <pattern
-                  id={gridId}
-                  width="20"
-                  height="20"
-                  patternUnits="userSpaceOnUse"
-                >
+                <pattern id={gridId} width="20" height="20" patternUnits="userSpaceOnUse">
                   <path
                     d="M 20 0 L 0 0 0 20"
                     fill="none"
@@ -295,12 +281,7 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
             preserveAspectRatio="xMidYMid meet"
           >
             <defs>
-              <pattern
-                id={gridId}
-                width="20"
-                height="20"
-                patternUnits="userSpaceOnUse"
-              >
+              <pattern id={gridId} width="20" height="20" patternUnits="userSpaceOnUse">
                 <path
                   d="M 20 0 L 0 0 0 20"
                   fill="none"
@@ -310,7 +291,6 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
                 />
               </pattern>
             </defs>
-
 
             <rect
               x={viewBox.x - 1000}
@@ -324,7 +304,6 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
             {DebugViewBoxRect}
             {DebugContentRect}
 
-
             <g transform={`scale(${zoomForRender})`}>{children}</g>
           </svg>
         )}
@@ -336,8 +315,8 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
               px
             </div>
             <div>
-              viewBox: {Math.round(viewBox.x)},{Math.round(viewBox.y)} →{" "}
-              {Math.round(viewBox.width)}×{Math.round(viewBox.height)}
+              viewBox: {Math.round(viewBox.x)},{Math.round(viewBox.y)} → {Math.round(viewBox.width)}
+              ×{Math.round(viewBox.height)}
             </div>
             <div>zoom: {Math.round(zoom * 100)}%</div>
             <div>mode: {scrollOnOverflow ? "scroll" : "fit"}</div>

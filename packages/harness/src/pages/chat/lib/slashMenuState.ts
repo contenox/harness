@@ -1,4 +1,3 @@
-
 import type { AvailableCommand } from '../../../lib/acp';
 
 export interface SlashMenuEntry {
@@ -18,7 +17,10 @@ export function filterSlashCommands(entries: SlashMenuEntry[], query: string): S
   return entries.filter(e => e.name.toLowerCase().startsWith(q));
 }
 
-export type SlashMenuKeyAction = { type: 'move'; delta: 1 | -1 } | { type: 'accept' } | { type: 'close' };
+export type SlashMenuKeyAction =
+  | { type: 'move'; delta: 1 | -1 }
+  | { type: 'accept' }
+  | { type: 'close' };
 
 export function slashMenuKeyFromEvent(key: string): SlashMenuKeyAction | null {
   switch (key) {

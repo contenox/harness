@@ -1,19 +1,19 @@
-import { Badge, Button, Card, KeyValue, P, Page, Small } from '@contenox/ui';
-import { ChevronRight } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { ScreenError, ScreenLoading } from '../ScreenState';
-import { ScreenBody } from '@contenox/ui';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { LegalLinks } from '../LegalLinks';
-import { TeamsCard } from './TeamsCard';
-import { useProductPorts } from '../../ports';
-import { formatDate } from '../../lib/relativeTime';
-import type { Account, BillingStatus, Usage, UsageRow } from '../../lib/api/types';
+import { Badge, Button, Card, KeyValue, P, Page, Small } from "@contenox/ui";
+import { ChevronRight } from "lucide-react";
+import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { ScreenError, ScreenLoading } from "../ScreenState";
+import { ScreenBody } from "@contenox/ui";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { LegalLinks } from "../LegalLinks";
+import { TeamsCard } from "./TeamsCard";
+import { useProductPorts } from "../../ports";
+import { formatDate } from "../../lib/relativeTime";
+import type { Account, BillingStatus, Usage, UsageRow } from "../../lib/api/types";
 
 export default function AccountPage() {
   const { routes, useAccount, useAuth, useBillingStatus, useSignOut, useUsage } = useProductPorts();
-  const accountID = useAuth().accountID ?? '';
+  const accountID = useAuth().accountID ?? "";
   const { user } = useAuth();
   const { data, isPending, error, refetch, isFetching } = useAccount(accountID);
   const billing = useBillingStatus(accountID);
@@ -30,12 +30,14 @@ export default function AccountPage() {
               variant="outline"
               size="sm"
               onClick={() => signOut.mutate()}
-              isLoading={signOut.isPending}>
+              isLoading={signOut.isPending}
+            >
               Sign out
             </Button>
           }
         />
-      }>
+      }
+    >
       <ScreenBody width="band">
         {user && (
           <Card variant="filled">
@@ -49,7 +51,6 @@ export default function AccountPage() {
         {data && <PlanCard account={data} billing={billing.data} />}
 
         {usage.data && <AllowanceCard usage={usage.data} paired={data?.active_instances} />}
-
 
         <TeamsCard />
 
@@ -74,13 +75,11 @@ export default function AccountPage() {
           </SettingLink>
         </nav>
 
-
         <LegalLinks />
       </ScreenBody>
     </Page>
   );
 }
-
 
 function SettingLink({ to, title, children }: { to: string; title: string; children: ReactNode }) {
   return (
@@ -99,15 +98,12 @@ function SettingLink({ to, title, children }: { to: string; title: string; child
   );
 }
 
-
-
-
 function AllowanceCard({ usage, paired }: { usage: Usage; paired?: number }) {
   return (
     <Card variant="filled">
       <div className="flex flex-col gap-1" aria-label="AI allowance this week">
         <Small>AI allowance this week</Small>
-        {allowanceRows(usage).map(row => (
+        {allowanceRows(usage).map((row) => (
           <div key={row.model} className="flex items-baseline justify-between gap-3">
             <span className="truncate text-sm">{row.model}</span>
             <span className="text-text-muted dark:text-dark-text-muted shrink-0 font-mono text-xs">
@@ -117,7 +113,7 @@ function AllowanceCard({ usage, paired }: { usage: Usage; paired?: number }) {
         ))}
         {paired !== undefined && (
           <Small className="text-text-muted dark:text-dark-text-muted">
-            {paired} paired {paired === 1 ? 'machine' : 'machines'} · allowance covers{' '}
+            {paired} paired {paired === 1 ? "machine" : "machines"} · allowance covers{" "}
             {usage.entitled_hosts}
           </Small>
         )}
@@ -131,11 +127,10 @@ function AllowanceCard({ usage, paired }: { usage: Usage; paired?: number }) {
   );
 }
 
-
 function allowanceRows(usage: Usage): UsageRow[] {
   const allowances = usage.allowances ?? [];
-  const used = new Map(usage.by_model.map(row => [row.model, row]));
-  const rows = allowances.map(allowance => {
+  const used = new Map(usage.by_model.map((row) => [row.model, row]));
+  const rows = allowances.map((allowance) => {
     const observed = used.get(allowance.model);
     if (observed) return observed;
     return {
@@ -146,16 +141,15 @@ function allowanceRows(usage: Usage): UsageRow[] {
       input_allowance: allowance.input_allowance,
     };
   });
-  const granted = new Set(allowances.map(allowance => allowance.model));
+  const granted = new Set(allowances.map((allowance) => allowance.model));
   for (const row of usage.by_model) {
     if (!granted.has(row.model)) rows.push(row);
   }
   return rows;
 }
 
-
 function usageLabel(row: UsageRow): string {
-  const fmt = (n: number) => n.toLocaleString('en-US');
+  const fmt = (n: number) => n.toLocaleString("en-US");
   return `${fmt(row.output_tokens)} of ${fmt(row.output_allowance)} output · ${fmt(row.input_tokens)} of ${fmt(row.input_allowance)} input`;
 }
 
@@ -166,24 +160,22 @@ function allowanceLabel(account: Account): string {
   return `${account.active_instances} of ${account.entitled_instances} paired`;
 }
 
-
 function subscriptionNote(account: Account): string | null {
   switch (account.subscription_state) {
-    case 'grace':
-      return 'A payment did not go through. Your machines keep working while it is retried.';
-    case 'on_hold':
-      return 'A payment failed and the subscription is on hold.';
-    case 'paused':
-      return 'The subscription is paused.';
-    case 'canceled':
-      return 'Cancelled. It stays active until the end of the period you have paid for.';
-    case 'expired':
-      return 'The subscription has ended.';
+    case "grace":
+      return "A payment did not go through. Your machines keep working while it is retried.";
+    case "on_hold":
+      return "A payment failed and the subscription is on hold.";
+    case "paused":
+      return "The subscription is paused.";
+    case "canceled":
+      return "Cancelled. It stays active until the end of the period you have paid for.";
+    case "expired":
+      return "The subscription has ended.";
     default:
       return null;
   }
 }
-
 
 function PlanCard({ account, billing }: { account: Account; billing?: BillingStatus }) {
   const {
@@ -194,21 +186,14 @@ function PlanCard({ account, billing }: { account: Account; billing?: BillingSta
   const checkout = useStartCheckout(account.id);
   const portal = useOpenBillingPortal(account.id);
 
-  const isPro = account.plan === 'pro';
+  const isPro = account.plan === "pro";
   const note = subscriptionNote(account);
   const canSubscribe = billing?.can_subscribe === true;
   const canManageBilling = billing?.can_manage_billing === true;
 
-
-
-
   const billedDirectly = billing?.billed_directly === true;
 
-
   const unentitled = billing?.entitled === false;
-
-
-
 
   const atAllowance =
     account.entitled_instances !== undefined &&
@@ -217,8 +202,8 @@ function PlanCard({ account, billing }: { account: Account; billing?: BillingSta
   return (
     <Card variant="filled" className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <Badge variant={isPro ? 'primary' : 'default'} size="md">
-          {isPro ? 'Pro' : 'Free'}
+        <Badge variant={isPro ? "primary" : "default"} size="md">
+          {isPro ? "Pro" : "Free"}
         </Badge>
         <Small>{allowanceLabel(account)}</Small>
       </div>
@@ -233,7 +218,6 @@ function PlanCard({ account, billing }: { account: Account; billing?: BillingSta
 
       {canSubscribe && (
         <>
-
           <P className="text-sm">
             Free includes you and up to three invited teammates, with one paired machine per active
             member. Pro is {proPriceLabel}: 25 machines and 25 invited seats.
@@ -242,7 +226,8 @@ function PlanCard({ account, billing }: { account: Account; billing?: BillingSta
             variant="primary"
             onClick={() => checkout.mutate()}
             isLoading={checkout.isPending}
-            disabled={account.suspended}>
+            disabled={account.suspended}
+          >
             Upgrade to Pro
           </Button>
           {checkout.error && <ScreenError error={checkout.error} />}
@@ -270,12 +255,12 @@ function PlanCard({ account, billing }: { account: Account; billing?: BillingSta
 
       {billedDirectly && <Small>This account is billed directly. Talk to us to change it.</Small>}
 
-
       <Small>
-        Want us to run the machines for you? We take on a few design partners —{' '}
+        Want us to run the machines for you? We take on a few design partners —{" "}
         <a
           href={contactMailto}
-          className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline">
+          className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline"
+        >
           talk to us
         </a>
         .

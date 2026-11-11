@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WebSocketTransport, type TransportClose, type WebSocketLike } from './transport';
 
-
 class FakeSocket implements WebSocketLike {
   readyState = 1;
   readonly sent: string[] = [];

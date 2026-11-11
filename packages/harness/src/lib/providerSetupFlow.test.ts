@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from './fetch';
 import { getCloudProviderSetup } from './providerCatalog';
 import {
   initialSetupState,
@@ -10,7 +11,6 @@ import {
   type SetupEvent,
   type SetupState,
 } from './providerSetupFlow';
-import { ApiError } from './fetch';
 import type { Connection } from './types';
 
 const conn = (patch: Partial<Connection> = {}): Connection => ({

@@ -1,7 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { useState, type ReactNode } from "react";
-import { Bot, Brain, Cloud, Gem, Layers, Monitor, Network, Plus, Server, Sparkles, Wind } from "lucide-react";
+import {
+  Bot,
+  Brain,
+  Cloud,
+  Gem,
+  Layers,
+  Monitor,
+  Network,
+  Plus,
+  Server,
+  Sparkles,
+  Wind,
+} from "lucide-react";
 import { Button } from "../components/Button";
 import { Disclosure } from "../components/Disclosure";
 import { ExternalLink } from "../components/ExternalLink";
@@ -17,7 +29,13 @@ import { Step, Steps } from "../components/Steps";
 const meta: Meta = {
   title: "Patterns/Provider setup",
   parameters: { layout: "padded" },
-  decorators: [(Story) => <div className="mx-auto w-full max-w-xl"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="mx-auto w-full max-w-xl">
+        <Story />
+      </div>
+    ),
+  ],
 };
 export default meta;
 type Story = StoryObj;
@@ -42,10 +60,16 @@ function KeyForm({
 }) {
   const [key, setKey] = useState("");
   const [env, setEnv] = useState(initialEnv);
-  const looksLikeKey = /^(sk-|sk_|AIza|gsk_|xai-|pk-|or-)/.test(env) || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(env || "X");
+  const looksLikeKey =
+    /^(sk-|sk_|AIza|gsk_|xai-|pk-|or-)/.test(env) || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(env || "X");
   return (
     <form className="flex flex-col gap-3" onSubmit={(e) => e.preventDefault()}>
-      <FormField label="API-Schlüssel" description={env ? "Wird nicht verwendet, solange eine Umgebungsvariable gesetzt ist" : undefined}>
+      <FormField
+        label="API-Schlüssel"
+        description={
+          env ? "Wird nicht verwendet, solange eine Umgebungsvariable gesetzt ist" : undefined
+        }
+      >
         <SecretInput
           {...secretLabels}
           value={key}
@@ -68,7 +92,11 @@ function KeyForm({
           <FormField
             label="Name der Umgebungsvariable"
             description="Nur der Name der Variable, nicht der Schlüssel selbst, z. B. ANTHROPIC_API_KEY. Contenox liest den Wert aus der Umgebung der Runtime."
-            error={looksLikeKey ? "Das sieht nach einem Schlüssel aus. Trage hier nur den Variablennamen ein oder den Schlüssel selbst ins Feld „API-Schlüssel“ oben." : undefined}
+            error={
+              looksLikeKey
+                ? "Das sieht nach einem Schlüssel aus. Trage hier nur den Variablennamen ein oder den Schlüssel selbst ins Feld „API-Schlüssel“ oben."
+                : undefined
+            }
           >
             <Input
               mono
@@ -84,7 +112,11 @@ function KeyForm({
           {envStatus && (
             <StatusDot
               status={envStatus === "found" ? "available" : "attention"}
-              label={envStatus === "found" ? "Variable in der Runtime-Umgebung gefunden" : "Variable ist in der Runtime-Umgebung nicht gesetzt. Setze sie und starte Contenox neu."}
+              label={
+                envStatus === "found"
+                  ? "Variable in der Runtime-Umgebung gefunden"
+                  : "Variable ist in der Runtime-Umgebung nicht gesetzt. Setze sie und starte Contenox neu."
+              }
             />
           )}
         </div>
@@ -110,7 +142,13 @@ function ProviderList({
   stored?: boolean;
 }) {
   const [open, setOpen] = useState<string | null>(initial);
-  const row = (id: string, icon: ReactNode, title: string, description: string, body: ReactNode) => (
+  const row = (
+    id: string,
+    icon: ReactNode,
+    title: string,
+    description: string,
+    body: ReactNode,
+  ) => (
     <SettingsRow
       key={id}
       icon={icon}
@@ -126,37 +164,110 @@ function ProviderList({
     <div className="flex flex-col gap-6">
       <SettingsGroup title="Empfohlen">
         {row(
-          "deepseek", <Brain />, "DeepSeek", "DeepSeek-Modelle mit eigenem API-Schlüssel",
-          <KeyForm keyUrl="https://platform.deepseek.com/api_keys" baseUrlPlaceholder="https://api.deepseek.com" />,
+          "deepseek",
+          <Brain />,
+          "DeepSeek",
+          "DeepSeek-Modelle mit eigenem API-Schlüssel",
+          <KeyForm
+            keyUrl="https://platform.deepseek.com/api_keys"
+            baseUrlPlaceholder="https://api.deepseek.com"
+          />,
         )}
         {row(
-          "anthropic", <Sparkles />, "Anthropic", "Claude-Modelle mit eigenem API-Schlüssel",
-          <KeyForm keyUrl="https://console.anthropic.com/settings/keys" stored={stored} advancedOpen={advancedOpen} baseUrlPlaceholder="https://api.anthropic.com" initialEnv={anthropicEnv} envStatus={envStatus} />,
+          "anthropic",
+          <Sparkles />,
+          "Anthropic",
+          "Claude-Modelle mit eigenem API-Schlüssel",
+          <KeyForm
+            keyUrl="https://console.anthropic.com/settings/keys"
+            stored={stored}
+            advancedOpen={advancedOpen}
+            baseUrlPlaceholder="https://api.anthropic.com"
+            initialEnv={anthropicEnv}
+            envStatus={envStatus}
+          />,
         )}
         {row(
-          "gemini", <Gem />, "Google Gemini", "Gemini-Modelle mit eigenem API-Schlüssel",
-          <KeyForm keyUrl="https://aistudio.google.com/app/apikey" baseUrlPlaceholder="https://generativelanguage.googleapis.com" />,
+          "gemini",
+          <Gem />,
+          "Google Gemini",
+          "Gemini-Modelle mit eigenem API-Schlüssel",
+          <KeyForm
+            keyUrl="https://aistudio.google.com/app/apikey"
+            baseUrlPlaceholder="https://generativelanguage.googleapis.com"
+          />,
         )}
       </SettingsGroup>
       <SettingsGroup title="Cloud">
-        {row("vertex-google", <Cloud />, "Vertex AI", "Google-Modelle über Vertex AI", <div className="flex justify-end"><Button>Verbinden</Button></div>)}
-        {row("bedrock", <Layers />, "AWS Bedrock", "Modelle über AWS Bedrock", <div className="flex justify-end"><Button>Verbinden</Button></div>)}
-        {row("vllm", <Server />, "vLLM", "Eigener vLLM-Server", <div className="flex justify-end"><Button>Verbinden</Button></div>)}
+        {row(
+          "vertex-google",
+          <Cloud />,
+          "Vertex AI",
+          "Google-Modelle über Vertex AI",
+          <div className="flex justify-end">
+            <Button>Verbinden</Button>
+          </div>,
+        )}
+        {row(
+          "bedrock",
+          <Layers />,
+          "AWS Bedrock",
+          "Modelle über AWS Bedrock",
+          <div className="flex justify-end">
+            <Button>Verbinden</Button>
+          </div>,
+        )}
+        {row(
+          "vllm",
+          <Server />,
+          "vLLM",
+          "Eigener vLLM-Server",
+          <div className="flex justify-end">
+            <Button>Verbinden</Button>
+          </div>,
+        )}
       </SettingsGroup>
       <SettingsGroup title="Lokal">
         {row(
-          "ollama", <Monitor />, "Ollama", "Modelle lokal auf diesem Gerät ausführen",
-          <div className="flex justify-end"><Button>Verbinden</Button></div>,
+          "ollama",
+          <Monitor />,
+          "Ollama",
+          "Modelle lokal auf diesem Gerät ausführen",
+          <div className="flex justify-end">
+            <Button>Verbinden</Button>
+          </div>,
         )}
       </SettingsGroup>
       <Disclosure label="Weitere Anbieter">
         <SettingsGroup>
           {row(
-            "openai", <Bot />, "OpenAI", "GPT-Modelle mit eigenem API-Schlüssel",
-            <KeyForm keyUrl="https://platform.openai.com/api-keys" baseUrlPlaceholder="https://api.openai.com/v1" />,
+            "openai",
+            <Bot />,
+            "OpenAI",
+            "GPT-Modelle mit eigenem API-Schlüssel",
+            <KeyForm
+              keyUrl="https://platform.openai.com/api-keys"
+              baseUrlPlaceholder="https://api.openai.com/v1"
+            />,
           )}
-          {row("openrouter", <Network />, "OpenRouter", "Modelle verschiedener Anbieter", <div className="flex justify-end"><Button>Verbinden</Button></div>)}
-          {row("mistral", <Wind />, "Mistral", "Mistral-Modelle per API", <div className="flex justify-end"><Button>Verbinden</Button></div>)}
+          {row(
+            "openrouter",
+            <Network />,
+            "OpenRouter",
+            "Modelle verschiedener Anbieter",
+            <div className="flex justify-end">
+              <Button>Verbinden</Button>
+            </div>,
+          )}
+          {row(
+            "mistral",
+            <Wind />,
+            "Mistral",
+            "Mistral-Modelle per API",
+            <div className="flex justify-end">
+              <Button>Verbinden</Button>
+            </div>,
+          )}
         </SettingsGroup>
       </Disclosure>
     </div>
@@ -189,11 +300,25 @@ export const EnvVarLooksLikeKey: Story = {
 };
 
 export const EnvVarFound: Story = {
-  render: () => <ProviderList initial="anthropic" advancedOpen anthropicEnv="ANTHROPIC_API_KEY" envStatus="found" />,
+  render: () => (
+    <ProviderList
+      initial="anthropic"
+      advancedOpen
+      anthropicEnv="ANTHROPIC_API_KEY"
+      envStatus="found"
+    />
+  ),
 };
 
 export const EnvVarMissing: Story = {
-  render: () => <ProviderList initial="anthropic" advancedOpen anthropicEnv="ANTHROPIC_API_KEY" envStatus="missing" />,
+  render: () => (
+    <ProviderList
+      initial="anthropic"
+      advancedOpen
+      anthropicEnv="ANTHROPIC_API_KEY"
+      envStatus="missing"
+    />
+  ),
 };
 
 export const StoredSecretMode: Story = {
@@ -203,12 +328,7 @@ export const StoredSecretMode: Story = {
 export const TwoConnections: Story = {
   render: () => (
     <SettingsGroup title="Lokal">
-      <SettingsRow
-        icon={<Server />}
-        title="Ollama"
-        description="2 Verbindungen"
-        defaultExpanded
-      >
+      <SettingsRow icon={<Server />} title="Ollama" description="2 Verbindungen" defaultExpanded>
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2">
             <div className="flex min-w-0 flex-col">
@@ -225,7 +345,10 @@ export const TwoConnections: Story = {
             <StatusDot status="unavailable" label="Nicht erreichbar" />
           </div>
           <div>
-            <Button variant="text" size="sm"><Plus className="size-3.5" />Weitere Verbindung</Button>
+            <Button variant="text" size="sm">
+              <Plus className="size-3.5" />
+              Weitere Verbindung
+            </Button>
           </div>
         </div>
       </SettingsRow>
@@ -247,7 +370,8 @@ export const Recovery: Story = {
         details="dial tcp 127.0.0.1:11434: connectex: Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte."
         detailsLabel="Technische Details"
       >
-        Contenox konnte keine Verbindung zu Ollama unter http://localhost:11434 herstellen. Prüfe, ob Ollama läuft.
+        Contenox konnte keine Verbindung zu Ollama unter http://localhost:11434 herstellen. Prüfe,
+        ob Ollama läuft.
       </RecoveryCard>
       <RecoveryCard
         tone="warning"
@@ -261,7 +385,8 @@ export const Recovery: Story = {
         details={'{"error":{"type":"authentication_error","message":"invalid x-api-key"}}'}
         detailsLabel="Technische Details"
       >
-        Anthropic hat den hinterlegten Schlüssel abgelehnt. Er wurde möglicherweise widerrufen oder falsch kopiert.
+        Anthropic hat den hinterlegten Schlüssel abgelehnt. Er wurde möglicherweise widerrufen oder
+        falsch kopiert.
       </RecoveryCard>
       <RecoveryCard
         tone="info"
@@ -285,7 +410,8 @@ export const DeviceCode: Story = {
           <OneTimeCode value="PLGQ-T2YJJ" copyLabel="Kopieren" copiedLabel="Kopiert" copied />
         </Step>
         <Step number={3} title="Zugriff bestätigen">
-          Erlaube Contenox die Nutzung deines ChatGPT-Kontos. Dieses Fenster geht automatisch weiter.
+          Erlaube Contenox die Nutzung deines ChatGPT-Kontos. Dieses Fenster geht automatisch
+          weiter.
         </Step>
       </Steps>
       <div className="flex items-center justify-between gap-3">

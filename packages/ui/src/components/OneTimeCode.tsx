@@ -27,7 +27,7 @@ export function OneTimeCode({
   const [copyCount, setCopyCount] = useState(0);
   const confirm = () => {
     setCopied(true);
-    setCopyCount(n => n + 1);
+    setCopyCount((n) => n + 1);
   };
 
   useEffect(() => {
@@ -46,18 +46,22 @@ export function OneTimeCode({
       className={cn(
         "border-line bg-raised flex items-center justify-between gap-3 rounded-xl border py-2 pl-4 pr-2",
         className,
-      )}>
-      <span className="text-text select-all whitespace-nowrap font-mono text-lg font-semibold tracking-[0.12em]">{value}</span>
+      )}
+    >
+      <span className="text-text select-all whitespace-nowrap font-mono text-lg font-semibold tracking-[0.12em]">
+        {value}
+      </span>
       <Button
         type="button"
         variant="ghost"
         size="sm"
         className="shrink-0"
         onClick={() => {
-          void copyTextToClipboard(value).then(ok => {
+          void copyTextToClipboard(value).then((ok) => {
             if (ok) confirm();
           });
-        }}>
+        }}
+      >
         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
         {copied ? copiedLabel : copyLabel}
       </Button>

@@ -4,13 +4,11 @@ import hljs from "highlight.js/lib/common";
 import { cn } from "../../utils";
 import { copyTextToClipboard } from "./clipboard";
 
-
 const HIGHLIGHT_MAX_CHARS = 20000;
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-
 
 function highlight(code: string, language?: string): string {
   if (code.length > HIGHLIGHT_MAX_CHARS) return escapeHtml(code);

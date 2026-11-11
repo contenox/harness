@@ -28,13 +28,7 @@ export const ValidJson: Story = {
         retries: 3,
       },
     });
-    return (
-      <JsonEditor
-        value={value}
-        onSave={(next) => setValue(next)}
-        onCancel={() => {}}
-      />
-    );
+    return <JsonEditor value={value} onSave={(next) => setValue(next)} onCancel={() => {}} />;
   },
 };
 

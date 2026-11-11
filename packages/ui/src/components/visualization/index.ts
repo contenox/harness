@@ -4,12 +4,7 @@ export { WorkflowNode } from "./WorkflowNode";
 export { WorkflowEdge } from "./WorkflowEdge";
 export { WorkflowVisualizer } from "./WorkflowVisualizer";
 export { calculateLayout, getConnectorPath } from "./utils";
-export type {
-  LayoutDirection,
-  NodePosition,
-  Edge,
-  AddButtonPosition,
-} from "./utils";
+export type { LayoutDirection, NodePosition, Edge, AddButtonPosition } from "./utils";
 export { StateVisualizer, type StateVisualizerLabels } from "./StateVisualizer";
 export { TaskEventFeed, type TaskEventFeedProps } from "./TaskEventFeed";
 export {
@@ -17,9 +12,4 @@ export {
   type ExecutionTimelineProps,
   type ExecutionTimelineLabels,
 } from "./ExecutionTimeline";
-export type {
-  TaskEvent,
-  TaskEventKind,
-  CapturedStateUnit,
-  TaskErrorState,
-} from "./taskTypes";
+export type { TaskEvent, TaskEventKind, CapturedStateUnit, TaskErrorState } from "./taskTypes";

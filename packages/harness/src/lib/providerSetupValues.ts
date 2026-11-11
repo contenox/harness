@@ -86,11 +86,16 @@ export function validateSetupValues(
 
   if ((setup.baseUrlRequired || setup.baseUrlPrimary) && !trimmed(values.baseUrl)) {
     errors.baseUrl = 'providers.field.required';
-  } else if (setup.provider !== 'bedrock' && trimmed(values.baseUrl) && !isHttpUrl(values.baseUrl ?? '')) {
+  } else if (
+    setup.provider !== 'bedrock' &&
+    trimmed(values.baseUrl) &&
+    !isHttpUrl(values.baseUrl ?? '')
+  ) {
     errors.baseUrl = 'providers.field.url_invalid';
   }
   if (setup.secretKind === 'api-key') {
-    if (env && looksLikeSecret(env)) errors.apiKeyEnv = 'cloud_providers.api_key_env_looks_like_key';
+    if (env && looksLikeSecret(env))
+      errors.apiKeyEnv = 'cloud_providers.api_key_env_looks_like_key';
     else if (key && env) errors.apiKeyEnv = 'cloud_providers.secret_source_error';
     else if (setup.secretRequired && !key && !env && !opts.secretStored) {
       errors.apiKey = 'providers.field.required';

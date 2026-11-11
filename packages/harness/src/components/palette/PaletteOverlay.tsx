@@ -7,7 +7,6 @@ import type { RankedItem } from '../../lib/palette/paletteState';
 import type { PaletteItem, PaletteItemType } from '../../lib/palette/types';
 import { cn } from '../../lib/utils';
 
-
 const TYPE_LABEL_KEY: Record<PaletteItemType, TranslationKey> = {
   action: 'palette.type_action',
   mission: 'palette.type_mission',
@@ -42,8 +41,18 @@ export interface PaletteOverlayProps {
 }
 
 export function PaletteOverlay(props: PaletteOverlayProps) {
-  const { query, results, selected, onQueryChange, onArrow, onEnter, onEscape, onHover, onExecute, onClose } =
-    props;
+  const {
+    query,
+    results,
+    selected,
+    onQueryChange,
+    onArrow,
+    onEnter,
+    onEscape,
+    onHover,
+    onExecute,
+    onClose,
+  } = props;
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -93,7 +102,10 @@ export function PaletteOverlay(props: PaletteOverlayProps) {
           'sm:h-auto sm:max-h-[70vh] sm:w-[36rem] sm:max-w-[90vw] sm:rounded-xl sm:border',
         )}>
         <div className="border-surface-300 dark:border-dark-surface-700 flex shrink-0 items-center gap-2 border-b px-4 py-3">
-          <Search className="text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0" aria-hidden />
+          <Search
+            className="text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0"
+            aria-hidden
+          />
           <input
             ref={inputRef}
             type="text"
@@ -140,7 +152,9 @@ export function PaletteOverlay(props: PaletteOverlayProps) {
                     ? 'bg-surface-200 dark:bg-dark-surface-200'
                     : 'hover:bg-surface-100 dark:hover:bg-dark-surface-200',
                 )}>
-                <span className="text-text-muted dark:text-dark-text-muted shrink-0">{row.item.icon}</span>
+                <span className="text-text-muted dark:text-dark-text-muted shrink-0">
+                  {row.item.icon}
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-text dark:text-dark-text truncate text-sm">
                     <Highlighted text={row.item.title} indexes={row.matchIndexes} />

@@ -1,14 +1,14 @@
-import { useState, type FormEvent } from 'react';
-import { Badge } from '../../components/Badge';
-import { Button } from '../../components/Button';
-import { EmptyState } from '../../components/EmptyState';
-import { Form } from '../../components/Form';
-import { FormField } from '../../components/FormField';
-import { Input } from '../../components/Input';
-import { ListCard } from '../../components/ListCard';
-import { Select } from '../../components/Select';
-import { Small } from '../../components/Typography';
-import type { AccessGrant, ManagedUser } from './types';
+import { useState, type FormEvent } from "react";
+import { Badge } from "../../components/Badge";
+import { Button } from "../../components/Button";
+import { EmptyState } from "../../components/EmptyState";
+import { Form } from "../../components/Form";
+import { FormField } from "../../components/FormField";
+import { Input } from "../../components/Input";
+import { ListCard } from "../../components/ListCard";
+import { Select } from "../../components/Select";
+import { Small } from "../../components/Typography";
+import type { AccessGrant, ManagedUser } from "./types";
 
 export function UserList({
   users,
@@ -27,7 +27,7 @@ export function UserList({
     return <EmptyState title="No users" description="Create a user to grant access." />;
   return (
     <div className="space-y-3">
-      {users.map(user => (
+      {users.map((user) => (
         <ListCard
           key={user.id}
           title={user.name || user.email}
@@ -54,8 +54,9 @@ export function UserList({
                   size="sm"
                   variant="danger"
                   disabled={busyID === user.id}
-                  onClick={() => onDelete(user)}>
-                  {busyID === user.id ? 'Deleting…' : 'Delete'}
+                  onClick={() => onDelete(user)}
+                >
+                  {busyID === user.id ? "Deleting…" : "Delete"}
                 </Button>
               )}
             </div>
@@ -79,13 +80,13 @@ export function UserForm({
   onCancel?: () => void;
   onSubmit: (value: { name: string; email: string; subject: string; password?: string }) => void;
 }) {
-  const [name, setName] = useState(value?.name ?? '');
-  const [email, setEmail] = useState(value?.email ?? '');
-  const [subject, setSubject] = useState(value?.subject ?? '');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState(value?.name ?? "");
+  const [email, setEmail] = useState(value?.email ?? "");
+  const [subject, setSubject] = useState(value?.subject ?? "");
+  const [password, setPassword] = useState("");
   return (
     <Form
-      title={value ? 'Edit user' : 'Create user'}
+      title={value ? "Edit user" : "Create user"}
       error={error}
       onSubmit={(event: FormEvent) => {
         event.preventDefault();
@@ -103,8 +104,9 @@ export function UserForm({
             variant="primary"
             disabled={
               pending || !name.trim() || !email.trim() || !subject.trim() || (!value && !password)
-            }>
-            {pending ? 'Saving…' : 'Save user'}
+            }
+          >
+            {pending ? "Saving…" : "Save user"}
           </Button>
           {value && onCancel && (
             <Button type="button" variant="secondary" onClick={onCancel}>
@@ -112,22 +114,23 @@ export function UserForm({
             </Button>
           )}
         </>
-      }>
+      }
+    >
       <FormField label="Name" required>
-        <Input value={name} onChange={event => setName(event.target.value)} />
+        <Input value={name} onChange={(event) => setName(event.target.value)} />
       </FormField>
       <FormField label="Email" required>
-        <Input type="email" value={email} onChange={event => setEmail(event.target.value)} />
+        <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
       </FormField>
       <FormField label="Subject" required>
-        <Input value={subject} onChange={event => setSubject(event.target.value)} />
+        <Input value={subject} onChange={(event) => setSubject(event.target.value)} />
       </FormField>
       {!value && (
         <FormField label="Password" required>
           <Input
             type="password"
             value={password}
-            onChange={event => setPassword(event.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
           />
         </FormField>
       )}
@@ -165,7 +168,7 @@ export function AccessGrantList({
       {grants.length === 0 ? (
         <EmptyState title="No access grants" description="Grant a user access to a resource." />
       ) : (
-        grants.map(grant => (
+        grants.map((grant) => (
           <ListCard
             key={grant.id}
             title={grant.identityName || grant.identity}
@@ -189,8 +192,9 @@ export function AccessGrantList({
                     size="sm"
                     variant="danger"
                     disabled={busyID === grant.id}
-                    onClick={() => onDelete(grant)}>
-                    {busyID === grant.id ? 'Deleting…' : 'Delete'}
+                    onClick={() => onDelete(grant)}
+                  >
+                    {busyID === grant.id ? "Deleting…" : "Delete"}
                   </Button>
                 )}
               </div>
@@ -222,18 +226,18 @@ export function AccessGrantForm({
   error?: string;
   onCancel?: () => void;
   onSubmit: (
-    value: Omit<AccessGrant, 'id' | 'identityName' | 'identityEmail' | 'resourceLabel'>,
+    value: Omit<AccessGrant, "id" | "identityName" | "identityEmail" | "resourceLabel">,
   ) => void;
 }) {
-  const [identity, setIdentity] = useState(value?.identity ?? '');
-  const [permission, setPermission] = useState(value?.permission ?? '');
-  const [resource, setResource] = useState(value?.resource ?? '');
-  const [resourceType, setResourceType] = useState(value?.resourceType ?? '');
+  const [identity, setIdentity] = useState(value?.identity ?? "");
+  const [permission, setPermission] = useState(value?.permission ?? "");
+  const [resource, setResource] = useState(value?.resource ?? "");
+  const [resourceType, setResourceType] = useState(value?.resourceType ?? "");
   return (
     <Form
-      title={value ? 'Edit access grant' : 'Create access grant'}
+      title={value ? "Edit access grant" : "Create access grant"}
       error={error}
-      onSubmit={event => {
+      onSubmit={(event) => {
         event.preventDefault();
         onSubmit({ identity, permission, resource, resourceType });
       }}
@@ -242,8 +246,9 @@ export function AccessGrantForm({
           <Button
             type="submit"
             variant="primary"
-            disabled={pending || !identity || !permission || !resource || !resourceType}>
-            {pending ? 'Saving…' : 'Save grant'}
+            disabled={pending || !identity || !permission || !resource || !resourceType}
+          >
+            {pending ? "Saving…" : "Save grant"}
           </Button>
           {value && onCancel && (
             <Button type="button" variant="secondary" onClick={onCancel}>
@@ -251,11 +256,12 @@ export function AccessGrantForm({
             </Button>
           )}
         </>
-      }>
+      }
+    >
       <FormField label="Identity" required>
         <Select
           value={identity}
-          onChange={event => setIdentity(event.target.value)}
+          onChange={(event) => setIdentity(event.target.value)}
           placeholder="Select identity"
           options={identities}
         />
@@ -263,15 +269,15 @@ export function AccessGrantForm({
       <FormField label="Permission" required>
         <Select
           value={permission}
-          onChange={event => setPermission(event.target.value)}
+          onChange={(event) => setPermission(event.target.value)}
           placeholder="Select permission"
-          options={permissions.map(item => ({ value: item, label: item }))}
+          options={permissions.map((item) => ({ value: item, label: item }))}
         />
       </FormField>
       <FormField label="Resource" required>
         <Select
           value={resource}
-          onChange={event => setResource(event.target.value)}
+          onChange={(event) => setResource(event.target.value)}
           placeholder="Select resource"
           options={resources}
         />
@@ -279,9 +285,9 @@ export function AccessGrantForm({
       <FormField label="Resource type" required>
         <Select
           value={resourceType}
-          onChange={event => setResourceType(event.target.value)}
+          onChange={(event) => setResourceType(event.target.value)}
           placeholder="Select resource type"
-          options={resourceTypes.map(item => ({ value: item, label: item }))}
+          options={resourceTypes.map((item) => ({ value: item, label: item }))}
         />
       </FormField>
     </Form>

@@ -78,9 +78,12 @@ export default function MissionDispatchPage() {
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(envelope => ({
-    value: envelope.name,
-    label: envelope.scope === 'workspace' ? t('missions.envelope_workspace_option', { name: envelope.name }) : envelope.name,
-  }));
+      value: envelope.name,
+      label:
+        envelope.scope === 'workspace'
+          ? t('missions.envelope_workspace_option', { name: envelope.name })
+          : envelope.name,
+    }));
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();

@@ -2,6 +2,7 @@ import { Button, ErrorState, H2, InlineNotice, Input, LoadingState, P, Panel } f
 import { FormEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePutShellEnv } from '../../../hooks/usePutShellEnv';
+import { useResetAfterSuccess } from '../../../hooks/useResetAfterSuccess';
 import { useShellEnv } from '../../../hooks/useShellEnv';
 import { AuthContext } from '../../../lib/authContext';
 
@@ -27,11 +28,7 @@ export function ShellEnvSettingsSection() {
     );
   }, [data]);
 
-  useEffect(() => {
-    if (!putEnv.isSuccess) return;
-    const timer = window.setTimeout(() => putEnv.reset(), 3000);
-    return () => window.clearTimeout(timer);
-  }, [putEnv.isSuccess, putEnv.reset]);
+  useResetAfterSuccess(putEnv.isSuccess, putEnv.reset);
 
   const validation = useMemo(() => {
     const counts = new Map<string, number>();

@@ -10,9 +10,14 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { lazy } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
 import i18n, { type TranslationKey } from '../i18n';
 import HomeRedirect from '../pages/HomeRedirect.tsx';
+import {
+  AcpChatSessionRedirect,
+  LegacyChatsRedirect,
+  LegacyConsoleRedirect,
+  ProjectsRedirect,
+} from './redirects.tsx';
 import { LOGIN_ROUTE } from './routeConstants.ts';
 
 const AcpChatPage = lazy(() => import('../pages/chat/AcpChatPage.tsx'));
@@ -30,14 +35,6 @@ const PermissionSetPage = lazy(() => import('../pages/admin/permissions/Permissi
 const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage.tsx'));
 const ByePage = lazy(() => import('../pages/public/bye/Bye.tsx'));
 const AuthPage = lazy(() => import('../pages/public/login/AuthPage.tsx'));
-
-const LegacyChatsRedirect = () => <Navigate to="/chat" replace />;
-const LegacyConsoleRedirect = () => <Navigate to="/chat" replace />;
-const ProjectsRedirect = () => <Navigate to="/chat" replace />;
-const AcpChatSessionRedirect = () => {
-  const { sessionId } = useParams<{ sessionId: string }>();
-  return <Navigate to={`/chat/${sessionId}`} replace />;
-};
 
 interface RouteConfig {
   path: string;
@@ -70,15 +67,22 @@ const adminRouteDefinitions: AdminRouteDefinition[] = [
   { path: '/agents', element: AgentsPage, labelKey: 'navbar.agents', Icon: Bot },
   { path: '/connectors', element: ConnectorsPage, labelKey: 'navbar.connectors', Icon: Plug },
   { path: '/backends', element: BackendsPage, labelKey: 'navbar.backends', Icon: Database },
-  { path: '/permissions', element: PermissionsPage, labelKey: 'navbar.permissions', Icon: ShieldCheck },
+  {
+    path: '/permissions',
+    element: PermissionsPage,
+    labelKey: 'navbar.permissions',
+    Icon: ShieldCheck,
+  },
   { path: '/settings', element: SettingsPage, labelKey: 'navbar.settings', Icon: Settings },
 ];
 
-export const adminNavItems: AdminNavItem[] = adminRouteDefinitions.map(({ path, labelKey, Icon }) => ({
-  path,
-  label: i18n.t(labelKey),
-  icon: <Icon className="h-[1em] w-[1em]" />,
-}));
+export const adminNavItems: AdminNavItem[] = adminRouteDefinitions.map(
+  ({ path, labelKey, Icon }) => ({
+    path,
+    label: i18n.t(labelKey),
+    icon: <Icon className="h-[1em] w-[1em]" />,
+  }),
+);
 
 const adminRoutes: RouteConfig[] = adminRouteDefinitions.map(def => ({
   path: def.path,

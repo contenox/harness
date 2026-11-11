@@ -1,4 +1,4 @@
-import { ApiError, errorMessage, isRetryable } from '../../lib/apiError';
+import { ApiError, errorMessage, isRetryable } from "../../lib/apiError";
 
 export interface FormErrors {
   readonly message?: string;
@@ -14,7 +14,7 @@ export function partitionFormError(error: unknown, fields: readonly string[]): F
   const retryable = isRetryable(error);
   if (
     error instanceof ApiError &&
-    error.source === 'relay' &&
+    error.source === "relay" &&
     error.param !== undefined &&
     fields.includes(error.param)
   ) {

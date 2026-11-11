@@ -1,9 +1,9 @@
-import type { MissionRow, ReportRow } from '@contenox/acp-client';
-import { InlineNotice, Page } from '@contenox/ui';
-import { Link } from 'react-router-dom';
-import { ScreenError, ScreenLoading } from '../saas/ScreenState';
-import { ScreenHeader } from '../shell/ScreenHeader';
-import { formatDateTime } from '../lib/relativeTime';
+import type { MissionRow, ReportRow } from "@contenox/acp-client";
+import { InlineNotice, Page } from "@contenox/ui";
+import { Link } from "react-router-dom";
+import { ScreenError, ScreenLoading } from "../saas/ScreenState";
+import { ScreenHeader } from "../shell/ScreenHeader";
+import { formatDateTime } from "../lib/relativeTime";
 
 export interface MissionDetail {
   mission: MissionRow;
@@ -33,12 +33,14 @@ export function MissionsScreen({
           actions={
             <Link
               to={`/session/${encodeURIComponent(instanceId)}/inbox`}
-              className="text-primary-600 dark:text-dark-primary-500 py-1 text-sm">
+              className="text-primary-600 dark:text-dark-primary-500 py-1 text-sm"
+            >
               Inbox
             </Link>
           }
         />
-      }>
+      }
+    >
       {error ? (
         <ScreenError error={error} />
       ) : rows === null ? (
@@ -49,12 +51,13 @@ export function MissionsScreen({
         </div>
       ) : (
         <ul className="flex flex-col gap-2 p-4">
-          {rows.map(m => (
+          {rows.map((m) => (
             <li key={m.id}>
               <button
                 type="button"
                 className="border-surface-200 dark:border-dark-surface-600 hover:bg-surface-50 dark:hover:bg-dark-surface-300 w-full rounded-lg border p-3 text-left"
-                onClick={() => onOpenDetail(m.id)}>
+                onClick={() => onOpenDetail(m.id)}
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-text-primary dark:text-dark-text-primary truncate font-medium">
                     {m.intent}
@@ -65,20 +68,20 @@ export function MissionsScreen({
                 </div>
                 <div className="text-text-muted dark:text-dark-text-muted mt-1 text-xs">
                   {m.agentName} · {formatDateTime(m.updatedAt)}
-                  {m.lastError ? ` · ${m.lastError}` : ''}
+                  {m.lastError ? ` · ${m.lastError}` : ""}
                 </div>
               </button>
               {detail?.mission.id === m.id && (
                 <div className="border-surface-200 dark:border-dark-surface-600 mt-1 rounded-lg border p-3">
                   <div className="text-text-muted dark:text-dark-text-muted mb-1 text-xs">
-                    Plan rev {detail.mission.plan.revision} ·{' '}
-                    {detail.mission.statusReason || 'no status reason'}
+                    Plan rev {detail.mission.plan.revision} ·{" "}
+                    {detail.mission.statusReason || "no status reason"}
                   </div>
                   {detail.mission.plan.entries.length > 0 && (
                     <ol className="text-text-primary dark:text-dark-text-primary mb-2 list-decimal pl-4 text-sm">
-                      {detail.mission.plan.entries.map(e => (
+                      {detail.mission.plan.entries.map((e) => (
                         <li key={e.id}>
-                          {e.content}{' '}
+                          {e.content}{" "}
                           <span className="text-text-muted dark:text-dark-text-muted">
                             ({e.status})
                           </span>
@@ -91,13 +94,14 @@ export function MissionsScreen({
                       <div className="text-text-muted dark:text-dark-text-muted mb-1 text-xs">
                         Reports
                       </div>
-                      {detail.reports.map(r => (
+                      {detail.reports.map((r) => (
                         <div
                           key={r.id}
-                          className="text-text-primary dark:text-dark-text-primary text-sm">
+                          className="text-text-primary dark:text-dark-text-primary text-sm"
+                        >
                           <span className="text-text-muted dark:text-dark-text-muted font-mono text-xs">
                             {r.kind}
-                          </span>{' '}
+                          </span>{" "}
                           {r.summary}
                         </div>
                       ))}
@@ -117,7 +121,8 @@ export function MissionsScreen({
       <div className="p-4 pt-0">
         <Link
           to={`/session/${encodeURIComponent(instanceId)}`}
-          className="text-primary-600 dark:text-dark-primary-500 text-sm">
+          className="text-primary-600 dark:text-dark-primary-500 text-sm"
+        >
           Sessions
         </Link>
       </div>

@@ -38,15 +38,13 @@ export const TabbedForm: React.FC<TabbedFormProps> = ({
 
   const activeTabContent = tabs.find((t) => t.id === activeTab)?.content;
 
-
   const onKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
     const idx = tabs.findIndex((t) => t.id === activeTab);
     if (idx === -1) return;
 
     let nextIdx = idx;
     if (e.key === "ArrowRight") nextIdx = (idx + 1) % tabs.length;
-    else if (e.key === "ArrowLeft")
-      nextIdx = (idx - 1 + tabs.length) % tabs.length;
+    else if (e.key === "ArrowLeft") nextIdx = (idx - 1 + tabs.length) % tabs.length;
     else if (e.key === "Home") nextIdx = 0;
     else if (e.key === "End") nextIdx = tabs.length - 1;
     else return;
@@ -88,7 +86,6 @@ export const TabbedForm: React.FC<TabbedFormProps> = ({
         </div>
       </Section>
 
-
       <div className="flex-1 overflow-y-auto">
         {activeTabContent && (
           <div
@@ -101,7 +98,6 @@ export const TabbedForm: React.FC<TabbedFormProps> = ({
           </div>
         )}
       </div>
-
 
       <div className="mt-6 shrink-0 border-t border-surface-300 dark:border-dark-surface-400 pt-4">
         <div className="flex items-center justify-between">

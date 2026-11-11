@@ -1,7 +1,6 @@
 import type { TranslationKey } from '../i18n';
 import type { MissionChangeStatus, MissionChangedFile } from './types';
 
-
 export const CHANGE_STATUS_BADGE_VARIANT: Record<
   MissionChangeStatus,
   'success' | 'warning' | 'error'

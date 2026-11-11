@@ -10,13 +10,9 @@ function source(id: string, collect: ArtifactSource['collect']): ArtifactSource 
 describe('ArtifactRegistry', () => {
   it('collects artifacts in registration order and skips null sources', () => {
     const reg = new ArtifactRegistry();
-    reg.register(
-      source('files', () => Artifact.openFile({ path: 'a.ts', text: 'x' })),
-    );
+    reg.register(source('files', () => Artifact.openFile({ path: 'a.ts', text: 'x' })));
     reg.register(source('terminal', () => null));
-    reg.register(
-      source('cmd', () => Artifact.commandOutput({ command: 'ls', output: 'a\n' })),
-    );
+    reg.register(source('cmd', () => Artifact.commandOutput({ command: 'ls', output: 'a\n' })));
 
     const got = reg.collect();
     expect(got).toHaveLength(2);

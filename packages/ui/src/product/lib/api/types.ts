@@ -1,15 +1,10 @@
-
-
-
-
-
 export interface User {
   id: string;
   email: string;
   display_name: string;
 }
 
-export type MembershipRole = 'tenant_owner' | 'tenant_admin' | 'tenant_user';
+export type MembershipRole = "tenant_owner" | "tenant_admin" | "tenant_user";
 
 export interface AccountMembership {
   id: string;
@@ -35,7 +30,7 @@ export interface SessionResponse {
   session_expires_at: string;
 }
 
-export type AccountType = 'consumer' | 'business';
+export type AccountType = "consumer" | "business";
 
 export interface BusinessDetails {
   legal_name: string;
@@ -117,16 +112,18 @@ export interface RevokeSessionsResponse {
   revoked: number;
 }
 
+export type Plan = "free" | "pro";
 
-
-
-
-export type Plan = 'free' | 'pro';
-
-export type SubscriptionSource = 'stripe' | 'manual';
+export type SubscriptionSource = "stripe" | "manual";
 
 export type SubscriptionState =
-  'none' | 'active' | 'grace' | 'on_hold' | 'paused' | 'expired' | 'canceled';
+  | "none"
+  | "active"
+  | "grace"
+  | "on_hold"
+  | "paused"
+  | "expired"
+  | "canceled";
 
 export interface ConsentRecord {
   document: string;
@@ -166,28 +163,6 @@ export interface DeleteAccountResponse {
   instances_deleted: number;
   members_removed: number;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export interface BillingAccountRequest {
   account_id: string;
@@ -242,10 +217,6 @@ export interface BillingStatus {
   checked_at?: string;
 }
 
-
-
-
-
 export interface Instance {
   id: string;
   account_id: string;
@@ -290,26 +261,11 @@ export interface UpdateInstanceRequest {
   name: string;
 }
 
+export type ConsumerSource = "generic" | "form";
 
+export type ConsumerSessionMode = "new" | "reused";
 
-
-
-
-
-
-
-
-
-
-
-
-
-export type ConsumerSource = 'generic' | 'form';
-
-export type ConsumerSessionMode = 'new' | 'reused';
-
-export type ConsumerTargetKind = 'agent' | 'chain';
-
+export type ConsumerTargetKind = "agent" | "chain";
 
 export const MAX_TARGET_NAME_BYTES = 200;
 
@@ -358,11 +314,6 @@ export interface ConsumerPage {
   nextCursor: string | null;
 }
 
-
-
-
-
-
 export interface Member {
   user_id: string;
   email: string;
@@ -392,7 +343,7 @@ export interface Invite {
   delivery: InviteDelivery;
 }
 
-export type InviteDelivery = 'not_configured' | 'queued' | 'sent' | 'failed';
+export type InviteDelivery = "not_configured" | "queued" | "sent" | "failed";
 
 export interface ListInvitesResponse {
   invites: Invite[];
@@ -429,10 +380,6 @@ export interface AcceptInviteResponse {
   account_name: string;
   role: MembershipRole;
 }
-
-
-
-
 
 export interface ExportConsent {
   document: string;
@@ -498,33 +445,7 @@ export interface ExportResponse {
   accounts: ExportAccount[];
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-export type AskDecision = 'allow' | 'deny' | 'answer';
+export type AskDecision = "allow" | "deny" | "answer";
 
 export interface Ask {
   ask_id: string;
@@ -556,7 +477,7 @@ export interface AnswerAskRequest {
   guidance?: string;
 }
 
-export type AnswerStatus = 'recorded' | 'settled' | 'already_decided';
+export type AnswerStatus = "recorded" | "settled" | "already_decided";
 
 export interface AnswerAskResponse {
   ask_id: string;
@@ -567,7 +488,7 @@ export interface AnswerAskResponse {
 }
 
 export interface AskStreamEvent {
-  type: 'ask.published' | 'ask.resolved';
+  type: "ask.published" | "ask.resolved";
   ask?: Ask;
   ask_id?: string;
   reason?: string;
@@ -577,7 +498,6 @@ export interface AskSubscription {
   agent_name: string;
   created_at: string;
 }
-
 
 export const MAX_SUBSCRIBED_AGENT_BYTES = 256;
 
@@ -589,22 +509,6 @@ export interface ChangeAskSubscriptionRequest {
   agent_name: string;
   subscribed: boolean;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export interface ApprovalRule {
   agent_name: string;

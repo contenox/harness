@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 export interface Deadline {
   atMs: number;
@@ -17,7 +17,7 @@ export function deadlineFromMint(
 
 export function formatRemaining(seconds: number): string {
   const clamped = Math.max(0, Math.floor(seconds));
-  return `${Math.floor(clamped / 60)}:${(clamped % 60).toString().padStart(2, '0')}`;
+  return `${Math.floor(clamped / 60)}:${(clamped % 60).toString().padStart(2, "0")}`;
 }
 
 export function useCountdown(deadline: Deadline | null): number {

@@ -1,11 +1,10 @@
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { InlineNotice } from '../../components/InlineNotice';
-import { Skeleton } from '../../components/Skeleton';
-import { Spinner } from '../../components/Spinner';
-import type { ReactNode } from 'react';
-import { errorMessage, isRetryable } from '../lib/apiError';
-
+import { Button } from "../../components/Button";
+import { Card } from "../../components/Card";
+import { InlineNotice } from "../../components/InlineNotice";
+import { Skeleton } from "../../components/Skeleton";
+import { Spinner } from "../../components/Spinner";
+import type { ReactNode } from "react";
+import { errorMessage, isRetryable } from "../lib/apiError";
 
 export function ScreenLoading({ label }: { label?: string }) {
   return (
@@ -13,7 +12,8 @@ export function ScreenLoading({ label }: { label?: string }) {
       className="flex min-h-40 flex-1 items-center justify-center p-6"
       role="status"
       aria-live="polite"
-      aria-label={label ?? 'Loading'}>
+      aria-label={label ?? "Loading"}
+    >
       <Spinner />
     </div>
   );
@@ -25,7 +25,8 @@ export function ListSkeleton({ label, rows = 3 }: { label?: string; rows?: numbe
       className="flex flex-col gap-3"
       role="status"
       aria-live="polite"
-      aria-label={label ?? 'Loading'}>
+      aria-label={label ?? "Loading"}
+    >
       {Array.from({ length: rows }, (_, index) => (
         <Card key={index} variant="filled" className="flex flex-col gap-2">
           <Skeleton className="w-2/5" />
@@ -60,7 +61,8 @@ export function ScreenError({
             size="sm"
             className="shrink-0"
             onClick={onRetry}
-            disabled={retrying}>
+            disabled={retrying}
+          >
             Try again
           </Button>
         )}

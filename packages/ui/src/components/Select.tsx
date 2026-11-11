@@ -39,11 +39,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       )}
       {groupSelectOptions(options).map((section, i) => {
         const rendered = section.options.map((option) => (
-          <SelectOption
-            key={option.value}
-            value={option.value}
-            disabled={option.disabled}
-          >
+          <SelectOption key={option.value} value={option.value} disabled={option.disabled}>
             {option.label}
           </SelectOption>
         ));
@@ -64,14 +60,7 @@ type SelectOptionProps = React.OptionHTMLAttributes<HTMLOptionElement>;
 
 export const SelectOption = forwardRef<HTMLOptionElement, SelectOptionProps>(
   ({ className, ...props }, ref) => (
-    <option
-      ref={ref}
-      className={cn(
-        "bg-raised text-text",
-        className,
-      )}
-      {...props}
-    />
+    <option ref={ref} className={cn("bg-raised text-text", className)} {...props} />
   ),
 );
 SelectOption.displayName = "SelectOption";

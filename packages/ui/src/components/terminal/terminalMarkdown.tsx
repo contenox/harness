@@ -2,7 +2,6 @@ import type { ComponentPropsWithoutRef } from "react";
 import type { Components } from "react-markdown";
 import { cn } from "../../utils";
 
-
 export const terminalMarkdownComponents: Components = {
   p: ({ children }) => <p className="my-1 whitespace-pre-wrap">{children}</p>,
   strong: ({ children }) => (
@@ -20,10 +19,14 @@ export const terminalMarkdownComponents: Components = {
     </a>
   ),
   h1: ({ children }) => (
-    <div className="mt-2 mb-1 text-[14px] font-semibold text-text dark:text-dark-text">{children}</div>
+    <div className="mt-2 mb-1 text-[14px] font-semibold text-text dark:text-dark-text">
+      {children}
+    </div>
   ),
   h2: ({ children }) => (
-    <div className="mt-2 mb-1 text-[13px] font-semibold text-text dark:text-dark-text">{children}</div>
+    <div className="mt-2 mb-1 text-[13px] font-semibold text-text dark:text-dark-text">
+      {children}
+    </div>
   ),
   h3: ({ children }) => (
     <div className="mt-1.5 mb-0.5 font-semibold text-text dark:text-dark-text">{children}</div>

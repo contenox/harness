@@ -12,8 +12,8 @@ import {
   InlineAttachments,
   InlineNotice,
   stripAnsi,
-  TerminalOutput,
   tailLines,
+  TerminalOutput,
   TOOL_CALL_PREVIEW_LINES,
   ToolCallCard,
   type ToolCallCardProps,
@@ -31,11 +31,11 @@ import type {
   AcpTimelineItem,
   AcpToolCallState,
 } from '../../../hooks/acpSessionState';
-import { translateRoutingLabel, translateRuntimeText } from '../../../lib/runtimeTexts';
-import { failureTurnKey } from '../../../lib/dismissedErrors';
-import { translateCommandConfirmation } from '../../../lib/commandConfirmations';
 import { useDismissedErrors } from '../../../hooks/useDismissedErrors';
+import { translateCommandConfirmation } from '../../../lib/commandConfirmations';
+import { failureTurnKey } from '../../../lib/dismissedErrors';
 import { describePersistedFailures, isPersistedFailure } from '../../../lib/persistedFailure';
+import { translateRoutingLabel, translateRuntimeText } from '../../../lib/runtimeTexts';
 import { shellCommandLine, shellOutputLines } from '../../../lib/shellExecution';
 import {
   shouldShowStreamingCaret,
@@ -65,7 +65,7 @@ function toolCallCardStatus(
 
 function LogTail({ lines }: { lines: string[] }) {
   return (
-    <pre className="whitespace-pre-wrap break-all">
+    <pre className="break-all whitespace-pre-wrap">
       {tailLines(lines.map(stripAnsi), TOOL_CALL_PREVIEW_LINES).join('\n')}
     </pre>
   );
@@ -84,7 +84,9 @@ function toolCallPreview(toolCall: AcpToolCallState): ReactNode {
   const streamed = toolCallContentText(toolCall);
   let lines: string[] = [];
   if (toolCall.kind === 'execute') {
-    lines = running ? tailLines(streamed, TOOL_CALL_PREVIEW_LINES) : (shellOutputLines(toolCall.rawOutput) ?? tailLines(streamed, TOOL_CALL_PREVIEW_LINES));
+    lines = running
+      ? tailLines(streamed, TOOL_CALL_PREVIEW_LINES)
+      : (shellOutputLines(toolCall.rawOutput) ?? tailLines(streamed, TOOL_CALL_PREVIEW_LINES));
   } else {
     lines = tailLines(streamed, TOOL_CALL_PREVIEW_LINES);
   }
@@ -141,7 +143,8 @@ const TranscriptMessage = memo(function TranscriptMessage({
     : splitLeadingThinking(translateCommandConfirmation(message.text, t));
   const thinking = [message.thinking, inline.thinking].filter(Boolean).join('\n\n');
   const thinkingStreaming =
-    message.thinkingStreaming || (inline.thinking !== null && inline.answer === '' && !!message.streaming);
+    message.thinkingStreaming ||
+    (inline.thinking !== null && inline.answer === '' && !!message.streaming);
 
   return (
     <ChatMessage
@@ -343,11 +346,7 @@ const TranscriptToolCall = memo(function TranscriptToolCall({
       toggleDetailLabel={t('acp_chat.tool_toggle_detail')}
       detail={
         hasDetail ? (
-          <ToolCallDetail
-            toolCall={toolCall}
-            onOpenFile={onOpenFile}
-            canOpenFile={canOpenFile}
-          />
+          <ToolCallDetail toolCall={toolCall} onOpenFile={onOpenFile} canOpenFile={canOpenFile} />
         ) : undefined
       }
       preview={toolCallPreview(toolCall)}
@@ -438,7 +437,10 @@ interface RenderItemContext {
   onOpenSettings?: () => void;
 }
 
-function persistedFailureText(session: AcpSessionState, item: AcpTimelineItem | undefined): string | null {
+function persistedFailureText(
+  session: AcpSessionState,
+  item: AcpTimelineItem | undefined,
+): string | null {
   if (!item || item.kind !== 'message') return null;
   const message = session.messages[item.id];
   if (!message || message.role !== 'assistant' || message.streaming) return null;
@@ -483,12 +485,21 @@ function renderItem(
     }
     const id = failureTurnKey(userTurnOrdinal(session, index));
     rendered = dismissedErrors.has(id) ? null : (
-      <TranscriptPersistedFailure key={`f-${item.id}`} texts={texts} onDismiss={() => dismissError(id)} />
+      <TranscriptPersistedFailure
+        key={`f-${item.id}`}
+        texts={texts}
+        onDismiss={() => dismissError(id)}
+      />
     );
   } else if (item.kind === 'message') {
     const message = session.messages[item.id];
     rendered = message ? (
-      <TranscriptMessage key={`m-${item.id}`} message={message} agentName={agentName} isLatest={isLatest} />
+      <TranscriptMessage
+        key={`m-${item.id}`}
+        message={message}
+        agentName={agentName}
+        isLatest={isLatest}
+      />
     ) : null;
   } else if (item.kind === 'terminal') {
     const card = session.terminals[item.id];
@@ -515,7 +526,8 @@ function renderItem(
       />
     ) : null;
   }
-  const anchorHere = pending && anchorId != null && item.kind === 'tool_call' && item.id === anchorId;
+  const anchorHere =
+    pending && anchorId != null && item.kind === 'tool_call' && item.id === anchorId;
   if (!anchorHere) return rendered;
   return [
     rendered,
@@ -584,8 +596,12 @@ export const TranscriptItems = memo(function TranscriptItems({
   return (
     <>
       {groups.map(group => {
-        const steps = group.entries.filter(({ item }) => item.kind === 'tool_call' || item.kind === 'terminal');
-        const rest = group.entries.filter(({ item }) => item.kind !== 'tool_call' && item.kind !== 'terminal');
+        const steps = group.entries.filter(
+          ({ item }) => item.kind === 'tool_call' || item.kind === 'terminal',
+        );
+        const rest = group.entries.filter(
+          ({ item }) => item.kind !== 'tool_call' && item.kind !== 'terminal',
+        );
         if (group.turnId === undefined || steps.length === 0 || rest.length === 0) {
           return group.entries.map(render);
         }

@@ -1,13 +1,6 @@
-import {
-  type DependencyList,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type DependencyList, useCallback, useEffect, useRef, useState } from "react";
 
 export type UseChatScrollOptions = {
-
   deps: DependencyList;
 
   thresholdPx?: number;

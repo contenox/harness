@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
-import { apiFetch, ApiError, type ApiFetchOptions } from './fetch';
+import { ApiError, apiFetch, type ApiFetchOptions } from './fetch';
 import type { WorkspaceRoot } from './types';
 import { projectForCwd } from './workspaceRoots';
 

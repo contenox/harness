@@ -43,14 +43,16 @@ export const Interactive: Story = {
     return (
       <div>
         <Button onClick={() => setOpen(true)}>Open Dialog</Button>
-        <Dialog
-          {...args}
-          open={open}
-          onClose={() => setOpen(false)}
-          title="Interactive Dialog"
-        >
+        <Dialog {...args} open={open} onClose={() => setOpen(false)} title="Interactive Dialog">
           <P>You can close this dialog by clicking the X or backdrop.</P>
-          <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+          <div
+            style={{
+              marginTop: "1rem",
+              display: "flex",
+              gap: "0.5rem",
+              justifyContent: "flex-end",
+            }}
+          >
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
@@ -72,12 +74,12 @@ export const LongContent: Story = {
     children: (
       <div>
         <P>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
-          tempor incididunt ut labore et dolore magna aliqua.
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt
+          ut labore et dolore magna aliqua.
         </P>
         <P>
-          Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi
-          ut aliquip ex ea commodo consequat.
+          Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+          commodo consequat.
         </P>
       </div>
     ),

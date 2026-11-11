@@ -1,14 +1,14 @@
-import type { AssetAction, AssetActionResult } from '@contenox/acp-client';
-import { useState, type ReactNode } from 'react';
-import { ResizablePanelHandle } from '../../../components/ResizablePanel';
-import { MentionMenu } from '../composer/MentionMenu';
-import type { AcpSessionState } from '../state/acpSessionState';
-import type { UseMentionMenuResult } from '../hooks/useMentionMenu';
-import { useMediaQuery } from '../lib/useMediaQuery';
-import { ActivityPanel } from '../activity/ActivityPanel';
-import { CanvasTabStrip, FilePane, FileTreePanel, type FileTreeManagement } from './FileCanvas';
-import { activeFileTab } from './fileCanvasState';
-import type { SessionWorkspace } from './useSessionWorkspace';
+import type { AssetAction, AssetActionResult } from "@contenox/acp-client";
+import { useState, type ReactNode } from "react";
+import { ResizablePanelHandle } from "../../../components/ResizablePanel";
+import { MentionMenu } from "../composer/MentionMenu";
+import type { AcpSessionState } from "../state/acpSessionState";
+import type { UseMentionMenuResult } from "../hooks/useMentionMenu";
+import { useMediaQuery } from "../lib/useMediaQuery";
+import { ActivityPanel } from "../activity/ActivityPanel";
+import { CanvasTabStrip, FilePane, FileTreePanel, type FileTreeManagement } from "./FileCanvas";
+import { activeFileTab } from "./fileCanvasState";
+import type { SessionWorkspace } from "./useSessionWorkspace";
 
 export interface AssetActionsSource {
   list: () => Promise<AssetAction[]>;
@@ -31,7 +31,7 @@ export function SessionWorkspaceLayout({
   management,
 }: SessionWorkspaceLayoutProps) {
   const { canvas, files } = workspace;
-  const isWide = useMediaQuery('(min-width: 1024px)');
+  const isWide = useMediaQuery("(min-width: 1024px)");
   const [activityOpen, setActivityOpen] = useState(false);
   const file = activeFileTab(canvas.state);
 
@@ -51,24 +51,24 @@ export function SessionWorkspaceLayout({
         <CanvasTabStrip
           tabs={canvas.state.tabs}
           activePath={canvas.state.activePath}
-          onSelect={path => {
+          onSelect={(path) => {
             setActivityOpen(false);
             canvas.activate(path);
           }}
           onClose={canvas.closeFile}
           views={[
             {
-              id: 'chat',
-              label: 'Chat',
-              active: !activityOpen && canvas.state.activePath === '',
+              id: "chat",
+              label: "Chat",
+              active: !activityOpen && canvas.state.activePath === "",
               onSelect: () => {
                 setActivityOpen(false);
-                canvas.activate('');
+                canvas.activate("");
               },
             },
             {
-              id: 'activity',
-              label: 'Activity',
+              id: "activity",
+              label: "Activity",
               active: activityOpen,
               onSelect: () => setActivityOpen(true),
             },
@@ -81,8 +81,9 @@ export function SessionWorkspaceLayout({
           <div className="flex min-h-0 flex-1">
             <div
               className={
-                file ? 'hidden min-h-0 flex-1 flex-col lg:flex' : 'flex min-h-0 flex-1 flex-col'
-              }>
+                file ? "hidden min-h-0 flex-1 flex-col lg:flex" : "flex min-h-0 flex-1 flex-col"
+              }
+            >
               {chat}
             </div>
             {file ? (
@@ -107,8 +108,8 @@ export function SessionWorkspaceLayout({
               <div className="hidden w-[min(400px,38vw)] min-w-[320px] shrink-0 flex-col items-center justify-center gap-3 border-l border-surface-200 p-6 dark:border-dark-surface-600 lg:flex">
                 <span className="text-text-muted dark:text-dark-text-muted max-w-60 text-center text-sm">
                   {assetActions
-                    ? 'Nothing open — pick a file from the tree. Preview, editing and asset actions happen here.'
-                    : 'Nothing open — pick a file from the tree. Preview and editing happen here.'}
+                    ? "Nothing open — pick a file from the tree. Preview, editing and asset actions happen here."
+                    : "Nothing open — pick a file from the tree. Preview and editing happen here."}
                 </span>
               </div>
             )}

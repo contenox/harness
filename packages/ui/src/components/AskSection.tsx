@@ -1,5 +1,5 @@
-import { H2 } from './Typography';
-import type { ReactNode } from 'react';
+import { H2 } from "./Typography";
+import type { ReactNode } from "react";
 
 export function AskSection({ title, children }: { title: string; children: ReactNode }) {
   return (

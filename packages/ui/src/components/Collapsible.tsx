@@ -7,9 +7,7 @@ interface CollapsibleContextType {
   onOpenChange: (open: boolean) => void;
 }
 
-const CollapsibleContext = createContext<CollapsibleContextType | undefined>(
-  undefined,
-);
+const CollapsibleContext = createContext<CollapsibleContextType | undefined>(undefined);
 
 export function useCollapsibleContext(): CollapsibleContextType {
   const ctx = useContext(CollapsibleContext);
@@ -56,9 +54,7 @@ export const Collapsible = ({
   };
 
   return (
-    <CollapsibleContext.Provider
-      value={{ open, onOpenChange: handleOpenChange }}
-    >
+    <CollapsibleContext.Provider value={{ open, onOpenChange: handleOpenChange }}>
       <div className={cn("w-full", className)}>
         {title ? (
           <>
@@ -66,10 +62,7 @@ export const Collapsible = ({
             <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-line bg-raised px-3 py-2 text-left text-text hover:bg-hover">
               {" "}
               <span>{title}</span>
-              <span
-                aria-hidden
-                className="text-text-muted"
-              >
+              <span aria-hidden className="text-text-muted">
                 {open ? "−" : "+"}
               </span>
             </CollapsibleTrigger>
@@ -83,8 +76,7 @@ export const Collapsible = ({
   );
 };
 
-interface CollapsibleTriggerProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface CollapsibleTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   asChild?: boolean;
   children: React.ReactNode;
   className?: string;
@@ -142,10 +134,7 @@ interface CollapsibleContentProps {
   className?: string;
 }
 
-export const CollapsibleContent = ({
-  children,
-  className,
-}: CollapsibleContentProps) => {
+export const CollapsibleContent = ({ children, className }: CollapsibleContentProps) => {
   const context = useContext(CollapsibleContext);
 
   if (!context) {

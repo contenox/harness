@@ -27,9 +27,7 @@ export function PlanProgress({
           ? t('plan.progress_title_active', { completed, total, inProgress })
           : t('plan.progress_title', { completed, total })
       }>
-      {inProgress > 0 && (
-        <StatusIndicator status="in-progress" size="sm" aria-hidden />
-      )}
+      {inProgress > 0 && <StatusIndicator status="in-progress" size="sm" aria-hidden />}
       <span className="tabular-nums">{t('plan.steps', { completed, total })}</span>
     </span>
   );

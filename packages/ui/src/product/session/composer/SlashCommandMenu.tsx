@@ -1,9 +1,9 @@
-import { Panel } from '../../../components/Panel';
-import { Span } from '../../../components/Typography';
-import { useEffect, useRef } from 'react';
-import type { AvailableCommand } from '@contenox/acp-client';
-import { commandArgumentHint } from '../lib/slashMenu';
-import type { SlashCommandMenuState } from '../hooks/useSlashCommandMenu';
+import { Panel } from "../../../components/Panel";
+import { Span } from "../../../components/Typography";
+import { useEffect, useRef } from "react";
+import type { AvailableCommand } from "@contenox/acp-client";
+import { commandArgumentHint } from "../lib/slashMenu";
+import type { SlashCommandMenuState } from "../hooks/useSlashCommandMenu";
 
 export function SlashCommandMenu({ menu }: { menu: SlashCommandMenuState }) {
   if (!menu.open) return null;
@@ -13,21 +13,15 @@ export function SlashCommandMenu({ menu }: { menu: SlashCommandMenuState }) {
       variant="surface"
       id={menu.listboxId}
       role="listbox"
-
-
-
-      aria-label={menu.mode === 'values' ? `Values for /${menu.command}` : 'Commands'}
-
-
-
-
-      className="max-h-48 overflow-y-auto overscroll-contain p-0">
-      {menu.mode === 'values' && menu.values.length === 0 && menu.argumentHint !== null && (
+      aria-label={menu.mode === "values" ? `Values for /${menu.command}` : "Commands"}
+      className="max-h-48 overflow-y-auto overscroll-contain p-0"
+    >
+      {menu.mode === "values" && menu.values.length === 0 && menu.argumentHint !== null && (
         <Span variant="muted" className="block px-3 py-2 font-mono text-xs">
           {menu.argumentHint}
         </Span>
       )}
-      {menu.mode === 'values'
+      {menu.mode === "values"
         ? menu.values.map((value, index) => (
             <ValueRow
               key={value}
@@ -52,7 +46,6 @@ export function SlashCommandMenu({ menu }: { menu: SlashCommandMenuState }) {
     </Panel>
   );
 }
-
 
 function CommandRow({
   command,
@@ -80,11 +73,12 @@ function CommandRow({
       role="option"
       aria-selected={selected}
       onMouseEnter={onHover}
-      onMouseDown={event => {
+      onMouseDown={(event) => {
         event.preventDefault();
         onPick();
       }}
-      className={rowClassName(selected)}>
+      className={rowClassName(selected)}
+    >
       <span className="flex w-full items-baseline gap-2">
         <Span className="text-text dark:text-dark-text font-mono text-sm font-medium">
           /{command.name}
@@ -101,7 +95,6 @@ function CommandRow({
     </button>
   );
 }
-
 
 function ValueRow({
   value,
@@ -126,11 +119,12 @@ function ValueRow({
       role="option"
       aria-selected={selected}
       onMouseEnter={onHover}
-      onMouseDown={event => {
+      onMouseDown={(event) => {
         event.preventDefault();
         onPick();
       }}
-      className={rowClassName(selected)}>
+      className={rowClassName(selected)}
+    >
       <Span className="text-text dark:text-dark-text w-full truncate font-mono text-sm font-medium">
         {value}
       </Span>
@@ -138,32 +132,20 @@ function ValueRow({
   );
 }
 
-
 function useVisibleWhenSelected(selected: boolean) {
   const ref = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (selected) ref.current?.scrollIntoView({ block: 'nearest' });
+    if (selected) ref.current?.scrollIntoView({ block: "nearest" });
   }, [selected]);
   return ref;
 }
 
-
-
-
-
-
-
-
-
-
-
-
 function rowClassName(selected: boolean): string {
   return (
-    'border-b-surface-200 dark:border-b-dark-surface-300 flex w-full flex-col items-start ' +
-    'gap-0.5 border-b border-l-2 px-3 py-2 text-left last:border-b-0 ' +
+    "border-b-surface-200 dark:border-b-dark-surface-300 flex w-full flex-col items-start " +
+    "gap-0.5 border-b border-l-2 px-3 py-2 text-left last:border-b-0 " +
     (selected
-      ? 'border-l-primary-500 bg-primary-50 dark:bg-dark-surface-400'
-      : 'border-l-transparent hover:bg-surface-100 dark:hover:bg-dark-surface-300')
+      ? "border-l-primary-500 bg-primary-50 dark:bg-dark-surface-400"
+      : "border-l-transparent hover:bg-surface-100 dark:hover:bg-dark-surface-300")
   );
 }

@@ -1,4 +1,12 @@
-import { Button, Chip, Dropdown, DropdownItem, DropdownSeparator, InlineNotice, Input } from '@contenox/ui';
+import {
+  Button,
+  Chip,
+  Dropdown,
+  DropdownItem,
+  DropdownSeparator,
+  InlineNotice,
+  Input,
+} from '@contenox/ui';
 import { FileText, Folder, Globe } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +28,12 @@ export function ScopeBar({ permission }: { permission: PermissionScope }) {
   const query = filter.trim().toLowerCase();
   const roots = permission.roots
     .map(root => ({ root, name: projectName(root) }))
-    .filter(({ root, name }) => query === '' || name.toLowerCase().includes(query) || root.path.toLowerCase().includes(query))
+    .filter(
+      ({ root, name }) =>
+        query === '' ||
+        name.toLowerCase().includes(query) ||
+        root.path.toLowerCase().includes(query),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const choose = (path: string | undefined) => {
@@ -67,7 +80,10 @@ export function ScopeBar({ permission }: { permission: PermissionScope }) {
               />
             </div>
           )}
-          <DropdownItem icon={<Globe className="size-3.5" />} selected={!current} onClick={() => choose(undefined)}>
+          <DropdownItem
+            icon={<Globe className="size-3.5" />}
+            selected={!current}
+            onClick={() => choose(undefined)}>
             {t('permissions.all_workspaces')}
           </DropdownItem>
           <DropdownSeparator />
@@ -82,11 +98,17 @@ export function ScopeBar({ permission }: { permission: PermissionScope }) {
             </DropdownItem>
           ))}
           {roots.length === 0 && (
-            <div className="px-2.5 py-1.5 text-xs text-text-muted">{t('permissions.scope_no_match')}</div>
+            <div className="text-text-muted px-2.5 py-1.5 text-xs">
+              {t('permissions.scope_no_match')}
+            </div>
           )}
         </Dropdown>
         {reveal && filePath && (
-          <Button variant="ghost" size="sm" title={filePath} onClick={() => void openFile(filePath)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            title={filePath}
+            onClick={() => void openFile(filePath)}>
             <FileText className="size-3.5" aria-hidden />
             {t('permissions.open_file')}
           </Button>

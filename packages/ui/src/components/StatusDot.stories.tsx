@@ -6,7 +6,10 @@ const meta: Meta<typeof StatusDot> = {
   component: StatusDot,
   args: { status: "available", label: "Available" },
   argTypes: {
-    status: { control: "select", options: ["available", "checking", "attention", "unavailable", "unknown"] },
+    status: {
+      control: "select",
+      options: ["available", "checking", "attention", "unavailable", "unknown"],
+    },
   },
 };
 export default meta;

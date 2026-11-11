@@ -119,7 +119,9 @@ export function ToolsGroup({ scope, name, envelopes, layer, workspaceName, onSav
         </P>
       )}
       {toolsets.error && (
-        <InlineNotice variant="warning">{t('permissions.tools_error', { message: toolsets.error.message })}</InlineNotice>
+        <InlineNotice variant="warning">
+          {t('permissions.tools_error', { message: toolsets.error.message })}
+        </InlineNotice>
       )}
       {error && (
         <InlineNotice variant="error" role="alert">

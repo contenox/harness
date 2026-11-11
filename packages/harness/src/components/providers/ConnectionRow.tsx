@@ -1,8 +1,8 @@
 import { IconButton, SettingsGroup, SettingsRow, StatusDot } from '@contenox/ui';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { backendDisplayUrl } from '../../lib/displayUrl';
 import { connectionStatus } from '../../lib/connectionStatus';
+import { backendDisplayUrl } from '../../lib/displayUrl';
 import type { Connection } from '../../lib/types';
 import { ConnectionMenu } from './ConnectionMenu';
 
@@ -37,11 +37,7 @@ export function ConnectionRow({
         trailing={
           <>
             <StatusDot status={status.statusDot} label={t(status.summaryKey)} />
-            <IconButton
-              label={t('connections.check')}
-              size="xs"
-              disabled={busy}
-              onClick={onCheck}>
+            <IconButton label={t('connections.check')} size="xs" disabled={busy} onClick={onCheck}>
               <RefreshCw className={busy ? 'size-3.5 animate-spin' : 'size-3.5'} aria-hidden />
             </IconButton>
             <ConnectionMenu

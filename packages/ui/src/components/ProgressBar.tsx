@@ -6,11 +6,7 @@ type ProgressBarProps = {
   className?: string;
 };
 
-export function ProgressBar({
-  value,
-  palette = "neutral",
-  className,
-}: ProgressBarProps) {
+export function ProgressBar({ value, palette = "neutral", className }: ProgressBarProps) {
   return (
     <div
       role="progressbar"

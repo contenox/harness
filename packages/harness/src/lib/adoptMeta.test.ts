@@ -10,7 +10,7 @@ describe('adoptMeta — the request wire shape', () => {
 
   it('round-trips through adoptResultFromMeta once the server echoes a controller flag', () => {
     const request = adoptMeta('inst-1', 'down-1');
-    const ref = (request[ADOPT_META_KEY] as { instanceId: string; sessionId: string });
+    const ref = request[ADOPT_META_KEY] as { instanceId: string; sessionId: string };
     const echo = { [ADOPT_META_KEY]: { ...ref, controller: true } };
     expect(adoptResultFromMeta(echo)).toEqual({
       instanceId: 'inst-1',
@@ -23,10 +23,14 @@ describe('adoptMeta — the request wire shape', () => {
 describe('adoptResultFromMeta — defensive, mirroring the server parseAdoptResultMeta', () => {
   it('reads a full adopt outcome, controller true and false', () => {
     expect(
-      adoptResultFromMeta({ 'contenox.adopt': { instanceId: 'i', sessionId: 's', controller: true } }),
+      adoptResultFromMeta({
+        'contenox.adopt': { instanceId: 'i', sessionId: 's', controller: true },
+      }),
     ).toEqual({ instanceId: 'i', sessionId: 's', controller: true });
     expect(
-      adoptResultFromMeta({ 'contenox.adopt': { instanceId: 'i', sessionId: 's', controller: false } }),
+      adoptResultFromMeta({
+        'contenox.adopt': { instanceId: 'i', sessionId: 's', controller: false },
+      }),
     ).toEqual({ instanceId: 'i', sessionId: 's', controller: false });
   });
 
@@ -49,16 +53,23 @@ describe('adoptResultFromMeta — defensive, mirroring the server parseAdoptResu
     expect(adoptResultFromMeta({ 'contenox.adopt': null })).toBeNull();
     expect(adoptResultFromMeta({ 'contenox.adopt': 'nope' })).toBeNull();
     expect(adoptResultFromMeta({ 'contenox.adopt': 42 })).toBeNull();
-    expect(adoptResultFromMeta({ 'contenox.adopt': { instanceId: '  ', sessionId: 's' } })).toBeNull();
-    expect(adoptResultFromMeta({ 'contenox.adopt': { sessionId: 's', controller: true } })).toBeNull();
+    expect(
+      adoptResultFromMeta({ 'contenox.adopt': { instanceId: '  ', sessionId: 's' } }),
+    ).toBeNull();
+    expect(
+      adoptResultFromMeta({ 'contenox.adopt': { sessionId: 's', controller: true } }),
+    ).toBeNull();
   });
 });
 
 describe('the sidebar delete-guard predicate', () => {
-  const isAdopted = (meta: Record<string, unknown> | undefined) => adoptResultFromMeta(meta) != null;
+  const isAdopted = (meta: Record<string, unknown> | undefined) =>
+    adoptResultFromMeta(meta) != null;
 
   it('recognizes an adopted session (delete must be hidden)', () => {
-    expect(isAdopted({ 'contenox.adopt': { instanceId: 'i', sessionId: 's', controller: true } })).toBe(true);
+    expect(
+      isAdopted({ 'contenox.adopt': { instanceId: 'i', sessionId: 's', controller: true } }),
+    ).toBe(true);
   });
 
   it('leaves native and external-only sessions deletable', () => {

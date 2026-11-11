@@ -1,12 +1,11 @@
-import { Checkbox } from '../Checkbox';
-import { FormField } from '../FormField';
-import { Input, PasswordInput } from '../Input';
-import { Select } from '../Select';
-import { Textarea } from '../TextArea';
-import type { ComponentProps, ReactNode } from 'react';
+import { Checkbox } from "../Checkbox";
+import { FormField } from "../FormField";
+import { Input, PasswordInput } from "../Input";
+import { Select } from "../Select";
+import { Textarea } from "../TextArea";
+import type { ComponentProps, ReactNode } from "react";
 
-
-type FieldProps = Omit<ComponentProps<typeof Input>, 'error'> & {
+type FieldProps = Omit<ComponentProps<typeof Input>, "error"> & {
   label: string;
   error?: string;
 
@@ -42,7 +41,7 @@ export function PasswordField({ label, error, hint, required, ...props }: FieldP
   );
 }
 
-type TextAreaFieldProps = Omit<ComponentProps<typeof Textarea>, 'error'> & {
+type TextAreaFieldProps = Omit<ComponentProps<typeof Textarea>, "error"> & {
   label: string;
   error?: string;
   hint?: string;
@@ -56,7 +55,7 @@ export function TextAreaField({ label, error, hint, required, ...props }: TextAr
   );
 }
 
-type SelectFieldProps = Omit<ComponentProps<typeof Select>, 'error'> & {
+type SelectFieldProps = Omit<ComponentProps<typeof Select>, "error"> & {
   label: string;
   error?: string;
   hint?: string;
@@ -92,7 +91,7 @@ export function CheckboxField({
         label={label}
         checked={checked}
         disabled={disabled}
-        onChange={event => onChange(event.target.checked)}
+        onChange={(event) => onChange(event.target.checked)}
       />
       {children && (
         <div className="text-text-muted dark:text-dark-text-muted text-xs">{children}</div>

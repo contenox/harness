@@ -1,11 +1,11 @@
-import type { WorkspaceEntry } from '../lib/workspaceTree';
+import type { WorkspaceEntry } from "../lib/workspaceTree";
 
 export interface SearchMatch {
   path: string;
   name: string;
 }
 
-const SKIP_DIRS = new Set(['.git', 'node_modules', 'dist', 'build', '.next', '.cache']);
+const SKIP_DIRS = new Set([".git", "node_modules", "dist", "build", ".next", ".cache"]);
 const MAX_DIRS = 400;
 const MAX_DEPTH = 8;
 const MAX_RESULTS = 100;
@@ -14,10 +14,10 @@ export type DirLister = (dir: string) => Promise<WorkspaceEntry[]>;
 
 export async function workspaceSearch(query: string, listDir: DirLister): Promise<SearchMatch[]> {
   const q = query.trim().toLowerCase();
-  if (q === '') return [];
+  if (q === "") return [];
   const out: SearchMatch[] = [];
   let visited = 0;
-  let frontier = [''];
+  let frontier = [""];
 
   for (let depth = 0; frontier.length > 0 && depth <= MAX_DEPTH; depth++) {
     const next: string[] = [];

@@ -54,10 +54,7 @@ export type ChatComposerProps = {
   charCountTooltip?: string;
 
   softLimitExceededNote?: string;
-  textareaProps?: Omit<
-    React.TextareaHTMLAttributes<HTMLTextAreaElement>,
-    "value" | "onChange"
-  >;
+  textareaProps?: Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange">;
 };
 
 const baseTextarea =
@@ -102,13 +99,9 @@ export function ChatComposer({
   } = textareaProps ?? {};
 
   const submitDisabled =
-    disabled ||
-    isPending ||
-    (!allowEmptyMessage && !value.trim()) ||
-    !canSubmit;
+    disabled || isPending || (!allowEmptyMessage && !value.trim()) || !canSubmit;
 
-  const effectiveShell: "panel" | "plain" =
-    shell ?? (variant === "workbench" ? "plain" : "panel");
+  const effectiveShell: "panel" | "plain" = shell ?? (variant === "workbench" ? "plain" : "panel");
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     onKeyDownProp?.(e);
@@ -122,9 +115,6 @@ export function ChatComposer({
 
   const countWarning = isComposerCharCountWarning(value.length, softMax);
   const overSoftMax = isOverComposerSoftMax(value.length, softMax);
-
-
-
 
   const countStr = charCountFormatter
     ? charCountFormatter(value.length, softMax)
@@ -176,9 +166,7 @@ export function ChatComposer({
 
   const softNoteBlock =
     overSoftMax && softLimitExceededNote ? (
-      <p className="text-text-muted px-2 text-xs">
-        {softLimitExceededNote}
-      </p>
+      <p className="text-text-muted px-2 text-xs">{softLimitExceededNote}</p>
     ) : null;
 
   const stopping = onStop != null;

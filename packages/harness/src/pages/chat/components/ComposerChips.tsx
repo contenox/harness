@@ -8,7 +8,12 @@ import {
   Popover,
   SearchBar,
 } from '@contenox/ui';
-import { buildChoiceEntries, choiceItems, needsSearch, summarizeChoice } from '@contenox/ui/session-lib';
+import {
+  buildChoiceEntries,
+  choiceItems,
+  needsSearch,
+  summarizeChoice,
+} from '@contenox/ui/session-lib';
 import { ConfigOptionControl } from '@contenox/ui/session-ui';
 import { Folder, FolderPlus, MoreHorizontal } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
@@ -38,7 +43,8 @@ export function SelectChip({ option, onChange, onOpen, align = 'end' }: SelectCh
   const panelRef = useRef<HTMLDivElement>(null);
   const searchable = needsSearch(option);
   const entries = useMemo(() => buildChoiceEntries(option, query), [option, query]);
-  if (option.type === 'boolean' || choiceItems(buildChoiceEntries(option)).length === 0) return null;
+  if (option.type === 'boolean' || choiceItems(buildChoiceEntries(option)).length === 0)
+    return null;
 
   const { label, badge, title } = summarizeChoice(option);
   const shown = label ?? t('composer_chips.not_set');
@@ -73,7 +79,9 @@ export function SelectChip({ option, onChange, onOpen, align = 'end' }: SelectCh
           label={
             <>
               {shown}
-              {badge && <span className="text-text-subtle ml-1.5 text-xs font-normal">{badge}</span>}
+              {badge && (
+                <span className="text-text-subtle ml-1.5 text-xs font-normal">{badge}</span>
+              )}
             </>
           }
           className="max-w-[12rem] shrink"
@@ -82,53 +90,55 @@ export function SelectChip({ option, onChange, onOpen, align = 'end' }: SelectCh
         />
       }>
       <div ref={panelRef}>
-      {searchable && (
-        <div className="p-1 pb-1.5">
-          <SearchBar
-            autoFocus
-            value={query}
-            placeholder={t('composer_chips.choice_search')}
-            aria-label={t('composer_chips.choice_search')}
-            onChange={e => setQuery(e.target.value)}
-            onClear={() => setQuery('')}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && items[0]) {
-                e.preventDefault();
-                pick(items[0].value);
-              } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                panelRef.current?.querySelector<HTMLElement>('[role="option"]')?.focus();
-              }
-            }}
-          />
+        {searchable && (
+          <div className="p-1 pb-1.5">
+            <SearchBar
+              autoFocus
+              value={query}
+              placeholder={t('composer_chips.choice_search')}
+              aria-label={t('composer_chips.choice_search')}
+              onChange={e => setQuery(e.target.value)}
+              onClear={() => setQuery('')}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && items[0]) {
+                  e.preventDefault();
+                  pick(items[0].value);
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  panelRef.current?.querySelector<HTMLElement>('[role="option"]')?.focus();
+                }
+              }}
+            />
+          </div>
+        )}
+        <div role="listbox" aria-label={option.name}>
+          {items.length === 0 && (
+            <div className="text-text-subtle px-2.5 py-2 text-[13px]">
+              {t('composer_chips.choice_none')}
+            </div>
+          )}
+          {entries.map(entry =>
+            entry.kind === 'header' ? (
+              <DropdownLabel
+                key={`h:${entry.key}`}
+                role="presentation"
+                className="bg-raised border-line sticky top-0 z-10 border-b">
+                {entry.label}
+              </DropdownLabel>
+            ) : (
+              <DropdownItem
+                key={entry.value}
+                role="option"
+                aria-selected={entry.value === option.currentValue}
+                selected={entry.value === option.currentValue}
+                title={entry.description}
+                onClick={() => pick(entry.value)}>
+                {entry.label}
+              </DropdownItem>
+            ),
+          )}
         </div>
-      )}
-      <div role="listbox" aria-label={option.name}>
-        {items.length === 0 && (
-          <div className="text-text-subtle px-2.5 py-2 text-[13px]">{t('composer_chips.choice_none')}</div>
-        )}
-        {entries.map(entry =>
-          entry.kind === 'header' ? (
-            <DropdownLabel
-              key={`h:${entry.key}`}
-              role="presentation"
-              className="bg-raised sticky top-0 z-10 border-b border-line">
-              {entry.label}
-            </DropdownLabel>
-          ) : (
-            <DropdownItem
-              key={entry.value}
-              role="option"
-              aria-selected={entry.value === option.currentValue}
-              selected={entry.value === option.currentValue}
-              title={entry.description}
-              onClick={() => pick(entry.value)}>
-              {entry.label}
-            </DropdownItem>
-          ),
-        )}
-      </div>
       </div>
     </Dropdown>
   );
@@ -236,7 +246,10 @@ export function ProjectChip({ root, editable, onSelect }: ProjectChipProps) {
             if (e.key === 'Enter') e.preventDefault();
           }}
         />
-        <div role="listbox" aria-label={t('composer_chips.project_list')} className="mt-1 max-h-60 overflow-y-auto">
+        <div
+          role="listbox"
+          aria-label={t('composer_chips.project_list')}
+          className="mt-1 max-h-60 overflow-y-auto">
           {projects.map(p => (
             <DropdownItem
               key={p.path}
@@ -252,7 +265,9 @@ export function ProjectChip({ root, editable, onSelect }: ProjectChipProps) {
               {projectName(p)}
             </DropdownItem>
           ))}
-          {projects.length === 0 && <DropdownLabel>{t('composer_chips.project_none')}</DropdownLabel>}
+          {projects.length === 0 && (
+            <DropdownLabel>{t('composer_chips.project_none')}</DropdownLabel>
+          )}
         </div>
         <DropdownSeparator />
         <DropdownItem

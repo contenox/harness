@@ -31,7 +31,10 @@ export function PresetInstall({ preset }: Props) {
         <InlineNotice variant="warning" className="flex flex-col gap-2">
           <span>
             {preset.node.found
-              ? t('external_agents.install.node_too_old', { min: preset.minNode, found: preset.node.version })
+              ? t('external_agents.install.node_too_old', {
+                  min: preset.minNode,
+                  found: preset.node.version,
+                })
               : t('external_agents.install.node_missing', { min: preset.minNode })}
           </span>
           <ExternalLink href={NODE_DOWNLOAD}>{t('external_agents.install.get_node')}</ExternalLink>

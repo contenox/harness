@@ -1,6 +1,5 @@
 import fuzzysort from 'fuzzysort';
 
-
 export interface ScoreResult {
   score: number;
   indexes: number[];

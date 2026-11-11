@@ -9,13 +9,7 @@ type PageProps = {
   bodyScroll?: "auto" | "hidden";
 };
 
-export function Page({
-  header,
-  footer,
-  children,
-  className,
-  bodyScroll = "auto",
-}: PageProps) {
+export function Page({ header, footer, children, className, bodyScroll = "auto" }: PageProps) {
   return (
     <div className={cn("flex h-full min-h-0 flex-col", className)}>
       {header && <div className="shrink-0">{header}</div>}
@@ -34,16 +28,6 @@ export function Page({
   );
 }
 
-export function Fill({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn("relative min-h-0 min-w-0 flex-1", className)}>
-      {children}
-    </div>
-  );
+export function Fill({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn("relative min-h-0 min-w-0 flex-1", className)}>{children}</div>;
 }

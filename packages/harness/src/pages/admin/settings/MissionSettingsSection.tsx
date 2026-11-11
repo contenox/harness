@@ -5,6 +5,7 @@ import { useAgents } from '../../../hooks/useAgents';
 import { useCLIConfig } from '../../../hooks/useCLIConfig';
 import { useEnvelopes } from '../../../hooks/useEnvelopes';
 import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
+import { useResetAfterSuccess } from '../../../hooks/useResetAfterSuccess';
 import { AuthContext } from '../../../lib/authContext';
 import { missionAgentNames } from '../../../lib/missionAgents';
 import type { CLIConfigUpdateRequest } from '../../../lib/types';
@@ -32,11 +33,7 @@ export function MissionSettingsSection() {
     setPolicy(cliConfig.defaultMissionPolicy || '');
   }, [cliConfig]);
 
-  useEffect(() => {
-    if (!putConfig.isSuccess) return;
-    const timer = window.setTimeout(() => putConfig.reset(), 3000);
-    return () => window.clearTimeout(timer);
-  }, [putConfig.isSuccess, putConfig.reset]);
+  useResetAfterSuccess(putConfig.isSuccess, putConfig.reset);
 
   const missionAgents = useMemo(() => missionAgentNames(agents), [agents]);
 

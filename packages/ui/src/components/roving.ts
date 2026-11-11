@@ -1,10 +1,4 @@
-export type RovingKey =
-  | "ArrowUp"
-  | "ArrowDown"
-  | "ArrowLeft"
-  | "ArrowRight"
-  | "Home"
-  | "End";
+export type RovingKey = "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight" | "Home" | "End";
 
 export type RovingOptions = {
   /** Which arrow keys move. Default "both". */

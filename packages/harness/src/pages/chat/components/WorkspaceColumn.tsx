@@ -8,6 +8,8 @@ export interface WorkspaceColumnProps {
   files: UseWorkspaceFilesResult;
   selectedFilePath: string | null;
   onOpenFile: (path: string) => void;
+  onPathMoved?: (from: string, to: string) => void;
+  onPathDeleted?: (path: string) => void;
 }
 
 /**
@@ -19,6 +21,8 @@ export function WorkspaceColumn({
   files,
   selectedFilePath,
   onOpenFile,
+  onPathMoved,
+  onPathDeleted,
 }: WorkspaceColumnProps) {
   const { t } = useTranslation();
 
@@ -34,6 +38,8 @@ export function WorkspaceColumn({
             files={files}
             onOpenFile={onOpenFile}
             selectedFilePath={selectedFilePath}
+            onPathMoved={onPathMoved}
+            onPathDeleted={onPathDeleted}
             compact
           />
         ) : (

@@ -35,7 +35,10 @@ export function SessionRow({ session, active, hasPendingPermission, onNavigate, 
       title={agentName ? `${label} - ${agentName}` : label}
       icon={
         hasPendingPermission ? (
-          <CircleDot className="text-text-warning" aria-label={t('acp_sidebar.pending_permission')} />
+          <CircleDot
+            className="text-text-warning"
+            aria-label={t('acp_sidebar.pending_permission')}
+          />
         ) : undefined
       }
       meta={relative}

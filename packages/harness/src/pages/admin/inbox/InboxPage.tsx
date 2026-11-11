@@ -71,8 +71,7 @@ function writeLastSeen(iso?: string): void {
   try {
     if (typeof localStorage === 'undefined' || !iso) return;
     localStorage.setItem(LAST_SEEN_KEY, iso);
-  } catch {
-  }
+  } catch {}
 }
 
 export default function InboxPage() {
@@ -167,7 +166,6 @@ export default function InboxPage() {
           </div>
         </div>
 
-
         {approvals.length > 0 && (
           <Section
             variant="empty"
@@ -191,9 +189,11 @@ export default function InboxPage() {
           </Section>
         )}
 
-
         {stalled.length > 0 && (
-          <Section variant="empty" title={t('inbox.stalled_title')} description={t('inbox.stalled_description')}>
+          <Section
+            variant="empty"
+            title={t('inbox.stalled_title')}
+            description={t('inbox.stalled_description')}>
             <div className="mt-4 space-y-2">
               {stalled.map(unit => (
                 <StalledUnitRow
@@ -207,7 +207,6 @@ export default function InboxPage() {
           </Section>
         )}
 
-
         {attentionClear && (
           <InlineNotice variant="info">
             <span className="font-medium">{t('inbox.all_clear_title')}</span>{' '}
@@ -215,8 +214,10 @@ export default function InboxPage() {
           </InlineNotice>
         )}
 
-
-        <Section variant="empty" title={t('inbox.reports_title')} description={t('inbox.reports_description')}>
+        <Section
+          variant="empty"
+          title={t('inbox.reports_title')}
+          description={t('inbox.reports_description')}>
           <div className="mt-4 space-y-6">
             {reports.isLoading ? (
               <LoadingState message={t('inbox.reports_loading')} />
@@ -237,7 +238,6 @@ export default function InboxPage() {
             )}
           </div>
         </Section>
-
 
         {running.live > 0 && (
           <P variant="muted" className="text-sm">
@@ -410,7 +410,6 @@ function ApprovalCard({
           {`${t('inbox.answer_error')} ${errorMessage ?? ''}`}
         </InlineNotice>
       )}
-
 
       {attention ? (
         <form

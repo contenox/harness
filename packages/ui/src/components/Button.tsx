@@ -71,13 +71,10 @@ const variantClasses = {
   secondary: "bg-sidebar text-text border border-transparent hover:bg-selected",
   outline: "bg-transparent text-text border border-line-strong hover:bg-hover",
   ghost: "bg-transparent text-text border border-transparent hover:bg-hover",
-  danger:
-    "bg-transparent text-text-error border border-transparent hover:bg-error/10",
-  dangerSolid:
-    "bg-error text-white border border-transparent hover:bg-error-600",
+  danger: "bg-transparent text-text-error border border-transparent hover:bg-error/10",
+  dangerSolid: "bg-error text-white border border-transparent hover:bg-error-600",
   text: "bg-transparent text-link border border-transparent hover:underline underline-offset-2 px-1",
-  success:
-    "bg-transparent text-text-success border border-transparent hover:bg-success/10",
+  success: "bg-transparent text-text-success border border-transparent hover:bg-success/10",
 } as const;
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -119,8 +116,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       resolved = "secondary";
     }
 
-    const resolvedSize =
-      size === "xl" || size === "2xl" ? "lg" : size;
+    const resolvedSize = size === "xl" || size === "2xl" ? "lg" : size;
     const isText = resolved === "text";
     const isIcon = resolvedSize.startsWith("icon");
 

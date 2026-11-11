@@ -4,11 +4,7 @@ import { cn } from "../../utils";
 import { Badge } from "../Badge";
 import { Button } from "../Button";
 import { Card } from "../Card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "../Collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../Collapsible";
 import { Panel } from "../Panel";
 import { Span } from "../Typography";
 import { Tooltip } from "../Tooltip";
@@ -29,8 +25,6 @@ function defaultAvatarLetter(role: ChatMessageBaseProps["role"]): string {
 }
 
 function avatarRingClass(role: ChatMessageBaseProps["role"]): string {
-
-
   switch (role) {
     case "user":
       return "bg-solid text-on-solid";
@@ -43,9 +37,7 @@ function avatarRingClass(role: ChatMessageBaseProps["role"]): string {
   }
 }
 
-function roleBadgeVariant(
-  role: ChatMessageBaseProps["role"],
-): "primary" | "accent" | "secondary" {
+function roleBadgeVariant(role: ChatMessageBaseProps["role"]): "primary" | "accent" | "secondary" {
   if (role === "user") return "primary";
   if (role === "system") return "accent";
   return "secondary";
@@ -102,19 +94,11 @@ export function ChatMessage({
   const [copied, setCopied] = useState(false);
   const isUser = role === "user";
 
-
-
   const effectiveOpen = collapsible ? open : true;
 
-  const bubbleRing =
-    isLatest && highlightLatest
-      ? "ring-1 ring-line-strong"
-      : "";
+  const bubbleRing = isLatest && highlightLatest ? "ring-1 ring-line-strong" : "";
 
-  const transcriptRing =
-    isLatest && highlightLatest
-      ? "ring-1 ring-line-strong"
-      : "";
+  const transcriptRing = isLatest && highlightLatest ? "ring-1 ring-line-strong" : "";
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
@@ -128,10 +112,6 @@ export function ChatMessage({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
 
-
-
-
-
       button?.blur();
     }
   };
@@ -143,24 +123,17 @@ export function ChatMessage({
 
   const ts = timestampTooltip ? (
     <Tooltip content={timestampTooltip}>
-      <Span
-        variant="muted"
-        className="text-text-subtle text-xs"
-      >
+      <Span variant="muted" className="text-text-subtle text-xs">
         {timestamp}
       </Span>
     </Tooltip>
   ) : (
-    <Span
-      variant="muted"
-      className="text-text-subtle text-xs"
-    >
+    <Span variant="muted" className="text-text-subtle text-xs">
       {timestamp}
     </Span>
   );
 
-  const articleLabel =
-    ariaLabel ?? (typeof roleLabel === "string" ? roleLabel : "message");
+  const articleLabel = ariaLabel ?? (typeof roleLabel === "string" ? roleLabel : "message");
 
   if (appearance === "plain") {
     const copyButton = copyText != null && (
@@ -168,7 +141,7 @@ export function ChatMessage({
         variant="ghost"
         size="sm"
         className="h-6 text-xs"
-        onClick={e => void handleCopy(e.currentTarget)}
+        onClick={(e) => void handleCopy(e.currentTarget)}
         aria-live="polite"
         type="button"
         aria-label={
@@ -204,12 +177,12 @@ export function ChatMessage({
         <div
           className={cn(
             "min-w-0",
-            isUser ? "max-w-[85%] rounded-2xl bg-selected px-4 py-2.5 text-text" : "w-full text-text",
+            isUser
+              ? "max-w-[85%] rounded-2xl bg-selected px-4 py-2.5 text-text"
+              : "w-full text-text",
           )}
         >
-          <div className="prose prose-compact dark:prose-invert max-w-none min-w-0">
-            {children}
-          </div>
+          <div className="prose prose-compact dark:prose-invert max-w-none min-w-0">{children}</div>
           {error != null && (
             <Panel className="mt-2 rounded-lg bg-error/10 p-3 text-text">
               <div className="flex items-center justify-between gap-2">
@@ -256,12 +229,7 @@ export function ChatMessage({
             )}
             {collapsible && (
               <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  className="h-6 px-2 text-xs"
-                  type="button"
-                >
+                <Button variant="ghost" size="xs" className="h-6 px-2 text-xs" type="button">
                   {open ? collapseLabels.open : collapseLabels.closed}
                 </Button>
               </CollapsibleTrigger>
@@ -300,7 +268,7 @@ export function ChatMessage({
                   variant="ghost"
                   size="sm"
                   className="h-6 text-xs"
-                  onClick={e => void handleCopy(e.currentTarget)}
+                  onClick={(e) => void handleCopy(e.currentTarget)}
                   aria-live="polite"
                   type="button"
                   aria-label={
@@ -348,12 +316,7 @@ export function ChatMessage({
           {avatar ?? defaultAvatarLetter(role)}
         </div>
 
-        <div
-          className={cn(
-            "flex max-w-[85%] flex-col gap-2",
-            isUser && "items-end",
-          )}
-        >
+        <div className={cn("flex max-w-[85%] flex-col gap-2", isUser && "items-end")}>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={roleBadgeVariant(role)} size="sm">
               {roleLabel}
@@ -366,12 +329,7 @@ export function ChatMessage({
             )}
             {collapsible && (
               <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  className="h-6 px-2 text-xs"
-                  type="button"
-                >
+                <Button variant="ghost" size="xs" className="h-6 px-2 text-xs" type="button">
                   {open ? collapseLabels.open : collapseLabels.closed}
                 </Button>
               </CollapsibleTrigger>
@@ -381,15 +339,9 @@ export function ChatMessage({
           <CollapsibleContent>
             <Card
               variant="surface"
-              className={cn(
-                "rounded-xl border border-line p-4",
-                bubbleBgClass(role),
-                bubbleRing,
-              )}
+              className={cn("rounded-xl border border-line p-4", bubbleBgClass(role), bubbleRing)}
             >
-              <div className="prose prose-compact dark:prose-invert max-w-none">
-                {children}
-              </div>
+              <div className="prose prose-compact dark:prose-invert max-w-none">{children}</div>
 
               {error != null && (
                 <Panel className="mt-2 rounded-lg bg-error/10 p-3 text-text">
@@ -416,7 +368,7 @@ export function ChatMessage({
                   variant="ghost"
                   size="sm"
                   className="h-6 text-xs"
-                  onClick={e => void handleCopy(e.currentTarget)}
+                  onClick={(e) => void handleCopy(e.currentTarget)}
                   aria-live="polite"
                   type="button"
                   aria-label={

@@ -46,7 +46,8 @@ export function TranscriptEmbedCard({
       className={cn(
         "border-surface-300 dark:border-dark-surface-400 bg-surface-50 dark:bg-dark-surface-200 w-full overflow-hidden rounded-lg border",
         className,
-      )}>
+      )}
+    >
       <CollapsibleTrigger
         className={cn(
           "h-auto min-h-0 w-full justify-between gap-2 rounded-none border-0 bg-transparent px-3 py-2.5 font-normal shadow-none ring-0 ring-offset-0",

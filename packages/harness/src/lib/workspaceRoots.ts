@@ -1,6 +1,5 @@
 import type { WorkspaceRoot } from './types';
 
-
 export function activeWorkspaceRoot(roots: readonly WorkspaceRoot[]): WorkspaceRoot | undefined {
   return roots.find(r => r.default) ?? roots[0];
 }

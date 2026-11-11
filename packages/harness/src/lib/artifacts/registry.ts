@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode, createElement } from 'react';
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 
 import type { ChatContextArtifact } from '../types';
 
@@ -35,7 +43,7 @@ export class ArtifactRegistry {
   }
 
   collect(): ChatContextArtifact[] {
-    return this.collectWithSources().map((p) => p.artifact);
+    return this.collectWithSources().map(p => p.artifact);
   }
 
   collectWithSources(): Array<{ source: ArtifactSource; artifact: ChatContextArtifact }> {
@@ -85,7 +93,7 @@ export function useArtifactSource(source: ArtifactSource | null) {
 export function useArtifactSources(): ArtifactSource[] {
   const registry = useArtifactRegistry();
   return useSyncExternalStore(
-    (cb) => registry.subscribe(cb),
+    cb => registry.subscribe(cb),
     () => registry.list(),
     () => [],
   );

@@ -1,20 +1,20 @@
-import { Button, Dialog, P, Page, Small } from '@contenox/ui';
-import { useState } from 'react';
-import { TextField } from '@contenox/ui';
-import { HostStateBadge } from '../HostStateBadge';
-import { ListCard } from '@contenox/ui';
-import { ListSkeleton, ScreenError } from '../ScreenState';
-import { ScreenBody } from '@contenox/ui';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { useProductPorts } from '../../ports';
-import type { Instance } from '../../lib/api/types';
-import { hostDetail } from '../../lib/hostState';
-import { FirstMachineCard } from './FirstMachineCard';
-import { PairingKeyPanel } from './PairingKeyPanel';
+import { Button, Dialog, P, Page, Small } from "@contenox/ui";
+import { useState } from "react";
+import { TextField } from "@contenox/ui";
+import { HostStateBadge } from "../HostStateBadge";
+import { ListCard } from "@contenox/ui";
+import { ListSkeleton, ScreenError } from "../ScreenState";
+import { ScreenBody } from "@contenox/ui";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { useProductPorts } from "../../ports";
+import type { Instance } from "../../lib/api/types";
+import { hostDetail } from "../../lib/hostState";
+import { FirstMachineCard } from "./FirstMachineCard";
+import { PairingKeyPanel } from "./PairingKeyPanel";
 
 export default function HostsPage() {
   const { useAuth, useHosts } = useProductPorts();
-  const accountID = useAuth().accountID ?? '';
+  const accountID = useAuth().accountID ?? "";
   const { data, isPending, error, refetch, isFetching } = useHosts(accountID);
 
   return (
@@ -28,14 +28,13 @@ export default function HostsPage() {
         )}
 
         {data?.length === 0 && <FirstMachineCard />}
-        {data?.map(host => (
+        {data?.map((host) => (
           <HostCard key={host.id} host={host} accountID={accountID} />
         ))}
       </ScreenBody>
     </Page>
   );
 }
-
 
 function HostCard({ host, accountID }: { host: Instance; accountID: string }) {
   const { useRevokeHost } = useProductPorts();
@@ -48,7 +47,8 @@ function HostCard({ host, accountID }: { host: Instance; accountID: string }) {
     <ListCard
       title={host.name}
       meta={<Small>{hostDetail(host)}</Small>}
-      trailing={<HostStateBadge host={host} />}>
+      trailing={<HostStateBadge host={host} />}
+    >
       {!revoked && (
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setRenaming(true)}>
@@ -75,7 +75,6 @@ function HostCard({ host, accountID }: { host: Instance; accountID: string }) {
         onClose={() => setRenaming(false)}
       />
 
-
       <Dialog open={confirming} onClose={() => setConfirming(false)} title={`Revoke ${host.name}?`}>
         <div className="flex flex-col gap-4">
           <P className="text-sm">
@@ -89,7 +88,8 @@ function HostCard({ host, accountID }: { host: Instance; accountID: string }) {
               variant="danger"
               className="flex-1"
               isLoading={revoke.isPending}
-              onClick={() => revoke.mutate(host.id, { onSuccess: () => setConfirming(false) })}>
+              onClick={() => revoke.mutate(host.id, { onSuccess: () => setConfirming(false) })}
+            >
               Revoke
             </Button>
             <Button variant="outline" className="flex-1" onClick={() => setConfirming(false)}>
@@ -101,7 +101,6 @@ function HostCard({ host, accountID }: { host: Instance; accountID: string }) {
     </ListCard>
   );
 }
-
 
 function RenameDialog({
   host,
@@ -118,7 +117,7 @@ function RenameDialog({
   const rename = useRenameHost(accountID);
   const [name, setName] = useState(host.name);
   const trimmed = name.trim();
-  const canSubmit = trimmed !== '' && trimmed !== host.name;
+  const canSubmit = trimmed !== "" && trimmed !== host.name;
 
   const close = () => {
     setName(host.name);
@@ -133,7 +132,7 @@ function RenameDialog({
           label="Name"
           required
           value={name}
-          onChange={event => setName(event.target.value)}
+          onChange={(event) => setName(event.target.value)}
           disabled={rename.isPending}
           autoCapitalize="none"
           autoCorrect="off"
@@ -148,7 +147,8 @@ function RenameDialog({
             disabled={!canSubmit}
             onClick={() =>
               rename.mutate({ instanceID: host.id, name: trimmed }, { onSuccess: close })
-            }>
+            }
+          >
             Save
           </Button>
           <Button variant="outline" className="flex-1" onClick={close} disabled={rename.isPending}>

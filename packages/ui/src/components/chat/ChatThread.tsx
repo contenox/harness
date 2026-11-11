@@ -19,25 +19,14 @@ export function ChatThread({
   scrollClassName,
   ariaLive = "polite",
 }: ChatThreadProps) {
-  const liveProps =
-    ariaLive === false
-      ? {}
-      : { role: "log" as const, "aria-live": ariaLive };
+  const liveProps = ariaLive === false ? {} : { role: "log" as const, "aria-live": ariaLive };
 
   return (
-    <div
-      className={cn(
-        "text-text flex min-h-0 min-w-0 flex-1 flex-col",
-        className,
-      )}
-    >
+    <div className={cn("text-text flex min-h-0 min-w-0 flex-1 flex-col", className)}>
       <div
         ref={containerRef}
         data-chat-thread=""
-        className={cn(
-          "flex-1 space-y-6 overflow-auto p-6",
-          scrollClassName,
-        )}
+        className={cn("flex-1 space-y-6 overflow-auto p-6", scrollClassName)}
         {...liveProps}
       >
         {children}

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
+import type { WorkspaceSearchMatch } from '../lib/types';
 import {
   groupMatchesByFile,
   runWorkspaceSearch,
   type SearchFetch,
   type SearchFileGroup,
 } from '../lib/workspaceSearch';
-import type { WorkspaceSearchMatch } from '../lib/types';
-
 
 export type SearchStatus = 'idle' | 'searching' | 'done' | 'refusal' | 'dependency' | 'error';
 

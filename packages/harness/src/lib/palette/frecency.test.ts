@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  blend,
-  frecencyBoost,
-  pruneStore,
-  recordUsage,
-  type FrecencyStore,
-} from './frecency';
+import { blend, frecencyBoost, pruneStore, recordUsage, type FrecencyStore } from './frecency';
 
 const HALF_LIFE_MS = 3 * 24 * 60 * 60 * 1000;
 const NOW = 1_000_000_000_000;

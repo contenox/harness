@@ -12,20 +12,54 @@ import {
 } from 'lucide-react';
 import { createElement } from 'react';
 import type { TranslationKey } from '../../i18n';
-import { externalAgentFromMeta } from '../acp';
 import { meaningfulTitle } from '../../pages/chat/lib/sessionLabel';
+import { externalAgentFromMeta } from '../acp';
 import type { PaletteItem, PaletteProvider, PaletteProviderContext } from './types';
-
 
 const icon = (i: LucideIcon) => createElement(i, { className: 'h-4 w-4', 'aria-hidden': true });
 
-const NAV_TARGETS: { path: string; labelKey: TranslationKey; icon: LucideIcon; keywords: string[] }[] = [
-  { path: '/chat', labelKey: 'navbar.chat', icon: MessageSquare, keywords: ['chat', 'session', 'sitzung'] },
-  { path: '/fleet', labelKey: 'navbar.fleet', icon: Radar, keywords: ['fleet', 'flotte', 'board', 'instances', 'instanzen'] },
-  { path: '/missions', labelKey: 'navbar.missions', icon: Rocket, keywords: ['missions', 'missionen'] },
-  { path: '/inbox', labelKey: 'navbar.inbox', icon: Inbox, keywords: ['inbox', 'posteingang', 'approvals', 'freigaben', 'asks'] },
-  { path: '/backends', labelKey: 'navbar.backends', icon: Database, keywords: ['backends', 'models', 'modelle', 'providers'] },
-  { path: '/settings', labelKey: 'navbar.settings', icon: Settings, keywords: ['settings', 'einstellungen', 'defaults', 'config'] },
+const NAV_TARGETS: {
+  path: string;
+  labelKey: TranslationKey;
+  icon: LucideIcon;
+  keywords: string[];
+}[] = [
+  {
+    path: '/chat',
+    labelKey: 'navbar.chat',
+    icon: MessageSquare,
+    keywords: ['chat', 'session', 'sitzung'],
+  },
+  {
+    path: '/fleet',
+    labelKey: 'navbar.fleet',
+    icon: Radar,
+    keywords: ['fleet', 'flotte', 'board', 'instances', 'instanzen'],
+  },
+  {
+    path: '/missions',
+    labelKey: 'navbar.missions',
+    icon: Rocket,
+    keywords: ['missions', 'missionen'],
+  },
+  {
+    path: '/inbox',
+    labelKey: 'navbar.inbox',
+    icon: Inbox,
+    keywords: ['inbox', 'posteingang', 'approvals', 'freigaben', 'asks'],
+  },
+  {
+    path: '/backends',
+    labelKey: 'navbar.backends',
+    icon: Database,
+    keywords: ['backends', 'models', 'modelle', 'providers'],
+  },
+  {
+    path: '/settings',
+    labelKey: 'navbar.settings',
+    icon: Settings,
+    keywords: ['settings', 'einstellungen', 'defaults', 'config'],
+  },
 ];
 
 export const actionsProvider: PaletteProvider = (ctx: PaletteProviderContext): PaletteItem[] => {
@@ -120,8 +154,7 @@ export const agentsProvider: PaletteProvider = (ctx): PaletteItem[] =>
 export const sessionsProvider: PaletteProvider = (ctx): PaletteItem[] =>
   ctx.sessions.map(s => {
     const agentName = externalAgentFromMeta(s._meta);
-    const title =
-      meaningfulTitle(s) ?? ctx.t('acp_sidebar.untitled_session');
+    const title = meaningfulTitle(s) ?? ctx.t('acp_sidebar.untitled_session');
     return {
       id: `session:${s.sessionId}`,
       type: 'session',
@@ -146,16 +179,23 @@ export const workspaceProvider: PaletteProvider = (ctx): PaletteItem[] =>
 
 export const inboxProvider: PaletteProvider = (ctx): PaletteItem[] =>
   ctx.approvals.map(a => {
-    const tool = [a.toolsName, a.toolName].map(p => p?.trim()).filter(Boolean).join(' / ');
+    const tool = [a.toolsName, a.toolName]
+      .map(p => p?.trim())
+      .filter(Boolean)
+      .join(' / ');
     return {
       id: `inbox:${a.id}`,
       type: 'inbox',
       title: tool || ctx.t('palette.approval_fallback'),
       subtitle: a.agentName ?? a.policyName ?? ctx.t('palette.type_inbox'),
       icon: icon(Inbox),
-      keywords: [a.agentName ?? '', a.missionId ?? '', a.policyName ?? '', a.toolName, a.toolsName].filter(
-        Boolean,
-      ),
+      keywords: [
+        a.agentName ?? '',
+        a.missionId ?? '',
+        a.policyName ?? '',
+        a.toolName,
+        a.toolsName,
+      ].filter(Boolean),
       action: () => ctx.navigate('/inbox'),
     };
   });

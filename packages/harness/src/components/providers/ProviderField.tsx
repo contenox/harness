@@ -18,7 +18,16 @@ type Props = {
 };
 
 /** One field of the provider setup schema, rendered with the matching library control. */
-export function ProviderField({ spec, value, onChange, errors, disabled, secretStored, description, inactive }: Props) {
+export function ProviderField({
+  spec,
+  value,
+  onChange,
+  errors,
+  disabled,
+  secretStored,
+  description,
+  inactive,
+}: Props) {
   const { t } = useTranslation();
   const errorKey = errors[spec.id];
   const error = errorKey ? t(errorKey) : undefined;

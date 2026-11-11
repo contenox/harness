@@ -1,9 +1,9 @@
-import type { ImagePart } from '@contenox/acp-client';
-import { Mic, Music, Square, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button } from '../../../components/Button';
-import { InlineNotice } from '../../../components/InlineNotice';
-import { Span } from '../../../components/Typography';
+import type { ImagePart } from "@contenox/acp-client";
+import { Mic, Music, Square, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "../../../components/Button";
+import { InlineNotice } from "../../../components/InlineNotice";
+import { Span } from "../../../components/Typography";
 import {
   AUDIO_ACCEPT_ATTRIBUTE,
   AudioAttachmentError,
@@ -11,7 +11,7 @@ import {
   remainingAudioBudget,
   type AudioAttachmentErrorReason,
   type PendingAudioAttachment,
-} from '../lib/audioAttachments';
+} from "../lib/audioAttachments";
 import {
   canRecordAudio,
   formatSeconds,
@@ -19,20 +19,20 @@ import {
   RECORDING_NAME,
   startBrowserRecording,
   type ActiveRecording,
-} from '../lib/audioRecording';
-import { fitsPromptWireLimit } from '../lib/imageAttachments';
+} from "../lib/audioRecording";
+import { fitsPromptWireLimit } from "../lib/imageAttachments";
 
 export type AudioAttachmentNotice =
-  | 'not_supported'
-  | 'message_too_large'
-  | 'mic_unavailable'
-  | 'no_room'
+  | "not_supported"
+  | "message_too_large"
+  | "mic_unavailable"
+  | "no_room"
   | AudioAttachmentErrorReason;
 
 const NOTICE_TIMEOUT_MS = 8000;
 const RECORDING_TICK_MS = 250;
 
-type WirePart = Pick<ImagePart, 'data' | 'mimeType'>;
+type WirePart = Pick<ImagePart, "data" | "mimeType">;
 
 export interface RecordingReadout {
   elapsedSeconds: number;
@@ -110,14 +110,14 @@ export function useAudioAttachments(
     async (files: File[]) => {
       if (files.length === 0) return;
       if (!supported) {
-        showNotice('not_supported');
+        showNotice("not_supported");
         return;
       }
       for (const file of files) {
         try {
           stage(await prepareAudioAttachment(file, { budgetBytes: budgetNow() }));
         } catch (err) {
-          showNotice(err instanceof AudioAttachmentError ? err.reason : 'process_failed');
+          showNotice(err instanceof AudioAttachmentError ? err.reason : "process_failed");
         }
       }
     },
@@ -125,8 +125,8 @@ export function useAudioAttachments(
   );
 
   const removeClip = useCallback((id: string) => {
-    setClips(prev => {
-      const next = prev.filter(clip => clip.id !== id);
+    setClips((prev) => {
+      const next = prev.filter((clip) => clip.id !== id);
       clipsRef.current = next;
       return next;
     });
@@ -142,11 +142,11 @@ export function useAudioAttachments(
     const recorder = recorderRef.current;
     if (!recorder) return;
     clearRecordingUi();
-    void recorder.finish().then(finished => {
+    void recorder.finish().then((finished) => {
       if (!finished) return;
 
       if (finished.data.length > budgetNow()) {
-        showNotice('too_large');
+        showNotice("too_large");
         return;
       }
       stage({
@@ -160,13 +160,13 @@ export function useAudioAttachments(
 
   const startRecording = useCallback(async () => {
     if (!supported) {
-      showNotice('not_supported');
+      showNotice("not_supported");
       return;
     }
     if (recorderRef.current) return;
     const limitSeconds = maxRecordingSeconds(budgetNow());
     if (limitSeconds <= 0) {
-      showNotice('no_room');
+      showNotice("no_room");
       return;
     }
     try {
@@ -181,7 +181,7 @@ export function useAudioAttachments(
         if (live) setRecording({ elapsedSeconds: live.elapsedSeconds(), limitSeconds });
       }, RECORDING_TICK_MS);
     } catch {
-      showNotice('mic_unavailable');
+      showNotice("mic_unavailable");
     }
   }, [supported, showNotice, budgetNow, settleRecording]);
 
@@ -195,7 +195,7 @@ export function useAudioAttachments(
   const approveForSend = useCallback(
     (text: string): boolean => {
       if (!fitsPromptWireLimit(text, [...carriedRef.current, ...clipsRef.current])) {
-        showNotice('message_too_large');
+        showNotice("message_too_large");
         return false;
       }
       return true;
@@ -214,7 +214,10 @@ export function useAudioAttachments(
 
   const restoreClips = useCallback((restored: PendingAudioAttachment[]) => {
     if (restored.length === 0) return;
-    const next = [...restored, ...clipsRef.current.filter(c => !restored.some(r => r.id === c.id))];
+    const next = [
+      ...restored,
+      ...clipsRef.current.filter((c) => !restored.some((r) => r.id === c.id)),
+    ];
     clipsRef.current = next;
     setClips(next);
   }, []);
@@ -245,13 +248,15 @@ export function ComposerAudioAttachments({
   return (
     <ul
       aria-label="Attached audio"
-      className="flex list-none gap-2 overflow-x-auto overscroll-x-contain p-0">
-      {clips.map(clip => {
+      className="flex list-none gap-2 overflow-x-auto overscroll-x-contain p-0"
+    >
+      {clips.map((clip) => {
         const name = clip.name || RECORDING_NAME;
         return (
           <li
             key={clip.id}
-            className="border-surface-300 dark:border-dark-surface-400 bg-surface-50 dark:bg-dark-surface-200 flex shrink-0 items-center gap-2 overflow-hidden rounded border pl-2">
+            className="border-surface-300 dark:border-dark-surface-400 bg-surface-50 dark:bg-dark-surface-200 flex shrink-0 items-center gap-2 overflow-hidden rounded border pl-2"
+          >
             <Music
               className="text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0"
               aria-hidden
@@ -273,7 +278,8 @@ export function ComposerAudioAttachments({
               onClick={() => onRemove(clip.id)}
               aria-label={`Remove ${name}`}
               title={`Remove ${name}`}
-              className="text-text-muted hover:bg-surface-100 hover:text-text dark:text-dark-text-muted dark:hover:bg-dark-surface-400 dark:hover:text-dark-text flex h-14 items-center justify-center self-stretch px-2">
+              className="text-text-muted hover:bg-surface-100 hover:text-text dark:text-dark-text-muted dark:hover:bg-dark-surface-400 dark:hover:text-dark-text flex h-14 items-center justify-center self-stretch px-2"
+            >
               <X className="h-4 w-4" aria-hidden />
             </button>
           </li>
@@ -291,10 +297,10 @@ export interface AttachAudioLabels {
 }
 
 const DEFAULT_AUDIO_LABELS: AttachAudioLabels = {
-  add: 'Add audio',
-  record: 'Record a voice note',
-  stop: 'Stop recording and attach',
-  discard: 'Discard recording',
+  add: "Add audio",
+  record: "Record a voice note",
+  stop: "Stop recording and attach",
+  discard: "Discard recording",
 };
 
 export function AttachAudioButtons({
@@ -326,12 +332,14 @@ export function AttachAudioButtons({
           size="icon"
           aria-label={l.stop}
           title={l.stop}
-          onClick={onStopRecording}>
+          onClick={onStopRecording}
+        >
           <Square className="text-error-600 dark:text-dark-error-500 h-5 w-5" aria-hidden />
         </Button>
         <Span
           className="text-text-muted dark:text-dark-text-muted text-xs tabular-nums"
-          role="timer">
+          role="timer"
+        >
           {formatSeconds(recording.elapsedSeconds)} / {formatSeconds(recording.limitSeconds)}
         </Span>
         <Button
@@ -341,7 +349,8 @@ export function AttachAudioButtons({
           size="icon"
           aria-label={l.discard}
           title={l.discard}
-          onClick={onCancelRecording}>
+          onClick={onCancelRecording}
+        >
           <X className="h-5 w-5" aria-hidden />
         </Button>
       </span>
@@ -358,10 +367,10 @@ export function AttachAudioButtons({
         aria-hidden
         className="sr-only"
         data-testid="composer-audio-input"
-        onChange={e => {
+        onChange={(e) => {
           const files = Array.from(e.currentTarget.files ?? []);
 
-          e.currentTarget.value = '';
+          e.currentTarget.value = "";
           if (files.length > 0) onFiles(files);
         }}
       />
@@ -373,7 +382,8 @@ export function AttachAudioButtons({
         disabled={disabled}
         aria-label={l.add}
         title={l.add}
-        onClick={() => inputRef.current?.click()}>
+        onClick={() => inputRef.current?.click()}
+      >
         <Music className="h-5 w-5" aria-hidden />
       </Button>
 
@@ -386,7 +396,8 @@ export function AttachAudioButtons({
           disabled={disabled}
           aria-label={l.record}
           title={l.record}
-          onClick={onStartRecording}>
+          onClick={onStartRecording}
+        >
           <Mic className="h-5 w-5" aria-hidden />
         </Button>
       )}
@@ -395,18 +406,18 @@ export function AttachAudioButtons({
 }
 
 const NOTICE_TEXT: Record<AudioAttachmentNotice, string> = {
-  not_supported: 'This machine’s agent does not accept audio.',
+  not_supported: "This machine’s agent does not accept audio.",
   unsupported:
-    'That file is not an audio format this machine accepts — WAV, MP3, M4A, OGG, or FLAC.',
+    "That file is not an audio format this machine accepts — WAV, MP3, M4A, OGG, or FLAC.",
   too_large:
-    'That clip is too large to send: attachments share one message of about 700 kB. Try a shorter clip or a smaller file.',
-  process_failed: 'That audio file could not be read.',
+    "That clip is too large to send: attachments share one message of about 700 kB. Try a shorter clip or a smaller file.",
+  process_failed: "That audio file could not be read.",
   message_too_large:
-    'That message is too long to send with its attachments. Shorten it, or remove one.',
+    "That message is too long to send with its attachments. Shorten it, or remove one.",
   mic_unavailable:
-    'The microphone is not available. Allow microphone access for this site and try again.',
+    "The microphone is not available. Allow microphone access for this site and try again.",
   no_room:
-    'This message has no room left for a recording — attachments share one message of about 700 kB. Remove one first.',
+    "This message has no room left for a recording — attachments share one message of about 700 kB. Remove one first.",
 };
 
 export function AudioAttachmentNoticeView({ notice }: { notice: AudioAttachmentNotice | null }) {

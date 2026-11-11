@@ -40,11 +40,7 @@ function render(
     createElement(
       MemoryRouter,
       null,
-      createElement(
-        QueryClientProvider,
-        { client },
-        createElement(AdoptedSessionBanner, props),
-      ),
+      createElement(QueryClientProvider, { client }, createElement(AdoptedSessionBanner, props)),
     ),
   );
 }

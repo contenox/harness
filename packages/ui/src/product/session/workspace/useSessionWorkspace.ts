@@ -7,14 +7,14 @@ import {
   type MouseEvent as ReactMouseEvent,
   type SetStateAction,
   type SyntheticEvent as ReactSyntheticEvent,
-} from 'react';
-import type { WorkspaceListing } from '@contenox/acp-client';
-import { useMentionMenu, type UseMentionMenuResult } from '../hooks/useMentionMenu';
-import { activeMentions, type WorkspaceFileRef } from '../lib/mentions';
-import type { DirCache } from '../lib/workspaceTree';
-import { useFileCanvas, type UseFileCanvasResult } from './fileCanvasState';
-import type { SelectedRegion } from './monacoViewShared';
-import { makeQuote, selectionBlockText } from './selectionQuote';
+} from "react";
+import type { WorkspaceListing } from "@contenox/acp-client";
+import { useMentionMenu, type UseMentionMenuResult } from "../hooks/useMentionMenu";
+import { activeMentions, type WorkspaceFileRef } from "../lib/mentions";
+import type { DirCache } from "../lib/workspaceTree";
+import { useFileCanvas, type UseFileCanvasResult } from "./fileCanvasState";
+import type { SelectedRegion } from "./monacoViewShared";
+import { makeQuote, selectionBlockText } from "./selectionQuote";
 
 export interface CaretTextareaProps {
   onSelect: (e: ReactSyntheticEvent<HTMLTextAreaElement>) => void;
@@ -70,7 +70,7 @@ export function useSessionWorkspace(
     onInsert: (nextDraft, nextCaret, file) => {
       setDraft(nextDraft);
       setCaret(nextCaret);
-      setMentions(prev => (prev.some(m => m.path === file.path) ? prev : [...prev, file]));
+      setMentions((prev) => (prev.some((m) => m.path === file.path) ? prev : [...prev, file]));
     },
     onDrill: (nextDraft, nextCaret) => {
       setDraft(nextDraft);
@@ -82,17 +82,19 @@ export function useSessionWorkspace(
   const askAboutSelection = useCallback(
     (path: string, region: SelectedRegion) => {
       if (!region.text.trim()) return;
-      const block = selectionBlockText(makeQuote(path, region.startLine, region.endLine, region.text));
-      setDraft(d => (d ? `${d}\n\n${block}` : block));
-      canvas.activate('');
+      const block = selectionBlockText(
+        makeQuote(path, region.startLine, region.endLine, region.text),
+      );
+      setDraft((d) => (d ? `${d}\n\n${block}` : block));
+      canvas.activate("");
     },
     [canvas, setDraft],
   );
 
   const listDir = useCallback(
     async (dir: string) => {
-      const listing = await listWorkspace(dir === '' ? '.' : dir);
-      return listing.entries.map(e => ({ path: e.path, name: e.name, isDirectory: e.isDir }));
+      const listing = await listWorkspace(dir === "" ? "." : dir);
+      return listing.entries.map((e) => ({ path: e.path, name: e.name, isDirectory: e.isDir }));
     },
     [listWorkspace],
   );
@@ -106,10 +108,10 @@ export function useSessionWorkspace(
   );
 
   const caretProps: CaretTextareaProps = {
-    onSelect: e => setCaret(e.currentTarget.selectionStart),
-    onKeyUp: e => setCaret(e.currentTarget.selectionStart),
-    onClick: e => setCaret(e.currentTarget.selectionStart),
-    onInput: e => setCaret(e.currentTarget.selectionStart),
+    onSelect: (e) => setCaret(e.currentTarget.selectionStart),
+    onKeyUp: (e) => setCaret(e.currentTarget.selectionStart),
+    onClick: (e) => setCaret(e.currentTarget.selectionStart),
+    onInput: (e) => setCaret(e.currentTarget.selectionStart),
   };
 
   return {
@@ -117,7 +119,7 @@ export function useSessionWorkspace(
     files,
     mentionMenu,
     caretProps,
-    mentionsIn: text => activeMentions(text, mentions),
+    mentionsIn: (text) => activeMentions(text, mentions),
     afterSend: () => {
       setMentions([]);
       setCaret(0);

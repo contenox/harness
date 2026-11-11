@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext } from 'react';
 
 export type AdoptIntent = {
   instanceId: string;
@@ -12,16 +12,7 @@ export interface AdoptIntentContextValue {
   setAdoptIntent: (intent: AdoptIntent | null) => void;
 }
 
-const AdoptIntentContext = createContext<AdoptIntentContextValue | null>(null);
-
-export function AdoptIntentProvider({ children }: { children: ReactNode }) {
-  const [adoptIntent, setAdoptIntent] = useState<AdoptIntent | null>(null);
-  const value = useMemo<AdoptIntentContextValue>(
-    () => ({ adoptIntent, setAdoptIntent }),
-    [adoptIntent],
-  );
-  return <AdoptIntentContext.Provider value={value}>{children}</AdoptIntentContext.Provider>;
-}
+export const AdoptIntentContext = createContext<AdoptIntentContextValue | null>(null);
 
 export function useAdoptIntent(): AdoptIntentContextValue {
   return useContext(AdoptIntentContext) ?? NOOP_ADOPT_INTENT;

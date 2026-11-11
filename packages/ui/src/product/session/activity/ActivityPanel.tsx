@@ -1,36 +1,34 @@
-import { useMemo, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
-import type { AcpSessionState } from '../state/acpSessionState';
-import { DiffView, diffLinesFromTexts } from '../../../components/DiffView';
+import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import type { AcpSessionState } from "../state/acpSessionState";
+import { DiffView, diffLinesFromTexts } from "../../../components/DiffView";
 import {
   activityTools,
   changedFiles,
   redact,
   type FileAction,
   type ActivityTool,
-} from './activity';
+} from "./activity";
 
-
-
-const STATUS_DOT: Record<ActivityTool['status'], string> = {
-  pending: 'bg-surface-400 dark:bg-dark-surface-500',
-  running: 'bg-primary-500 animate-pulse',
-  success: 'bg-success-500',
-  error: 'bg-error-500',
+const STATUS_DOT: Record<ActivityTool["status"], string> = {
+  pending: "bg-surface-400 dark:bg-dark-surface-500",
+  running: "bg-primary-500 animate-pulse",
+  success: "bg-success-500",
+  error: "bg-error-500",
 };
 
-const STATUS_WORD: Record<ActivityTool['status'], string> = {
-  pending: 'Waiting',
-  running: 'Running',
-  success: 'Done',
-  error: 'Failed',
+const STATUS_WORD: Record<ActivityTool["status"], string> = {
+  pending: "Waiting",
+  running: "Running",
+  success: "Done",
+  error: "Failed",
 };
 
 const ACTION_TONE: Record<FileAction, string> = {
-  created: 'text-success-700 dark:text-dark-success-700',
-  modified: 'text-primary-700 dark:text-dark-primary-500',
-  deleted: 'text-error-700 dark:text-dark-error-700',
-  moved: 'text-text-muted dark:text-dark-text-muted',
+  created: "text-success-700 dark:text-dark-success-700",
+  modified: "text-primary-700 dark:text-dark-primary-500",
+  deleted: "text-error-700 dark:text-dark-error-700",
+  moved: "text-text-muted dark:text-dark-text-muted",
 };
 
 export function ActivityPanel({ session }: { session: AcpSessionState }) {
@@ -40,7 +38,7 @@ export function ActivityPanel({ session }: { session: AcpSessionState }) {
   const pending = session.pendingPermission !== null;
 
   const filesNewest = [...files].sort((a, b) => {
-    const at = (id: string) => tools.findIndex(t => t.toolCallId === id);
+    const at = (id: string) => tools.findIndex((t) => t.toolCallId === id);
     return at(b.tools[b.tools.length - 1].toolCallId) - at(a.tools[a.tools.length - 1].toolCallId);
   });
 
@@ -58,11 +56,12 @@ export function ActivityPanel({ session }: { session: AcpSessionState }) {
   return (
     <div
       className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3 sm:p-4"
-      aria-label="Agent activity">
+      aria-label="Agent activity"
+    >
       <p className="sr-only" role="status">
-        {tools.length} tool {tools.length === 1 ? 'call' : 'calls'}, {files.length} changed{' '}
-        {files.length === 1 ? 'file' : 'files'}
-        {pending ? ', one approval waiting' : ''}
+        {tools.length} tool {tools.length === 1 ? "call" : "calls"}, {files.length} changed{" "}
+        {files.length === 1 ? "file" : "files"}
+        {pending ? ", one approval waiting" : ""}
       </p>
 
       {filesNewest.length > 0 && (
@@ -70,30 +69,32 @@ export function ActivityPanel({ session }: { session: AcpSessionState }) {
           <h2 className="text-text-muted dark:text-dark-text-muted text-[11px] font-medium tracking-[0.02em]">
             Changed files
           </h2>
-          {filesNewest.map(file => {
+          {filesNewest.map((file) => {
             const key = `file:${file.path}`;
             const expanded = open === key;
             return (
               <div
                 key={file.path}
-                className="border-surface-200 dark:border-dark-surface-600 rounded-lg border">
+                className="border-surface-200 dark:border-dark-surface-600 rounded-lg border"
+              >
                 <button
                   type="button"
                   aria-expanded={expanded}
                   onClick={() => setOpen(expanded ? null : key)}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left">
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left"
+                >
                   <ChevronDown
-                    className={`text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0 transition-transform ${expanded ? '' : '-rotate-90'}`}
+                    className={`text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0 transition-transform ${expanded ? "" : "-rotate-90"}`}
                     aria-hidden
                   />
                   <span className={`w-14 shrink-0 text-xs font-medium ${ACTION_TONE[file.action]}`}>
-                    {file.action === 'created'
-                      ? 'Created'
-                      : file.action === 'deleted'
-                        ? 'Deleted'
-                        : file.action === 'moved'
-                          ? 'Moved'
-                          : 'Modified'}
+                    {file.action === "created"
+                      ? "Created"
+                      : file.action === "deleted"
+                        ? "Deleted"
+                        : file.action === "moved"
+                          ? "Moved"
+                          : "Modified"}
                   </span>
                   <span className="min-w-0 flex-1 truncate font-mono text-sm">{file.path}</span>
                   <span className="text-text-muted dark:text-dark-text-muted shrink-0 text-xs">
@@ -113,7 +114,7 @@ export function ActivityPanel({ session }: { session: AcpSessionState }) {
                           <DiffView
                             key={`${diff.toolCallId}-${index}`}
                             filePath={file.path}
-                            lines={diffLinesFromTexts(diff.oldText ?? '', diff.newText ?? '')}
+                            lines={diffLinesFromTexts(diff.oldText ?? "", diff.newText ?? "")}
                           />
                         );
                       })
@@ -135,20 +136,22 @@ export function ActivityPanel({ session }: { session: AcpSessionState }) {
             Waiting on you — an approval is open for the next call.
           </p>
         )}
-        {[...tools].reverse().map(tool => {
+        {[...tools].reverse().map((tool) => {
           const key = `tool:${tool.toolCallId}`;
           const expanded = open === key;
           return (
             <div
               key={tool.toolCallId}
-              className="border-surface-200 dark:border-dark-surface-600 rounded-lg border">
+              className="border-surface-200 dark:border-dark-surface-600 rounded-lg border"
+            >
               <button
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => setOpen(expanded ? null : key)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left">
+                className="flex w-full items-center gap-2 px-3 py-2 text-left"
+              >
                 <ChevronDown
-                  className={`text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0 transition-transform ${expanded ? '' : '-rotate-90'}`}
+                  className={`text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0 transition-transform ${expanded ? "" : "-rotate-90"}`}
                   aria-hidden
                 />
                 <span
@@ -159,7 +162,7 @@ export function ActivityPanel({ session }: { session: AcpSessionState }) {
                 {tool.locations.length > 0 && (
                   <span className="text-text-muted dark:text-dark-text-muted hidden max-w-48 truncate font-mono text-xs sm:block">
                     {tool.locations[0].path}
-                    {tool.locations.length > 1 ? ` +${tool.locations.length - 1}` : ''}
+                    {tool.locations.length > 1 ? ` +${tool.locations.length - 1}` : ""}
                   </span>
                 )}
               </button>
@@ -177,12 +180,13 @@ function toolDetails(tool: ActivityTool) {
     <div className="flex flex-col gap-3 border-t border-surface-200 p-3 dark:border-dark-surface-600">
       {tool.locations.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {tool.locations.map(location => (
+          {tool.locations.map((location) => (
             <span
-              key={`${location.path}:${location.line ?? ''}`}
-              className="text-text-muted dark:text-dark-text-muted bg-surface-100 dark:bg-dark-surface-300 rounded px-1.5 py-0.5 font-mono text-xs">
+              key={`${location.path}:${location.line ?? ""}`}
+              className="text-text-muted dark:text-dark-text-muted bg-surface-100 dark:bg-dark-surface-300 rounded px-1.5 py-0.5 font-mono text-xs"
+            >
               {location.path}
-              {location.line !== undefined ? `:${location.line}` : ''}
+              {location.line !== undefined ? `:${location.line}` : ""}
             </span>
           ))}
         </div>
@@ -194,7 +198,7 @@ function toolDetails(tool: ActivityTool) {
           <DiffView
             key={index}
             filePath={diff.path ?? tool.title}
-            lines={diffLinesFromTexts(diff.oldText ?? '', diff.newText ?? '')}
+            lines={diffLinesFromTexts(diff.oldText ?? "", diff.newText ?? "")}
           />
         );
       })}
@@ -210,10 +214,11 @@ function RawBlock({ tool }: { tool: ActivityTool }) {
     <div className="flex flex-col gap-1.5">
       <button
         type="button"
-        onClick={() => setShow(value => !value)}
+        onClick={() => setShow((value) => !value)}
         aria-expanded={show}
-        className="text-text-muted dark:text-dark-text-muted self-start text-xs underline-offset-2 hover:underline">
-        {show ? 'Hide raw input/output' : 'Show raw input/output'}
+        className="text-text-muted dark:text-dark-text-muted self-start text-xs underline-offset-2 hover:underline"
+      >
+        {show ? "Hide raw input/output" : "Show raw input/output"}
       </button>
       {show && (
         <pre className="text-text-muted dark:text-dark-text-muted bg-surface-100 dark:bg-dark-surface-300 overflow-x-auto rounded-lg p-2 font-mono text-xs whitespace-pre-wrap">
@@ -225,11 +230,10 @@ function RawBlock({ tool }: { tool: ActivityTool }) {
   );
 }
 
-
 const RAW_MAX_CHARS = 8000;
 
 function renderRaw(value: unknown): string {
-  const text = typeof value === 'string' ? value : JSON.stringify(redact(value), null, 2);
+  const text = typeof value === "string" ? value : JSON.stringify(redact(value), null, 2);
   if (text.length <= RAW_MAX_CHARS) return text;
   return `${text.slice(0, RAW_MAX_CHARS)}\n… truncated (${text.length} characters)`;
 }

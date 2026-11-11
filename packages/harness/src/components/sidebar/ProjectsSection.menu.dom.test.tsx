@@ -1,10 +1,16 @@
-import '../../test/fakeDomGlobals';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
-import { clickOn, findAll, fireEvent, installFakeDom, type FakeDomHandle, type FakeNode } from '../../test/fakeDom';
+import {
+  clickOn,
+  findAll,
+  fireEvent,
+  installFakeDom,
+  type FakeDomHandle,
+  type FakeNode,
+} from '../../test/fakeDom';
 import { ProjectsSection } from './ProjectsSection';
 import type { SessionGroups } from './sessionGroups';
 
@@ -26,8 +32,7 @@ const groups: SessionGroups = {
   other: [],
 };
 
-const menuItems = () =>
-  findAll(dom.document.body, n => n.getAttribute('role') === 'menuitem');
+const menuItems = () => findAll(dom.document.body, n => n.getAttribute('role') === 'menuitem');
 
 const mouseDownOnDocument = (target: FakeNode) => {
   for (const listener of [...(dom.document.listeners.mousedown ?? [])]) listener.fn({ target });
@@ -75,7 +80,10 @@ describe('ProjectsSection context menu', () => {
     expect(permissions, 'the menu opened').toBeDefined();
 
     await act(async () => mouseDownOnDocument(permissions));
-    expect(menuItems().length, 'a mousedown on a menu item does not close the menu').toBeGreaterThan(0);
+    expect(
+      menuItems().length,
+      'a mousedown on a menu item does not close the menu',
+    ).toBeGreaterThan(0);
 
     await act(async () => clickOn(dom.document.body, permissions, fn => fn()));
     expect(onOpenPermissions).toHaveBeenCalledWith('C:/code/alpha');

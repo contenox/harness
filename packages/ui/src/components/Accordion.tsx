@@ -1,4 +1,3 @@
-
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { cn } from "../utils";
@@ -15,25 +14,15 @@ export function Accordion({ title, children, className }: AccordionProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div
-      className={cn(
-        "border-line rounded-lg border",
-        className,
-      )}
-    >
+    <div className={cn("border-line rounded-lg border", className)}>
       <Button
         variant="ghost"
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center justify-between p-4"
       >
-        <Span className="text-text text-sm font-medium">
-          {title}
-        </Span>
+        <Span className="text-text text-sm font-medium">{title}</Span>
         <ChevronDown
-          className={cn(
-            "text-text-subtle h-5 w-5 transition-transform",
-            isOpen && "rotate-180",
-          )}
+          className={cn("text-text-subtle h-5 w-5 transition-transform", isOpen && "rotate-180")}
         />
       </Button>
       <div

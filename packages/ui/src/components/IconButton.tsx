@@ -22,39 +22,37 @@ const sizeMap = {
 } as const;
 
 /** Square, ghost-by-default button holding a single icon. */
-export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
-  function IconButton(
-    {
-      label,
-      size = "md",
-      variant = "ghost",
-      noTooltip = false,
-      active,
-      tooltipPosition = "top",
-      className,
-      children,
-      ...props
-    },
-    ref,
-  ) {
-    const button = (
-      <Button
-        ref={ref}
-        variant={variant}
-        size={sizeMap[size]}
-        aria-label={label}
-        aria-pressed={active}
-        className={cn(active && "bg-selected", className)}
-        {...props}
-      >
-        {children}
-      </Button>
-    );
-    if (noTooltip) return button;
-    return (
-      <Tooltip content={label} position={tooltipPosition}>
-        {button}
-      </Tooltip>
-    );
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
+  {
+    label,
+    size = "md",
+    variant = "ghost",
+    noTooltip = false,
+    active,
+    tooltipPosition = "top",
+    className,
+    children,
+    ...props
   },
-);
+  ref,
+) {
+  const button = (
+    <Button
+      ref={ref}
+      variant={variant}
+      size={sizeMap[size]}
+      aria-label={label}
+      aria-pressed={active}
+      className={cn(active && "bg-selected", className)}
+      {...props}
+    >
+      {children}
+    </Button>
+  );
+  if (noTooltip) return button;
+  return (
+    <Tooltip content={label} position={tooltipPosition}>
+      {button}
+    </Tooltip>
+  );
+});

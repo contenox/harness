@@ -1,4 +1,3 @@
-
 export interface WorkspaceTabsState {
   tabs: string[];
   activeId: string | null;
@@ -22,7 +21,10 @@ function neighborAfterRemoval(tabs: string[], index: number): string | null {
   return tabs[0];
 }
 
-export function workspaceTabsReducer(state: WorkspaceTabsState, action: WorkspaceTabsAction): WorkspaceTabsState {
+export function workspaceTabsReducer(
+  state: WorkspaceTabsState,
+  action: WorkspaceTabsAction,
+): WorkspaceTabsState {
   switch (action.type) {
     case 'open': {
       if (state.tabs.includes(action.id)) {
@@ -35,7 +37,8 @@ export function workspaceTabsReducer(state: WorkspaceTabsState, action: Workspac
       const index = state.tabs.indexOf(action.id);
       if (index === -1) return state;
       const tabs = state.tabs.filter(id => id !== action.id);
-      const activeId = state.activeId === action.id ? neighborAfterRemoval(tabs, index) : state.activeId;
+      const activeId =
+        state.activeId === action.id ? neighborAfterRemoval(tabs, index) : state.activeId;
       return { tabs, activeId };
     }
 
@@ -68,7 +71,10 @@ export function workspaceTabsReducer(state: WorkspaceTabsState, action: Workspac
   }
 }
 
-export function routeForActiveTab(activeId: string | null, intentionalEmpty: boolean): string | null {
+export function routeForActiveTab(
+  activeId: string | null,
+  intentionalEmpty: boolean,
+): string | null {
   if (activeId !== null) return `/chat/${activeId}`;
   return intentionalEmpty ? '/chat' : null;
 }

@@ -22,8 +22,6 @@ describe("formatCompactNumber", () => {
   });
 
   it("is locale-aware", () => {
-
-
     expect(formatCompactNumber(1_500_000, "de-DE")).toMatch(/^1,5\s*Mio\.$/);
   });
 

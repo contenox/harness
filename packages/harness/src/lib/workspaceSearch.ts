@@ -1,8 +1,6 @@
 import { cwdRawFetch } from './projectRuntime';
 import type { WorkspaceSearchDone, WorkspaceSearchMatch } from './types';
 
-
-
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -20,7 +18,6 @@ export function byteSlice(
     after: decoder.decode(bytes.subarray(end)),
   };
 }
-
 
 export type SearchFileGroup = {
   path: string;
@@ -42,7 +39,6 @@ export function groupMatchesByFile(matches: readonly WorkspaceSearchMatch[]): Se
   return groups;
 }
 
-
 export type SSEFrame = { event: string; data: string };
 
 export function parseSSEFrames(buffer: string): { frames: SSEFrame[]; rest: string } {
@@ -62,7 +58,6 @@ export function parseSSEFrames(buffer: string): { frames: SSEFrame[]; rest: stri
   }
   return { frames, rest };
 }
-
 
 export type SearchRefusal = {
   kind: 'dependency' | 'refusal';
@@ -148,8 +143,7 @@ export async function runWorkspaceSearch(opts: RunWorkspaceSearchOptions): Promi
     let parsed: { message?: string; code?: string } = {};
     try {
       parsed = messageFromErrorBody(await response.json());
-    } catch {
-    }
+    } catch {}
     const message = parsed.message ?? `search failed (${response.status})`;
     if (response.status === 501 && parsed.code === 'dependency_missing') {
       opts.onRefusal({ kind: 'dependency', status: 501, code: parsed.code, message });

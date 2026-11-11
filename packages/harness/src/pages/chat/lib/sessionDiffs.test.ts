@@ -2,11 +2,20 @@ import { describe, expect, it } from 'vitest';
 import type { AcpToolCallState } from '../../../hooks/acpSessionState';
 import { aggregateSessionDiffs } from './sessionDiffs';
 
-function call(id: string, diffs: Array<[string, string, string]>, status?: string): AcpToolCallState {
+function call(
+  id: string,
+  diffs: Array<[string, string, string]>,
+  status?: string,
+): AcpToolCallState {
   return {
     toolCallId: id,
     status: status as AcpToolCallState['status'],
-    content: diffs.map(([path, oldText, newText]) => ({ type: 'diff' as const, path, oldText, newText })),
+    content: diffs.map(([path, oldText, newText]) => ({
+      type: 'diff' as const,
+      path,
+      oldText,
+      newText,
+    })),
   };
 }
 
@@ -27,7 +36,11 @@ describe('aggregateSessionDiffs', () => {
 
   it('combines first old text with last new text per file', () => {
     const out = aggregateSessionDiffs(
-      session([call('1', [['a.ts', 'v0', 'v1']]), call('2', [['b.ts', 'x', 'y']]), call('3', [['a.ts', 'v1', 'v2']])]),
+      session([
+        call('1', [['a.ts', 'v0', 'v1']]),
+        call('2', [['b.ts', 'x', 'y']]),
+        call('3', [['a.ts', 'v1', 'v2']]),
+      ]),
     );
     expect(out).toEqual([
       { path: 'a.ts', oldText: 'v0', newText: 'v2', changes: 2 },

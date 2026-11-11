@@ -1,1 +1,1 @@
-export * from './OperatorScreens';
+export * from "./OperatorScreens";

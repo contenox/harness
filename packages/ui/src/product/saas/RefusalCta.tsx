@@ -1,7 +1,7 @@
-import { Button } from '../../components/Button';
-import { InlineNotice } from '../../components/InlineNotice';
-import { useNavigate } from 'react-router-dom';
-import { useProductPorts } from '../ports';
+import { Button } from "../../components/Button";
+import { InlineNotice } from "../../components/InlineNotice";
+import { useNavigate } from "react-router-dom";
+import { useProductPorts } from "../ports";
 
 export function RefusalCta({ error }: { error: unknown }) {
   const { refusalSell } = useProductPorts();
@@ -10,7 +10,7 @@ export function RefusalCta({ error }: { error: unknown }) {
   if (sell === null) return null;
 
   const act = () => {
-    if (sell.cta.href.startsWith('mailto:')) {
+    if (sell.cta.href.startsWith("mailto:")) {
       window.location.href = sell.cta.href;
       return;
     }

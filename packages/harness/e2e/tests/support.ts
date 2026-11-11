@@ -87,7 +87,9 @@ export async function expectPermissionCard(page: Page, detail: string): Promise<
 export async function pickPolicy(page: Page, name: string): Promise<void> {
   await page.getByRole('button', { name: /^HITL Policy/ }).click();
   await page.getByRole('option', { name, exact: true }).click();
-  await expect(page.getByRole('button', { name: `HITL Policy: ${name}`, exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: `HITL Policy: ${name}`, exact: true }),
+  ).toBeVisible();
 }
 
 export async function waitForFile(file: string): Promise<string> {
@@ -122,7 +124,16 @@ export async function restoreDefaults(request: APIRequestContext): Promise<void>
 
 export async function connection(request: APIRequestContext, name: string) {
   const { body } = await api(request, 'GET', '/api/providers/connections');
-  return (body as Array<{ id: string; name: string; health?: string; modelCount?: number; providerType?: string; [key: string]: unknown }>).find(item => item.name === name);
+  return (
+    body as Array<{
+      id: string;
+      name: string;
+      health?: string;
+      modelCount?: number;
+      providerType?: string;
+      [key: string]: unknown;
+    }>
+  ).find(item => item.name === name);
 }
 
 export async function ensureMockBackend(request: APIRequestContext): Promise<void> {
@@ -159,7 +170,12 @@ export async function removeBackend(request: APIRequestContext, name: string): P
 
 export async function listConnectors(request: APIRequestContext) {
   const { body } = await api(request, 'GET', '/api/connectors');
-  return body as Array<{ id: string; name: string; tools?: Array<{ name: string }>; [key: string]: unknown }>;
+  return body as Array<{
+    id: string;
+    name: string;
+    tools?: Array<{ name: string }>;
+    [key: string]: unknown;
+  }>;
 }
 
 export async function removeConnector(request: APIRequestContext, name: string): Promise<void> {

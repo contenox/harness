@@ -18,7 +18,11 @@ describe('shellOutputLines', () => {
 
   it('appends a non-zero exit code after stderr', () => {
     const lines = shellOutputLines(
-      JSON.stringify({ exit_code: 1, stdout: 'FAIL\tpkg [build failed]', stderr: '# pkg\nx.go:3: redeclared' }),
+      JSON.stringify({
+        exit_code: 1,
+        stdout: 'FAIL\tpkg [build failed]',
+        stderr: '# pkg\nx.go:3: redeclared',
+      }),
     );
     expect(lines).toEqual(['FAIL\tpkg [build failed]', '# pkg', 'x.go:3: redeclared', 'exit 1']);
   });

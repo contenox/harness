@@ -1,4 +1,3 @@
-
 export const MAX_SELECTION_EXCERPT = 8000;
 
 export interface SelectionQuote {

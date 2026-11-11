@@ -10,11 +10,7 @@ export interface NewChatOptions {
   cwd?: string | null;
 }
 
-export function startNewChat(
-  agent: string | null,
-  deps: NewChatDeps,
-  opts?: NewChatOptions,
-): void {
+export function startNewChat(agent: string | null, deps: NewChatDeps, opts?: NewChatOptions): void {
   deps.setStagedAgent(agent);
   deps.setStagedRoot?.(opts?.cwd ?? null);
   deps.focusEmptyTab();

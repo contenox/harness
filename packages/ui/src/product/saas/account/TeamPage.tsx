@@ -1,34 +1,30 @@
-import { Badge, Button, Card, EmptyState, InlineNotice, P, Page, Small } from '@contenox/ui';
-import { Users } from 'lucide-react';
-import { useState } from 'react';
-import { ConfirmDialog } from '../ConfirmDialog';
-import { EmailField, SectionForm, SelectField, TextField } from '@contenox/ui';
-import { RefusalCta } from '../RefusalCta';
-import { ListCard } from '@contenox/ui';
-import { ListSkeleton, ScreenError } from '../ScreenState';
-import { ScreenBody } from '@contenox/ui';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { BackTo } from '../../shell/BackTo';
-import { useProductPorts } from '../../ports';
-import type { Account, Invite, InviteDelivery, Member, MembershipRole } from '../../lib/api/types';
-import { partitionFormError, type FormErrors } from './lib/formErrors';
-import { formatDate, relativeTime } from '../../lib/relativeTime';
-import { ROLE_DESCRIPTIONS, ROLE_LABELS } from '../../lib/roles';
+import { Badge, Button, Card, EmptyState, InlineNotice, P, Page, Small } from "@contenox/ui";
+import { Users } from "lucide-react";
+import { useState } from "react";
+import { ConfirmDialog } from "../ConfirmDialog";
+import { EmailField, SectionForm, SelectField, TextField } from "@contenox/ui";
+import { RefusalCta } from "../RefusalCta";
+import { ListCard } from "@contenox/ui";
+import { ListSkeleton, ScreenError } from "../ScreenState";
+import { ScreenBody } from "@contenox/ui";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { BackTo } from "../../shell/BackTo";
+import { useProductPorts } from "../../ports";
+import type { Account, Invite, InviteDelivery, Member, MembershipRole } from "../../lib/api/types";
+import { partitionFormError, type FormErrors } from "./lib/formErrors";
+import { formatDate, relativeTime } from "../../lib/relativeTime";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "../../lib/roles";
 
-const ROLE_OPTIONS = (Object.keys(ROLE_LABELS) as MembershipRole[]).map(role => ({
+const ROLE_OPTIONS = (Object.keys(ROLE_LABELS) as MembershipRole[]).map((role) => ({
   value: role,
   label: ROLE_LABELS[role],
 }));
 
-
-const INVITE_FIELDS = ['email', 'role'] as const;
-
-
+const INVITE_FIELDS = ["email", "role"] as const;
 
 function alone(members: Member[]): boolean {
-  return members.filter(member => member.is_active).length <= 1;
+  return members.filter((member) => member.is_active).length <= 1;
 }
-
 
 function hasExpired(invite: Invite, now: number): boolean {
   return new Date(invite.expires_at).getTime() <= now;
@@ -36,15 +32,15 @@ function hasExpired(invite: Invite, now: number): boolean {
 
 export default function TeamPage() {
   const { routes, useAccount, useAuth, useInvites, useMembers } = useProductPorts();
-  const accountID = useAuth().accountID ?? '';
+  const accountID = useAuth().accountID ?? "";
   const members = useMembers(accountID);
   const invites = useInvites(accountID);
   const account = useAccount(accountID);
 
   const now = Date.now();
-  const unspent = (invites.data ?? []).filter(invite => invite.used_at === null);
-  const open = unspent.filter(invite => !hasExpired(invite, now));
-  const dead = unspent.filter(invite => hasExpired(invite, now));
+  const unspent = (invites.data ?? []).filter((invite) => invite.used_at === null);
+  const open = unspent.filter((invite) => !hasExpired(invite, now));
+  const dead = unspent.filter((invite) => hasExpired(invite, now));
 
   return (
     <Page header={<ScreenHeader title="Team" />}>
@@ -62,7 +58,7 @@ export default function TeamPage() {
         {open.length > 0 && (
           <>
             <Small>Invited, not yet joined</Small>
-            {open.map(invite => (
+            {open.map((invite) => (
               <InviteCard key={invite.id} invite={invite} accountID={accountID} />
             ))}
           </>
@@ -70,7 +66,7 @@ export default function TeamPage() {
         {dead.length > 0 && (
           <>
             <Small>Expired</Small>
-            {dead.map(invite => (
+            {dead.map((invite) => (
               <ExpiredInviteCard key={invite.id} invite={invite} />
             ))}
           </>
@@ -85,7 +81,7 @@ export default function TeamPage() {
             retrying={members.isFetching}
           />
         )}
-        {members.data?.map(member => (
+        {members.data?.map((member) => (
           <MemberCard key={member.user_id} member={member} accountID={accountID} />
         ))}
 
@@ -103,13 +99,12 @@ export default function TeamPage() {
   );
 }
 
-
 function RolesCard() {
   return (
     <>
       <Small>What each role can do</Small>
       <Card variant="filled" className="flex flex-col gap-3">
-        {(Object.keys(ROLE_LABELS) as MembershipRole[]).map(role => (
+        {(Object.keys(ROLE_LABELS) as MembershipRole[]).map((role) => (
           <div key={role}>
             <P className="text-sm font-medium">{ROLE_LABELS[role]}</P>
             <Small>{ROLE_DESCRIPTIONS[role]}</Small>
@@ -120,9 +115,7 @@ function RolesCard() {
   );
 }
 
-
 const NO_FORM_ERRORS: FormErrors = { retryable: false, fields: {} };
-
 
 function seatLine(account: Account | undefined): string | null {
   if (account?.entitled_seats === undefined) return null;
@@ -135,73 +128,63 @@ function seatLine(account: Account | undefined): string | null {
   );
 }
 
-
 function wearsDefaultName(account: Account | undefined, email: string | undefined): boolean {
   if (account === undefined || email === undefined) return false;
-  const localPart = email.split('@')[0];
-  return localPart !== '' && account.name === localPart;
+  const localPart = email.split("@")[0];
+  return localPart !== "" && account.name === localPart;
 }
 
-
 const DELIVERY_LABEL: Record<InviteDelivery, string> = {
-  not_configured: 'Not sent',
-  queued: 'Sending',
-  sent: 'Sent',
-  failed: 'Failed',
+  not_configured: "Not sent",
+  queued: "Sending",
+  sent: "Sent",
+  failed: "Failed",
 };
 
-
 const DELIVERY_NEEDS_ATTENTION: ReadonlySet<InviteDelivery> = new Set<InviteDelivery>([
-  'not_configured',
-  'failed',
+  "not_configured",
+  "failed",
 ]);
-
 
 function deliveryNote(delivery: InviteDelivery): string | null {
   switch (delivery) {
-    case 'not_configured':
-      return 'Nothing was delivered for this invitation. It is valid, and the person has no way to receive it until delivery is configured on the relay.';
-    case 'failed':
-      return 'Delivery failed for this invitation. It is valid and nobody received it — revoke it and invite the address again, or ask an operator to look at the relay’s mail transport.';
+    case "not_configured":
+      return "Nothing was delivered for this invitation. It is valid, and the person has no way to receive it until delivery is configured on the relay.";
+    case "failed":
+      return "Delivery failed for this invitation. It is valid and nobody received it — revoke it and invite the address again, or ask an operator to look at the relay’s mail transport.";
     default:
       return null;
   }
 }
 
-
 function creationNote(delivery: InviteDelivery, email: string): string {
   switch (delivery) {
-    case 'not_configured':
+    case "not_configured":
       return `The invitation for ${email} exists, but nothing was sent — this relay has no delivery configured. Ask an operator to set it up.`;
-    case 'failed':
+    case "failed":
       return `The invitation for ${email} exists and delivery failed. Ask an operator to look at the relay’s mail transport.`;
-    case 'sent':
+    case "sent":
       return `Invitation sent to ${email}.`;
     default:
       return `Invitation for ${email} is on its way. It shows as sent above once a mail server has taken it.`;
   }
 }
 
-
 function InviteForm({ accountID, account }: { accountID: string; account: Account | undefined }) {
   const { refusalSell, useAuth, useCreateInvite } = useProductPorts();
   const { user } = useAuth();
   const create = useCreateInvite(accountID);
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<MembershipRole>('tenant_user');
-
-
-
-
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<MembershipRole>("tenant_user");
 
   const sell = refusalSell(create.error);
   const errors = sell === null ? partitionFormError(create.error, INVITE_FIELDS) : NO_FORM_ERRORS;
-  const canSubmit = email.trim() !== '';
+  const canSubmit = email.trim() !== "";
   const seats = seatLine(account);
 
   const submit = () => {
     if (!canSubmit) return;
-    create.mutate({ email: email.trim(), role }, { onSuccess: () => setEmail('') });
+    create.mutate({ email: email.trim(), role }, { onSuccess: () => setEmail("") });
   };
 
   return (
@@ -215,27 +198,29 @@ function InviteForm({ accountID, account }: { accountID: string; account: Accoun
       note={
         create.data !== undefined ? (
           <InlineNotice
-            variant={DELIVERY_NEEDS_ATTENTION.has(create.data.delivery) ? 'warning' : 'info'}
-            role="status">
+            variant={DELIVERY_NEEDS_ATTENTION.has(create.data.delivery) ? "warning" : "info"}
+            role="status"
+          >
             {creationNote(create.data.delivery, create.data.email)}
           </InlineNotice>
         ) : (
           <RefusalCta error={create.error} />
         )
-      }>
+      }
+    >
       {seats !== null && <Small>{seats}</Small>}
       <EmailField
         label="Email"
         required
         value={email}
-        onChange={e => setEmail(e.target.value)}
+        onChange={(e) => setEmail(e.target.value)}
         disabled={create.isPending}
         error={errors.fields.email}
       />
       <SelectField
         label="Role"
         value={role}
-        onChange={e => setRole(e.target.value as MembershipRole)}
+        onChange={(e) => setRole(e.target.value as MembershipRole)}
         disabled={create.isPending}
         options={ROLE_OPTIONS}
         error={errors.fields.role}
@@ -247,7 +232,7 @@ function InviteForm({ accountID, account }: { accountID: string; account: Accoun
       </Small>
 
       {wearsDefaultName(account, user?.email) && accountID !== null && (
-        <TeamNameField accountID={accountID} currentName={account?.name ?? ''} />
+        <TeamNameField accountID={accountID} currentName={account?.name ?? ""} />
       )}
       <Small>
         We send the invitation. There is no link to copy — the token only ever exists in the message
@@ -256,7 +241,6 @@ function InviteForm({ accountID, account }: { accountID: string; account: Accoun
     </SectionForm>
   );
 }
-
 
 function InviteCard({ invite, accountID }: { invite: Invite; accountID: string }) {
   const { useRevokeInvite } = useProductPorts();
@@ -269,17 +253,18 @@ function InviteCard({ invite, accountID }: { invite: Invite; accountID: string }
       title={invite.email}
       meta={
         <Small>
-
           {ROLE_LABELS[invite.role]} · expires {formatDate(invite.expires_at)}
         </Small>
       }
       trailing={
         <Badge
-          variant={DELIVERY_NEEDS_ATTENTION.has(invite.delivery) ? 'warning' : 'default'}
-          className="shrink-0 whitespace-nowrap">
+          variant={DELIVERY_NEEDS_ATTENTION.has(invite.delivery) ? "warning" : "default"}
+          className="shrink-0 whitespace-nowrap"
+        >
           {DELIVERY_LABEL[invite.delivery]}
         </Badge>
-      }>
+      }
+    >
       {note !== null && <InlineNotice variant="warning">{note}</InlineNotice>}
 
       <div className="flex justify-end">
@@ -295,7 +280,8 @@ function InviteCard({ invite, accountID }: { invite: Invite; accountID: string }
         confirmLabel="Revoke the invitation"
         pending={revoke.isPending}
         error={revoke.error}
-        onConfirm={() => revoke.mutate(invite.id, { onSuccess: () => setConfirming(false) })}>
+        onConfirm={() => revoke.mutate(invite.id, { onSuccess: () => setConfirming(false) })}
+      >
         <P className="text-sm">
           The invitation stops working immediately. If they have already been sent it, the link they
           hold will be refused. Nothing else changes — inviting them again issues a new one.
@@ -305,7 +291,6 @@ function InviteCard({ invite, accountID }: { invite: Invite; accountID: string }
   );
 }
 
-
 function ExpiredInviteCard({ invite }: { invite: Invite }) {
   return (
     <ListCard
@@ -313,15 +298,15 @@ function ExpiredInviteCard({ invite }: { invite: Invite }) {
       title={invite.email}
       meta={
         <Small>
-
-          {ROLE_LABELS[invite.role]} · expired {relativeTime(invite.expires_at, 'just now')}
+          {ROLE_LABELS[invite.role]} · expired {relativeTime(invite.expires_at, "just now")}
         </Small>
       }
       trailing={
         <Badge variant="outline" className="shrink-0 whitespace-nowrap">
           Expired
         </Badge>
-      }>
+      }
+    >
       <Small>
         The link stopped working and the seat it was holding is free again. Invite the address again
         to send a new one.
@@ -329,7 +314,6 @@ function ExpiredInviteCard({ invite }: { invite: Invite }) {
     </ListCard>
   );
 }
-
 
 function MemberCard({ member, accountID }: { member: Member; accountID: string }) {
   const { useAuth, useRemoveMember, useUpdateMemberRole } = useProductPorts();
@@ -359,7 +343,7 @@ function MemberCard({ member, accountID }: { member: Member; accountID: string }
       title={
         <>
           {member.display_name || member.email}
-          {isSelf && ' (you)'}
+          {isSelf && " (you)"}
         </>
       }
       meta={
@@ -374,13 +358,14 @@ function MemberCard({ member, accountID }: { member: Member; accountID: string }
             {ROLE_LABELS[member.role]}
           </Badge>
         )
-      }>
+      }
+    >
       {!isSelf && (
         <>
           <SelectField
             label="Role"
             value={member.role}
-            onChange={e =>
+            onChange={(e) =>
               updateRole.mutate({ userID: member.user_id, role: e.target.value as MembershipRole })
             }
             disabled={updateRole.isPending}
@@ -402,7 +387,8 @@ function MemberCard({ member, accountID }: { member: Member; accountID: string }
         confirmLabel="Remove them"
         pending={remove.isPending}
         error={remove.error}
-        onConfirm={() => remove.mutate(member.user_id, { onSuccess: () => setConfirming(false) })}>
+        onConfirm={() => remove.mutate(member.user_id, { onSuccess: () => setConfirming(false) })}
+      >
         <P className="text-sm">
           They lose access to this account immediately, including every machine paired to it. Their
           own sign-in survives — an identity is one person across every account they belong to, so
@@ -419,11 +405,10 @@ function MemberCard({ member, accountID }: { member: Member; accountID: string }
 
 function lastSeenLabel(member: Member): string {
   if (member.last_login_at === null) {
-    return `Joined ${relativeTime(member.joined_at, 'just now')}, never signed in`;
+    return `Joined ${relativeTime(member.joined_at, "just now")}, never signed in`;
   }
-  return `Last signed in ${relativeTime(member.last_login_at, 'just now')}`;
+  return `Last signed in ${relativeTime(member.last_login_at, "just now")}`;
 }
-
 
 function TeamNameField({ accountID, currentName }: { accountID: string; currentName: string }) {
   const { useAccount, useUpdateAccount } = useProductPorts();
@@ -434,7 +419,7 @@ function TeamNameField({ accountID, currentName }: { accountID: string; currentN
 
   const save = () => {
     const trimmed = name.trim();
-    if (trimmed === '' || trimmed === currentName || slug === undefined) return;
+    if (trimmed === "" || trimmed === currentName || slug === undefined) return;
     update.mutate({ name: trimmed, slug });
   };
 
@@ -447,7 +432,7 @@ function TeamNameField({ accountID, currentName }: { accountID: string; currentN
       <TextField
         label="Team name"
         value={name}
-        onChange={e => setName(e.target.value)}
+        onChange={(e) => setName(e.target.value)}
         disabled={update.isPending || slug === undefined}
         placeholder="Acme Engineering"
       />
@@ -457,7 +442,8 @@ function TeamNameField({ accountID, currentName }: { accountID: string; currentN
         className="self-start"
         onClick={save}
         isLoading={update.isPending}
-        disabled={name.trim() === '' || name.trim() === currentName || slug === undefined}>
+        disabled={name.trim() === "" || name.trim() === currentName || slug === undefined}
+      >
         Save name
       </Button>
       {update.error && <ScreenError error={update.error} />}

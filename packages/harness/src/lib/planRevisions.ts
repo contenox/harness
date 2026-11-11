@@ -1,6 +1,5 @@
 import type { PlanRevisionSummary } from './types';
 
-
 export function revisionsNewestFirst(
   revisions?: readonly PlanRevisionSummary[] | null,
 ): PlanRevisionSummary[] {

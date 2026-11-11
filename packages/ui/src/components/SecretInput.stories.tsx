@@ -14,7 +14,13 @@ const meta: Meta<typeof SecretInput> = {
     placeholder: "sk-...",
     "aria-label": "API key",
   },
-  decorators: [(Story) => <div className="max-w-sm"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-sm">
+        <Story />
+      </div>
+    ),
+  ],
 };
 export default meta;
 type Story = StoryObj<typeof SecretInput>;

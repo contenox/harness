@@ -1,20 +1,19 @@
-import { lazy, Suspense, useEffect, useState, type DragEvent, type ReactNode } from 'react';
-import { File as FileIcon, Folder, FolderOpen, X } from 'lucide-react';
-import { Button } from '../../../components/Button';
-import { cn } from '../../../utils';
-import type { AssetAction, AssetActionResult } from '@contenox/acp-client';
-import type { SelectedRegion } from './monacoViewShared';
-import type { DirCache } from '../lib/workspaceTree';
-import type { CanvasFileTab } from './fileCanvasState';
-import { workspaceSearch, type DirLister, type SearchMatch } from './workspaceSearch';
-import { previewKind } from '../../../components/editors/previewKind';
-import { previewViewer } from './previewRegistry';
-import { AssetActionToolbar } from './AssetActionToolbar';
+import { lazy, Suspense, useEffect, useState, type DragEvent, type ReactNode } from "react";
+import { File as FileIcon, Folder, FolderOpen, X } from "lucide-react";
+import { Button } from "../../../components/Button";
+import { cn } from "../../../utils";
+import type { AssetAction, AssetActionResult } from "@contenox/acp-client";
+import type { SelectedRegion } from "./monacoViewShared";
+import type { DirCache } from "../lib/workspaceTree";
+import type { CanvasFileTab } from "./fileCanvasState";
+import { workspaceSearch, type DirLister, type SearchMatch } from "./workspaceSearch";
+import { previewKind } from "../../../components/editors/previewKind";
+import { previewViewer } from "./previewRegistry";
+import { AssetActionToolbar } from "./AssetActionToolbar";
 
-const MonacoView = lazy(() => import('./MonacoView'));
+const MonacoView = lazy(() => import("./MonacoView"));
 
-
-const ROOT = '';
+const ROOT = "";
 
 export interface TreeEntryRef {
   path: string;
@@ -51,10 +50,10 @@ interface TreeContext {
   selectDir: (dir: string) => void;
 }
 
-const PANEL_DROP = '\u0000panel';
+const PANEL_DROP = "\u0000panel";
 
 function carriesFiles(event: DragEvent<HTMLElement>): boolean {
-  return Array.from(event.dataTransfer.types).includes('Files');
+  return Array.from(event.dataTransfer.types).includes("Files");
 }
 
 function dropProps(ctx: TreeContext, dir: string, highlight: string = dir) {
@@ -92,25 +91,26 @@ function TreeNode({
   const { cache, ensureLoaded, isLoading, onOpenFile, openDirs, toggleDir, manage } = ctx;
   const expanded = openDirs.has(dir);
   const entries = cache[dir] ?? [];
-  const droppable = manage !== undefined && name !== '';
+  const droppable = manage !== undefined && name !== "";
   return (
     <>
       <div
         className={cn(
-          'flex items-center',
+          "flex items-center",
           droppable &&
             ctx.dropDir === dir &&
-            'bg-primary-500/15 ring-primary-500 ring-1 ring-inset',
+            "bg-primary-500/15 ring-primary-500 ring-1 ring-inset",
         )}
-        {...(droppable ? dropProps(ctx, dir) : {})}>
+        {...(droppable ? dropProps(ctx, dir) : {})}
+      >
         <button
           type="button"
           className={cn(
-            'text-text-primary dark:text-dark-text-primary flex min-w-0 flex-1 items-center gap-1.5 rounded px-2 py-1 text-left text-sm hover:bg-black/5 dark:hover:bg-white/10',
+            "text-text-primary dark:text-dark-text-primary flex min-w-0 flex-1 items-center gap-1.5 rounded px-2 py-1 text-left text-sm hover:bg-black/5 dark:hover:bg-white/10",
           )}
           style={{ paddingLeft: `${8 + depth * 14}px` }}
           onClick={() => {
-            if (name === '') {
+            if (name === "") {
               ctx.selectDir(ROOT);
               return;
             }
@@ -118,9 +118,10 @@ function TreeNode({
             toggleDir(dir);
             ctx.selectDir(dir);
           }}
-          aria-label={name === '' && manage !== undefined ? 'Top level' : undefined}
-          aria-expanded={expanded}>
-          {name !== '' ? (
+          aria-label={name === "" && manage !== undefined ? "Top level" : undefined}
+          aria-expanded={expanded}
+        >
+          {name !== "" ? (
             expanded ? (
               <FolderOpen className="text-text-muted dark:text-dark-text-muted size-4 shrink-0" />
             ) : (
@@ -130,16 +131,16 @@ function TreeNode({
             <span className="text-text-muted dark:text-dark-text-muted w-4" />
           )}
           <span className="truncate font-mono text-xs">
-            {name || (manage === undefined ? '' : 'Top level')}
+            {name || (manage === undefined ? "" : "Top level")}
           </span>
           {isLoading(dir) && <span className="text-text-muted dark:text-dark-text-muted">…</span>}
         </button>
         {manage !== undefined &&
-          name !== '' &&
+          name !== "" &&
           manage.rowAction({ path: dir, name, isDirectory: true })}
       </div>
       {expanded &&
-        entries.map(e =>
+        entries.map((e) =>
           e.isDirectory ? (
             <TreeNode key={e.path} dir={e.path} name={e.name} depth={depth + 1} ctx={ctx} />
           ) : (
@@ -148,7 +149,8 @@ function TreeNode({
                 type="button"
                 className="text-text-primary dark:text-dark-text-primary flex min-w-0 flex-1 items-center gap-1.5 rounded px-2 py-1 text-left font-mono text-xs hover:bg-black/5 dark:hover:bg-white/10"
                 style={{ paddingLeft: `${8 + (depth + 1) * 14}px` }}
-                onClick={() => onOpenFile(e.path)}>
+                onClick={() => onOpenFile(e.path)}
+              >
                 <FileIcon className="text-text-muted dark:text-dark-text-muted size-4 shrink-0" />
                 <span className="truncate">{e.name}</span>
               </button>
@@ -170,7 +172,7 @@ export function FileTreePanel({
   manage,
 }: FileTreePanelProps) {
   const [openDirs, setOpenDirs] = useState<Set<string>>(new Set([ROOT]));
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchMatch[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -187,7 +189,7 @@ export function FileTreePanel({
     setSearchError(null);
     const t = window.setTimeout(() => {
       void workspaceSearch(q, listDir)
-        .then(hits => {
+        .then((hits) => {
           setResults(hits);
           setSearching(false);
         })
@@ -200,7 +202,7 @@ export function FileTreePanel({
     return () => window.clearTimeout(t);
   }, [query, listDir]);
   const toggleDir = (dir: string) =>
-    setOpenDirs(prev => {
+    setOpenDirs((prev) => {
       const next = new Set(prev);
       if (next.has(dir)) {
         next.delete(dir);
@@ -224,8 +226,8 @@ export function FileTreePanel({
   return (
     <aside
       className={cn(
-        'border-surface-200 dark:border-dark-surface-600 flex w-56 shrink-0 flex-col overflow-y-auto border-r sm:w-60',
-        manage !== undefined && dropDir === PANEL_DROP && 'ring-primary-500 ring-2 ring-inset',
+        "border-surface-200 dark:border-dark-surface-600 flex w-56 shrink-0 flex-col overflow-y-auto border-r sm:w-60",
+        manage !== undefined && dropDir === PANEL_DROP && "ring-primary-500 ring-2 ring-inset",
       )}
       aria-label="Workspace files"
       {...(manage === undefined
@@ -240,7 +242,8 @@ export function FileTreePanel({
                 setDropDir(null);
               }
             },
-          })}>
+          })}
+    >
       <div className="text-text-muted dark:text-dark-text-muted px-3 py-2 text-[11px] font-medium tracking-[0.02em]">
         Workspace
       </div>
@@ -250,7 +253,7 @@ export function FileTreePanel({
         aria-label="Search files"
         placeholder="Find a file…"
         value={query}
-        onChange={e => setQuery(e.target.value)}
+        onChange={(e) => setQuery(e.target.value)}
         className="border-surface-300 dark:border-dark-surface-600 bg-surface-50 dark:bg-dark-surface-50 text-text dark:text-dark-text placeholder:text-surface-400 dark:placeholder:text-dark-surface-600 mx-2 mb-2 h-8 rounded-md border px-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-dark-primary-500"
       />
       {searchError && (
@@ -270,15 +273,16 @@ export function FileTreePanel({
               No matches
             </div>
           )}
-          {results.map(r => (
+          {results.map((r) => (
             <button
               key={r.path}
               type="button"
               onClick={() => {
                 onOpenFile(r.path);
-                setQuery('');
+                setQuery("");
               }}
-              className="text-text-primary dark:text-dark-text-primary flex w-full items-center gap-1.5 truncate rounded px-3 py-1 text-left font-mono text-xs hover:bg-black/5 dark:hover:bg-white/10">
+              className="text-text-primary dark:text-dark-text-primary flex w-full items-center gap-1.5 truncate rounded px-3 py-1 text-left font-mono text-xs hover:bg-black/5 dark:hover:bg-white/10"
+            >
               <FileIcon className="text-text-muted dark:text-dark-text-muted size-3 shrink-0" />
               <span className="truncate">{r.path}</span>
             </button>
@@ -291,7 +295,6 @@ export function FileTreePanel({
     </aside>
   );
 }
-
 
 export function CanvasTabStrip({
   tabs,
@@ -320,19 +323,21 @@ export function CanvasTabStrip({
     <div
       key={path}
       className={cn(
-        'flex shrink-0 items-center',
-        active ? 'border-primary-500 border-b-2' : 'border-b-2 border-transparent',
-      )}>
+        "flex shrink-0 items-center",
+        active ? "border-primary-500 border-b-2" : "border-b-2 border-transparent",
+      )}
+    >
       <button
         type="button"
         onClick={onClick}
-        aria-current={active ? 'page' : undefined}
+        aria-current={active ? "page" : undefined}
         className={cn(
-          'flex items-center gap-1 px-2 py-1.5 text-xs',
+          "flex items-center gap-1 px-2 py-1.5 text-xs",
           active
-            ? 'text-text-primary dark:text-dark-text-primary'
-            : 'text-text-muted dark:text-dark-text-muted hover:text-text-primary dark:hover:text-dark-text-primary',
-        )}>
+            ? "text-text-primary dark:text-dark-text-primary"
+            : "text-text-muted dark:text-dark-text-muted hover:text-text-primary dark:hover:text-dark-text-primary",
+        )}
+      >
         <span className="max-w-40 truncate font-mono">{label}</span>
       </button>
       {closable && (
@@ -340,7 +345,8 @@ export function CanvasTabStrip({
           type="button"
           aria-label={`Close ${label}`}
           onClick={() => onClose(path)}
-          className="text-text-muted dark:text-dark-text-muted hover:text-text-primary dark:hover:text-dark-text-primary px-1 py-1.5">
+          className="text-text-muted dark:text-dark-text-muted hover:text-text-primary dark:hover:text-dark-text-primary px-1 py-1.5"
+        >
           <X className="size-3" />
         </button>
       )}
@@ -349,10 +355,10 @@ export function CanvasTabStrip({
   return (
     <div className="border-surface-200 dark:border-dark-surface-600 flex shrink-0 items-end gap-1 overflow-x-auto border-b px-2">
       {views !== undefined
-        ? views.map(view => tab(view.id, view.label, view.active, view.onSelect, false))
-        : tab('', 'Chat', activePath === '', () => onSelect(''), false)}
+        ? views.map((view) => tab(view.id, view.label, view.active, view.onSelect, false))
+        : tab("", "Chat", activePath === "", () => onSelect(""), false)}
       {showFileTabs &&
-        tabs.map(t => tab(t.path, t.name, activePath === t.path, () => onSelect(t.path), true))}
+        tabs.map((t) => tab(t.path, t.name, activePath === t.path, () => onSelect(t.path), true))}
     </div>
   );
 }
@@ -376,20 +382,20 @@ export function FilePane({
 }: FilePaneProps) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(tab.content);
-  const [status, setStatus] = useState<'saved' | 'error' | null>(null);
+  const [status, setStatus] = useState<"saved" | "error" | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (!editing) setText(tab.content);
   }, [tab.content, editing]);
 
-  if (tab.state === 'loading') {
+  if (tab.state === "loading") {
     return (
       <div className="text-text-muted dark:text-dark-text-muted p-4 text-sm">
         Loading {tab.name}…
       </div>
     );
   }
-  if (tab.state === 'error') {
+  if (tab.state === "error") {
     return (
       <div className="p-4 text-sm text-error dark:text-dark-error" role="alert">
         Could not read {tab.path}: {tab.error}
@@ -404,11 +410,11 @@ export function FilePane({
     setError(null);
     void onWrite(tab.path, text)
       .then(() => {
-        setStatus('saved');
+        setStatus("saved");
         window.setTimeout(() => setStatus(null), 2000);
       })
       .catch((err: unknown) => {
-        setStatus('error');
+        setStatus("error");
         setError(err instanceof Error ? err.message : String(err));
       });
   };
@@ -423,14 +429,14 @@ export function FilePane({
           {dirty && (
             <span className="text-text-primary dark:text-dark-text-primary"> · unsaved</span>
           )}
-          {status === 'saved' && (
+          {status === "saved" && (
             <span className="text-success-500 dark:text-dark-success-500"> · saved</span>
           )}
-          {status === 'error' && error && (
+          {status === "error" && error && (
             <span className="text-error dark:text-dark-error"> · {error}</span>
           )}
         </span>
-        {onWrite && !editing && kind === 'code' && (
+        {onWrite && !editing && kind === "code" && (
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
             Edit
           </Button>
@@ -448,13 +454,14 @@ export function FilePane({
                 setEditing(false);
                 setStatus(null);
                 setError(null);
-              }}>
+              }}
+            >
               Cancel
             </Button>
           </>
         )}
       </div>
-      {kind === 'image' && (
+      {kind === "image" && (
         <AssetActionToolbar
           kind={kind}
           path={tab.path}
@@ -468,8 +475,9 @@ export function FilePane({
           <div className="text-text-muted dark:text-dark-text-muted p-4 text-sm">
             Loading viewer…
           </div>
-        }>
-        {kind === 'code' ? (
+        }
+      >
+        {kind === "code" ? (
           <MonacoView
             value={text}
             path={tab.path}

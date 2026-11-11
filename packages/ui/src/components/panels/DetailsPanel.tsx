@@ -122,12 +122,9 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
     <div
       className={`bg-surface-50 dark:bg-dark-surface-50 flex h-full w-96 flex-col border-l border-surface-300 dark:border-dark-surface-300 ${className}`}
     >
-
       <div className="flex items-center justify-between border-b border-surface-300 dark:border-dark-surface-300 p-4">
         <div>
-          <h4 className="text-lg font-semibold text-text dark:text-dark-text">
-            {title}
-          </h4>
+          <h4 className="text-lg font-semibold text-text dark:text-dark-text">{title}</h4>
           {!isEditMode && <Badge className="mt-1">{viewModeLabel}</Badge>}
         </div>
         <div className="flex gap-1">
@@ -144,47 +141,29 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({
             </Button>
           )}
           {onDelete && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onDelete}
-              aria-label={deleteLabel}
-            >
+            <Button size="sm" variant="ghost" onClick={onDelete} aria-label={deleteLabel}>
               <Trash2 className="h-4 w-4 text-error-500 dark:text-dark-error-500" />
             </Button>
           )}
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onClose}
-            aria-label={closeLabel}
-          >
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label={closeLabel}>
             <X className="h-4 w-4 text-text dark:text-dark-text" />
           </Button>
         </div>
       </div>
 
-
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {fields.map((field) => (
           <Panel key={field.key} variant="surface">
-            <Label className="text-text dark:text-dark-text">
-              {field.label}
-            </Label>
+            <Label className="text-text dark:text-dark-text">{field.label}</Label>
             <div className="mt-2">{renderField(field)}</div>
           </Panel>
         ))}
       </div>
 
-
       {isEditMode && (
         <div className="border-t border-surface-300 dark:border-dark-surface-300 p-4">
           <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              onClick={handleCancel}
-              className="flex-1"
-            >
+            <Button variant="secondary" onClick={handleCancel} className="flex-1">
               {cancelLabel}
             </Button>
             <Button variant="primary" onClick={handleSave} className="flex-1">

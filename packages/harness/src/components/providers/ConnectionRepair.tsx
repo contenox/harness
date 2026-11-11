@@ -3,11 +3,15 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCheckConnection, useConnections } from '../../hooks/useConnections';
 import { withFallbackCode } from '../../lib/chatRecovery';
-import { getCloudProviderSetup, isCloudProviderType, signInAccountName } from '../../lib/providerCatalog';
+import {
+  getCloudProviderSetup,
+  isCloudProviderType,
+  signInAccountName,
+} from '../../lib/providerCatalog';
 import type { Connection } from '../../lib/types';
-import { SignInConnection } from './SignInConnection';
 import { ConnectionRecovery } from './ConnectionRecovery';
 import { ProviderSetupForm } from './ProviderSetupForm';
+import { SignInConnection } from './SignInConnection';
 
 type Dialogs = 'configure' | 'signIn' | null;
 
@@ -93,7 +97,9 @@ export function ConnectionRepair({
       <Dialog
         open={dialog === 'signIn' && canSignIn}
         onClose={close}
-        title={t('recovery.dialog_sign_in', { name: signInAccountName(t, connection.providerType) })}
+        title={t('recovery.dialog_sign_in', {
+          name: signInAccountName(t, connection.providerType),
+        })}
         closeLabel={t('common.close')}
         className="w-[min(32rem,calc(100vw-2rem))]">
         <SignInConnection

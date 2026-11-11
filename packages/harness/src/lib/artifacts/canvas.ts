@@ -1,4 +1,3 @@
-
 import type { TaskEvent } from '../types';
 
 export type CanvasArtifactId = string;

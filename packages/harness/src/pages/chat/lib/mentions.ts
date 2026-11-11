@@ -1,6 +1,6 @@
 import { audioContent, imageContent, textContent, type ContentBlock } from '../../../lib/acp';
-import type { PendingImageAttachment } from './imageAttachments';
 import type { PendingAudioAttachment } from './audioAttachments';
+import type { PendingImageAttachment } from './imageAttachments';
 
 export interface WorkspaceFileRef {
   path: string;
@@ -44,7 +44,10 @@ export function splitMentionQuery(query: string): { dir: string; leaf: string } 
   return { dir: query.slice(0, slash), leaf: query.slice(slash + 1) };
 }
 
-export function mentionCandidatesForScope(entries: MentionCandidate[], leaf: string): MentionCandidate[] {
+export function mentionCandidatesForScope(
+  entries: MentionCandidate[],
+  leaf: string,
+): MentionCandidate[] {
   const q = leaf.trim().toLowerCase();
   const scored = entries
     .map(e => {
@@ -79,7 +82,11 @@ function browseToken(dir: string): string {
   return needsQuoting(inner) ? `@"${inner}` : `@${inner}`;
 }
 
-export function applyMentionFolder(text: string, q: MentionQuery, dir: WorkspaceFileRef): { text: string; caret: number } {
+export function applyMentionFolder(
+  text: string,
+  q: MentionQuery,
+  dir: WorkspaceFileRef,
+): { text: string; caret: number } {
   const token = browseToken(dir.path);
   const next = text.slice(0, q.start) + token + text.slice(q.end);
   return { text: next, caret: q.start + token.length };
@@ -118,7 +125,10 @@ export function mentionMenuKeyFromEvent(key: string): MentionMenuKeyAction | nul
   }
 }
 
-export function mentionPreviewPath(entries: MentionCandidate[], activeIndex: number): string | null {
+export function mentionPreviewPath(
+  entries: MentionCandidate[],
+  activeIndex: number,
+): string | null {
   const entry = entries[activeIndex];
   if (!entry || entry.isDirectory) return null;
   return entry.path;
@@ -141,7 +151,11 @@ export function filterMentionFiles(files: WorkspaceFileRef[], query: string): Wo
   return scored.map(x => x.f);
 }
 
-export function applyMention(text: string, q: MentionQuery, file: WorkspaceFileRef): { text: string; caret: number } {
+export function applyMention(
+  text: string,
+  q: MentionQuery,
+  file: WorkspaceFileRef,
+): { text: string; caret: number } {
   const token = `${mentionToken(file)} `;
   const next = text.slice(0, q.start) + token + text.slice(q.end);
   return { text: next, caret: q.start + token.length };

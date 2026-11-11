@@ -1,6 +1,6 @@
 import { createElement, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
-import { releaseNavbarSlot } from './NavbarSlot';
+import { releaseNavbarSlot } from './navbarSlotState';
 
 describe('releaseNavbarSlot — navbar slot single-owner set/clear', () => {
   it('clears the slot when the unmounting claimant still holds its own node', () => {

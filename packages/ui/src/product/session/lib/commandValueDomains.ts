@@ -1,26 +1,22 @@
+import type { SessionConfigOption } from "@contenox/acp-client";
+import { isGroupedOptions, selectableValues } from "./configOptions";
 
-import type { SessionConfigOption } from '@contenox/acp-client';
-import { isGroupedOptions, selectableValues } from './configOptions';
+export const MODEL_CONFIG_ID = "model";
 
+export const THINK_CONFIG_ID = "think";
 
-export const MODEL_CONFIG_ID = 'model';
+export const HITL_POLICY_CONFIG_ID = "hitl-policy";
 
-export const THINK_CONFIG_ID = 'think';
+export const COMMAND_MODEL = "model";
+export const COMMAND_PROVIDER = "provider";
+export const COMMAND_THINK = "think";
+export const COMMAND_POLICY = "policy";
 
-export const HITL_POLICY_CONFIG_ID = 'hitl-policy';
+const HITL_POLICY_DEFAULT_VALUE = "__contenox_default__";
 
-export const COMMAND_MODEL = 'model';
-export const COMMAND_PROVIDER = 'provider';
-export const COMMAND_THINK = 'think';
-export const COMMAND_POLICY = 'policy';
-
-
-const HITL_POLICY_DEFAULT_VALUE = '__contenox_default__';
-
-const ANY_PROVIDER_GROUP = 'any';
+const ANY_PROVIDER_GROUP = "any";
 
 export type CommandValueDomains = ReadonlyMap<string, readonly string[]>;
-
 
 export const NO_VALUE_DOMAINS: CommandValueDomains = new Map<string, readonly string[]>();
 
@@ -40,7 +36,7 @@ export function commandValueDomains(
         addCommandValues(
           domains,
           COMMAND_THINK,
-          selectableValues(option).map(value => value.value),
+          selectableValues(option).map((value) => value.value),
         );
         break;
       case HITL_POLICY_CONFIG_ID:
@@ -48,8 +44,8 @@ export function commandValueDomains(
           domains,
           COMMAND_POLICY,
           selectableValues(option)
-            .filter(value => value.value !== HITL_POLICY_DEFAULT_VALUE)
-            .map(value => value.value),
+            .filter((value) => value.value !== HITL_POLICY_DEFAULT_VALUE)
+            .map((value) => value.value),
         );
         break;
     }
@@ -68,8 +64,8 @@ function modelCommandDomains(option: SessionConfigOption): {
 } {
   if (!isGroupedOptions(option.options)) {
     const models = selectableValues(option)
-      .map(value => text(value.value))
-      .filter(value => value !== '');
+      .map((value) => text(value.value))
+      .filter((value) => value !== "");
     return { models, providers: [] };
   }
   const models: string[] = [];
@@ -77,11 +73,11 @@ function modelCommandDomains(option: SessionConfigOption): {
   for (const group of option.options) {
     const id = text(group.group);
     const selector = id === ANY_PROVIDER_GROUP ? id : text(group.name) || id;
-    if (selector !== '') providers.push(selector);
+    if (selector !== "") providers.push(selector);
     for (const value of group.options ?? []) {
       const model = text(value.name) || text(value.value);
-      if (model === '') continue;
-      models.push(selector === '' ? model : `${selector}/${model}`);
+      if (model === "") continue;
+      models.push(selector === "" ? model : `${selector}/${model}`);
     }
   }
   return { models, providers };
@@ -94,7 +90,7 @@ function addCommandValues(
 ): void {
   for (const candidate of values) {
     const value = text(candidate);
-    if (value === '') continue;
+    if (value === "") continue;
     const existing = domains.get(command);
     if (existing === undefined) {
       domains.set(command, [value]);
@@ -106,5 +102,5 @@ function addCommandValues(
 }
 
 function text(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
+  return typeof value === "string" ? value.trim() : "";
 }

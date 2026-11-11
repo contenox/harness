@@ -11,7 +11,12 @@ export interface ComposerChipOptions {
 }
 
 function isMode(o: SessionConfigOption): boolean {
-  return o.id === 'hitl-policy' || o.id === 'mode' || o.category === '_hitl_policy' || o.category === 'mode';
+  return (
+    o.id === 'hitl-policy' ||
+    o.id === 'mode' ||
+    o.category === '_hitl_policy' ||
+    o.category === 'mode'
+  );
 }
 
 function isModel(o: SessionConfigOption): boolean {
@@ -28,7 +33,9 @@ export function withLiveModelValues(
 ): readonly SessionConfigOption[] {
   const liveModel = liveOptions?.find(isModel);
   if (!liveModel || !sessionOptions.some(isModel)) return sessionOptions;
-  return sessionOptions.map(option => (isModel(option) ? { ...option, options: liveModel.options } : option));
+  return sessionOptions.map(option =>
+    isModel(option) ? { ...option, options: liveModel.options } : option,
+  );
 }
 
 /** Sorts ACP config options into the composer's chips. The workspace root is handled by the project chip. */

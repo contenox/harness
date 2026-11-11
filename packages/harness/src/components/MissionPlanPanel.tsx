@@ -27,9 +27,8 @@ export function MissionPlanPanel({ plan }: { plan?: MissionPlan | null }) {
         </span>
       </div>
 
-
       {plan.explanation && (
-        <P variant="muted" className="mt-3 whitespace-pre-wrap text-sm">
+        <P variant="muted" className="mt-3 text-sm whitespace-pre-wrap">
           <span className="font-medium">{t('plan.why_label')}: </span>
           {plan.explanation}
         </P>
@@ -53,10 +52,7 @@ export function MissionPlanPanel({ plan }: { plan?: MissionPlan | null }) {
                 {entry.content}
               </span>
             </div>
-            <Span
-              variant="muted"
-              className="shrink-0 text-xs"
-              title={t('plan.priority_title')}>
+            <Span variant="muted" className="shrink-0 text-xs" title={t('plan.priority_title')}>
               {t(PLAN_ENTRY_PRIORITY_LABEL_KEY[entry.priority])}
             </Span>
           </li>

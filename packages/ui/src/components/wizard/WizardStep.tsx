@@ -17,13 +17,7 @@ export type WizardStepProps = {
   className?: string;
 };
 
-function StepIndicator({
-  step,
-  status,
-}: {
-  step: number;
-  status: WizardStepStatus;
-}) {
+function StepIndicator({ step, status }: { step: number; status: WizardStepStatus }) {
   const base =
     "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors";
 
@@ -105,10 +99,7 @@ export function WizardStep({
       <div className="flex w-9 shrink-0 flex-col items-center">
         <StepIndicator step={step} status={status} />
         {!isLast ? (
-          <div
-            className={cn("mt-2 w-px flex-1 min-h-[1.5rem]", lineClass)}
-            aria-hidden
-          />
+          <div className={cn("mt-2 w-px flex-1 min-h-[1.5rem]", lineClass)} aria-hidden />
         ) : null}
       </div>
       <div className={cn("min-w-0 flex-1", !isLast && "pb-6")}>
@@ -116,10 +107,8 @@ export function WizardStep({
           variant="subsectionTitle"
           className={cn(
             "text-base",
-            status === "complete" &&
-              "text-text-muted dark:text-dark-text-muted",
-            status === "upcoming" &&
-              "text-text-muted dark:text-dark-text-muted",
+            status === "complete" && "text-text-muted dark:text-dark-text-muted",
+            status === "upcoming" && "text-text-muted dark:text-dark-text-muted",
           )}
         >
           {title}

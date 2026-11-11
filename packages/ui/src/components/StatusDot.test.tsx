@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { StatusDot } from "./StatusDot";
 
-const render = (props: Parameters<typeof StatusDot>[0]) => renderToStaticMarkup(createElement(StatusDot, props));
+const render = (props: Parameters<typeof StatusDot>[0]) =>
+  renderToStaticMarkup(createElement(StatusDot, props));
 
 describe("StatusDot", () => {
   it("renders the label and hides the dot from assistive tech", () => {

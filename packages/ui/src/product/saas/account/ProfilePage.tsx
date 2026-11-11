@@ -1,20 +1,17 @@
-import { InlineNotice, Page, Small } from '@contenox/ui';
-import { useState } from 'react';
-import { EmailField, PasswordField, SectionForm, TextField } from '@contenox/ui';
-import { ScreenBody } from '@contenox/ui';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { BackTo } from '../../shell/BackTo';
-import { useProductPorts } from '../../ports';
-import { partitionFormError } from './lib/formErrors';
-
+import { InlineNotice, Page, Small } from "@contenox/ui";
+import { useState } from "react";
+import { EmailField, PasswordField, SectionForm, TextField } from "@contenox/ui";
+import { ScreenBody } from "@contenox/ui";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { BackTo } from "../../shell/BackTo";
+import { useProductPorts } from "../../ports";
+import { partitionFormError } from "./lib/formErrors";
 
 const MIN_PASSWORD_LENGTH = 12;
 
+const IDENTITY_FIELDS = ["email", "display_name"] as const;
 
-const IDENTITY_FIELDS = ['email', 'display_name'] as const;
-
-
-const PASSWORD_FIELDS = ['current_password', 'new_password'] as const;
+const PASSWORD_FIELDS = ["current_password", "new_password"] as const;
 
 export default function ProfilePage() {
   const { routes } = useProductPorts();
@@ -29,18 +26,17 @@ export default function ProfilePage() {
   );
 }
 
-
 function IdentitySection() {
   const { useAuth, useUpdateMe } = useProductPorts();
   const { user } = useAuth();
   const update = useUpdateMe();
-  const [email, setEmail] = useState(user?.email ?? '');
-  const [displayName, setDisplayName] = useState(user?.display_name ?? '');
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [displayName, setDisplayName] = useState(user?.display_name ?? "");
 
   const errors = partitionFormError(update.error, IDENTITY_FIELDS);
   const changed =
-    email.trim() !== (user?.email ?? '') || displayName.trim() !== (user?.display_name ?? '');
-  const canSubmit = email.trim() !== '' && changed;
+    email.trim() !== (user?.email ?? "") || displayName.trim() !== (user?.display_name ?? "");
+  const canSubmit = email.trim() !== "" && changed;
 
   const submit = () => {
     if (!canSubmit) return;
@@ -61,11 +57,12 @@ function IdentitySection() {
             Saved. You are still signed in — a session belongs to you, not to your address.
           </InlineNotice>
         ) : undefined
-      }>
+      }
+    >
       <TextField
         label="Name"
         value={displayName}
-        onChange={e => setDisplayName(e.target.value)}
+        onChange={(e) => setDisplayName(e.target.value)}
         disabled={update.isPending}
         autoComplete="name"
         error={errors.fields.display_name}
@@ -74,7 +71,7 @@ function IdentitySection() {
         label="Email"
         required
         value={email}
-        onChange={e => setEmail(e.target.value)}
+        onChange={(e) => setEmail(e.target.value)}
         disabled={update.isPending}
         error={errors.fields.email}
         hint="You sign in with it"
@@ -83,16 +80,15 @@ function IdentitySection() {
   );
 }
 
-
 function PasswordSection() {
   const { useChangePassword } = useProductPorts();
   const change = useChangePassword();
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
 
   const errors = partitionFormError(change.error, PASSWORD_FIELDS);
-  const tooShort = next !== '' && next.length < MIN_PASSWORD_LENGTH;
-  const canSubmit = current !== '' && next.length >= MIN_PASSWORD_LENGTH;
+  const tooShort = next !== "" && next.length < MIN_PASSWORD_LENGTH;
+  const canSubmit = current !== "" && next.length >= MIN_PASSWORD_LENGTH;
 
   const submit = () => {
     if (!canSubmit) return;
@@ -100,8 +96,8 @@ function PasswordSection() {
       { current_password: current, new_password: next },
       {
         onSuccess: () => {
-          setCurrent('');
-          setNext('');
+          setCurrent("");
+          setNext("");
         },
       },
     );
@@ -121,7 +117,8 @@ function PasswordSection() {
             Changed. Every other browser has been signed out; this one is still signed in.
           </InlineNotice>
         ) : undefined
-      }>
+      }
+    >
       <InlineNotice variant="warning">
         Changing your password signs you out everywhere else. This browser stays signed in.
       </InlineNotice>
@@ -129,7 +126,7 @@ function PasswordSection() {
         label="Current password"
         required
         value={current}
-        onChange={e => setCurrent(e.target.value)}
+        onChange={(e) => setCurrent(e.target.value)}
         disabled={change.isPending}
         autoComplete="current-password"
         error={errors.fields.current_password}
@@ -138,7 +135,7 @@ function PasswordSection() {
         label="New password"
         required
         value={next}
-        onChange={e => setNext(e.target.value)}
+        onChange={(e) => setNext(e.target.value)}
         disabled={change.isPending}
         autoComplete="new-password"
         hint={`${MIN_PASSWORD_LENGTH}+ characters`}

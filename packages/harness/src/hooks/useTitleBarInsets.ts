@@ -20,10 +20,11 @@ function measure(): TitleBarInsets {
 export function useTitleBarInsets(): TitleBarInsets {
   const [insets, setInsets] = useState<TitleBarInsets>(measure);
   useEffect(() => {
-    const update = () => setInsets(prev => {
-      const next = measure();
-      return prev.start === next.start && prev.end === next.end ? prev : next;
-    });
+    const update = () =>
+      setInsets(prev => {
+        const next = measure();
+        return prev.start === next.start && prev.end === next.end ? prev : next;
+      });
     const overlay = (navigator as Navigator & { windowControlsOverlay?: WindowControlsOverlay })
       .windowControlsOverlay;
     window.addEventListener('resize', update);

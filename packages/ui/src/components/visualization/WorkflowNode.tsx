@@ -57,7 +57,7 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
         rx="12"
         className={cn(
           "fill-surface-50 dark:fill-dark-surface-50 stroke-2 transition-all duration-300 ease-in-out",
-          
+
           statusStrokes[status],
           isSelected ? "stroke-accent-500 dark:stroke-dark-accent-400" : "",
         )}
@@ -65,13 +65,9 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
 
       <foreignObject width={width} height={height}>
         <div className="flex h-full flex-col p-3">
-
           <div className="flex items-start justify-between">
             <div className="grow overflow-hidden">
-              <div
-                className="truncate font-medium text-text dark:text-dark-text"
-                title={label}
-              >
+              <div className="truncate font-medium text-text dark:text-dark-text" title={label}>
                 {label}
               </div>
               <div className="truncate text-sm text-text-muted dark:text-dark-text-muted">
@@ -80,13 +76,11 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
             </div>
           </div>
 
-
           {description && (
             <div className="mt-2 line-clamp-2 grow text-sm text-text-muted dark:text-dark-text-muted">
               {description}
             </div>
           )}
-
 
           {metadata?.branches !== undefined && (
             <div className="mt-2 flex items-center justify-end text-xs text-text-muted dark:text-dark-text-muted">

@@ -1,7 +1,7 @@
-import { cn } from '../../../utils';
-import { Panel } from '../../../components/Panel';
-import { ChevronRight, File as FileIcon, Folder } from 'lucide-react';
-import type { MentionCandidate } from '../lib/mentions';
+import { cn } from "../../../utils";
+import { Panel } from "../../../components/Panel";
+import { ChevronRight, File as FileIcon, Folder } from "lucide-react";
+import type { MentionCandidate } from "../lib/mentions";
 
 export interface MentionMenuProps {
   entries: MentionCandidate[];
@@ -23,7 +23,7 @@ export function MentionMenu({
   return (
     <Panel variant="surface" className="max-h-48 overflow-y-auto overscroll-contain p-0">
       <div role="listbox" aria-label="Workspace files">
-        {scope !== '' && (
+        {scope !== "" && (
           <div className="border-surface-200 dark:border-dark-surface-600 text-text-muted dark:text-dark-text-muted sticky top-0 border-b bg-inherit px-3 py-1.5 font-mono text-xs">
             {scope}/
           </div>
@@ -40,18 +40,17 @@ export function MentionMenu({
               role="option"
               aria-selected={i === activeIndex}
               onMouseEnter={() => onHoverIndex?.(i)}
-
-
-              onMouseDown={e => {
+              onMouseDown={(e) => {
                 e.preventDefault();
                 onPick(entry);
               }}
               className={cn(
-                'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
+                "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
                 i === activeIndex
-                  ? 'bg-primary-50 dark:bg-dark-primary-900'
-                  : 'hover:bg-surface-100 dark:hover:bg-dark-surface-300',
-              )}>
+                  ? "bg-primary-50 dark:bg-dark-primary-900"
+                  : "hover:bg-surface-100 dark:hover:bg-dark-surface-300",
+              )}
+            >
               {entry.isDirectory ? (
                 <Folder
                   className="text-primary-500 dark:text-dark-primary h-3.5 w-3.5 shrink-0"
@@ -65,7 +64,7 @@ export function MentionMenu({
               )}
               <span className="text-text dark:text-dark-text min-w-0 flex-1 truncate font-mono text-xs font-medium">
                 {entry.name}
-                {entry.isDirectory && '/'}
+                {entry.isDirectory && "/"}
               </span>
               {entry.isDirectory && (
                 <ChevronRight

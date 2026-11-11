@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import {
   applyMention,
   applyMentionAscend,
@@ -9,12 +9,9 @@ import {
   splitMentionQuery,
   type MentionCandidate,
   type WorkspaceFileRef,
-} from '../lib/mentions';
-import { clampIndex } from '../lib/slashMenu';
+} from "../lib/mentions";
+import { clampIndex } from "../lib/slashMenu";
 type DirCache = Record<string, MentionCandidate[] | undefined>;
-
-
-
 
 const MAX_ENTRIES = 50;
 
@@ -53,8 +50,6 @@ export function useMentionMenu({
   const query = useMemo(() => deriveMentionQuery(draft, caret), [draft, caret]);
   const { dir: scope, leaf } = useMemo(() => splitMentionQuery(query.query), [query.query]);
 
-
-
   useEffect(() => {
     if (query.active) ensureLoaded(scope);
   }, [query.active, scope, ensureLoaded]);
@@ -62,7 +57,7 @@ export function useMentionMenu({
   const scopeEntries = useMemo<MentionCandidate[]>(() => {
     const entries = cache[scope];
     if (!entries) return EMPTY_ENTRIES;
-    return entries.map(e => ({ path: e.path, name: e.name, isDirectory: e.isDirectory }));
+    return entries.map((e) => ({ path: e.path, name: e.name, isDirectory: e.isDirectory }));
   }, [cache, scope]);
 
   const filtered = useMemo(
@@ -71,15 +66,12 @@ export function useMentionMenu({
   );
   const loading = query.active && cache[scope] === undefined && isLoading(scope);
 
-
-
-
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
   const open = query.active && dismissedFor !== draft && (filtered.length > 0 || loading);
 
   const [activeIndex, setActiveIndexState] = useState(0);
   useEffect(() => {
-    setActiveIndexState(i => clampIndex(i, filtered.length));
+    setActiveIndexState((i) => clampIndex(i, filtered.length));
   }, [filtered.length]);
 
   const setActiveIndex = useCallback(
@@ -110,20 +102,18 @@ export function useMentionMenu({
       const action = mentionMenuKeyFromEvent(e.key);
       if (!action) return;
 
-
-
       switch (action.type) {
-        case 'move':
+        case "move":
           e.preventDefault();
-          setActiveIndexState(i => clampIndex(i + action.delta, filtered.length));
+          setActiveIndexState((i) => clampIndex(i + action.delta, filtered.length));
           break;
-        case 'accept': {
+        case "accept": {
           e.preventDefault();
           const entry = filtered[activeIndex];
           if (entry) pick(entry);
           break;
         }
-        case 'drill': {
+        case "drill": {
           const entry = filtered[activeIndex];
           if (entry?.isDirectory) {
             e.preventDefault();
@@ -131,15 +121,15 @@ export function useMentionMenu({
           }
           break;
         }
-        case 'ascend':
-          if (scope !== '') {
+        case "ascend":
+          if (scope !== "") {
             e.preventDefault();
             const { text, caret: nextCaret } = applyMentionAscend(draft, query);
             onDrill(text, nextCaret);
             setActiveIndexState(0);
           }
           break;
-        case 'close':
+        case "close":
           e.preventDefault();
           setDismissedFor(draft);
           break;

@@ -1,15 +1,16 @@
 import { IconButton } from '@contenox/ui';
-import { FileDiff, FolderTree, Terminal, type LucideIcon } from 'lucide-react';
+import { FileDiff, FolderTree, Search, Terminal, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useActiveChatPane } from '../../../hooks/chatPaneStore';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import type { PaneKind } from '../lib/panes';
 
 const TOGGLES: Array<{
-  pane: Extract<PaneKind, 'terminal' | 'diff'>;
+  pane: Extract<PaneKind, 'terminal' | 'diff' | 'search'>;
   Icon: LucideIcon;
-  labelKey: 'panes.terminal' | 'panes.diff';
+  labelKey: 'panes.terminal' | 'panes.diff' | 'panes.search';
 }> = [
+  { pane: 'search', Icon: Search, labelKey: 'panes.search' },
   { pane: 'terminal', Icon: Terminal, labelKey: 'panes.terminal' },
   { pane: 'diff', Icon: FileDiff, labelKey: 'panes.diff' },
 ];

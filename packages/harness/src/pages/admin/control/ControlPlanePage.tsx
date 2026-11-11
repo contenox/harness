@@ -9,7 +9,6 @@ export default function ControlPlanePage() {
 
   return (
     <Page bodyScroll="auto">
-
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 p-4 md:p-6">
         <Section>
           <H1 variant="page">{t('control_plane.hub_title')}</H1>

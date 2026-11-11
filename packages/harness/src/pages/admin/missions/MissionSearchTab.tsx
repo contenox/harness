@@ -7,8 +7,8 @@ import { useWorkspaceRoots } from '../../../hooks/useWorkspaceRoots';
 import { useWorkspaceSearch, type WorkspaceSearchState } from '../../../hooks/useWorkspaceSearch';
 import { matchChangedFile } from '../../../lib/missionChanges';
 import type { MissionChangedFile, WorkspaceRoot, WorkspaceSearchMatch } from '../../../lib/types';
-import { byteSlice, type SearchFileGroup } from '../../../lib/workspaceSearch';
 import { shortenRootPath } from '../../../lib/workspaceRoots';
+import { byteSlice, type SearchFileGroup } from '../../../lib/workspaceSearch';
 
 export interface MissionSearchTabProps {
   changedFiles: MissionChangedFile[];
@@ -81,7 +81,8 @@ export function SearchTabView({
 
       {root && (
         <span className="text-text-muted dark:text-dark-text-muted text-xs" title={root.path}>
-          {t('workspaceSearch.root_label')}: <span className="font-mono">{shortenRootPath(root.path, 4)}</span>
+          {t('workspaceSearch.root_label')}:{' '}
+          <span className="font-mono">{shortenRootPath(root.path, 4)}</span>
         </span>
       )}
 
@@ -128,7 +129,11 @@ function SearchBody({
 
   if (state.status === 'refusal') {
     return (
-      <WorkspaceBoundaryNotice message={state.refusalMessage ?? ''} roots={roots} onRetry={onRetry} />
+      <WorkspaceBoundaryNotice
+        message={state.refusalMessage ?? ''}
+        roots={roots}
+        onRetry={onRetry}
+      />
     );
   }
 
@@ -202,7 +207,10 @@ function SearchFileGroupRow({
           onClick={() => setOpen(o => !o)}
           aria-expanded={open}
           className="flex min-w-0 flex-1 items-center gap-2 text-left">
-          <Chevron aria-hidden="true" className="text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0" />
+          <Chevron
+            aria-hidden="true"
+            className="text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0"
+          />
           <span className="min-w-0 truncate font-mono text-sm" title={group.path}>
             {group.path}
           </span>

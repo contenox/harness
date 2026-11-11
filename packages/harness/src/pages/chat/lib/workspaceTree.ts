@@ -40,7 +40,11 @@ function reasonLabel(dim: DimensionVerdict, labels: AccessLabels): string {
   return dim.reason === 'matched_rule' ? labels.reasonRule : labels.reasonDefault;
 }
 
-function axisIndicator(dimName: string, dim: DimensionVerdict, labels: AccessLabels): AxisIndicator {
+function axisIndicator(
+  dimName: string,
+  dim: DimensionVerdict,
+  labels: AccessLabels,
+): AxisIndicator {
   return {
     status: dim.action,
     title: labels.format(dimName, actionLabel(dim.action, labels), reasonLabel(dim, labels)),
@@ -85,7 +89,11 @@ export function toFileTreeNodes(
     name: e.name,
     path: e.path,
     isDirectory: e.isDirectory,
-    children: e.isDirectory ? (cache[e.path] ? toFileTreeNodes(cache, e.path, decorate) : undefined) : undefined,
+    children: e.isDirectory
+      ? cache[e.path]
+        ? toFileTreeNodes(cache, e.path, decorate)
+        : undefined
+      : undefined,
     ...(decorate?.(e.path) ?? {}),
   }));
 }

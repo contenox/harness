@@ -1,13 +1,13 @@
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { Page } from '../../components/Page';
-import { P } from '../../components/Typography';
-import { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import type { ReactNode } from 'react';
-import { useProductPorts } from '../ports';
-import { TextField } from '../../components/forms/Fields';
-import { ScreenError, ScreenLoading } from './ScreenState';
+import { Button } from "../../components/Button";
+import { Card } from "../../components/Card";
+import { Page } from "../../components/Page";
+import { P } from "../../components/Typography";
+import { useState } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import type { ReactNode } from "react";
+import { useProductPorts } from "../ports";
+import { TextField } from "../../components/forms/Fields";
+import { ScreenError, ScreenLoading } from "./ScreenState";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { routes, useAuth } = useProductPorts();
@@ -22,17 +22,15 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-
 function NoAccount() {
   const { useCreateAccount, useSignOut } = useProductPorts();
   const signOut = useSignOut();
   const create = useCreateAccount();
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
 
   const submit = () => {
     const trimmed = name.trim();
-    if (trimmed === '') return;
-
+    if (trimmed === "") return;
 
     create.mutate({ name: trimmed });
   };
@@ -49,7 +47,7 @@ function NoAccount() {
           <TextField
             label="Team name"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             disabled={create.isPending}
             placeholder="Acme Engineering"
           />
@@ -57,7 +55,8 @@ function NoAccount() {
             variant="primary"
             onClick={submit}
             isLoading={create.isPending}
-            disabled={name.trim() === ''}>
+            disabled={name.trim() === ""}
+          >
             Create a team
           </Button>
           {create.error !== null && create.error !== undefined && (
@@ -66,7 +65,8 @@ function NoAccount() {
           <Button
             variant="outline"
             onClick={() => signOut.mutate(undefined)}
-            isLoading={signOut.isPending}>
+            isLoading={signOut.isPending}
+          >
             Sign out
           </Button>
         </Card>

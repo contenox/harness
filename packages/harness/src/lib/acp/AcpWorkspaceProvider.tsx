@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
-import type { AcpSessionState } from '../../hooks/acpSessionState';
+import { WebSocketTransport } from '@contenox/acp-client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
 import {
   createAcpWorkspaceController,
   type AcpWorkspaceController,
@@ -10,45 +11,19 @@ import {
   initialAcpSessionsState,
   initialAcpWorkspaceState,
   selectFocusedSession,
-  type AcpSessionsState,
-  type AcpWorkspaceState,
 } from '../../hooks/acpWorkspaceState';
-import { WebSocketTransport } from '@contenox/acp-client';
-import { useQueryClient } from '@tanstack/react-query';
-import { agentsConfigKeys, envelopeKeys, workspaceAccessKeys } from '../queryKeys';
 import {
   acpWsUrl,
   ensureProjectPrefix,
   hasProjectBridge,
   projectPathForCwd,
 } from '../projectRuntime';
-
-export interface AcpWorkspaceContextValue {
-  workspace: AcpWorkspaceState;
-  session: AcpSessionState;
-  sessions: AcpSessionsState;
-  controller: AcpWorkspaceController;
-}
-
-const AcpWorkspaceContext = createContext<AcpWorkspaceContextValue | null>(null);
-
-export function createDeferredDisposer(dispose: () => void): { armForCleanup: () => void; cancelPendingDispose: () => void } {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  return {
-    armForCleanup: () => {
-      timer = setTimeout(() => {
-        timer = null;
-        dispose();
-      }, 0);
-    },
-    cancelPendingDispose: () => {
-      if (timer !== null) {
-        clearTimeout(timer);
-        timer = null;
-      }
-    },
-  };
-}
+import { agentsConfigKeys, envelopeKeys, workspaceAccessKeys } from '../queryKeys';
+import {
+  AcpWorkspaceContext,
+  createDeferredDisposer,
+  type AcpWorkspaceContextValue,
+} from './acpWorkspaceContext';
 
 export interface AcpWorkspaceProviderProps {
   children: ReactNode;
@@ -95,12 +70,4 @@ export function AcpWorkspaceProvider({ children }: AcpWorkspaceProviderProps) {
   );
 
   return <AcpWorkspaceContext.Provider value={value}>{children}</AcpWorkspaceContext.Provider>;
-}
-
-export function useAcpWorkspaceContext(): AcpWorkspaceContextValue {
-  const ctx = useContext(AcpWorkspaceContext);
-  if (!ctx) {
-    throw new Error('useAcpWorkspace/useAcpWorkspaceContext must be used within an <AcpWorkspaceProvider>');
-  }
-  return ctx;
 }

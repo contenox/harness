@@ -1,7 +1,6 @@
 import { cwdRawFetch } from './projectRuntime';
 import { parseSSEFrames } from './workspaceSearch';
 
-
 export interface WorkspaceFindMatch {
   path: string;
   name: string;
@@ -100,8 +99,7 @@ export async function runWorkspaceFind(opts: RunWorkspaceFindOptions): Promise<v
     let parsed: { message?: string; code?: string } = {};
     try {
       parsed = messageFromErrorBody(await response.json());
-    } catch {
-    }
+    } catch {}
     const message = parsed.message ?? `find failed (${response.status})`;
     if (response.status === 422) {
       opts.onRefusal({ status: 422, code: parsed.code, message });

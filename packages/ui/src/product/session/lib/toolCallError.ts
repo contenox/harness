@@ -1,6 +1,9 @@
-import type { AcpToolCallState } from '../state/acpSessionState';
+import type { AcpToolCallState } from "../state/acpSessionState";
 
-export type ToolCallErrorSource = Pick<AcpToolCallState, 'status' | 'content' | 'meta' | 'rawOutput'>;
+export type ToolCallErrorSource = Pick<
+  AcpToolCallState,
+  "status" | "content" | "meta" | "rawOutput"
+>;
 
 /**
  * The text to show for a tool call that failed.
@@ -14,19 +17,19 @@ export type ToolCallErrorSource = Pick<AcpToolCallState, 'status' | 'content' | 
  * and raw output is the last resort for a call that merely reports failure.
  */
 export function toolCallError(toolCall: ToolCallErrorSource): string | null {
-  if (toolCall.status !== 'failed') return null;
+  if (toolCall.status !== "failed") return null;
 
   for (const block of toolCall.content ?? []) {
-    if (block.type !== 'content') continue;
-    const text = block.content?.type === 'text' ? block.content.text : undefined;
-    if (typeof text === 'string' && text.trim() !== '') return text;
+    if (block.type !== "content") continue;
+    const text = block.content?.type === "text" ? block.content.text : undefined;
+    if (typeof text === "string" && text.trim() !== "") return text;
   }
 
   const metaError = toolCall.meta?.error;
-  if (typeof metaError === 'string' && metaError.trim() !== '') return metaError;
+  if (typeof metaError === "string" && metaError.trim() !== "") return metaError;
 
   const output = toolCall.rawOutput;
-  if (typeof output === 'string' && output.trim() !== '') return output;
+  if (typeof output === "string" && output.trim() !== "") return output;
   if (output != null) {
     try {
       return JSON.stringify(output, null, 2);

@@ -18,10 +18,7 @@ export const AddNodeButton: React.FC<AddNodeButtonProps> = ({
   className,
 }) => {
   return (
-    <g
-      transform={`translate(${x - 16}, ${y - 16})`}
-      className={`cursor-pointer ${className}`}
-    >
+    <g transform={`translate(${x - 16}, ${y - 16})`} className={`cursor-pointer ${className}`}>
       <title>{ariaLabel}</title>
       <circle
         cx="16"

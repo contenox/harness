@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:stories": "vitest run --project storybook",
     "prettier:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
-    "prettier": "prettier --write \"**/*.{ts,tsx,js,json,md}\""
+    "prettier": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "typecheck": "tsc --noEmit -p ."
   },
   "peerDependencies": {
     "clsx": "^2.1.1",
@@ -49,6 +50,11 @@
       "types": "./dist/editor.d.ts",
       "import": "./dist/editor.mjs",
       "require": "./dist/editor.js"
+    },
+    "./monaco": {
+      "types": "./dist/monaco.d.ts",
+      "import": "./dist/monaco.mjs",
+      "require": "./dist/monaco.js"
     },
     "./access": {
       "types": "./dist/access.d.ts",
@@ -106,7 +112,8 @@
   ],
   "sideEffects": [
     "**/*.css",
-    "**/monacoBootstrap.ts"
+    "**/monacoBootstrap.ts",
+    "./dist/monaco.*"
   ],
   "devDependencies": {
     "@storybook/addon-themes": "10.4.0",
@@ -122,6 +129,7 @@
     "@vitest/browser": "^3.2.7",
     "playwright": "^1.63.0",
     "postcss": "^8.5.3",
+    "prettier": "^3.8.3",
     "react": "^19.0.0",
     "react-dom": "^19.2.3",
     "react-markdown": "^10.1.0",

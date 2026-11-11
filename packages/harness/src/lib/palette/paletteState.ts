@@ -2,7 +2,6 @@ import { blend, frecencyBoost, type FrecencyStore } from './frecency';
 import { createSearcher, type FuzzySearcher, type WeightedField } from './fuzzy';
 import type { PaletteItem, PaletteItemType } from './types';
 
-
 export const FIELD_WEIGHTS = {
   title: 4,
   keyword: 3,
@@ -11,7 +10,9 @@ export const FIELD_WEIGHTS = {
 } as const;
 
 export function paletteItemFields(item: PaletteItem): WeightedField[] {
-  const fields: WeightedField[] = [{ text: item.title, weight: FIELD_WEIGHTS.title, highlight: true }];
+  const fields: WeightedField[] = [
+    { text: item.title, weight: FIELD_WEIGHTS.title, highlight: true },
+  ];
   for (const kw of item.keywords ?? []) fields.push({ text: kw, weight: FIELD_WEIGHTS.keyword });
   if (item.subtitle) fields.push({ text: item.subtitle, weight: FIELD_WEIGHTS.subtitle });
   fields.push({ text: item.id, weight: FIELD_WEIGHTS.id });
@@ -77,9 +78,10 @@ function recents(
     if (typeDelta !== 0) return typeDelta;
     return a.order - b.order;
   });
-  return withOrder.slice(0, cap).map(({ item, boost }) => ({ item, score: boost, matchIndexes: [] }));
+  return withOrder
+    .slice(0, cap)
+    .map(({ item, boost }) => ({ item, score: boost, matchIndexes: [] }));
 }
-
 
 export interface PaletteUIState {
   open: boolean;
@@ -104,7 +106,9 @@ export function paletteReducer(state: PaletteUIState, action: PaletteAction): Pa
     case 'close':
       return { open: false, query: '', selected: 0 };
     case 'toggle':
-      return state.open ? { open: false, query: '', selected: 0 } : { open: true, query: '', selected: 0 };
+      return state.open
+        ? { open: false, query: '', selected: 0 }
+        : { open: true, query: '', selected: 0 };
     case 'setQuery':
       return { ...state, query: action.query, selected: 0 };
     case 'move':

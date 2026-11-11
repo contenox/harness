@@ -7,7 +7,9 @@ const meta: Meta<typeof UserMenu> = {
   component: UserMenu,
   decorators: [
     (Story) => (
-      <div style={{ padding: "4rem", display: "flex", justifyContent: "flex-end", minHeight: "260px" }}>
+      <div
+        style={{ padding: "4rem", display: "flex", justifyContent: "flex-end", minHeight: "260px" }}
+      >
         <Story />
       </div>
     ),
@@ -51,12 +53,7 @@ export const NoEmail: Story = {
   render: () => {
     const [open, setOpen] = useState(true);
     return (
-      <UserMenu
-        isOpen={open}
-        onToggle={setOpen}
-        friendlyName="Grace Hopper"
-        logout={() => {}}
-      />
+      <UserMenu isOpen={open} onToggle={setOpen} friendlyName="Grace Hopper" logout={() => {}} />
     );
   },
 };

@@ -1,5 +1,4 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import { EMPTY_SESSION_KEY } from './acpWorkspaceState';
 import {
   initialPaneState,
   paneOf,
@@ -8,6 +7,7 @@ import {
   type PaneState,
   type PaneStoreState,
 } from '../pages/chat/lib/panes';
+import { EMPTY_SESSION_KEY } from './acpWorkspaceState';
 
 /**
  * Module-level store for the right-hand pane of each chat tab. It lives outside React because the

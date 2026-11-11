@@ -1,8 +1,8 @@
-import { Editor } from '@monaco-editor/react';
-import type { editor } from 'monaco-editor';
-import './monacoBootstrap';
-import { languageForPath } from './fileLanguage';
-import { defineCanvasMonacoThemes, useCanvasMonacoTheme } from './monacoTheme';
+import { Editor } from "@monaco-editor/react";
+import type { editor } from "monaco-editor";
+import "./monacoBootstrap";
+import { languageForPath } from "./fileLanguage";
+import { defineCanvasMonacoThemes, useCanvasMonacoTheme } from "./monacoTheme";
 
 export default function MonacoView({
   value,
@@ -29,7 +29,7 @@ export default function MonacoView({
       onChange={
         readOnly
           ? undefined
-          : next => {
+          : (next) => {
               if (next !== undefined) onChange?.(next);
             }
       }
@@ -40,7 +40,7 @@ export default function MonacoView({
         scrollBeyondLastLine: false,
         fontFamily: '"Geist Mono", ui-monospace, monospace',
         padding: { top: 8, bottom: 8 },
-        wordWrap: 'on',
+        wordWrap: "on",
         ...options,
         readOnly,
       }}

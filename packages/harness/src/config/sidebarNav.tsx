@@ -1,4 +1,14 @@
-import { Bot, Database, Inbox, Plug, Radar, Rocket, Settings, ShieldCheck, type LucideIcon } from 'lucide-react';
+import {
+  Bot,
+  Database,
+  Inbox,
+  Plug,
+  Radar,
+  Rocket,
+  Settings,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react';
 import type { TranslationKey } from '../i18n';
 
 export interface SidebarNavDefinition {

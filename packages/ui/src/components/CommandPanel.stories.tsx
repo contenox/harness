@@ -50,9 +50,7 @@ export const ImperativeUpdate: Story = {
       <div>
         <CommandPanel ref={ref} initialContent={<P>Initial content</P>} />
         <div style={{ display: "flex", gap: "0.5rem", padding: "1rem" }}>
-          <Button onClick={() => ref.current?.updateContent(<P>Updated content</P>)}>
-            Update
-          </Button>
+          <Button onClick={() => ref.current?.updateContent(<P>Updated content</P>)}>Update</Button>
           <Button onClick={() => ref.current?.resetContent()}>Reset</Button>
         </div>
       </div>

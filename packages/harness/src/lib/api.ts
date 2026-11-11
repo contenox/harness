@@ -9,6 +9,13 @@ import type {
 import { apiFetch } from './fetch';
 import {
   Agent,
+  AgentIdentity,
+  AgentIdentityCheck,
+  AgentIdentityState,
+  AgentKey,
+  AgentPreset,
+  AgentPresetInstallResult,
+  AgentRecord,
   AuthStatus,
   Backend,
   BackendRuntimeState,
@@ -18,7 +25,6 @@ import {
   CloudProviderType,
   Connection,
   CreateConnectionInput,
-  PatchConnectionInput,
   DispatchRequest,
   DispatchResult,
   Envelope,
@@ -27,20 +33,14 @@ import {
   ExternalAgentInput,
   ExternalAgentLogin,
   ExternalAgentPresetStatus,
-  AgentIdentity,
-  AgentIdentityCheck,
-  AgentIdentityState,
-  AgentKey,
   FleetEntry,
   HITLApproval,
   Mission,
   MissionChangesResponse,
   MissionFileDiff,
   MissionReport,
-  AgentPreset,
-  AgentPresetInstallResult,
-  AgentRecord,
   OperatorInboxItem,
+  PatchConnectionInput,
   ProviderLoginStart,
   ProviderLoginStatus,
   SetupStatus,
@@ -107,27 +107,36 @@ export const api = {
       options('PUT', { tools, workspace }),
     ),
   getMcpServer: (id: string) => apiFetch<McpServer>(`/api/mcp-servers/${encodeURIComponent(id)}`),
-  createMcpServer: (input: McpServerInput) => apiFetch<McpServer>('/api/mcp-servers', options('POST', input)),
+  createMcpServer: (input: McpServerInput) =>
+    apiFetch<McpServer>('/api/mcp-servers', options('POST', input)),
   updateMcpServer: (id: string, input: McpServerInput) =>
     apiFetch<McpServer>(`/api/mcp-servers/${encodeURIComponent(id)}`, options('PUT', input)),
-  deleteMcpServer: (id: string) => apiFetch<void>(`/api/mcp-servers/${encodeURIComponent(id)}`, options('DELETE')),
+  deleteMcpServer: (id: string) =>
+    apiFetch<void>(`/api/mcp-servers/${encodeURIComponent(id)}`, options('DELETE')),
   startMcpOAuth: (id: string, redirectBase: string) =>
     apiFetch<{ authorizationUrl: string }>(
       `/api/mcp-servers/${encodeURIComponent(id)}/oauth/start`,
       options('POST', { redirectBase }),
     ),
-  getRemoteTools: (id: string) => apiFetch<RemoteToolsEntry>(`/api/tools/remote/${encodeURIComponent(id)}`),
+  getRemoteTools: (id: string) =>
+    apiFetch<RemoteToolsEntry>(`/api/tools/remote/${encodeURIComponent(id)}`),
   createRemoteTools: (input: RemoteToolsInput) =>
     apiFetch<RemoteToolsEntry>('/api/tools/remote', options('POST', input)),
   updateRemoteTools: (id: string, input: RemoteToolsInput) =>
-    apiFetch<RemoteToolsEntry>(`/api/tools/remote/${encodeURIComponent(id)}`, options('PUT', input)),
+    apiFetch<RemoteToolsEntry>(
+      `/api/tools/remote/${encodeURIComponent(id)}`,
+      options('PUT', input),
+    ),
   deleteRemoteTools: (id: string) =>
     apiFetch<void>(`/api/tools/remote/${encodeURIComponent(id)}`, options('DELETE')),
   listExternalAgents: () => apiFetch<ExternalAgent[]>('/api/external-agents'),
   createExternalAgent: (input: ExternalAgentInput) =>
     apiFetch<ExternalAgent>('/api/external-agents', options('POST', input)),
   updateExternalAgent: (name: string, input: ExternalAgentInput) =>
-    apiFetch<ExternalAgent>(`/api/external-agents/${encodeURIComponent(name)}`, options('PUT', input)),
+    apiFetch<ExternalAgent>(
+      `/api/external-agents/${encodeURIComponent(name)}`,
+      options('PUT', input),
+    ),
   deleteExternalAgent: (name: string) =>
     apiFetch<void>(`/api/external-agents/${encodeURIComponent(name)}`, options('DELETE')),
   setExternalAgentEnabled: (name: string, enabled: boolean) =>
@@ -136,7 +145,10 @@ export const api = {
       options('POST'),
     ),
   checkExternalAgent: (name: string) =>
-    apiFetch<ExternalAgentCheck>(`/api/external-agents/${encodeURIComponent(name)}/check`, options('POST')),
+    apiFetch<ExternalAgentCheck>(
+      `/api/external-agents/${encodeURIComponent(name)}/check`,
+      options('POST'),
+    ),
   startExternalAgentLogin: (name: string, methodId: string) =>
     apiFetch<ExternalAgentLogin>(
       `/api/external-agents/${encodeURIComponent(name)}/login`,
@@ -150,8 +162,12 @@ export const api = {
       options('POST', { code }),
     ),
   cancelExternalAgentLogin: (name: string) =>
-    apiFetch<ExternalAgentLogin>(`/api/external-agents/${encodeURIComponent(name)}/login`, options('DELETE')),
-  listExternalAgentPresets: () => apiFetch<ExternalAgentPresetStatus[]>('/api/external-agent-presets'),
+    apiFetch<ExternalAgentLogin>(
+      `/api/external-agents/${encodeURIComponent(name)}/login`,
+      options('DELETE'),
+    ),
+  listExternalAgentPresets: () =>
+    apiFetch<ExternalAgentPresetStatus[]>('/api/external-agent-presets'),
   installExternalAgentPreset: (id: string) =>
     apiFetch<ExternalAgentPresetStatus>(
       `/api/external-agent-presets/${encodeURIComponent(id)}/install`,
@@ -233,7 +249,9 @@ export const api = {
 
   listPolicies: () => apiFetch<string[]>('/api/hitl-policies/list'),
   listEnvelopes: (workspace?: string) =>
-    apiFetch<Envelope[]>(`/api/envelopes${workspace ? `?workspace=${encodeURIComponent(workspace)}` : ''}`),
+    apiFetch<Envelope[]>(
+      `/api/envelopes${workspace ? `?workspace=${encodeURIComponent(workspace)}` : ''}`,
+    ),
 
   getAgentIdentity: () => apiFetch<AgentIdentityState>('/api/agent-identity'),
   putAgentIdentity: (body: AgentIdentity) =>

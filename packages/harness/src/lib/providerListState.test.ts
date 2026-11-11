@@ -71,9 +71,9 @@ describe('providerListReducer', () => {
 
 describe('draftFor', () => {
   it('falls back to defaults such as the Ollama address', () => {
-    expect(
-      draftFor(initialProviderListState, getCloudProviderSetup('ollama')).baseUrl,
-    ).toBe('http://127.0.0.1:11434');
+    expect(draftFor(initialProviderListState, getCloudProviderSetup('ollama')).baseUrl).toBe(
+      'http://127.0.0.1:11434',
+    );
   });
   it('returns the stored draft when present', () => {
     const s = providerListReducer(initialProviderListState, {

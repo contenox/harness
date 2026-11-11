@@ -29,14 +29,10 @@ export function TabbedPage({
     controlledActiveTab ?? defaultActiveTab ?? tabs[0]?.id,
   );
 
-
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
-    if (
-      controlledActiveTab !== undefined &&
-      controlledActiveTab !== activeTab
-    ) {
+    if (controlledActiveTab !== undefined && controlledActiveTab !== activeTab) {
       setActiveTab(controlledActiveTab);
     }
   }, [controlledActiveTab, activeTab]);
@@ -52,8 +48,7 @@ export function TabbedPage({
 
     let nextIdx = idx;
     if (e.key === "ArrowRight") nextIdx = (idx + 1) % tabs.length;
-    else if (e.key === "ArrowLeft")
-      nextIdx = (idx - 1 + tabs.length) % tabs.length;
+    else if (e.key === "ArrowLeft") nextIdx = (idx - 1 + tabs.length) % tabs.length;
     else if (e.key === "Home") nextIdx = 0;
     else if (e.key === "End") nextIdx = tabs.length - 1;
     else return;

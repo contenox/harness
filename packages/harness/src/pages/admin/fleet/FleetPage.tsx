@@ -18,7 +18,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { PlanProgress } from '../../../components/PlanProgress';
 import { StopConfirmDialog } from '../../../components/StopConfirmDialog';
 import { UnitStatus } from '../../../components/UnitStatus';
-import { startAdoptSession, useAdoptIntent } from '../../../lib/adoptIntent';
 import { useAgents } from '../../../hooks/useAgents';
 import { useApprovals, useInboxReports } from '../../../hooks/useApprovals';
 import {
@@ -28,9 +27,10 @@ import {
   type CancelInstanceInput,
 } from '../../../hooks/useFleet';
 import { useMissions } from '../../../hooks/useMissions';
+import { startAdoptSession, useAdoptIntent } from '../../../lib/adoptIntent';
 import { isMissionCapable, startMissionPath } from '../../../lib/missionAgents';
 import { relativeTime } from '../../../lib/relativeTime';
-import { createStopFlow, stopConfirmCopy } from '../../../lib/stopFlow';
+import { createStopFlow } from '../../../lib/stopFlow';
 import type { FleetInstanceState, InstanceStatus, Mission } from '../../../lib/types';
 import {
   needsYouMissionIds,
@@ -45,8 +45,6 @@ const FINISHED_MISSION_STATUSES: Mission['status'][] = ['landed', 'abandoned'];
 function isFinishedMission(mission?: Mission): boolean {
   return !!mission && FINISHED_MISSION_STATUSES.includes(mission.status);
 }
-
-export { createStopFlow, stopConfirmCopy, StopConfirmDialog };
 
 type StopMutation = UseMutationResult<string, Error, string, unknown>;
 type CancelMutation = UseMutationResult<string, Error, CancelInstanceInput, unknown>;
@@ -160,7 +158,6 @@ function InstanceRow({
         </span>
       </div>
 
-
       {sessionIds.length === 0 ? (
         <P variant="muted" className="text-xs">
           {t('fleet.no_sessions')}
@@ -176,7 +173,6 @@ function InstanceRow({
                 <span className="font-mono text-xs">{sessionId}</span>
               </span>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-
                 {canAdopt && (
                   <Button
                     variant="outline"
@@ -208,7 +204,6 @@ function InstanceRow({
       )}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-
         {!finished && sessionIds.length > 1 && (
           <Button
             variant="outline"

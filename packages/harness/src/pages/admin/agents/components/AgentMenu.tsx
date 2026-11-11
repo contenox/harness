@@ -21,7 +21,9 @@ export function AgentMenu({ name, enabled, onToggle, onEdit, onRemove }: Props) 
           <MoreHorizontal className="size-3.5" aria-hidden />
         </IconButton>
       }>
-      <DropdownItem icon={enabled ? <PowerOff className="size-3.5" /> : <Power className="size-3.5" />} onClick={onToggle}>
+      <DropdownItem
+        icon={enabled ? <PowerOff className="size-3.5" /> : <Power className="size-3.5" />}
+        onClick={onToggle}>
         {enabled ? t('external_agents.turn_off') : t('external_agents.turn_on')}
       </DropdownItem>
       {onEdit && (

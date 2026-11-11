@@ -31,7 +31,6 @@ export interface WebSocketTransportOptions {
 
 const READY_STATE_OPEN = 1;
 
-
 const CLOSE_NO_STATUS = 1005;
 
 export class WebSocketTransport implements Transport {
@@ -42,7 +41,8 @@ export class WebSocketTransport implements Transport {
   private closedFired = false;
 
   constructor(url: string, options: WebSocketTransportOptions = {}) {
-    const Impl = options.WebSocketImpl ?? (globalThis as { WebSocket?: WebSocketConstructorLike }).WebSocket;
+    const Impl =
+      options.WebSocketImpl ?? (globalThis as { WebSocket?: WebSocketConstructorLike }).WebSocket;
     if (!Impl) {
       throw new Error(
         'WebSocketTransport: no WebSocket implementation available (pass options.WebSocketImpl outside a browser)',
@@ -56,7 +56,7 @@ export class WebSocketTransport implements Transport {
         this.ws.send(text);
       }
     });
-    this.ws.addEventListener('message', (ev) => {
+    this.ws.addEventListener('message', ev => {
       const text = typeof ev.data === 'string' ? ev.data : String(ev.data);
       for (const cb of this.messageCbs) cb(text);
     });
@@ -66,8 +66,7 @@ export class WebSocketTransport implements Transport {
         reason: ev.reason ?? '',
       });
     });
-    this.ws.addEventListener('error', () => {
-    });
+    this.ws.addEventListener('error', () => {});
   }
 
   send(text: string): void {

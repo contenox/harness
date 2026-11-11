@@ -17,9 +17,7 @@ export const TabTrigger = forwardRef<HTMLButtonElement, TabTriggerProps>(
       className={cn(
         "inline-flex h-7 items-center rounded-lg px-2.5 text-[13px] font-medium whitespace-nowrap transition-colors",
         "disabled:pointer-events-none disabled:opacity-50",
-        active
-          ? "bg-selected text-text"
-          : "text-text-muted hover:bg-hover hover:text-text",
+        active ? "bg-selected text-text" : "text-text-muted hover:bg-hover hover:text-text",
         className,
       )}
     >

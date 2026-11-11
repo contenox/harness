@@ -1,9 +1,9 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import type { WorkspaceSearchState } from '../../../hooks/useWorkspaceSearch';
 import i18n from '../../../i18n';
 import type { MissionChangedFile } from '../../../lib/types';
-import type { WorkspaceSearchState } from '../../../hooks/useWorkspaceSearch';
 import { SearchTabView, type SearchTabViewProps } from './MissionSearchTab';
 
 beforeAll(async () => {
@@ -48,7 +48,10 @@ describe('SearchTabView — terminal states', () => {
       truncated: true,
       matchCount: 1,
       groups: [
-        { path: 'src/a.ts', matches: [{ path: 'src/a.ts', line: 1, column: 0, length: 6, preview: 'needle' }] },
+        {
+          path: 'src/a.ts',
+          matches: [{ path: 'src/a.ts', line: 1, column: 0, length: 6, preview: 'needle' }],
+        },
       ],
     });
     expect(html).toContain('refine your search');

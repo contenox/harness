@@ -5,10 +5,10 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { getCloudProviderSetup } from '../../lib/providerCatalog';
 import type { Connection } from '../../lib/types';
+import BackendForm from '../../pages/admin/backends/components/BackendForm';
 import { ConnectionRecovery } from './ConnectionRecovery';
 import { ConnectionRow } from './ConnectionRow';
 import { HiddenModelsNotice } from './HiddenModelsNotice';
-import BackendForm from '../../pages/admin/backends/components/BackendForm';
 import { ProviderSetupForm } from './ProviderSetupForm';
 
 vi.mock('../../lib/api', () => ({ api: {} }));
@@ -34,9 +34,7 @@ const connection: Connection = {
 };
 
 const render = (node: ReactElement) =>
-  renderToStaticMarkup(
-    createElement(QueryClientProvider, { client: new QueryClient() }, node),
-  );
+  renderToStaticMarkup(createElement(QueryClientProvider, { client: new QueryClient() }, node));
 
 describe('ConnectionRecovery', () => {
   it('shows a mapped title and text, with the raw error only in details', () => {
@@ -64,7 +62,11 @@ describe('ConnectionRecovery', () => {
       error: 'Vertex AI needs Google credentials. Paste a service account key JSON.',
     };
     const html = render(
-      <ConnectionRecovery connection={vertex} providerTitle="Vertex AI" onConfigure={() => undefined} />,
+      <ConnectionRecovery
+        connection={vertex}
+        providerTitle="Vertex AI"
+        onConfigure={() => undefined}
+      />,
     );
     expect(html).toContain('Vertex AI needs Google credentials');
     expect(html).not.toContain('Technical details');
@@ -72,7 +74,11 @@ describe('ConnectionRecovery', () => {
 
   it('offers only the actions that have a handler', () => {
     const html = render(
-      <ConnectionRecovery connection={connection} providerTitle="Ollama" onRetry={() => undefined} />,
+      <ConnectionRecovery
+        connection={connection}
+        providerTitle="Ollama"
+        onRetry={() => undefined}
+      />,
     );
     expect(html).toContain('Check again');
     expect(html).not.toContain('>Configure<');
@@ -212,7 +218,8 @@ describe('Vertex connections never print the project', () => {
     baseUrl: 'https://aiplatform.googleapis.com/v1/projects/secret-project-123/locations/global',
     displayUrl: 'https://aiplatform.googleapis.com/v1/projects/…/locations/global',
     errorCode: 'unreachable',
-    error: 'Post "https://aiplatform.googleapis.com/v1/projects/secret-project-123/locations/global:x": dial tcp: refused',
+    error:
+      'Post "https://aiplatform.googleapis.com/v1/projects/secret-project-123/locations/global:x": dial tcp: refused',
   };
 
   it('uses the display URL on the row', () => {
@@ -231,7 +238,11 @@ describe('Vertex connections never print the project', () => {
 
   it('redacts the project in the recovery card and its details', () => {
     const html = render(
-      <ConnectionRecovery connection={vertex} providerTitle="Vertex AI" onRetry={() => undefined} />,
+      <ConnectionRecovery
+        connection={vertex}
+        providerTitle="Vertex AI"
+        onRetry={() => undefined}
+      />,
     );
     expect(html).not.toContain('secret-project-123');
   });

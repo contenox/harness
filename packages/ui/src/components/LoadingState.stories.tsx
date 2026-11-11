@@ -23,20 +23,11 @@ export const ErrorStateDefault: StoryObj<typeof ErrorState> = {
 };
 
 export const ErrorStateWithMessage: StoryObj<typeof ErrorState> = {
-  render: () => (
-    <ErrorState
-      title="Request failed"
-      error="The server returned a 500 error."
-    />
-  ),
+  render: () => <ErrorState title="Request failed" error="The server returned a 500 error." />,
 };
 
 export const ErrorStateWithRetry: StoryObj<typeof ErrorState> = {
   render: () => (
-    <ErrorState
-      title="Network error"
-      error="Could not reach the server."
-      onRetry={() => {}}
-    />
+    <ErrorState title="Network error" error="Could not reach the server." onRetry={() => {}} />
   ),
 };

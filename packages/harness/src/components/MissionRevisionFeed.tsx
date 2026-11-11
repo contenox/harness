@@ -1,7 +1,7 @@
 import { Badge, Section, Span } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
-import { relativeTime } from '../lib/relativeTime';
 import { formatRevisionDelta, revisionsNewestFirst } from '../lib/planRevisions';
+import { relativeTime } from '../lib/relativeTime';
 import type { PlanRevisionSummary } from '../lib/types';
 
 export function MissionRevisionFeed({ revisions }: { revisions?: PlanRevisionSummary[] | null }) {

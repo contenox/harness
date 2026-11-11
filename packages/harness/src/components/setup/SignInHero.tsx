@@ -1,7 +1,7 @@
 import { H1, P } from '@contenox/ui';
 import logoMarkLightUrl from '../../assets/logo-mark-light.svg?url';
 import logoMarkDarkUrl from '../../assets/logo-mark.svg?url';
-import { useTheme } from '../../lib/ThemeProvider';
+import { useTheme } from '../../lib/themeContext';
 
 type Props = {
   /** Omit for the logo alone. */

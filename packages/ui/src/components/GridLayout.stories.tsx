@@ -19,9 +19,7 @@ const meta: Meta<typeof GridLayout> = {
 };
 
 const Cell = ({ index }: { index: number }) => (
-  <div className="rounded-lg bg-sidebar p-4 text-center text-[13px] text-text">
-    Item {index}
-  </div>
+  <div className="rounded-lg bg-sidebar p-4 text-center text-[13px] text-text">Item {index}</div>
 );
 
 export default meta;

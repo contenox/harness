@@ -3,11 +3,18 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { SecretInput } from "./SecretInput";
 
-const props = { showLabel: "Show", hideLabel: "Hide", storedLabel: "Key saved", replaceLabel: "Replace" };
+const props = {
+  showLabel: "Show",
+  hideLabel: "Hide",
+  storedLabel: "Key saved",
+  replaceLabel: "Replace",
+};
 
 describe("SecretInput", () => {
   it("renders a hardened password input", () => {
-    const html = renderToStaticMarkup(createElement(SecretInput, { ...props, value: "", onChange: () => {} }));
+    const html = renderToStaticMarkup(
+      createElement(SecretInput, { ...props, value: "", onChange: () => {} }),
+    );
     expect(html).toContain('type="password"');
     expect(html).toContain('autoComplete="off"');
     expect(html).toContain('spellCheck="false"');

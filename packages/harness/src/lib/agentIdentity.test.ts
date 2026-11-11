@@ -25,27 +25,51 @@ describe('agentIdentityIssues', () => {
   });
 
   it('asks for the missing half and rejects an address that is not one', () => {
-    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, name: 'Agent' })).toEqual(['name_without_email']);
-    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, email: 'a@b.c' })).toEqual(['email_without_name']);
-    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, name: 'Agent', email: 'nope' })).toEqual(['email_invalid']);
+    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, name: 'Agent' })).toEqual([
+      'name_without_email',
+    ]);
+    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, email: 'a@b.c' })).toEqual([
+      'email_without_name',
+    ]);
+    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, name: 'Agent', email: 'nope' })).toEqual([
+      'email_invalid',
+    ]);
   });
 
   it('wants Credit as written as Name <email>', () => {
-    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, creditAs: 'just a name' })).toEqual(['credit_as_invalid']);
-    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, creditAs: 'Alex <alex@example.com>' })).toEqual([]);
-    expect(parsePerson('  Alex Work  <alex@work.example> ')).toEqual({ name: 'Alex Work', email: 'alex@work.example' });
+    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, creditAs: 'just a name' })).toEqual([
+      'credit_as_invalid',
+    ]);
+    expect(
+      agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, creditAs: 'Alex <alex@example.com>' }),
+    ).toEqual([]);
+    expect(parsePerson('  Alex Work  <alex@work.example> ')).toEqual({
+      name: 'Alex Work',
+      email: 'alex@work.example',
+    });
     expect(parsePerson('alex@example.com')).toBeUndefined();
   });
 
   it('will not sign without a key, nor save an unusable one', () => {
-    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, sign: true })).toEqual(['sign_without_key']);
+    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, sign: true })).toEqual([
+      'sign_without_key',
+    ]);
     const locked = key({ usable: false, problem: 'passphrase_protected' });
-    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, key: locked.ref }, [locked])).toEqual(['key_unusable']);
+    expect(agentIdentityIssues({ ...EMPTY_AGENT_IDENTITY, key: locked.ref }, [locked])).toEqual([
+      'key_unusable',
+    ]);
   });
 });
 
 describe('commitPreview', () => {
-  const identity = { name: 'Contenox Agent', email: 'agent@example.com', key: key().ref, sign: true, creditMe: true, creditAs: '' };
+  const identity = {
+    name: 'Contenox Agent',
+    email: 'agent@example.com',
+    key: key().ref,
+    sign: true,
+    creditMe: true,
+    creditAs: '',
+  };
   const me = { name: 'Alex', email: 'alex@example.com' };
 
   it('shows the author, the signing key and the co-author line', () => {
@@ -57,14 +81,19 @@ describe('commitPreview', () => {
   });
 
   it('says nothing about signing when the key cannot sign, and does not credit the agent to itself', () => {
-    const preview = commitPreview(identity, { name: 'Agent', email: 'AGENT@example.com' }, key({ usable: false }));
+    const preview = commitPreview(
+      identity,
+      { name: 'Agent', email: 'AGENT@example.com' },
+      key({ usable: false }),
+    );
     expect(preview).toEqual({ author: 'Contenox Agent <agent@example.com>' });
   });
 
   it('credits the Credit as person when one is set', () => {
-    expect(commitPreview({ ...identity, creditAs: 'Alex Work <alex@work.example>' }, me, key())?.coAuthor).toBe(
-      'Alex Work <alex@work.example>',
-    );
+    expect(
+      commitPreview({ ...identity, creditAs: 'Alex Work <alex@work.example>' }, me, key())
+        ?.coAuthor,
+    ).toBe('Alex Work <alex@work.example>');
   });
 
   it('has no preview until both name and email are set', () => {
@@ -74,7 +103,9 @@ describe('commitPreview', () => {
 
 describe('hasGeneratedAgentKey', () => {
   it('finds the generated key on either path separator', () => {
-    expect(hasGeneratedAgentKey([key({ ref: 'C:\\Users\\me\\.ssh\\contenox_agent_ed25519' })])).toBe(true);
+    expect(
+      hasGeneratedAgentKey([key({ ref: 'C:\\Users\\me\\.ssh\\contenox_agent_ed25519' })]),
+    ).toBe(true);
     expect(hasGeneratedAgentKey([key({ ref: '/home/me/.ssh/contenox_agent_ed25519' })])).toBe(true);
     expect(hasGeneratedAgentKey([key()])).toBe(false);
   });

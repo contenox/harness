@@ -62,7 +62,9 @@ export function ProviderList({ includeSignIns = false, onConnected }: ProviderLi
         description={t(setup.shortKey)}
         trailing={<RowStatus connections={connections} />}
         expanded={state.expanded === setup.provider}
-        onExpandedChange={expanded => dispatch({ type: 'expand', provider: setup.provider, expanded })}>
+        onExpandedChange={expanded =>
+          dispatch({ type: 'expand', provider: setup.provider, expanded })
+        }>
         <ProviderBody
           setup={setup}
           connections={connections}

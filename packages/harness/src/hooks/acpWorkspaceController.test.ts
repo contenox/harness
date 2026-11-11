@@ -1680,7 +1680,11 @@ describe('acpWorkspaceController: inline permission card responses (explicit-onl
     await flushMicrotasks();
     expect(h.sessStore.state.pendingPermission).not.toBeNull();
 
-    h.transports[0].feed({ jsonrpc: '2.0', method: '$/cancel_request', params: { requestId: 'perm-w' } });
+    h.transports[0].feed({
+      jsonrpc: '2.0',
+      method: '$/cancel_request',
+      params: { requestId: 'perm-w' },
+    });
     await flushMicrotasks();
 
     expect(h.sessStore.state.pendingPermission).toBeNull();

@@ -1,4 +1,3 @@
-
 export const ADOPT_META_KEY = 'contenox.adopt';
 
 export type AdoptRef = {
@@ -17,7 +16,9 @@ export type AdoptResult = {
   controller: boolean;
 };
 
-export function adoptResultFromMeta(meta: Record<string, unknown> | undefined | null): AdoptResult | null {
+export function adoptResultFromMeta(
+  meta: Record<string, unknown> | undefined | null,
+): AdoptResult | null {
   const raw = meta?.[ADOPT_META_KEY];
   if (raw === null || typeof raw !== 'object') return null;
   const r = raw as Partial<AdoptResult>;

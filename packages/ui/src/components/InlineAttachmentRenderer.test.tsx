@@ -8,7 +8,6 @@ import {
 } from "./InlineAttachmentRenderer";
 import { chatTranscriptMarkdownComponents } from "./chat/chatTranscript";
 
-
 const PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
@@ -66,10 +65,7 @@ describe("InlineAttachmentRenderer: image kind", () => {
   it("renders inside an InlineAttachments list alongside other kinds", () => {
     const html = renderToStaticMarkup(
       createElement(InlineAttachments, {
-        attachments: [
-          { kind: "file_view", path: "a.txt", text: "hi" },
-          imageAttachment,
-        ],
+        attachments: [{ kind: "file_view", path: "a.txt", text: "hi" }, imageAttachment],
       }),
     );
     expect(html).toContain("a.txt");

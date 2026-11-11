@@ -10,13 +10,7 @@ export type WizardProps = {
   className?: string;
 };
 
-export function Wizard({
-  title,
-  description,
-  footer,
-  children,
-  className,
-}: WizardProps) {
+export function Wizard({ title, description, footer, children, className }: WizardProps) {
   return (
     <Panel
       variant="bordered"
@@ -40,7 +34,11 @@ export function Wizard({
         </header>
       )}
       <div className="space-y-0">{children}</div>
-      {footer ? <footer className="mt-4 border-t border-surface-200 pt-4 dark:border-dark-surface-700">{footer}</footer> : null}
+      {footer ? (
+        <footer className="mt-4 border-t border-surface-200 pt-4 dark:border-dark-surface-700">
+          {footer}
+        </footer>
+      ) : null}
     </Panel>
   );
 }

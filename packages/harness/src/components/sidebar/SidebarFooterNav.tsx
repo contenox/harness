@@ -22,7 +22,7 @@ export function SidebarFooterNav({ onNavigate }: { onNavigate: () => void }) {
       ) : undefined,
   }));
   return (
-    <div className="shrink-0 border-t border-line p-2">
+    <div className="border-line shrink-0 border-t p-2">
       <SidebarNav items={items} onNavigate={onNavigate} ariaLabel={t('acp_sidebar.navigation')} />
     </div>
   );

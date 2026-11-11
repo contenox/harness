@@ -24,11 +24,15 @@ export function ListEditor({ label, values, placeholder, onChange }: Props) {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={inputId} className="text-xs font-medium text-text-muted">
+      <label htmlFor={inputId} className="text-text-muted text-xs font-medium">
         {label}
       </label>
       <div className="flex flex-wrap items-center gap-1">
-        {values.length === 0 && <Span variant="muted" className="text-xs">{t('permissions.list_empty')}</Span>}
+        {values.length === 0 && (
+          <Span variant="muted" className="text-xs">
+            {t('permissions.list_empty')}
+          </Span>
+        )}
         {values.map(value => (
           <Chip
             key={value}
@@ -54,7 +58,12 @@ export function ListEditor({ label, values, placeholder, onChange }: Props) {
             }
           }}
         />
-        <Button type="button" variant="outline" size="sm" onClick={add} disabled={draft.trim() === ''}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={add}
+          disabled={draft.trim() === ''}>
           {t('permissions.list_add')}
         </Button>
       </div>

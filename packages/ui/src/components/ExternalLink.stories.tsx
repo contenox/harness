@@ -21,7 +21,8 @@ export const Default: Story = {
 export const InsideText: Story = {
   render: () => (
     <p className="max-w-sm text-sm text-text-muted">
-      Need a key? <ExternalLink href="https://example.com">Create one in the console</ExternalLink> and paste it here.
+      Need a key? <ExternalLink href="https://example.com">Create one in the console</ExternalLink>{" "}
+      and paste it here.
     </p>
   ),
 };
@@ -29,7 +30,9 @@ export const InsideText: Story = {
 export const LongLabelWraps: Story = {
   render: () => (
     <div className="w-48">
-      <ExternalLink href="https://example.com">A considerably longer link label that wraps</ExternalLink>
+      <ExternalLink href="https://example.com">
+        A considerably longer link label that wraps
+      </ExternalLink>
     </div>
   ),
 };

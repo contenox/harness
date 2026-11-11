@@ -121,8 +121,13 @@ function errorCodeOf(connection: Connection): string | undefined {
 export async function verifyConnection(
   common: RunCommon & { connection: Connection },
 ): Promise<Connection | undefined> {
-  const { deps, dispatch, isCancelled, timeoutMs = VERIFY_TIMEOUT_MS, pollMs = VERIFY_POLL_MS } =
-    common;
+  const {
+    deps,
+    dispatch,
+    isCancelled,
+    timeoutMs = VERIFY_TIMEOUT_MS,
+    pollMs = VERIFY_POLL_MS,
+  } = common;
   let connection = common.connection;
   if (isCancelled()) return undefined;
   dispatch({ type: 'verifying', connection });

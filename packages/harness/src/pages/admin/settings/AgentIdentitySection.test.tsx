@@ -73,9 +73,22 @@ describe('AgentIdentitySection', () => {
   });
 
   it('explains why a hardware key cannot be used', () => {
-    const hardware: AgentKey = { ...fileKey, ref: '/home/me/.ssh/id_ed25519_sk', type: 'sk-ssh-ed25519@openssh.com', usable: false, problem: 'security_key' };
+    const hardware: AgentKey = {
+      ...fileKey,
+      ref: '/home/me/.ssh/id_ed25519_sk',
+      type: 'sk-ssh-ed25519@openssh.com',
+      usable: false,
+      problem: 'security_key',
+    };
     const html = render({
-      identity: { name: 'Contenox Agent', email: 'agent@example.com', key: hardware.ref, sign: false, creditMe: true, creditAs: '' },
+      identity: {
+        name: 'Contenox Agent',
+        email: 'agent@example.com',
+        key: hardware.ref,
+        sign: false,
+        creditMe: true,
+        creditAs: '',
+      },
       keys: [hardware],
     });
     expect(html).toContain('needs a touch for every commit');
@@ -98,7 +111,14 @@ describe('AgentIdentitySection', () => {
 
   it('previews a signed, co-authored commit and shows the public key to add', () => {
     const html = render({
-      identity: { name: 'Contenox Agent', email: 'agent@example.com', key: fileKey.ref, sign: true, creditMe: true, creditAs: '' },
+      identity: {
+        name: 'Contenox Agent',
+        email: 'agent@example.com',
+        key: fileKey.ref,
+        sign: true,
+        creditMe: true,
+        creditAs: '',
+      },
       me: { name: 'Alex', email: 'alex@example.com', source: 'git' },
       keys: [fileKey],
     });
@@ -120,7 +140,14 @@ describe('AgentIdentitySection', () => {
       problem: 'passphrase_protected',
     };
     const html = render({
-      identity: { name: 'Contenox Agent', email: 'agent@example.com', key: locked.ref, sign: false, creditMe: false, creditAs: '' },
+      identity: {
+        name: 'Contenox Agent',
+        email: 'agent@example.com',
+        key: locked.ref,
+        sign: false,
+        creditMe: false,
+        creditAs: '',
+      },
       keys: [locked],
     });
     expect(html).toContain('Load it into your SSH agent with ssh-add');

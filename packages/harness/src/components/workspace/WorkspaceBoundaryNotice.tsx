@@ -22,7 +22,7 @@ export function WorkspaceBoundaryNotice({ message, roots, onRetry }: WorkspaceBo
       <InlineNotice variant="error" className="mb-2">
         <div className="flex flex-col gap-2">
           <p
-            className="max-h-40 overflow-y-auto text-xs break-words [overflow-wrap:anywhere]"
+            className="max-h-40 overflow-y-auto text-xs [overflow-wrap:anywhere] break-words"
             title={message}>
             {message}
           </p>

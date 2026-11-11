@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { ReactNode } from 'react';
-import type { Agent, FleetEntry, HITLApproval, Mission, WorkspaceRoot } from '../types';
 import type { SessionInfo } from '../acp';
+import type { Agent, FleetEntry, HITLApproval, Mission, WorkspaceRoot } from '../types';
 
 export type PaletteItemType =
   | 'action'

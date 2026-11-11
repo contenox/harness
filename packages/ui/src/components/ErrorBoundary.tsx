@@ -35,9 +35,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="flex min-h-screen items-center justify-center">
             <div className="text-center space-y-4">
               <H1>Something went wrong</H1>
-              <P variant="muted">
-                {this.state.error.message}
-              </P>
+              <P variant="muted">{this.state.error.message}</P>
               <Button variant="primary" onClick={this.reset}>
                 Try again
               </Button>

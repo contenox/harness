@@ -29,7 +29,7 @@ Everyday
   build              build the UI library and the harness UI
   test               unit tests of ui library, harness and acp-client
                      [Storybook tests: npm run test:stories in packages/ui]
-  typecheck          tsc for the harness app only
+  typecheck          tsc for the ui library, harness and acp-client
   lint               eslint for the harness app only
   ci                 install-web, build, typecheck, lint, test (what CI runs)
 
@@ -272,8 +272,12 @@ const tasks = {
   },
   test: () => needAll('test-ui', 'test-harness', 'test-acp-client'),
   typecheck: async () => {
+    await need('ensure:packages/ui');
     await need('ensure:packages/harness');
+    await need('ensure:packages/acp-client');
+    await npm('typecheck packages/ui', at('packages/ui'), ['run', 'typecheck']);
     await npm('typecheck packages/harness', at('packages/harness'), ['run', 'typecheck']);
+    await npm('typecheck packages/acp-client', at('packages/acp-client'), ['run', 'typecheck']);
   },
   lint: async () => {
     await need('ensure:packages/harness');

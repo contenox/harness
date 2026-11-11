@@ -1,9 +1,9 @@
-import { MessageSquare } from 'lucide-react';
-import { Button } from '../../../components/Button';
-import { EmptyState } from '../../../components/EmptyState';
-import { ListCard } from '../../../components/ListCard';
-import { LoadingState } from '../../../components/LoadingState';
-import { Small } from '../../../components/Typography';
+import { MessageSquare } from "lucide-react";
+import { Button } from "../../../components/Button";
+import { EmptyState } from "../../../components/EmptyState";
+import { ListCard } from "../../../components/ListCard";
+import { LoadingState } from "../../../components/LoadingState";
+import { Small } from "../../../components/Typography";
 
 export interface ChatSessionSummary {
   id: string;
@@ -36,7 +36,7 @@ export function ChatSessionList({
     );
   return (
     <div className="space-y-3">
-      {sessions.map(session => (
+      {sessions.map((session) => (
         <ListCard
           key={session.id}
           title={session.model}

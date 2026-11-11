@@ -1,10 +1,4 @@
-import {
-  CSSProperties,
-  forwardRef,
-  ReactNode,
-  useImperativeHandle,
-  useState,
-} from "react";
+import { CSSProperties, forwardRef, ReactNode, useImperativeHandle, useState } from "react";
 import { cn } from "../utils";
 import { P } from "./Typography";
 
@@ -19,34 +13,29 @@ export interface CommandPanelProps {
   style?: CSSProperties;
 }
 
-export const CommandPanel = forwardRef<CommandPanelHandle, CommandPanelProps>(
-  (props, ref) => {
-    const { initialContent = <P>Hi</P>, className = "", style = {} } = props;
+export const CommandPanel = forwardRef<CommandPanelHandle, CommandPanelProps>((props, ref) => {
+  const { initialContent = <P>Hi</P>, className = "", style = {} } = props;
 
-    const [content, setContent] = useState<ReactNode>(initialContent);
+  const [content, setContent] = useState<ReactNode>(initialContent);
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        updateContent(newContent: ReactNode) {
-          setContent(newContent);
-        },
-        resetContent() {
-          setContent(initialContent);
-        },
-      }),
-      [initialContent],
-    );
+  useImperativeHandle(
+    ref,
+    () => ({
+      updateContent(newContent: ReactNode) {
+        setContent(newContent);
+      },
+      resetContent() {
+        setContent(initialContent);
+      },
+    }),
+    [initialContent],
+  );
 
-    return (
-      <div
-        className={cn("flex items-center justify-between gap-4 p-4", className)}
-        style={style}
-      >
-        {content}
-      </div>
-    );
-  },
-);
+  return (
+    <div className={cn("flex items-center justify-between gap-4 p-4", className)} style={style}>
+      {content}
+    </div>
+  );
+});
 
 CommandPanel.displayName = "CommandPanel";

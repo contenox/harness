@@ -4,11 +4,7 @@ type SkeletonProps = React.HTMLAttributes<HTMLDivElement> & {
   variant?: "line" | "circle";
 };
 
-export function Skeleton({
-  className,
-  variant = "line",
-  ...props
-}: SkeletonProps) {
+export function Skeleton({ className, variant = "line", ...props }: SkeletonProps) {
   return (
     <div
       aria-hidden="true"

@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  runWorkspaceFind,
-  type FindFetch,
-  type WorkspaceFindMatch,
-} from '../lib/workspaceFind';
-
+import { runWorkspaceFind, type FindFetch, type WorkspaceFindMatch } from '../lib/workspaceFind';
 
 export type FindStatus = 'idle' | 'searching' | 'done' | 'refusal' | 'error';
 

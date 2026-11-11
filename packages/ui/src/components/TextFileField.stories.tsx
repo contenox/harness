@@ -16,7 +16,13 @@ const meta: Meta<typeof TextFileField> = {
   title: "Components/TextFileField",
   component: TextFileField,
   args: { labels },
-  decorators: [(Story) => <div className="max-w-md"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-md">
+        <Story />
+      </div>
+    ),
+  ],
 };
 export default meta;
 type Story = StoryObj<typeof TextFileField>;
@@ -57,4 +63,7 @@ export const PlainText: Story = {
   args: { accept: ".txt,text/plain" },
   render: (args) => <Controlled {...args} initial="any text is fine" />,
 };
-export const Disabled: Story = { args: { disabled: true }, render: (args) => <Controlled {...args} /> };
+export const Disabled: Story = {
+  args: { disabled: true },
+  render: (args) => <Controlled {...args} />,
+};

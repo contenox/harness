@@ -66,11 +66,7 @@ export function ToolbarItem({ label, tooltip, children, className, ...props }: T
 export const ToolbarActions = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   function ToolbarActions({ className, ...props }, ref) {
     return (
-      <div
-        ref={ref}
-        className={cn("flex shrink-0 items-center gap-1.5", className)}
-        {...props}
-      />
+      <div ref={ref} className={cn("flex shrink-0 items-center gap-1.5", className)} {...props} />
     );
   },
 );

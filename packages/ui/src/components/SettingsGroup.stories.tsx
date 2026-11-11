@@ -10,7 +10,13 @@ import { Button } from "./Button";
 const meta: Meta<typeof SettingsGroup> = {
   title: "Components/SettingsGroup",
   component: SettingsGroup,
-  decorators: [(Story) => <div className="max-w-xl"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-xl">
+        <Story />
+      </div>
+    ),
+  ],
 };
 export default meta;
 type Story = StoryObj<typeof SettingsGroup>;
@@ -18,7 +24,9 @@ type Story = StoryObj<typeof SettingsGroup>;
 const Body = () => (
   <div className="flex flex-col gap-3">
     <Input aria-label="Key" placeholder="Value" />
-    <div className="flex justify-end"><Button size="sm">Save</Button></div>
+    <div className="flex justify-end">
+      <Button size="sm">Save</Button>
+    </div>
   </div>
 );
 
@@ -26,9 +34,15 @@ export const Collapsed: Story = {
   args: { title: "Recommended" },
   render: (args) => (
     <SettingsGroup {...args}>
-      <SettingsRow icon={<Cloud />} title="Anthropic" description="Claude models via API key"><Body /></SettingsRow>
-      <SettingsRow icon={<KeyRound />} title="OpenAI" description="GPT models via API key"><Body /></SettingsRow>
-      <SettingsRow icon={<Cpu />} title="Gemini" description="Google models via API key"><Body /></SettingsRow>
+      <SettingsRow icon={<Cloud />} title="Anthropic" description="Claude models via API key">
+        <Body />
+      </SettingsRow>
+      <SettingsRow icon={<KeyRound />} title="OpenAI" description="GPT models via API key">
+        <Body />
+      </SettingsRow>
+      <SettingsRow icon={<Cpu />} title="Gemini" description="Google models via API key">
+        <Body />
+      </SettingsRow>
     </SettingsGroup>
   ),
 };
@@ -36,7 +50,9 @@ export const Collapsed: Story = {
 export const WithoutTitle: Story = {
   render: () => (
     <SettingsGroup>
-      <SettingsRow title="Only row" description="No group caption"><Body /></SettingsRow>
+      <SettingsRow title="Only row" description="No group caption">
+        <Body />
+      </SettingsRow>
     </SettingsGroup>
   ),
 };
@@ -44,8 +60,15 @@ export const WithoutTitle: Story = {
 export const NonExpandableAndDisabled: Story = {
   render: () => (
     <SettingsGroup title="Local">
-      <SettingsRow icon={<Server />} title="Ollama" description="Connected" trailing={<StatusDot status="available" label="Ready" />} />
-      <SettingsRow icon={<Cpu />} title="vLLM" description="Not available on this device" disabled><Body /></SettingsRow>
+      <SettingsRow
+        icon={<Server />}
+        title="Ollama"
+        description="Connected"
+        trailing={<StatusDot status="available" label="Ready" />}
+      />
+      <SettingsRow icon={<Cpu />} title="vLLM" description="Not available on this device" disabled>
+        <Body />
+      </SettingsRow>
       <SettingsRow
         icon={<Cloud />}
         title="Very long provider name that has to be truncated in a narrow container"
@@ -62,11 +85,23 @@ export const OneOpenAtATime: Story = {
   render: function Render() {
     const [open, setOpen] = useState<string | null>("a");
     const row = (id: string, title: string) => (
-      <SettingsRow key={id} title={title} description="Controlled by the parent" expanded={open === id} onExpandedChange={(e) => setOpen(e ? id : null)}>
+      <SettingsRow
+        key={id}
+        title={title}
+        description="Controlled by the parent"
+        expanded={open === id}
+        onExpandedChange={(e) => setOpen(e ? id : null)}
+      >
         <Body />
       </SettingsRow>
     );
-    return <SettingsGroup title="Accordion behaviour">{row("a", "First")}{row("b", "Second")}{row("c", "Third")}</SettingsGroup>;
+    return (
+      <SettingsGroup title="Accordion behaviour">
+        {row("a", "First")}
+        {row("b", "Second")}
+        {row("c", "Third")}
+      </SettingsGroup>
+    );
   },
   play: async ({ canvasElement }) => {
     const c = within(canvasElement);
@@ -83,10 +118,18 @@ export const KeyboardNavigation: Story = {
   args: { title: "Keyboard" },
   render: (args) => (
     <SettingsGroup {...args}>
-      <SettingsRow title="One" description="a"><Body /></SettingsRow>
-      <SettingsRow title="Two" description="b" disabled><Body /></SettingsRow>
-      <SettingsRow title="Three" description="c"><Body /></SettingsRow>
-      <SettingsRow title="Four" description="d"><Body /></SettingsRow>
+      <SettingsRow title="One" description="a">
+        <Body />
+      </SettingsRow>
+      <SettingsRow title="Two" description="b" disabled>
+        <Body />
+      </SettingsRow>
+      <SettingsRow title="Three" description="c">
+        <Body />
+      </SettingsRow>
+      <SettingsRow title="Four" description="d">
+        <Body />
+      </SettingsRow>
     </SettingsGroup>
   ),
   play: async ({ canvasElement }) => {
@@ -114,7 +157,9 @@ export const UncontrolledWithCallback: Story = {
   args: { title: "Callback" },
   render: () => (
     <SettingsGroup title="Callback">
-      <SettingsRow title="Row" onExpandedChange={fn()}><Body /></SettingsRow>
+      <SettingsRow title="Row" onExpandedChange={fn()}>
+        <Body />
+      </SettingsRow>
     </SettingsGroup>
   ),
   play: async ({ canvasElement }) => {

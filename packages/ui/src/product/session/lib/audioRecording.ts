@@ -1,20 +1,14 @@
-
-import { base64LengthForBytes } from './imageAttachments';
-
+import { base64LengthForBytes } from "./imageAttachments";
 
 export const RECORDING_SAMPLE_RATE = 16000;
 
-
 export const RECORDING_BYTES_PER_SECOND = RECORDING_SAMPLE_RATE * 2;
-
 
 export const WAV_HEADER_BYTES = 44;
 
-
-export const RECORDING_NAME = 'Voice note';
+export const RECORDING_NAME = "Voice note";
 
 export function maxRecordingSeconds(budgetBytes: number): number {
-
   const rawBudget = Math.floor(budgetBytes / 4) * 3;
   return Math.max(0, Math.floor((rawBudget - WAV_HEADER_BYTES) / RECORDING_BYTES_PER_SECOND));
 }
@@ -68,10 +62,10 @@ export function encodeWavPcm16(samples: Int16Array, sampleRate: number): Uint8Ar
   const ascii = (offset: number, text: string) => {
     for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
   };
-  ascii(0, 'RIFF');
+  ascii(0, "RIFF");
   view.setUint32(4, 36 + dataBytes, true);
-  ascii(8, 'WAVE');
-  ascii(12, 'fmt ');
+  ascii(8, "WAVE");
+  ascii(12, "fmt ");
   view.setUint32(16, 16, true);
   view.setUint16(20, 1, true);
   view.setUint16(22, 1, true);
@@ -79,7 +73,7 @@ export function encodeWavPcm16(samples: Int16Array, sampleRate: number): Uint8Ar
   view.setUint32(28, sampleRate * 2, true);
   view.setUint16(32, 2, true);
   view.setUint16(34, 16, true);
-  ascii(36, 'data');
+  ascii(36, "data");
   view.setUint32(40, dataBytes, true);
   for (let i = 0; i < samples.length; i++) {
     view.setInt16(WAV_HEADER_BYTES + i * 2, samples[i], true);
@@ -87,7 +81,7 @@ export function encodeWavPcm16(samples: Int16Array, sampleRate: number): Uint8Ar
   return new Uint8Array(buffer);
 }
 
-const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 export function base64FromBytes(bytes: Uint8Array): string {
   const out: string[] = [];
@@ -98,16 +92,16 @@ export function base64FromBytes(bytes: Uint8Array): string {
     out.push(
       BASE64_ALPHABET[b0 >> 2],
       BASE64_ALPHABET[((b0 & 0x03) << 4) | (b1 >> 4)],
-      i + 1 < bytes.length ? BASE64_ALPHABET[((b1 & 0x0f) << 2) | (b2 >> 6)] : '=',
-      i + 2 < bytes.length ? BASE64_ALPHABET[b2 & 0x3f] : '=',
+      i + 1 < bytes.length ? BASE64_ALPHABET[((b1 & 0x0f) << 2) | (b2 >> 6)] : "=",
+      i + 2 < bytes.length ? BASE64_ALPHABET[b2 & 0x3f] : "=",
     );
   }
-  return out.join('');
+  return out.join("");
 }
 
 export interface FinishedRecording {
   data: string;
-  mimeType: 'audio/wav';
+  mimeType: "audio/wav";
   seconds: number;
 }
 
@@ -128,7 +122,7 @@ export function finishRecording(
   const wav = encodeWavPcm16(floatTo16BitPcm(resampled), RECORDING_SAMPLE_RATE);
   return {
     data: base64FromBytes(wav),
-    mimeType: 'audio/wav',
+    mimeType: "audio/wav",
     seconds: resampled.length / RECORDING_SAMPLE_RATE,
   };
 }
@@ -137,11 +131,8 @@ export function formatSeconds(seconds: number): string {
   const whole = Math.max(0, Math.floor(seconds));
   const m = Math.floor(whole / 60);
   const s = whole % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
-
-
-
 
 const CAPTURE_WORKLET_SOURCE = `
 registerProcessor('contenox-capture', class extends AudioWorkletProcessor {
@@ -172,9 +163,9 @@ export interface StartRecordingOptions {
 
 export function canRecordAudio(): boolean {
   return (
-    typeof navigator !== 'undefined' &&
+    typeof navigator !== "undefined" &&
     !!navigator.mediaDevices?.getUserMedia &&
-    typeof AudioContext !== 'undefined'
+    typeof AudioContext !== "undefined"
   );
 }
 
@@ -196,14 +187,14 @@ export async function startBrowserRecording(
   let node: AudioWorkletNode;
   try {
     const moduleUrl = URL.createObjectURL(
-      new Blob([CAPTURE_WORKLET_SOURCE], { type: 'text/javascript' }),
+      new Blob([CAPTURE_WORKLET_SOURCE], { type: "text/javascript" }),
     );
     try {
       await context.audioWorklet.addModule(moduleUrl);
     } finally {
       URL.revokeObjectURL(moduleUrl);
     }
-    node = new AudioWorkletNode(context, 'contenox-capture');
+    node = new AudioWorkletNode(context, "contenox-capture");
   } catch (err) {
     teardown();
     throw err;

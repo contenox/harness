@@ -24,13 +24,29 @@ function makeClient(): QueryClient {
 const RESPONSE: AccessEvaluateResponse = {
   policyName: 'hitl-policy-strict.json',
   verdicts: [
-    { path: 'README.md', reachable: true, read: { action: 'allow' }, write: { action: 'approve', reason: 'default_action' } },
-    { path: '.ssh/id_rsa', reachable: true, read: { action: 'deny', reason: 'matched_rule', rule: 0 }, write: { action: 'deny', reason: 'matched_rule', rule: 0 } },
+    {
+      path: 'README.md',
+      reachable: true,
+      read: { action: 'allow' },
+      write: { action: 'approve', reason: 'default_action' },
+    },
+    {
+      path: '.ssh/id_rsa',
+      reachable: true,
+      read: { action: 'deny', reason: 'matched_rule', rule: 0 },
+      write: { action: 'deny', reason: 'matched_rule', rule: 0 },
+    },
     { path: '../escape', reachable: false },
   ],
 };
 
-function seed(client: QueryClient, root: string, policyKey: string, paths: string[], data = RESPONSE) {
+function seed(
+  client: QueryClient,
+  root: string,
+  policyKey: string,
+  paths: string[],
+  data = RESPONSE,
+) {
   const pathsKey = dedupeSortPaths(paths).join('\n');
   client.setQueryData(workspaceAccessKeys.batch(root, policyKey, pathsKey), data);
 }
@@ -69,7 +85,12 @@ describe('useWorkspaceAccess', () => {
     expect(res.verdicts.size).toBe(0);
 
     const before = mountHook<WorkspaceAccessResult>(client, () =>
-      useWorkspaceAccess({ root: '/ws', policy: 'strict', paths: ['.ssh/id_rsa', 'README.md'], enabled: true }),
+      useWorkspaceAccess({
+        root: '/ws',
+        policy: 'strict',
+        paths: ['.ssh/id_rsa', 'README.md'],
+        enabled: true,
+      }),
     );
     expect(before.verdicts.size).toBe(2);
   });

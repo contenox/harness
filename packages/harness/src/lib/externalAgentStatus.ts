@@ -39,7 +39,12 @@ export type AgentStatusInput = {
 };
 
 /** One state per agent row, in the order a person has to act on it. */
-export function agentRowStatus({ preset, agent, check, checking }: AgentStatusInput): AgentRowStatus {
+export function agentRowStatus({
+  preset,
+  agent,
+  check,
+  checking,
+}: AgentStatusInput): AgentRowStatus {
   const state = rowState({ preset, agent, check, checking });
   return { state, ...STATUS[state] };
 }

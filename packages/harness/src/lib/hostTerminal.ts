@@ -1,4 +1,3 @@
-
 export const TERMINAL_READ_ONLY_DEFAULT = true;
 
 export function resizeFrame(cols: number, rows: number): string {
@@ -11,8 +10,7 @@ export interface LocationLike {
 }
 
 export function buildTerminalWsUrl(wsPath: string, location?: LocationLike): string {
-  const loc =
-    location ?? (typeof window !== 'undefined' ? window.location : undefined);
+  const loc = location ?? (typeof window !== 'undefined' ? window.location : undefined);
   if (!loc) {
     throw new Error('buildTerminalWsUrl: no location available (pass one outside a browser)');
   }

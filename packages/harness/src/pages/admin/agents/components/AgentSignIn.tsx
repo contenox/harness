@@ -1,4 +1,14 @@
-import { Button, FormField, InlineNotice, Input, P, Span, Spinner, Step, Steps } from '@contenox/ui';
+import {
+  Button,
+  FormField,
+  InlineNotice,
+  Input,
+  P,
+  Span,
+  Spinner,
+  Step,
+  Steps,
+} from '@contenox/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useExternalAgentLogin } from '../../../../hooks/useExternalAgents';
@@ -87,7 +97,12 @@ export function AgentSignIn({ name, title, methods }: Props) {
             <Spinner size="xs" />
             {t('external_agents.signin.waiting')}
           </Span>
-          <Button type="button" variant="ghost" size="sm" isLoading={cancel.isPending} onClick={() => cancel.mutate()}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            isLoading={cancel.isPending}
+            onClick={() => cancel.mutate()}>
             {t('external_agents.cancel')}
           </Button>
         </div>
@@ -115,7 +130,10 @@ export function AgentSignIn({ name, title, methods }: Props) {
               type="button"
               size="sm"
               variant={i === 0 ? 'primary' : 'secondary'}
-              isLoading={(start.isPending && start.variables === m.id) || (!!active && login?.methodId === m.id)}
+              isLoading={
+                (start.isPending && start.variables === m.id) ||
+                (!!active && login?.methodId === m.id)
+              }
               disabled={start.isPending || !!active}
               onClick={() => start.mutate(m.id)}>
               {t('external_agents.signin.with', { method: m.name })}

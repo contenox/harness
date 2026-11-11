@@ -1,5 +1,5 @@
-import { type SlashCommand, type SlashCommandContext } from './types';
 import type { SlashCommandRegistry } from './registry';
+import { type SlashCommand, type SlashCommandContext } from './types';
 
 export function createHelpCommand(registry: SlashCommandRegistry): SlashCommand {
   return {
@@ -13,7 +13,7 @@ export function createHelpCommand(registry: SlashCommandRegistry): SlashCommand 
         ctx.notify('info', 'No commands registered.');
         return;
       }
-      const lines = cmds.map((c) => {
+      const lines = cmds.map(c => {
         const trigger = c.trigger ?? '/';
         const usage = c.usage ?? `${trigger}${c.name}`;
         return `${usage} — ${c.description}`;
@@ -22,4 +22,3 @@ export function createHelpCommand(registry: SlashCommandRegistry): SlashCommand 
     },
   };
 }
-

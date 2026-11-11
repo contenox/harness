@@ -12,6 +12,9 @@ export function tokenLimitFromOptions(options: readonly SessionConfigOption[]): 
 }
 
 /** The meter's max: the selected token limit when set, else the runtime-reported context window. */
-export function effectiveUsageMax(reportedSize: number, options: readonly SessionConfigOption[]): number {
+export function effectiveUsageMax(
+  reportedSize: number,
+  options: readonly SessionConfigOption[],
+): number {
   return tokenLimitFromOptions(options) ?? reportedSize;
 }

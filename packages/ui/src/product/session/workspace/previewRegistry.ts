@@ -1,5 +1,5 @@
-import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
-import type { PreviewKind } from '../../../components/editors/previewKind';
+import { lazy, type ComponentType, type LazyExoticComponent } from "react";
+import type { PreviewKind } from "../../../components/editors/previewKind";
 
 export interface PreviewViewerProps {
   content: string;
@@ -10,9 +10,9 @@ export interface PreviewViewerProps {
 export type PreviewViewer = LazyExoticComponent<ComponentType<PreviewViewerProps>>;
 
 const VIEWERS: Partial<Record<PreviewKind, PreviewViewer>> = {
-  markdown: lazy(() => import('./MarkdownView')),
-  image: lazy(() => import('./ImageView')),
-  pdf: lazy(() => import('./PdfView')),
+  markdown: lazy(() => import("./MarkdownView")),
+  image: lazy(() => import("./ImageView")),
+  pdf: lazy(() => import("./PdfView")),
 };
 
 export function previewViewer(kind: PreviewKind): PreviewViewer | null {

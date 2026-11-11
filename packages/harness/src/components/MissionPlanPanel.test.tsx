@@ -28,7 +28,12 @@ describe('MissionPlanPanel — the mission detail plan checklist', () => {
     const html = render({
       entries: [
         entry({ id: '1', content: 'Clone the repository', status: 'completed', priority: 'high' }),
-        entry({ id: '2', content: 'Reproduce the flake', status: 'in_progress', priority: 'medium' }),
+        entry({
+          id: '2',
+          content: 'Reproduce the flake',
+          status: 'in_progress',
+          priority: 'medium',
+        }),
         entry({ id: '3', content: 'Write the fix', status: 'pending', priority: 'low' }),
       ],
       revision: 3,

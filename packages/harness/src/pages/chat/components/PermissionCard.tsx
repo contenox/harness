@@ -11,7 +11,8 @@ function optionVariant(kind: PermissionOption['kind']): 'primary' | 'danger' | '
 }
 
 function permissionOptionLabel(option: PermissionOption, t: TFunction): string {
-  if (option.kind === 'allow_once' && option.name === 'Allow') return t('acp_chat.permission_allow');
+  if (option.kind === 'allow_once' && option.name === 'Allow')
+    return t('acp_chat.permission_allow');
   if (option.kind === 'reject_once' && option.name === 'Deny') return t('acp_chat.permission_deny');
   return option.name;
 }
@@ -40,7 +41,9 @@ export function PermissionCard({ permission, onRespond }: PermissionCardProps) {
         <Span variant="status" className="text-text-muted">
           {toolCall.kind ?? t('acp_chat.permission_default_kind')}
         </Span>
-        <P className="text-text mt-1 text-sm font-medium">{toolCall.title ?? toolCall.toolCallId}</P>
+        <P className="text-text mt-1 text-sm font-medium">
+          {toolCall.title ?? toolCall.toolCallId}
+        </P>
       </div>
 
       <div className="mt-3 space-y-3">

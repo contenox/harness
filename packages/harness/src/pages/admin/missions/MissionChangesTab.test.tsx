@@ -2,9 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import type { MissionChangesData } from '../../../hooks/useMissionChanges';
 import i18n from '../../../i18n';
 import { missionKeys } from '../../../lib/queryKeys';
-import type { MissionChangesData } from '../../../hooks/useMissionChanges';
 import MissionChangesTab from './MissionChangesTab';
 
 vi.mock('../../../lib/api', () => ({
@@ -34,7 +34,11 @@ describe('MissionChangesTab', () => {
   });
 
   it('says so plainly when a mission has no changes', () => {
-    const html = render('m1', { files: [], incomplete: false, scope: { files: 0, dirs: 0, anomaly: false } });
+    const html = render('m1', {
+      files: [],
+      incomplete: false,
+      scope: { files: 0, dirs: 0, anomaly: false },
+    });
     expect(html).toContain('No file changes recorded');
   });
 

@@ -42,21 +42,11 @@ export const WithQuery: Story = {
   args: { value: "react components" },
 };
 
-const items = [
-  "Button",
-  "Badge",
-  "Input",
-  "Checkbox",
-  "Select",
-  "TextArea",
-  "Tooltip",
-];
+const items = ["Button", "Badge", "Input", "Checkbox", "Select", "TextArea", "Tooltip"];
 
 const ResultsExample = () => {
   const [query, setQuery] = useState("b");
-  const filtered = items.filter((i) =>
-    i.toLowerCase().includes(query.toLowerCase()),
-  );
+  const filtered = items.filter((i) => i.toLowerCase().includes(query.toLowerCase()));
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       <SearchBar
@@ -91,9 +81,7 @@ const ResultsExample = () => {
           ))}
         </ul>
       ) : (
-        <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0 }}>
-          No results
-        </p>
+        <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0 }}>No results</p>
       )}
     </div>
   );

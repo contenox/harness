@@ -1,4 +1,19 @@
 import {
+  Badge,
+  Button,
+  ChatComposer,
+  ChatDateSeparator,
+  ChatMessage as ChatMessageUI,
+  ChatScrollToLatest,
+  ChatThread,
+  ChatThreadSkeleton,
+  InlineNotice,
+  Panel,
+  Span,
+  chatTranscriptMarkdownComponents,
+  useChatScroll,
+} from '@contenox/ui/chat';
+import {
   AlertTriangle,
   Check,
   Database,
@@ -19,21 +34,6 @@ import {
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import {
-  Badge,
-  Button,
-  ChatComposer,
-  ChatDateSeparator,
-  ChatMessage as ChatMessageUI,
-  ChatScrollToLatest,
-  ChatThread,
-  ChatThreadSkeleton,
-  InlineNotice,
-  Panel,
-  Span,
-  chatTranscriptMarkdownComponents,
-  useChatScroll,
-} from '@contenox/ui/chat';
 
 export type BeamChatSession = {
   id: string;
@@ -546,15 +546,12 @@ export function BeamChat({
     client.cancelTurn(activeSessionRef.current);
   }, [client]);
 
-  const resolveApproval = useCallback(
-    (optionId: string | undefined) => {
-      setPendingApproval(current => {
-        current?.resolve(optionId);
-        return null;
-      });
-    },
-    [],
-  );
+  const resolveApproval = useCallback((optionId: string | undefined) => {
+    setPendingApproval(current => {
+      current?.resolve(optionId);
+      return null;
+    });
+  }, []);
 
   useEffect(() => {
     void loadInitial();
@@ -728,17 +725,26 @@ export function BeamChat({
                 {productName}
               </Span>
             )}
-            {runtimeSummary && runtimeSummary.contextSize && runtimeSummary.contextSize > 0 ? (() => {
-              const used = runtimeSummary.contextUsed || 0;
-              const size = runtimeSummary.contextSize;
-              const pct = Math.round((used / size) * 100);
-              const cls = pct > 90 ? 'text-error dark:text-dark-error' : pct > 70 ? 'text-warning dark:text-dark-warning' : 'text-text-muted dark:text-dark-text-muted';
-              return (
-                <span className={`ml-1 text-[10px] tabular-nums ${cls}`} title={`Context: ${used.toLocaleString()} / ${size.toLocaleString()} tokens (${pct}%)`}>
-                  {used.toLocaleString()}/{size.toLocaleString()} ({pct}%)
-                </span>
-              );
-            })() : null}
+            {runtimeSummary && runtimeSummary.contextSize && runtimeSummary.contextSize > 0
+              ? (() => {
+                  const used = runtimeSummary.contextUsed || 0;
+                  const size = runtimeSummary.contextSize;
+                  const pct = Math.round((used / size) * 100);
+                  const cls =
+                    pct > 90
+                      ? 'text-error dark:text-dark-error'
+                      : pct > 70
+                        ? 'text-warning dark:text-dark-warning'
+                        : 'text-text-muted dark:text-dark-text-muted';
+                  return (
+                    <span
+                      className={`ml-1 text-[10px] tabular-nums ${cls}`}
+                      title={`Context: ${used.toLocaleString()} / ${size.toLocaleString()} tokens (${pct}%)`}>
+                      {used.toLocaleString()}/{size.toLocaleString()} ({pct}%)
+                    </span>
+                  );
+                })()
+              : null}
             <Badge variant={loadState === 'ready' ? 'outline' : 'secondary'} size="sm">
               {subtitle}
             </Badge>
@@ -772,7 +778,9 @@ export function BeamChat({
           </Button>
         </div>
 
-        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2" aria-label={`${productName} sessions`}>
+        <nav
+          className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2"
+          aria-label={`${productName} sessions`}>
           {loadState === 'loading' ? <ChatThreadSkeleton rows={3} /> : null}
           {loadState === 'ready' && sessions.length === 0 ? (
             <Panel
@@ -805,7 +813,7 @@ export function BeamChat({
               {client.renameSession ? (
                 <Button
                   aria-label={`Rename ${sessionTitle(session)}`}
-                  className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                  className="opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
                   disabled={pending}
                   onClick={() => void renameSession(session)}
                   size="icon"
@@ -817,7 +825,7 @@ export function BeamChat({
               {client.deleteSession ? (
                 <Button
                   aria-label={`Delete ${sessionTitle(session)}`}
-                  className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                  className="opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
                   disabled={pending}
                   onClick={() => void deleteSession(session)}
                   size="icon"
@@ -831,7 +839,12 @@ export function BeamChat({
         </nav>
 
         <div className="border-surface-200 dark:border-dark-surface-700 border-t p-3">
-          <ContextReadiness links={links} readiness={readiness} productName={productName} runtimeSummary={runtimeSummary} />
+          <ContextReadiness
+            links={links}
+            readiness={readiness}
+            productName={productName}
+            runtimeSummary={runtimeSummary}
+          />
           <ToolSummary tools={tools} unavailable={loadState === 'unavailable'} />
         </div>
       </Panel>
@@ -847,17 +860,26 @@ export function BeamChat({
               <Badge variant={loadState === 'ready' ? 'outline' : 'secondary'} size="sm">
                 {statusBadge}
               </Badge>
-              {runtimeSummary && runtimeSummary.contextSize && runtimeSummary.contextSize > 0 ? (() => {
-                const used = runtimeSummary.contextUsed || 0;
-                const size = runtimeSummary.contextSize;
-                const pct = Math.round((used / size) * 100);
-                const cls = pct > 90 ? 'text-error dark:text-dark-error' : pct > 70 ? 'text-warning dark:text-dark-warning' : 'text-text-muted dark:text-dark-text-muted';
-                return (
-                  <span className={`ml-1 text-[10px] tabular-nums ${cls}`} title={`Context: ${used.toLocaleString()} / ${size.toLocaleString()} tokens (${pct}%)`}>
-                    {used.toLocaleString()}/{size.toLocaleString()} ({pct}%)
-                  </span>
-                );
-              })() : null}
+              {runtimeSummary && runtimeSummary.contextSize && runtimeSummary.contextSize > 0
+                ? (() => {
+                    const used = runtimeSummary.contextUsed || 0;
+                    const size = runtimeSummary.contextSize;
+                    const pct = Math.round((used / size) * 100);
+                    const cls =
+                      pct > 90
+                        ? 'text-error dark:text-dark-error'
+                        : pct > 70
+                          ? 'text-warning dark:text-dark-warning'
+                          : 'text-text-muted dark:text-dark-text-muted';
+                    return (
+                      <span
+                        className={`ml-1 text-[10px] tabular-nums ${cls}`}
+                        title={`Context: ${used.toLocaleString()} / ${size.toLocaleString()} tokens (${pct}%)`}>
+                        {used.toLocaleString()}/{size.toLocaleString()} ({pct}%)
+                      </span>
+                    );
+                  })()
+                : null}
             </div>
             <Span variant="muted" className="mt-1 block text-sm">
               {subtitle}
@@ -1127,9 +1149,7 @@ function ToolCallCard({
           ) : (
             <Wrench className="h-3.5 w-3.5 shrink-0 opacity-70" />
           )}
-          <span className="truncate font-medium">
-            {call.title ?? call.toolName ?? 'Tool call'}
-          </span>
+          <span className="truncate font-medium">{call.title ?? call.toolName ?? 'Tool call'}</span>
         </span>
         <Badge variant={call.status === 'error' ? 'secondary' : 'outline'} size="sm">
           {call.status}
@@ -1170,9 +1190,7 @@ function ApprovalCard({
         {request.title}
       </div>
       {request.details ? (
-        <p className="text-text-muted dark:text-dark-text-muted mt-1 text-xs">
-          {request.details}
-        </p>
+        <p className="text-text-muted dark:text-dark-text-muted mt-1 text-xs">{request.details}</p>
       ) : null}
       {request.diff ? (
         <div className="mt-2 grid gap-2 sm:grid-cols-2">

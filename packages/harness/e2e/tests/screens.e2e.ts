@@ -15,9 +15,7 @@ const surfaces: Array<[name: string, path: string]> = [
 
 async function openSeededSession(page: Page): Promise<string | null> {
   await page.goto('/#/chat', { waitUntil: 'networkidle' });
-  const link = page
-    .getByRole('link', { name: /Show me what a seeded session looks like/ })
-    .first();
+  const link = page.getByRole('link', { name: /Show me what a seeded session looks like/ }).first();
   await link.waitFor({ state: 'attached', timeout: 8_000 }).catch(() => {});
   let href = await link.getAttribute('href').catch(() => null);
   if (href === null) {

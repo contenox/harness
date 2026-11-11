@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  accessUrl,
+  dedupeSortPaths,
+  fetchWorkspaceAccess,
+  HITL_POLICY_DEFAULT_VALUE,
+  verdictsToMap,
+  type AccessEvaluateResponse,
+  type PathVerdict,
+} from './workspaceAccess';
 
 vi.mock('./fetch', () => ({
   apiFetch: vi.fn(),
 }));
 
 const { apiFetch } = await import('./fetch');
-import {
-  accessUrl,
-  dedupeSortPaths,
-  fetchWorkspaceAccess,
-  verdictsToMap,
-  HITL_POLICY_DEFAULT_VALUE,
-  type AccessEvaluateResponse,
-  type PathVerdict,
-} from './workspaceAccess';
 
 const parse = (url: string) => new URLSearchParams(url.split('?')[1]);
 
@@ -39,7 +39,9 @@ describe('accessUrl', () => {
 describe('dedupeSortPaths', () => {
   it('de-dupes and sorts so the batch key is order-independent (expands do not thrash)', () => {
     expect(dedupeSortPaths(['b', 'a', 'a', 'c'])).toEqual(['a', 'b', 'c']);
-    expect(dedupeSortPaths(['c', 'a', 'b']).join('\n')).toBe(dedupeSortPaths(['a', 'b', 'c']).join('\n'));
+    expect(dedupeSortPaths(['c', 'a', 'b']).join('\n')).toBe(
+      dedupeSortPaths(['a', 'b', 'c']).join('\n'),
+    );
   });
 
   it('grows the union as the lazy tree expands (superset re-keys)', () => {
@@ -53,7 +55,12 @@ describe('dedupeSortPaths', () => {
 describe('verdictsToMap', () => {
   it('projects the ordered verdict list into a path lookup, unreachable included', () => {
     const verdicts: PathVerdict[] = [
-      { path: 'src/main.go', reachable: true, read: { action: 'allow' }, write: { action: 'approve' } },
+      {
+        path: 'src/main.go',
+        reachable: true,
+        read: { action: 'allow' },
+        write: { action: 'approve' },
+      },
       { path: '../escape', reachable: false },
     ];
     const map = verdictsToMap(verdicts);
@@ -68,7 +75,14 @@ describe('fetchWorkspaceAccess', () => {
   it('POSTs the paths body to the access URL and returns the response', async () => {
     const response: AccessEvaluateResponse = {
       policyName: 'hitl-policy-strict.json',
-      verdicts: [{ path: 'a.txt', reachable: true, read: { action: 'allow' }, write: { action: 'deny', reason: 'matched_rule', rule: 0 } }],
+      verdicts: [
+        {
+          path: 'a.txt',
+          reachable: true,
+          read: { action: 'allow' },
+          write: { action: 'deny', reason: 'matched_rule', rule: 0 },
+        },
+      ],
     };
     vi.mocked(apiFetch).mockResolvedValueOnce(response);
 

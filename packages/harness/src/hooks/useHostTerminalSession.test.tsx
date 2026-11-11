@@ -46,9 +46,7 @@ describe('createHostTerminalSession', () => {
   });
 
   it('propagates a 422 refusal (too many sessions / bad cwd) as a real error', async () => {
-    fetchMock.mockRejectedValueOnce(
-      new ApiError('too many terminal sessions', 422),
-    );
+    fetchMock.mockRejectedValueOnce(new ApiError('too many terminal sessions', 422));
     await expect(createHostTerminalSession('', 80, 24)).rejects.toMatchObject({ status: 422 });
   });
 });

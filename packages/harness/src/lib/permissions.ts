@@ -7,7 +7,12 @@ export const GRANTS: Grant[] = ['allow', 'approve', 'deny'];
 
 export type AxisId = 'files.read' | 'files.write' | 'shell' | 'missions.fire' | 'missions.answer';
 
-export type ListKey = 'approve_paths' | 'deny_paths' | 'prefix_allowlist' | 'ask_always' | 'blacklist';
+export type ListKey =
+  | 'approve_paths'
+  | 'deny_paths'
+  | 'prefix_allowlist'
+  | 'ask_always'
+  | 'blacklist';
 
 export const AXIS_PATH: Record<AxisId, string[]> = {
   'files.read': ['files', 'read'],
@@ -27,7 +32,7 @@ export const AXIS_LISTS: Record<AxisId, ListKey[]> = {
 
 export const CHAT_ENVELOPE = 'default';
 
-export const AREA_TOOLSETS =new Set(['local_fs', 'local_shell', 'mission']);
+export const AREA_TOOLSETS = new Set(['local_fs', 'local_shell', 'mission']);
 
 export type AxisValue = {
   grant: Grant;
@@ -98,7 +103,9 @@ function isListKey(key: string): key is ListKey {
 
 export function parentOf(envelopes: RawEnvelopes, name: string): string | undefined {
   const extendsName = envelopes.get(name)?.extends;
-  return typeof extendsName === 'string' && extendsName.trim() !== '' ? extendsName.trim() : undefined;
+  return typeof extendsName === 'string' && extendsName.trim() !== ''
+    ? extendsName.trim()
+    : undefined;
 }
 
 function chain(envelopes: RawEnvelopes, name: string): string[] {
@@ -113,7 +120,11 @@ function chain(envelopes: RawEnvelopes, name: string): string[] {
   return out;
 }
 
-export function resolveAxis(envelopes: RawEnvelopes, name: string, axis: AxisId): Resolved<AxisValue> | undefined {
+export function resolveAxis(
+  envelopes: RawEnvelopes,
+  name: string,
+  axis: AxisId,
+): Resolved<AxisValue> | undefined {
   for (const link of chain(envelopes, name)) {
     const value = parseAxis(getAt(envelopes.get(link), AXIS_PATH[axis]));
     if (value) return { value, from: link };
@@ -147,7 +158,11 @@ export function layerHas(layer: unknown, path: string[]): boolean {
   return getAt(layer, path) !== undefined;
 }
 
-export function serializeAxis(axis: AxisId, next: AxisValue, previous: AxisValue | undefined): unknown {
+export function serializeAxis(
+  axis: AxisId,
+  next: AxisValue,
+  previous: AxisValue | undefined,
+): unknown {
   const table: Record<string, unknown> = { ...next.extra, grant: next.grant };
   for (const key of AXIS_LISTS[axis]) {
     const values = next.lists[key] ?? [];
@@ -165,7 +180,11 @@ export function nestAt(path: string[], value: unknown): Record<string, unknown> 
   return out as Record<string, unknown>;
 }
 
-export function axisPatch(axis: AxisId, next: AxisValue, previous: AxisValue | undefined): Record<string, unknown> {
+export function axisPatch(
+  axis: AxisId,
+  next: AxisValue,
+  previous: AxisValue | undefined,
+): Record<string, unknown> {
   return nestAt(AXIS_PATH[axis], serializeAxis(axis, next, previous));
 }
 
@@ -199,7 +218,10 @@ export function policyEnvelopeName(policy: string | undefined | null): string | 
 export function sameValue(a: AxisValue | undefined, b: AxisValue | undefined): boolean {
   if (!a || !b) return a === b;
   if (a.grant !== b.grant || (a.substitution ?? '') !== (b.substitution ?? '')) return false;
-  const keys = new Set<ListKey>([...(Object.keys(a.lists) as ListKey[]), ...(Object.keys(b.lists) as ListKey[])]);
+  const keys = new Set<ListKey>([
+    ...(Object.keys(a.lists) as ListKey[]),
+    ...(Object.keys(b.lists) as ListKey[]),
+  ]);
   for (const key of keys) {
     const left = a.lists[key] ?? [];
     const right = b.lists[key] ?? [];

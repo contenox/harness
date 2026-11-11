@@ -39,7 +39,7 @@ describe('acpSessionReducer: unified timeline (D4)', () => {
     expect(state.items.filter(it => it.id === 'tc-1')).toHaveLength(1);
   });
 
-  it('tags a turn\'s tool_call and message items with the same turnId, for grouping the steps trail above the answer', () => {
+  it("tags a turn's tool_call and message items with the same turnId, for grouping the steps trail above the answer", () => {
     const state = run(
       { type: 'session_reset', sessionId: 'sess-1' },
       { type: 'prompt_start' },
@@ -146,7 +146,6 @@ describe('acpSessionReducer: unified timeline (D4)', () => {
 });
 
 describe('acpSessionReducer: stable message identity within one turn', () => {
-
   it('no-id-then-id: a turn-id-fallback chunk followed by a real messageId chunk yields ONE item', () => {
     const state = run(
       { type: 'session_reset', sessionId: 's1' },
@@ -229,10 +228,11 @@ describe('acpSessionReducer: stable message identity within one turn', () => {
       { type: 'message_chunk', id: 'assistant-1', text: 'first turn answer' },
       { type: 'prompt_end', stopReason: 'end_turn' },
     );
-    const second = acpSessionReducer(
-      acpSessionReducer(first, { type: 'prompt_start' }),
-      { type: 'thought_chunk', id: 'assistant-1', text: 'second turn thinking' },
-    );
+    const second = acpSessionReducer(acpSessionReducer(first, { type: 'prompt_start' }), {
+      type: 'thought_chunk',
+      id: 'assistant-1',
+      text: 'second turn thinking',
+    });
 
     expect(second.messages['assistant-1']).toMatchObject({
       thinking: 'first turn thinking',
@@ -496,7 +496,12 @@ describe('acpSessionReducer: terminal stream + cards', () => {
       { type: 'prompt_start' },
       {
         type: 'tool_call',
-        event: { updateKind: 'tool_call_update', toolCallId: 'tc-1', kind: 'read', status: 'completed' },
+        event: {
+          updateKind: 'tool_call_update',
+          toolCallId: 'tc-1',
+          kind: 'read',
+          status: 'completed',
+        },
       },
     );
     expect(state.terminal).toBeNull();

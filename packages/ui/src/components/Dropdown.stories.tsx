@@ -120,12 +120,12 @@ function Menu() {
 export const InsideClippingContainer: Story = {
   name: "Dropdown inside clipping container",
   render: () => (
-    <div style={{ width: 320, height: 56, overflow: "hidden" }} className="rounded-xl border border-line">
+    <div
+      style={{ width: 320, height: 56, overflow: "hidden" }}
+      className="rounded-xl border border-line"
+    >
       <div style={{ display: "flex", justifyContent: "flex-end", padding: 8 }}>
-        <Dropdown
-          align="end"
-          trigger={<Button variant="secondary">Menu</Button>}
-        >
+        <Dropdown align="end" trigger={<Button variant="secondary">Menu</Button>}>
           <Menu />
         </Dropdown>
       </div>

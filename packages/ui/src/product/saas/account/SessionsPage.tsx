@@ -1,22 +1,22 @@
-import { Badge, Button, Card, EmptyState, P, Page, Small } from '@contenox/ui';
-import { MonitorSmartphone } from 'lucide-react';
-import { useState } from 'react';
-import { ConfirmDialog } from '../ConfirmDialog';
-import { ListCard } from '@contenox/ui';
-import { ScreenError, ScreenLoading } from '../ScreenState';
-import { ScreenBody } from '@contenox/ui';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { BackTo } from '../../shell/BackTo';
-import { useProductPorts } from '../../ports';
-import type { BrowserSession } from '../../lib/api/types';
+import { Badge, Button, Card, EmptyState, P, Page, Small } from "@contenox/ui";
+import { MonitorSmartphone } from "lucide-react";
+import { useState } from "react";
+import { ConfirmDialog } from "../ConfirmDialog";
+import { ListCard } from "@contenox/ui";
+import { ScreenError, ScreenLoading } from "../ScreenState";
+import { ScreenBody } from "@contenox/ui";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { BackTo } from "../../shell/BackTo";
+import { useProductPorts } from "../../ports";
+import type { BrowserSession } from "../../lib/api/types";
 import {
   browserSessionLabel,
   browserSessionState,
   canRevoke,
   signedInElsewhere,
   type BrowserSessionState,
-} from './lib/browserSessions';
-import { relativeTime } from '../../lib/relativeTime';
+} from "./lib/browserSessions";
+import { relativeTime } from "../../lib/relativeTime";
 
 export default function SessionsPage() {
   const { routes, useBrowserSessions, useRevokeOtherSessions } = useProductPorts();
@@ -38,7 +38,7 @@ export default function SessionsPage() {
         {data && others > 0 && (
           <Card variant="filled" className="flex flex-col gap-3">
             <P className="text-sm">
-              You are signed in on {others === 1 ? 'one other browser' : `${others} other browsers`}
+              You are signed in on {others === 1 ? "one other browser" : `${others} other browsers`}
               .
             </P>
             <Button variant="danger" onClick={() => setConfirming(true)}>
@@ -55,7 +55,7 @@ export default function SessionsPage() {
           />
         )}
 
-        {data?.map(session => (
+        {data?.map((session) => (
           <SessionCard key={session.id} session={session} />
         ))}
       </ScreenBody>
@@ -67,9 +67,10 @@ export default function SessionsPage() {
         confirmLabel="Sign the others out"
         pending={revokeOthers.isPending}
         error={revokeOthers.error}
-        onConfirm={() => revokeOthers.mutate(undefined, { onSuccess: () => setConfirming(false) })}>
+        onConfirm={() => revokeOthers.mutate(undefined, { onSuccess: () => setConfirming(false) })}
+      >
         <P className="text-sm">
-          {others === 1 ? 'One other browser' : `${others} other browsers`} will be signed out
+          {others === 1 ? "One other browser" : `${others} other browsers`} will be signed out
           immediately and will have to sign in again. This browser stays signed in.
         </P>
         <P className="text-sm">
@@ -81,14 +82,12 @@ export default function SessionsPage() {
   );
 }
 
-
-const BADGE_VARIANTS: Record<BrowserSessionState, 'success' | 'default' | 'outline'> = {
-  current: 'success',
-  signed_in: 'default',
-  expired: 'outline',
-  signed_out: 'outline',
+const BADGE_VARIANTS: Record<BrowserSessionState, "success" | "default" | "outline"> = {
+  current: "success",
+  signed_in: "default",
+  expired: "outline",
+  signed_out: "outline",
 };
-
 
 function SessionCard({ session }: { session: BrowserSession }) {
   const { useRevokeSession } = useProductPorts();
@@ -98,19 +97,15 @@ function SessionCard({ session }: { session: BrowserSession }) {
 
   return (
     <ListCard
-      title={
-
-
-
-        describeAgent(session.user_agent)
-      }
+      title={describeAgent(session.user_agent)}
       titleClassName="font-medium break-words"
       meta={<Small>{activityLabel(session, state)}</Small>}
       trailing={
         <Badge variant={BADGE_VARIANTS[state]} className="shrink-0 whitespace-nowrap">
           {browserSessionLabel(state)}
         </Badge>
-      }>
+      }
+    >
       {canRevoke(state) && (
         <div className="flex justify-end">
           <Button variant="danger" size="sm" onClick={() => setConfirming(true)}>
@@ -126,7 +121,8 @@ function SessionCard({ session }: { session: BrowserSession }) {
         confirmLabel="Sign it out"
         pending={revoke.isPending}
         error={revoke.error}
-        onConfirm={() => revoke.mutate(session.id, { onSuccess: () => setConfirming(false) })}>
+        onConfirm={() => revoke.mutate(session.id, { onSuccess: () => setConfirming(false) })}
+      >
         <P className="text-sm">
           {describeAgent(session.user_agent)} stops being signed in immediately and has to sign in
           again. Nothing else changes — your machines keep running and no other browser is touched.
@@ -136,23 +132,21 @@ function SessionCard({ session }: { session: BrowserSession }) {
   );
 }
 
-
 function describeAgent(userAgent: string): string {
   const trimmed = userAgent.trim();
-  if (trimmed === '') return 'An unnamed browser';
+  if (trimmed === "") return "An unnamed browser";
   return trimmed.length > 72 ? `${trimmed.slice(0, 72)}…` : trimmed;
 }
 
-
 function activityLabel(session: BrowserSession, state: BrowserSessionState): string {
-  if (state === 'signed_out' && session.revoked_at !== null) {
-    return `Signed out ${relativeTime(session.revoked_at, 'just now')}`;
+  if (state === "signed_out" && session.revoked_at !== null) {
+    return `Signed out ${relativeTime(session.revoked_at, "just now")}`;
   }
-  if (state === 'expired') {
-    return `Expired ${relativeTime(session.expires_at, 'just now')}`;
+  if (state === "expired") {
+    return `Expired ${relativeTime(session.expires_at, "just now")}`;
   }
   if (session.last_seen_at !== null) {
-    return `Last used ${relativeTime(session.last_seen_at, 'just now')}`;
+    return `Last used ${relativeTime(session.last_seen_at, "just now")}`;
   }
-  return `Signed in ${relativeTime(session.created_at, 'just now')}, not used since`;
+  return `Signed in ${relativeTime(session.created_at, "just now")}, not used since`;
 }

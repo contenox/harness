@@ -1,4 +1,12 @@
-import { Button, Disclosure, ExternalLink, InlineNotice, Span, Spinner, StatusDot } from '@contenox/ui';
+import {
+  Button,
+  Disclosure,
+  ExternalLink,
+  InlineNotice,
+  Span,
+  Spinner,
+  StatusDot,
+} from '@contenox/ui';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProviderSetup } from '../../hooks/useProviderSetup';
@@ -69,7 +77,10 @@ export function ProviderSetupForm({
           ? t('cloud_providers.api_key_unused_with_env')
           : undefined;
     const showEnvStatus =
-      spec.id === 'apiKeyEnv' && !!saved && saved.secretSource === 'env' && envName === saved.apiKeyEnv;
+      spec.id === 'apiKeyEnv' &&
+      !!saved &&
+      saved.secretSource === 'env' &&
+      envName === saved.apiKeyEnv;
     return (
       <div key={spec.id} className="flex flex-col gap-1.5">
         <ProviderField
@@ -85,7 +96,9 @@ export function ProviderSetupForm({
         {showEnvStatus && (
           <StatusDot
             status={saved.secretPresent ? 'available' : 'attention'}
-            label={t(saved.secretPresent ? 'cloud_providers.env_found' : 'cloud_providers.env_missing')}
+            label={t(
+              saved.secretPresent ? 'cloud_providers.env_found' : 'cloud_providers.env_missing',
+            )}
           />
         )}
         {spec.id === 'apiKey' && setup.keyUrl && (
@@ -116,7 +129,10 @@ export function ProviderSetupForm({
       {primary.map(renderField)}
 
       {advanced.length > 0 && (
-        <Disclosure label={t('providers.advanced')} open={advancedOpen} onOpenChange={setAdvancedOpen}>
+        <Disclosure
+          label={t('providers.advanced')}
+          open={advancedOpen}
+          onOpenChange={setAdvancedOpen}>
           <div className="flex flex-col gap-3">{advanced.map(renderField)}</div>
         </Disclosure>
       )}
@@ -157,7 +173,12 @@ export function ProviderSetupForm({
           </Span>
         )}
         {onCancel && (
-          <Button type="button" variant="ghost" size="sm" disabled={controller.busy} onClick={onCancel}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={controller.busy}
+            onClick={onCancel}>
             {t('providers.cancel')}
           </Button>
         )}

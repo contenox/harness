@@ -120,7 +120,6 @@ export const StateUnit: Story = {
   ),
 };
 
-
 const image: InlineAttachment = {
   kind: "image",
   mimeType: "image/png",

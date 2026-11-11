@@ -2,7 +2,12 @@ import { Button, RecoveryCard } from '@contenox/ui';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { acpFailureCopyKeys, classifyAcpExecutionError, failedAgentName, type AcpFailureKind } from '../../../lib/acpFailureKind';
+import {
+  acpFailureCopyKeys,
+  classifyAcpExecutionError,
+  failedAgentName,
+  type AcpFailureKind,
+} from '../../../lib/acpFailureKind';
 import { translateRuntimeText } from '../../../lib/runtimeTexts';
 import { ChatFailureRecovery } from './ChatFailureRecovery';
 
@@ -22,18 +27,31 @@ function AgentRecoveryAction({ agent, kind }: { agent: string; kind: AcpFailureK
   const { t } = useTranslation();
   const navigate = useNavigate();
   return (
-    <Button type="button" size="sm" onClick={() => navigate(`/agents?agent=${encodeURIComponent(agent)}`)}>
-      {kind === 'agent_sign_in' ? t('acp_recovery.agent_sign_in_action') : t('acp_recovery.agent_unavailable_action')}
+    <Button
+      type="button"
+      size="sm"
+      onClick={() => navigate(`/agents?agent=${encodeURIComponent(agent)}`)}>
+      {kind === 'agent_sign_in'
+        ? t('acp_recovery.agent_sign_in_action')
+        : t('acp_recovery.agent_unavailable_action')}
     </Button>
   );
 }
 
 /** A failed turn: connection problems go through ConnectionRepair, everything else is a RecoveryCard. */
-export function ChatErrorCard({ message, summary, details, fallbackTitleKey, actions, onDismiss }: ChatErrorCardProps) {
+export function ChatErrorCard({
+  message,
+  summary,
+  details,
+  fallbackTitleKey,
+  actions,
+  onDismiss,
+}: ChatErrorCardProps) {
   const { t } = useTranslation();
   const kind = classifyAcpExecutionError(message);
   const copy = acpFailureCopyKeys(kind);
-  const agent = kind === 'agent_sign_in' || kind === 'agent_unavailable' ? failedAgentName(message) : null;
+  const agent =
+    kind === 'agent_sign_in' || kind === 'agent_unavailable' ? failedAgentName(message) : null;
   const extra = actions?.(kind);
   const dismiss = onDismiss ? (
     <Button type="button" variant="ghost" size="sm" onClick={onDismiss}>

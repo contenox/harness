@@ -1,13 +1,13 @@
-import type { SessionInfo } from '@contenox/acp-client';
-import { Button, Card, EmptyState, InlineNotice, P, Page, Small } from '@contenox/ui';
-import { ChevronRight, MessageSquare } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { ScreenError } from '../saas/ScreenState';
-import { ScreenHeader } from '../shell/ScreenHeader';
-import { ScreenBody } from '@contenox/ui';
-import { relativeTime } from '../lib/relativeTime';
-import { SessionAgentBadge } from './components/SessionAgentBadge';
+import type { SessionInfo } from "@contenox/acp-client";
+import { Button, Card, EmptyState, InlineNotice, P, Page, Small } from "@contenox/ui";
+import { ChevronRight, MessageSquare } from "lucide-react";
+import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { ScreenError } from "../saas/ScreenState";
+import { ScreenHeader } from "../shell/ScreenHeader";
+import { ScreenBody } from "@contenox/ui";
+import { relativeTime } from "../lib/relativeTime";
+import { SessionAgentBadge } from "./components/SessionAgentBadge";
 
 export function SessionPickerScreen({
   instanceId,
@@ -39,12 +39,14 @@ export function SessionPickerScreen({
             <>
               <Link
                 to={`/session/${encodeURIComponent(instanceId)}/missions`}
-                className="text-primary-600 dark:text-dark-primary-500 py-1 text-sm">
+                className="text-primary-600 dark:text-dark-primary-500 py-1 text-sm"
+              >
                 Missions
               </Link>
               <Link
                 to={`/session/${encodeURIComponent(instanceId)}/inbox`}
-                className="text-primary-600 dark:text-dark-primary-500 py-1 text-sm">
+                className="text-primary-600 dark:text-dark-primary-500 py-1 text-sm"
+              >
                 Inbox
               </Link>
               <Button variant="outline" size="sm" disabled={!canCreate} onClick={onCreate}>
@@ -53,7 +55,8 @@ export function SessionPickerScreen({
             </>
           }
         />
-      }>
+      }
+    >
       <ScreenBody width="band">
         {connectionState}
         {!blocked && agentSelector}
@@ -70,7 +73,7 @@ export function SessionPickerScreen({
           />
         )}
         {!blocked &&
-          sessions.map(session => (
+          sessions.map((session) => (
             <SessionRow key={session.sessionId} instanceId={instanceId} session={session} />
           ))}
         {sessionLoadError != null && <ScreenError error={sessionLoadError} />}
@@ -83,13 +86,14 @@ export function SessionRow({ instanceId, session }: { instanceId: string; sessio
   return (
     <Link
       to={`/session/${encodeURIComponent(instanceId)}/${encodeURIComponent(session.sessionId)}`}
-      className="block">
+      className="block"
+    >
       <Card variant="filled">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <P className="truncate font-medium">{session.title ?? session.cwd ?? 'Untitled'}</P>
+            <P className="truncate font-medium">{session.title ?? session.cwd ?? "Untitled"}</P>
             <div className="flex flex-wrap items-center gap-2">
-              {session.updatedAt && <Small>{relativeTime(session.updatedAt, 'just now')}</Small>}
+              {session.updatedAt && <Small>{relativeTime(session.updatedAt, "just now")}</Small>}
               <SessionAgentBadge meta={session._meta} />
             </div>
           </div>

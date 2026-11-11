@@ -108,11 +108,7 @@ export function P({ children, className, variant }: TypographyProps) {
 }
 
 export function Small({ children, className }: TypographyProps) {
-  return (
-    <p className={cn("text-sm text-text-muted", className)}>
-      {children}
-    </p>
-  );
+  return <p className={cn("text-sm text-text-muted", className)}>{children}</p>;
 }
 
 export function Span({
@@ -125,10 +121,8 @@ export function Span({
     <span
       className={cn(
         {
-          "text-[11px] font-medium tracking-[0.02em] text-text-muted":
-            variant === "status",
-          "text-sm text-text-muted":
-            variant === "muted",
+          "text-[11px] font-medium tracking-[0.02em] text-text-muted": variant === "status",
+          "text-sm text-text-muted": variant === "muted",
         },
         className,
       )}
@@ -141,12 +135,7 @@ export function Span({
 
 export function Blockquote({ children, className }: TypographyProps) {
   return (
-    <blockquote
-      className={cn(
-        "border-l-2 border-line-strong pl-4 text-text",
-        className,
-      )}
-    >
+    <blockquote className={cn("border-l-2 border-line-strong pl-4 text-text", className)}>
       {children}
     </blockquote>
   );

@@ -6,7 +6,8 @@ export function joinRootRelative(root: string, rel: string): string {
   const windows = root.includes('\\') && !root.includes('/');
   const sep = windows ? '\\' : '/';
   const cleaned = rel.replace(/^\.?[\\/]+/, '').replace(/[\\/]+$/, '');
-  if (cleaned === '' || cleaned === '.') return windows && /^[A-Za-z]:$/.test(base) ? base + sep : base;
+  if (cleaned === '' || cleaned === '.')
+    return windows && /^[A-Za-z]:$/.test(base) ? base + sep : base;
   return `${base}${sep}${windows ? cleaned.replace(/\//g, '\\') : cleaned}`;
 }
 

@@ -9,8 +9,8 @@ import type {
 } from '../lib/types';
 import {
   useCancelConnectionLogin,
-  useConnectionLogout,
   useConnectionLoginStatus,
+  useConnectionLogout,
   useStartConnectionLogin,
 } from './useConnections';
 import {

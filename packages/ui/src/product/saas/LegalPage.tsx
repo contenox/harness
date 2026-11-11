@@ -1,6 +1,6 @@
-import { Page } from '@contenox/ui';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { Page } from "@contenox/ui";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export function LegalPage({ markdown }: { markdown: string }) {
   return (

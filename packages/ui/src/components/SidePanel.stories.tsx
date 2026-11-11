@@ -1,11 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { PanelLeft } from "lucide-react";
-import {
-  SidePanelBody,
-  SidePanelColumn,
-  SidePanelHeader,
-  SidePanelRailButton,
-} from "./SidePanel";
+import { SidePanelBody, SidePanelColumn, SidePanelHeader, SidePanelRailButton } from "./SidePanel";
 import { Button } from "./Button";
 import { P, Span } from "./Typography";
 
@@ -28,7 +23,14 @@ type Story = StoryObj<typeof SidePanelColumn>;
 
 export const RightExpanded: Story = {
   render: (args) => (
-    <div style={{ display: "flex", height: 320, width: 640, border: "1px solid var(--color-surface-300)" }}>
+    <div
+      style={{
+        display: "flex",
+        height: 320,
+        width: 640,
+        border: "1px solid var(--color-surface-300)",
+      }}
+    >
       <div style={{ flex: 1, padding: "1rem" }}>
         <P>Main content area.</P>
       </div>
@@ -50,7 +52,14 @@ export const RightExpanded: Story = {
 export const LeftExpanded: Story = {
   args: { side: "left" },
   render: (args) => (
-    <div style={{ display: "flex", height: 320, width: 640, border: "1px solid var(--color-surface-300)" }}>
+    <div
+      style={{
+        display: "flex",
+        height: 320,
+        width: 640,
+        border: "1px solid var(--color-surface-300)",
+      }}
+    >
       <SidePanelColumn {...args}>
         <SidePanelHeader>
           <Span>Navigator</Span>
@@ -68,7 +77,14 @@ export const LeftExpanded: Story = {
 
 export const Collapsed: Story = {
   render: () => (
-    <div style={{ display: "flex", height: 240, width: 480, border: "1px solid var(--color-surface-300)" }}>
+    <div
+      style={{
+        display: "flex",
+        height: 240,
+        width: 480,
+        border: "1px solid var(--color-surface-300)",
+      }}
+    >
       <div style={{ flex: 1, padding: "1rem" }}>
         <P>Main content area.</P>
       </div>

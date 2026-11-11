@@ -3,7 +3,10 @@ import { previewEntryFromPeek, selectPreview, type FilePreviewCache } from './fi
 
 describe('previewEntryFromPeek', () => {
   it('maps a text peek to a text entry', () => {
-    expect(previewEntryFromPeek({ text: 'hello', isBinary: false })).toEqual({ kind: 'text', text: 'hello' });
+    expect(previewEntryFromPeek({ text: 'hello', isBinary: false })).toEqual({
+      kind: 'text',
+      text: 'hello',
+    });
   });
   it('maps a binary peek to a binary entry, dropping any text', () => {
     expect(previewEntryFromPeek({ text: '', isBinary: true })).toEqual({ kind: 'binary' });
@@ -35,6 +38,10 @@ describe('selectPreview', () => {
 
   it('only the highlighted path drives the display (out-of-order fetches are inert)', () => {
     const withLate: FilePreviewCache = { ...cache, 'late.txt': { kind: 'text', text: 'late' } };
-    expect(selectPreview('a.txt', withLate)).toEqual({ status: 'text', path: 'a.txt', text: 'aaa' });
+    expect(selectPreview('a.txt', withLate)).toEqual({
+      status: 'text',
+      path: 'a.txt',
+      text: 'aaa',
+    });
   });
 });

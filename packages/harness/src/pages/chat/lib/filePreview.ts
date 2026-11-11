@@ -1,4 +1,3 @@
-
 export type FilePreviewEntry =
   | { kind: 'text'; text: string }
   | { kind: 'binary' }

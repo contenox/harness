@@ -5,7 +5,6 @@ import i18n from '../../i18n';
 import type { RankedItem } from '../../lib/palette/paletteState';
 import { Highlighted, PaletteOverlay, type PaletteOverlayProps } from './PaletteOverlay';
 
-
 beforeAll(async () => {
   await i18n.changeLanguage('en');
 });
@@ -25,7 +24,10 @@ const baseProps = (results: RankedItem[], selected = 0): PaletteOverlayProps => 
   onClose: noop,
 });
 
-const row = (over: Partial<RankedItem['item']> & { id: string }, matchIndexes: number[] = []): RankedItem => ({
+const row = (
+  over: Partial<RankedItem['item']> & { id: string },
+  matchIndexes: number[] = [],
+): RankedItem => ({
   item: { type: 'mission', title: over.id, icon: null, action: () => {}, ...over },
   score: 1,
   matchIndexes,
@@ -34,7 +36,10 @@ const row = (over: Partial<RankedItem['item']> & { id: string }, matchIndexes: n
 describe('PaletteOverlay', () => {
   it('renders a titled row with its type badge', () => {
     const html = renderToStaticMarkup(
-      createElement(PaletteOverlay, baseProps([row({ id: 'mission:1', title: 'Deploy the thing', type: 'mission' })])),
+      createElement(
+        PaletteOverlay,
+        baseProps([row({ id: 'mission:1', title: 'Deploy the thing', type: 'mission' })]),
+      ),
     );
     expect(html).toContain('Deploy the thing');
     expect(html).toContain('Mission');
@@ -65,7 +70,9 @@ describe('PaletteOverlay', () => {
 
 describe('Highlighted', () => {
   it('wraps matched characters in a mark and leaves the rest plain', () => {
-    const html = renderToStaticMarkup(createElement(Highlighted, { text: 'Researcher', indexes: [0, 1, 2] }));
+    const html = renderToStaticMarkup(
+      createElement(Highlighted, { text: 'Researcher', indexes: [0, 1, 2] }),
+    );
     expect(html).toContain('<mark');
     expect(html).toContain('Res');
     expect(html).toContain('earcher');

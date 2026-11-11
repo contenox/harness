@@ -32,7 +32,10 @@ describe('planProgress — the one shared progress helper', () => {
   });
 
   it('reports zero in-progress when nothing is mid-flight (so the marker is hidden)', () => {
-    const p = plan([entry({ id: '1', status: 'pending' }), entry({ id: '2', status: 'completed' })]);
+    const p = plan([
+      entry({ id: '1', status: 'pending' }),
+      entry({ id: '2', status: 'completed' }),
+    ]);
     expect(planProgress(p)).toEqual({ completed: 1, total: 2, inProgress: 0 });
   });
 

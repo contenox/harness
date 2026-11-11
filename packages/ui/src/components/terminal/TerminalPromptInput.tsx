@@ -25,7 +25,6 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
   else if (ref && typeof ref === "object") (ref as { current: T | null }).current = value;
 }
 
-
 export const TerminalPromptInput = forwardRef<HTMLTextAreaElement, TerminalPromptInputProps>(
   function TerminalPromptInput(
     { value, onChange, onKeyDown, disabled, prompt = TERMINAL_GLYPH.prompt, hint, className },
@@ -63,7 +62,10 @@ export const TerminalPromptInput = forwardRef<HTMLTextAreaElement, TerminalPromp
       >
         <span className="select-none text-success dark:text-dark-success">{prompt}</span>
         <div className="relative min-w-0 flex-1">
-          <div aria-hidden className="whitespace-pre-wrap break-words text-text dark:text-dark-text">
+          <div
+            aria-hidden
+            className="whitespace-pre-wrap break-words text-text dark:text-dark-text"
+          >
             {value.length === 0 && !showCursor ? (
               <span className="text-text-muted dark:text-dark-text-muted">{hint}</span>
             ) : (

@@ -26,9 +26,7 @@ export const Caret: Story = {
 
 export const StreamingPlaceholder: Story = {
   render: () => (
-    <ChatTranscriptStreamingPlaceholder>
-      Generating response
-    </ChatTranscriptStreamingPlaceholder>
+    <ChatTranscriptStreamingPlaceholder>Generating response</ChatTranscriptStreamingPlaceholder>
   ),
 };
 
@@ -92,16 +90,12 @@ Trailing paragraph after a rule.`;
 export const MarkdownComponents: Story = {
   render: () => (
     <div style={{ maxWidth: "680px" }}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={chatTranscriptMarkdownComponents}
-      >
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={chatTranscriptMarkdownComponents}>
         {RICH_MARKDOWN}
       </ReactMarkdown>
     </div>
   ),
 };
-
 
 export const MarkdownComponentsDark: Story = {
   render: () => (
@@ -109,10 +103,7 @@ export const MarkdownComponentsDark: Story = {
       className="dark bg-dark-surface-100 text-dark-text"
       style={{ maxWidth: "680px", padding: 16 }}
     >
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={chatTranscriptMarkdownComponents}
-      >
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={chatTranscriptMarkdownComponents}>
         {RICH_MARKDOWN}
       </ReactMarkdown>
     </div>

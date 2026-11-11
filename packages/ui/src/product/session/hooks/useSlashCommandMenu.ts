@@ -6,16 +6,16 @@ import {
   useState,
   type KeyboardEvent,
   type TextareaHTMLAttributes,
-} from 'react';
-import type { AvailableCommand, SessionConfigOption } from '@contenox/acp-client';
-import { FIRST_ARGUMENT_KEY } from '@contenox/acp-client';
-import { commandValueDomains } from '../lib/commandValueDomains';
+} from "react";
+import type { AvailableCommand, SessionConfigOption } from "@contenox/acp-client";
+import { FIRST_ARGUMENT_KEY } from "@contenox/acp-client";
+import { commandValueDomains } from "../lib/commandValueDomains";
 import {
   mergeRuntimeValueDomains,
   runtimeArgumentCompletions,
   runtimeArgumentHint,
   runtimeFlagValues,
-} from '../lib/runtimeArgumentCompletions';
+} from "../lib/runtimeArgumentCompletions";
 import {
   TOP_OF_LIST,
   clampIndex,
@@ -31,9 +31,9 @@ import {
   valueCompletion,
   valueDomainFor,
   type ValueHighlight,
-} from '../lib/slashMenu';
+} from "../lib/slashMenu";
 
-export type SlashMenuMode = 'commands' | 'values';
+export type SlashMenuMode = "commands" | "values";
 
 export interface SlashCommandMenuState {
   open: boolean;
@@ -56,7 +56,7 @@ export interface SlashCommandMenuState {
 
 export type SlashMenuTextareaAria = Pick<
   TextareaHTMLAttributes<HTMLTextAreaElement>,
-  'role' | 'aria-autocomplete' | 'aria-controls' | 'aria-expanded' | 'aria-activedescendant'
+  "role" | "aria-autocomplete" | "aria-controls" | "aria-expanded" | "aria-activedescendant"
 >;
 
 export function useSlashCommandMenu(
@@ -75,10 +75,7 @@ export function useSlashCommandMenu(
     [derivedOpen, availableCommands, query],
   );
 
-  const runtime = useMemo(
-    () => runtimeArgumentCompletions(availableCommands),
-    [availableCommands],
-  );
+  const runtime = useMemo(() => runtimeArgumentCompletions(availableCommands), [availableCommands]);
   const domains = useMemo(
     () => mergeRuntimeValueDomains(commandValueDomains(configOptions), runtime),
     [configOptions, runtime],
@@ -87,7 +84,7 @@ export function useSlashCommandMenu(
   const flagArgument = argument === null ? deriveSlashFlagArgument(draft) : null;
   const argCommand = argument?.command ?? flagArgument?.command ?? null;
   const argKey = flagArgument?.flag ?? FIRST_ARGUMENT_KEY;
-  const argText = argument?.arg ?? flagArgument?.arg ?? '';
+  const argText = argument?.arg ?? flagArgument?.arg ?? "";
   const domain =
     argCommand === null
       ? null
@@ -103,21 +100,19 @@ export function useSlashCommandMenu(
     [domain, argText],
   );
 
-  const mode: SlashMenuMode = domain === null && argumentHint === null ? 'commands' : 'values';
-  const valueCommand = mode === 'values' ? argCommand : null;
+  const mode: SlashMenuMode = domain === null && argumentHint === null ? "commands" : "values";
+  const valueCommand = mode === "values" ? argCommand : null;
   const valuePrefix = flagArgument?.prefix ?? null;
 
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
-  const length = mode === 'values' ? values.length : entries.length;
+  const length = mode === "values" ? values.length : entries.length;
   const open = (length > 0 || argumentHint !== null) && dismissedFor !== draft;
-
 
   const [highlight, setHighlight] = useState<ValueHighlight>(TOP_OF_LIST);
 
-
   useEffect(() => setHighlight(TOP_OF_LIST), [query, argCommand, argText]);
   const activeIndex =
-    mode === 'values'
+    mode === "values"
       ? resolveValueIndex(values, highlight)
       : clampIndex(highlight.index, entries.length);
 
@@ -149,7 +144,7 @@ export function useSlashCommandMenu(
   );
 
   const accept = useCallback(() => {
-    if (mode === 'values') {
+    if (mode === "values") {
       const value = values[activeIndex];
       if (value !== undefined) pickValue(value);
       return;
@@ -159,7 +154,7 @@ export function useSlashCommandMenu(
   }, [mode, values, entries, activeIndex, pick, pickValue]);
 
   const acceptOnSubmit = useCallback((): boolean => {
-    if (!open || mode === 'values') return false;
+    if (!open || mode === "values") return false;
     const entry = entries[activeIndex];
     if (entry === undefined) return false;
     pick(entry);
@@ -171,18 +166,18 @@ export function useSlashCommandMenu(
       if (!open) return;
       const action = slashMenuKeyFromEvent(event.key);
       if (action === null) return;
-      if (length === 0 && action.type !== 'close') return;
+      if (length === 0 && action.type !== "close") return;
       if (
-        action.type === 'accept' &&
-        mode === 'values' &&
+        action.type === "accept" &&
+        mode === "values" &&
         values[activeIndex]?.toLowerCase() === argText.trim().toLowerCase()
       ) {
         return;
       }
       event.preventDefault();
-      if (action.type === 'move') {
+      if (action.type === "move") {
         highlightAt(clampIndex(activeIndex + action.delta, length));
-      } else if (action.type === 'accept') {
+      } else if (action.type === "accept") {
         accept();
       } else {
         setDismissedFor(draft);
@@ -193,17 +188,16 @@ export function useSlashCommandMenu(
 
   const valueCount = useCallback((name: string) => domains.get(name)?.length ?? 0, [domains]);
 
-
   const textareaAria = useMemo<SlashMenuTextareaAria>(
     () =>
       availableCommands.length === 0 && domains.size === 0 && runtime.size === 0
         ? {}
         : {
-            role: 'combobox',
-            'aria-autocomplete': 'list',
-            'aria-controls': listboxId,
-            'aria-expanded': open,
-            'aria-activedescendant': open ? optionId(activeIndex) : undefined,
+            role: "combobox",
+            "aria-autocomplete": "list",
+            "aria-controls": listboxId,
+            "aria-expanded": open,
+            "aria-activedescendant": open ? optionId(activeIndex) : undefined,
           },
     [availableCommands.length, domains.size, runtime.size, listboxId, open, optionId, activeIndex],
   );

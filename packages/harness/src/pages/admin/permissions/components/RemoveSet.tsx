@@ -36,7 +36,12 @@ export function RemoveSet({ name, workspaceName, inLayer, inUseBy, onRemove }: P
     if (!inLayer) return null;
     return (
       <div className="flex flex-col items-start gap-2 px-1">
-        <Button variant="ghost" size="sm" isLoading={busy} disabled={busy} onClick={() => void run()}>
+        <Button
+          variant="ghost"
+          size="sm"
+          isLoading={busy}
+          disabled={busy}
+          onClick={() => void run()}>
           <RotateCcw className="size-3.5" aria-hidden />
           {t('permissions.reset_set_here', { name: workspaceName })}
         </Button>
@@ -67,7 +72,13 @@ export function RemoveSet({ name, workspaceName, inLayer, inUseBy, onRemove }: P
       {confirming ? (
         <div className="flex flex-wrap items-center gap-2">
           <P className="text-[13px]">{t('permissions.delete_confirm', { name: title })}</P>
-          <Button variant="danger" solid size="sm" isLoading={busy} disabled={busy} onClick={() => void run()}>
+          <Button
+            variant="danger"
+            solid
+            size="sm"
+            isLoading={busy}
+            disabled={busy}
+            onClick={() => void run()}>
             {t('permissions.delete_confirm_button')}
           </Button>
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => setConfirming(false)}>

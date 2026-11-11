@@ -38,18 +38,26 @@ const preset: ExternalAgentPresetStatus = {
 
 describe('agentRowStatus', () => {
   it('asks to install a preset that is not there yet', () => {
-    expect(agentRowStatus({ preset: { ...preset, installed: false, installState: 'idle', agent: undefined } }).state).toBe(
-      'not_installed',
-    );
+    expect(
+      agentRowStatus({
+        preset: { ...preset, installed: false, installState: 'idle', agent: undefined },
+      }).state,
+    ).toBe('not_installed');
   });
 
   it('shows install progress and failure before anything else', () => {
-    expect(agentRowStatus({ preset: { ...preset, installState: 'installing' }, agent }).dot).toBe('checking');
-    expect(agentRowStatus({ preset: { ...preset, installState: 'failed' }, agent }).state).toBe('install_failed');
+    expect(agentRowStatus({ preset: { ...preset, installState: 'installing' }, agent }).dot).toBe(
+      'checking',
+    );
+    expect(agentRowStatus({ preset: { ...preset, installState: 'failed' }, agent }).state).toBe(
+      'install_failed',
+    );
   });
 
   it('puts a turned-off agent before its check', () => {
-    expect(agentRowStatus({ preset, agent: { ...agent, enabled: false }, checking: true }).state).toBe('off');
+    expect(
+      agentRowStatus({ preset, agent: { ...agent, enabled: false }, checking: true }).state,
+    ).toBe('off');
   });
 
   it('orders checking, problem, sign-in and ready', () => {
@@ -57,20 +65,37 @@ describe('agentRowStatus', () => {
     expect(agentRowStatus({ ...base, checking: true }).state).toBe('checking');
     expect(agentRowStatus(base).state).toBe('unchecked');
     expect(
-      agentRowStatus({ ...base, check: { ready: false, authMethods: [], checkedAt: '', problem: { kind: 'sandbox_unavailable', message: '' } } }).state,
+      agentRowStatus({
+        ...base,
+        check: {
+          ready: false,
+          authMethods: [],
+          checkedAt: '',
+          problem: { kind: 'sandbox_unavailable', message: '' },
+        },
+      }).state,
     ).toBe('problem');
-    expect(agentRowStatus({ ...base, check: { ready: false, authMethods: [], checkedAt: '', signedIn: false } }).dot).toBe(
-      'attention',
-    );
-    expect(agentRowStatus({ ...base, check: { ready: true, authMethods: [], checkedAt: '', signedIn: true } }).dot).toBe(
-      'available',
-    );
+    expect(
+      agentRowStatus({
+        ...base,
+        check: { ready: false, authMethods: [], checkedAt: '', signedIn: false },
+      }).dot,
+    ).toBe('attention');
+    expect(
+      agentRowStatus({
+        ...base,
+        check: { ready: true, authMethods: [], checkedAt: '', signedIn: true },
+      }).dot,
+    ).toBe('available');
   });
 
   it('treats an agent that reports no sign-in state as ready', () => {
-    expect(agentRowStatus({ agent: { ...agent, preset: undefined }, check: { ready: true, authMethods: [], checkedAt: '' } }).state).toBe(
-      'ready',
-    );
+    expect(
+      agentRowStatus({
+        agent: { ...agent, preset: undefined },
+        check: { ready: true, authMethods: [], checkedAt: '' },
+      }).state,
+    ).toBe('ready');
   });
 });
 

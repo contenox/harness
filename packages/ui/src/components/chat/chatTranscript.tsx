@@ -3,24 +3,17 @@ import type { Components } from "react-markdown";
 import { cn } from "../../utils";
 import { CodeBlockView } from "./CodeBlockView";
 
-
 function nodeText(children: React.ReactNode): string {
   if (children == null || typeof children === "boolean") return "";
-  if (typeof children === "string" || typeof children === "number")
-    return String(children);
+  if (typeof children === "string" || typeof children === "number") return String(children);
   if (Array.isArray(children)) return children.map(nodeText).join("");
   if (React.isValidElement(children)) {
-    return nodeText(
-      (children.props as { children?: React.ReactNode }).children,
-    );
+    return nodeText((children.props as { children?: React.ReactNode }).children);
   }
   return "";
 }
 
-
 export const chatTranscriptMarkdownComponents: Components = {
-
-
   pre: ({ children }: React.ComponentPropsWithoutRef<"pre">) => <>{children}</>,
 
   code: (props: React.ComponentPropsWithoutRef<"code"> & { node?: any }) => {
@@ -28,15 +21,11 @@ export const chatTranscriptMarkdownComponents: Components = {
     const match = /language-(\w+)/.exec(className || "");
     const isBlock =
       Boolean(match) ||
-      (node &&
-        node.parent &&
-        node.parent.type === "element" &&
-        node.parent.tagName === "pre");
+      (node && node.parent && node.parent.type === "element" && node.parent.tagName === "pre");
 
     if (isBlock) {
       return <CodeBlockView code={nodeText(children)} language={match?.[1]} />;
     }
-
 
     return (
       <code
@@ -50,8 +39,6 @@ export const chatTranscriptMarkdownComponents: Components = {
       </code>
     );
   },
-
-
 
   h1: ({ children, ...props }: React.ComponentPropsWithoutRef<"h1">) => (
     <h1
@@ -128,10 +115,7 @@ export const chatTranscriptMarkdownComponents: Components = {
     );
   },
 
-  strong: ({
-    children,
-    ...props
-  }: React.ComponentPropsWithoutRef<"strong">) => (
+  strong: ({ children, ...props }: React.ComponentPropsWithoutRef<"strong">) => (
     <strong className="font-semibold" {...props}>
       {children}
     </strong>
@@ -142,12 +126,8 @@ export const chatTranscriptMarkdownComponents: Components = {
     </em>
   ),
   hr: (props: React.ComponentPropsWithoutRef<"hr">) => (
-    <hr
-      className="border-surface-200 dark:border-dark-surface-700 my-4"
-      {...props}
-    />
+    <hr className="border-surface-200 dark:border-dark-surface-700 my-4" {...props} />
   ),
-
 
   table: ({ children, ...props }: React.ComponentPropsWithoutRef<"table">) => (
     <div className="my-3 overflow-x-auto">
@@ -157,10 +137,7 @@ export const chatTranscriptMarkdownComponents: Components = {
     </div>
   ),
   thead: ({ children, ...props }: React.ComponentPropsWithoutRef<"thead">) => (
-    <thead
-      className="border-surface-200 dark:border-dark-surface-700 border-b"
-      {...props}
-    >
+    <thead className="border-surface-200 dark:border-dark-surface-700 border-b" {...props}>
       {children}
     </thead>
   ),
@@ -178,8 +155,6 @@ export const chatTranscriptMarkdownComponents: Components = {
     </td>
   ),
 
-
-
   img: ({ className, ...props }: React.ComponentPropsWithoutRef<"img">) => (
     <img
       loading="lazy"
@@ -191,10 +166,7 @@ export const chatTranscriptMarkdownComponents: Components = {
     />
   ),
 
-  blockquote: ({
-    children,
-    ...props
-  }: React.ComponentPropsWithoutRef<"blockquote">) => (
+  blockquote: ({ children, ...props }: React.ComponentPropsWithoutRef<"blockquote">) => (
     <blockquote
       className="border-line-strong text-text-muted rounded-r-lg border-l-2 py-1 pl-4"
       {...props}
@@ -223,16 +195,8 @@ export function ChatStreamThinkingBox({
   );
 }
 
-export function ChatTranscriptStreamingPlaceholder({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <p className="text-text-muted dark:text-dark-text-muted text-sm italic">
-      {children}
-    </p>
-  );
+export function ChatTranscriptStreamingPlaceholder({ children }: { children: React.ReactNode }) {
+  return <p className="text-text-muted dark:text-dark-text-muted text-sm italic">{children}</p>;
 }
 
 export function ChatStreamingCaret({ className }: { className?: string }) {

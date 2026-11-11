@@ -1,12 +1,11 @@
-import { Badge } from '../../components/Badge';
-import type { Instance } from '../lib/api/types';
-import { hostState, hostStateLabel, type HostState } from '../lib/hostState';
+import { Badge } from "../../components/Badge";
+import type { Instance } from "../lib/api/types";
+import { hostState, hostStateLabel, type HostState } from "../lib/hostState";
 
-
-const BADGE_VARIANTS: Record<HostState, 'success' | 'default' | 'outline'> = {
-  connected: 'success',
-  offline: 'default',
-  revoked: 'outline',
+const BADGE_VARIANTS: Record<HostState, "success" | "default" | "outline"> = {
+  connected: "success",
+  offline: "default",
+  revoked: "outline",
 };
 
 export function HostStateBadge({ host }: { host: Instance }) {

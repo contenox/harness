@@ -1,19 +1,13 @@
+export const DROPPED_CONTENT_META_KEY = "contenox.droppedContent";
 
+export const DROPPED_KIND_IMAGE = "image";
 
-
-export const DROPPED_CONTENT_META_KEY = 'contenox.droppedContent';
-
-
-export const DROPPED_KIND_IMAGE = 'image';
-
-
-export const DROPPED_KIND_AUDIO = 'audio';
-
+export const DROPPED_KIND_AUDIO = "audio";
 
 function kindsOf(raw: unknown): string[] {
-  if (typeof raw === 'string') return raw === '' ? [] : [raw];
-  if (Array.isArray(raw)) return raw.filter((k): k is string => typeof k === 'string' && k !== '');
-  if (typeof raw === 'object' && raw !== null) {
+  if (typeof raw === "string") return raw === "" ? [] : [raw];
+  if (Array.isArray(raw)) return raw.filter((k): k is string => typeof k === "string" && k !== "");
+  if (typeof raw === "object" && raw !== null) {
     return kindsOf((raw as Record<string, unknown>).kinds);
   }
   return [];

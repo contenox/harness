@@ -1,7 +1,6 @@
-
-import type { Ask, AskSubscription, EventConsumer, Instance } from './api/types';
-import { ALL_AGENTS, openAsks, type AskBoard } from './asks';
-import { MAX_SUBSCRIBED_AGENT_BYTES } from './api/types';
+import type { Ask, AskSubscription, EventConsumer, Instance } from "./api/types";
+import { ALL_AGENTS, openAsks, type AskBoard } from "./asks";
+import { MAX_SUBSCRIBED_AGENT_BYTES } from "./api/types";
 
 export interface AgentReach {
   name: string;
@@ -27,19 +26,19 @@ export function agentCatalogue({ board, subscriptions, consumers }: AgentSources
     return fresh;
   };
   const addHost = (agent: AgentReach, instanceID: string) => {
-    if (instanceID !== '' && !agent.hosts.includes(instanceID)) agent.hosts.push(instanceID);
+    if (instanceID !== "" && !agent.hosts.includes(instanceID)) agent.hosts.push(instanceID);
   };
 
   for (const ask of openAsks(board)) {
-    const name = (ask.agent_name ?? '').trim();
-    if (name === '') continue;
+    const name = (ask.agent_name ?? "").trim();
+    if (name === "") continue;
     const agent = reach(name);
     agent.waiting += 1;
     addHost(agent, ask.instance_id);
   }
   for (const consumer of consumers ?? []) {
-    const name = (consumer.agent_name ?? '').trim();
-    if (name === '') continue;
+    const name = (consumer.agent_name ?? "").trim();
+    if (name === "") continue;
     const agent = reach(name);
     agent.triggers += 1;
     addHost(agent, consumer.instance_id);
@@ -53,29 +52,29 @@ export function agentCatalogue({ board, subscriptions, consumers }: AgentSources
 }
 
 export function agentReach(catalogue: AgentReach[], name: string): AgentReach | null {
-  return catalogue.find(agent => agent.name === name) ?? null;
+  return catalogue.find((agent) => agent.name === name) ?? null;
 }
 
 export function agentAsks(board: AskBoard, name: string): Ask[] {
-  return board.asks.filter(ask => (ask.agent_name ?? '').trim() === name);
+  return board.asks.filter((ask) => (ask.agent_name ?? "").trim() === name);
 }
 
 export function hostAsks(board: AskBoard, instanceID: string): Ask[] {
-  return board.asks.filter(ask => ask.instance_id === instanceID);
+  return board.asks.filter((ask) => ask.instance_id === instanceID);
 }
 
 export function agentTriggers(
   consumers: EventConsumer[] | undefined,
   name: string,
 ): EventConsumer[] {
-  return (consumers ?? []).filter(consumer => (consumer.agent_name ?? '').trim() === name);
+  return (consumers ?? []).filter((consumer) => (consumer.agent_name ?? "").trim() === name);
 }
 
 export function hostTriggers(
   consumers: EventConsumer[] | undefined,
   instanceID: string,
 ): EventConsumer[] {
-  return (consumers ?? []).filter(consumer => consumer.instance_id === instanceID);
+  return (consumers ?? []).filter((consumer) => consumer.instance_id === instanceID);
 }
 
 export function hostAgents(sources: AgentSources, instanceID: string): AgentReach[] {
@@ -83,7 +82,7 @@ export function hostAgents(sources: AgentSources, instanceID: string): AgentReac
     board: { asks: hostAsks(sources.board, instanceID), outcomes: sources.board.outcomes },
     subscriptions: sources.subscriptions,
     consumers: hostTriggers(sources.consumers, instanceID),
-  }).filter(agent => agent.waiting > 0 || agent.triggers > 0);
+  }).filter((agent) => agent.waiting > 0 || agent.triggers > 0);
 }
 
 export function agentInstances(
@@ -92,7 +91,7 @@ export function agentInstances(
 ): { known: Instance[]; unknown: number } {
   const fleet = instances ?? [];
   const known = hosts
-    .map(id => fleet.find(instance => instance.id === id))
+    .map((id) => fleet.find((instance) => instance.id === id))
     .filter((instance): instance is Instance => instance !== undefined)
     .sort((a, b) => {
       const delta = Number(b.connected) - Number(a.connected);
@@ -107,16 +106,16 @@ export function catalogueIsEmpty(catalogue: AgentReach[]): boolean {
 
 export function subscribableAgentName(raw: string): string | null {
   const name = raw.trim();
-  if (name === '' || agentNameRefusal(name) !== null) return null;
+  if (name === "" || agentNameRefusal(name) !== null) return null;
   return name;
 }
 
 export function agentNameRefusal(raw: string): string | null {
   const name = raw.trim();
-  if (name === '') return null;
-  if (name === ALL_AGENTS) return 'Use the control above to be shown every agent.';
-  if (byteLength(name) > MAX_SUBSCRIBED_AGENT_BYTES) return 'That agent name is too long.';
-  if (hasControlCharacter(name)) return 'That agent name carries a control character.';
+  if (name === "") return null;
+  if (name === ALL_AGENTS) return "Use the control above to be shown every agent.";
+  if (byteLength(name) > MAX_SUBSCRIBED_AGENT_BYTES) return "That agent name is too long.";
+  if (hasControlCharacter(name)) return "That agent name carries a control character.";
   return null;
 }
 

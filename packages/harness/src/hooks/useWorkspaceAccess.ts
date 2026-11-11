@@ -4,8 +4,8 @@ import { workspaceAccessKeys } from '../lib/queryKeys';
 import {
   dedupeSortPaths,
   fetchWorkspaceAccess,
-  verdictsToMap,
   HITL_POLICY_DEFAULT_VALUE,
+  verdictsToMap,
   type PathVerdict,
 } from '../lib/workspaceAccess';
 

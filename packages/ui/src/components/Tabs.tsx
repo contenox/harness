@@ -1,4 +1,3 @@
-
 import React, { useRef } from "react";
 import { X } from "lucide-react";
 import { TabTrigger } from "./TabTrigger";
@@ -37,8 +36,7 @@ export function Tabs<T extends string = string>({
 
     let nextIdx = idx;
     if (e.key === "ArrowRight") nextIdx = (idx + 1) % tabs.length;
-    else if (e.key === "ArrowLeft")
-      nextIdx = (idx - 1 + tabs.length) % tabs.length;
+    else if (e.key === "ArrowLeft") nextIdx = (idx - 1 + tabs.length) % tabs.length;
     else if (e.key === "Home") nextIdx = 0;
     else if (e.key === "End") nextIdx = tabs.length - 1;
     else return;

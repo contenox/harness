@@ -12,16 +12,14 @@ const stores = new Map<string, ToggleStore>();
 function readPersisted(key: string): boolean {
   try {
     if (typeof localStorage !== 'undefined') return localStorage.getItem(key) === '1';
-  } catch {
-  }
+  } catch {}
   return false;
 }
 
 function writePersisted(key: string, value: boolean): void {
   try {
     if (typeof localStorage !== 'undefined') localStorage.setItem(key, value ? '1' : '0');
-  } catch {
-  }
+  } catch {}
 }
 
 export function toggleStore(key: string): ToggleStore {

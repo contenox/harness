@@ -1,17 +1,17 @@
-import '@xterm/xterm/css/xterm.css';
+import { Badge, Button, cn, Dialog, P } from '@contenox/ui';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
-import { Badge, Button, cn, Dialog, P } from '@contenox/ui';
+import '@xterm/xterm/css/xterm.css';
 import { Eye, RotateCw, TerminalSquare } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { safeFit } from './terminalFit';
 import {
   buildTerminalWsUrl,
   createHostTerminalBridge,
   TERMINAL_READ_ONLY_DEFAULT,
   type HostTerminalBridge,
 } from '../../lib/hostTerminal';
+import { safeFit } from './terminalFit';
 
 type ConnState = 'connecting' | 'open' | 'closed';
 
@@ -62,8 +62,7 @@ export function TerminalView({ wsPath, className }: TerminalViewProps) {
       if (!safeFit(host, disposed, () => fit.fit())) return;
       try {
         bridge.sendResize(term.cols, term.rows);
-      } catch {
-      }
+      } catch {}
     };
 
     socket.addEventListener('open', () => {
@@ -100,15 +99,13 @@ export function TerminalView({ wsPath, className }: TerminalViewProps) {
       bridge.dispose();
       try {
         socket.close();
-      } catch {
-      }
+      } catch {}
       // xterm's viewport schedules work on open; disposing in the same tick (effect re-run, strict
       // mode, takeover remount) makes that work hit a torn-down renderer. Dispose a tick later.
       window.setTimeout(() => {
         try {
           term.dispose();
-        } catch {
-        }
+        } catch {}
       }, 0);
       termRef.current = null;
       bridgeRef.current = null;
@@ -175,7 +172,6 @@ export function TerminalView({ wsPath, className }: TerminalViewProps) {
         </div>
       </div>
 
-
       <div ref={hostRef} className="min-h-0 flex-1 overflow-hidden bg-black p-1" />
 
       {confirmOpen && (
@@ -194,11 +190,7 @@ export function TerminalView({ wsPath, className }: TerminalViewProps) {
               onClick={() => setConfirmOpen(false)}>
               {t('hostTerminal.take_over_confirm_cancel')}
             </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={takeOver}>
+            <Button variant="danger" size="sm" className="w-full sm:w-auto" onClick={takeOver}>
               {t('hostTerminal.take_over_confirm_confirm')}
             </Button>
           </div>

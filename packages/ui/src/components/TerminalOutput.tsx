@@ -2,8 +2,7 @@ import { forwardRef, useEffect, useRef } from "react";
 import { cn } from "../utils";
 import { sanitizeTerminalText } from "../ansi";
 
-export interface TerminalOutputProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+export interface TerminalOutputProps extends React.HTMLAttributes<HTMLDivElement> {
   lines: string[];
   autoScroll?: boolean;
   title?: string;
@@ -13,15 +12,7 @@ export interface TerminalOutputProps
 
 export const TerminalOutput = forwardRef<HTMLDivElement, TerminalOutputProps>(
   function TerminalOutput(
-    {
-      className,
-      lines,
-      autoScroll = true,
-      title,
-      actions,
-      maxHeight = "100%",
-      ...props
-    },
+    { className, lines, autoScroll = true, title, actions, maxHeight = "100%", ...props },
     ref,
   ) {
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -45,7 +36,6 @@ export const TerminalOutput = forwardRef<HTMLDivElement, TerminalOutputProps>(
         style={{ maxHeight }}
         {...props}
       >
-
         {(title || actions) && (
           <div
             className={cn(
@@ -63,11 +53,7 @@ export const TerminalOutput = forwardRef<HTMLDivElement, TerminalOutputProps>(
           </div>
         )}
 
-
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-auto p-3"
-        >
+        <div ref={scrollRef} className="flex-1 overflow-auto p-3">
           <pre className="whitespace-pre-wrap break-all font-mono text-xs leading-5">
             {lines.map((line, i) => (
               <div key={i}>
@@ -82,12 +68,7 @@ export const TerminalOutput = forwardRef<HTMLDivElement, TerminalOutputProps>(
   },
 );
 
-
-
-
-
 const ANSI_CLASSES: Record<string, string> = {
-
   "30": "text-surface-600 dark:text-dark-surface-900",
   "31": "text-error-400 dark:text-dark-error",
   "32": "text-success dark:text-dark-success",
@@ -106,9 +87,6 @@ const ANSI_CLASSES: Record<string, string> = {
 const ANSI_RE = /\x1b\[([0-9;]*)m/g;
 
 function colorize(rawText: string): React.ReactNode {
-
-
-
   const text = sanitizeTerminalText(rawText);
   if (!text.includes("\x1b[")) return text;
 
@@ -117,11 +95,9 @@ function colorize(rawText: string): React.ReactNode {
   let activeClasses = "";
   let match: RegExpExecArray | null;
 
-
   ANSI_RE.lastIndex = 0;
 
   while ((match = ANSI_RE.exec(text)) !== null) {
-
     if (match.index > lastIndex) {
       const chunk = text.slice(lastIndex, match.index);
       parts.push(
@@ -147,7 +123,6 @@ function colorize(rawText: string): React.ReactNode {
       }
     }
   }
-
 
   if (lastIndex < text.length) {
     const chunk = text.slice(lastIndex);

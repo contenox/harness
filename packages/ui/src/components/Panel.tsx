@@ -38,8 +38,7 @@ export const Panel = forwardRef<HTMLDivElement, PanelProps>(
           "p-4 border border-line bg-hover": variant === "info",
           "p-4 bg-solid text-on-solid": variant === "gradient",
           "p-4 border border-line bg-raised": variant === "surface",
-          "p-4 border border-line bg-transparent hover:bg-hover":
-            variant === "ghost",
+          "p-4 border border-line bg-transparent hover:bg-hover": variant === "ghost",
           "p-4 border-t border-line": variant === "body",
         },
         className,

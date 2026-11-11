@@ -1,4 +1,4 @@
-import { apiFetch, ApiError } from './fetch';
+import { ApiError, apiFetch } from './fetch';
 import { cwdApiFetch } from './projectRuntime';
 
 export type ConfigScope = { workspace?: string };
@@ -98,7 +98,11 @@ export function patchEnvelope(
   });
 }
 
-export function deleteEnvelope(scope: ConfigScope, name: string, revision: string): Promise<unknown> {
+export function deleteEnvelope(
+  scope: ConfigScope,
+  name: string,
+  revision: string,
+): Promise<unknown> {
   return call<unknown>(scope, configUrl(itemPath(name), scope), {
     method: 'DELETE',
     headers: { 'If-Match': `"${revision}"` },
@@ -120,7 +124,9 @@ export async function saveEnvelope(
   known: { inLayer: boolean; revision: string },
 ): Promise<EnvelopeItem> {
   const attempt = (inLayer: boolean, revision: string) =>
-    inLayer ? patchEnvelope(scope, name, patch, revision) : createEnvelope(scope, name, patch, revision);
+    inLayer
+      ? patchEnvelope(scope, name, patch, revision)
+      : createEnvelope(scope, name, patch, revision);
   try {
     return await attempt(known.inLayer, known.revision);
   } catch (err) {
@@ -149,7 +155,11 @@ export async function saveWorkspaceAware(
   return saved;
 }
 
-export async function removeEnvelope(scope: ConfigScope, name: string, revision: string): Promise<void> {
+export async function removeEnvelope(
+  scope: ConfigScope,
+  name: string,
+  revision: string,
+): Promise<void> {
   try {
     await deleteEnvelope(scope, name, revision);
   } catch (err) {

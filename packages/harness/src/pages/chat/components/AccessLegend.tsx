@@ -37,10 +37,16 @@ export function AccessLegend({ error, evaluating }: AccessLegendProps) {
         ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <LegendItem dotClass="ring-success/60 ring-1 ring-inset" label={t('workspace.legend_allowed')} />
+        <LegendItem
+          dotClass="ring-success/60 ring-1 ring-inset"
+          label={t('workspace.legend_allowed')}
+        />
         <LegendItem dotClass="bg-warning" label={t('workspace.legend_approval')} />
         <LegendItem dotClass="bg-error" label={t('workspace.legend_blocked')} />
-        <LegendItem dotClass="bg-text-subtle opacity-50" label={t('workspace.legend_unreachable')} />
+        <LegendItem
+          dotClass="bg-text-subtle opacity-50"
+          label={t('workspace.legend_unreachable')}
+        />
       </div>
     </div>
   );

@@ -26,7 +26,12 @@ describe('initialValues', () => {
 describe('buildConnectionPayload', () => {
   it('trims and omits blanks', () => {
     expect(
-      buildConnectionPayload({ name: ' ', apiKey: ' sk-1 ', apiKeyEnv: '', baseUrl: ' https://x ' }),
+      buildConnectionPayload({
+        name: ' ',
+        apiKey: ' sk-1 ',
+        apiKeyEnv: '',
+        baseUrl: ' https://x ',
+      }),
     ).toEqual({ apiKey: 'sk-1', baseUrl: 'https://x' });
   });
   it('sends JSON credentials as the secret', () => {
@@ -49,7 +54,19 @@ describe('env variable name validation', () => {
     for (const ok of ['ANTHROPIC_API_KEY', '_X1', 'my_key', 'K']) expect(check(ok)).toBeUndefined();
   });
   it('blocks things that look like keys', () => {
-    for (const bad of ['sk-test123', 'sk-ant-abc', 'sk_live', 'AIzaSyAbc', 'gsk_abc', 'xai-abc', 'pk-1', 'sk-or-v1', 'has space', '1ABC', 'A'.repeat(65)]) {
+    for (const bad of [
+      'sk-test123',
+      'sk-ant-abc',
+      'sk_live',
+      'AIzaSyAbc',
+      'gsk_abc',
+      'xai-abc',
+      'pk-1',
+      'sk-or-v1',
+      'has space',
+      '1ABC',
+      'A'.repeat(65),
+    ]) {
       expect(check(bad)).toBe('cloud_providers.api_key_env_looks_like_key');
     }
   });
@@ -72,9 +89,9 @@ describe('validateSetupValues', () => {
     expect(validateSetupValues(ollama, { baseUrl: ' ' }, { secretStored: false })).toEqual({
       baseUrl: 'providers.field.required',
     });
-    expect(
-      validateSetupValues(ollama, { baseUrl: 'http://x' }, { secretStored: false }),
-    ).toEqual({});
+    expect(validateSetupValues(ollama, { baseUrl: 'http://x' }, { secretStored: false })).toEqual(
+      {},
+    );
   });
   it('requires the Vertex URL; the JSON is optional', () => {
     expect(validateSetupValues(vertex, {}, { secretStored: false })).toEqual({
@@ -96,12 +113,12 @@ describe('mapSetupError', () => {
     expect(mapSetupError(new ApiError('invalid name', 422), anthropic).fieldErrors).toEqual({
       name: 'providers.field.name_invalid',
     });
-    expect(mapSetupError(new ApiError('api key is required', 422), anthropic).fieldErrors).toEqual(
-      { apiKey: 'providers.field.rejected' },
-    );
-    expect(
-      mapSetupError(new ApiError('credentials missing', 422), vertex).fieldErrors,
-    ).toEqual({ credentialsJson: 'providers.field.rejected' });
+    expect(mapSetupError(new ApiError('api key is required', 422), anthropic).fieldErrors).toEqual({
+      apiKey: 'providers.field.rejected',
+    });
+    expect(mapSetupError(new ApiError('credentials missing', 422), vertex).fieldErrors).toEqual({
+      credentialsJson: 'providers.field.rejected',
+    });
   });
   it('keeps unknown failures as a message', () => {
     expect(mapSetupError(new ApiError('boom', 500), anthropic)).toEqual({

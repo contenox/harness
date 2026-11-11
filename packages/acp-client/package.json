@@ -10,11 +10,13 @@
   "scripts": {
     "prettier:check": "prettier --check \"src/**/*.{ts,json,md}\"",
     "prettier": "prettier --write \"src/**/*.{ts,json,md}\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p ."
   },
-  "dependencies": {},
   "devDependencies": {
     "@agentclientprotocol/sdk": "1.2.1",
+    "prettier": "^3.8.3",
+    "typescript": "^5.7.3",
     "vitest": "^3.2.7"
   },
   "exports": {

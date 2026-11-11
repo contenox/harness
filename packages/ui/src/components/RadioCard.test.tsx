@@ -11,7 +11,12 @@ const options = [
 const tabIndexes = (html: string) => [...html.matchAll(/tabindex="(-?\d)"/g)].map((m) => m[1]);
 const render = (value: string) =>
   renderToStaticMarkup(
-    createElement(RadioCardGroup<string>, { options, value, onChange: () => {}, "aria-label": "x" }),
+    createElement(RadioCardGroup<string>, {
+      options,
+      value,
+      onChange: () => {},
+      "aria-label": "x",
+    }),
   );
 
 describe("RadioCardGroup roving tabindex", () => {

@@ -1,17 +1,17 @@
-import { Button, Card, EmptyState, P, Page, Small } from '@contenox/ui';
-import { ChevronRight, Server } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { HostStateBadge } from '../saas/HostStateBadge';
-import { ListSkeleton, ScreenError } from '../saas/ScreenState';
-import { ScreenHeader } from '../shell/ScreenHeader';
-import { ScreenBody } from '@contenox/ui';
-import { useProductPorts } from '../ports';
-import type { Instance } from '../lib/api/types';
-import { hostDetail, isReachable } from '../lib/hostState';
+import { Button, Card, EmptyState, P, Page, Small } from "@contenox/ui";
+import { ChevronRight, Server } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { HostStateBadge } from "../saas/HostStateBadge";
+import { ListSkeleton, ScreenError } from "../saas/ScreenState";
+import { ScreenHeader } from "../shell/ScreenHeader";
+import { ScreenBody } from "@contenox/ui";
+import { useProductPorts } from "../ports";
+import type { Instance } from "../lib/api/types";
+import { hostDetail, isReachable } from "../lib/hostState";
 
 export default function HostPickerPage() {
   const { routes, useAuth, useHosts } = useProductPorts();
-  const accountID = useAuth().accountID ?? '';
+  const accountID = useAuth().accountID ?? "";
   const navigate = useNavigate();
   const { data, isPending, error, refetch, isFetching } = useHosts(accountID);
 
@@ -26,13 +26,14 @@ export default function HostPickerPage() {
           <EmptyState
             icon={<Server aria-hidden />}
             title="Nothing paired yet"
-            description="Pair a machine and its sessions show up here.">
+            description="Pair a machine and its sessions show up here."
+          >
             <Button variant="primary" onClick={() => navigate(routes.hosts)}>
               Set up a machine
             </Button>
           </EmptyState>
         )}
-        {data?.map(host => (
+        {data?.map((host) => (
           <HostRow key={host.id} host={host} />
         ))}
       </ScreenBody>
@@ -63,10 +64,6 @@ function HostRow({ host }: { host: Instance }) {
     );
   }
   return (
-
-
-
-
     <Link to={routes.host(host.id)} className="block">
       <Card variant="filled" interactive>
         {body}

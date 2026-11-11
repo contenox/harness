@@ -2,7 +2,7 @@ import { Tabs, type Tab } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
 import type { PaneKind } from '../lib/panes';
 
-const PANES: PaneKind[] = ['files', 'terminal', 'diff'];
+const PANES: PaneKind[] = ['files', 'search', 'terminal', 'diff'];
 
 export interface PaneTabsProps {
   active: PaneKind;

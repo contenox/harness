@@ -70,11 +70,7 @@ describe('parseSlashInvocation', () => {
   });
 });
 
-function cmd(
-  trigger: '/' | '@',
-  name: string,
-  aliases?: string[],
-): SlashCommand {
+function cmd(trigger: '/' | '@', name: string, aliases?: string[]): SlashCommand {
   return {
     trigger,
     name,
@@ -109,11 +105,7 @@ describe('SlashCommandRegistry', () => {
     reg.register(cmd('@', 'file'));
     reg.register(cmd('/', 'help'));
     reg.register(cmd('@', 'plan'));
-    expect(reg.list().map((c) => `${c.trigger}${c.name}`)).toEqual([
-      '/help',
-      '@file',
-      '@plan',
-    ]);
+    expect(reg.list().map(c => `${c.trigger}${c.name}`)).toEqual(['/help', '@file', '@plan']);
   });
 
   it('namesStartingWith filters by trigger', () => {

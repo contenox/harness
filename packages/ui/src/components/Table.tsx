@@ -6,13 +6,7 @@ type TableProps = React.HTMLAttributes<HTMLTableElement> & {
   containerClassName?: string;
 };
 
-export function Table({
-  columns,
-  children,
-  className,
-  containerClassName,
-  ...props
-}: TableProps) {
+export function Table({ columns, children, className, containerClassName, ...props }: TableProps) {
   return (
     <div
       className={cn(
@@ -46,10 +40,7 @@ type TableRowProps = React.HTMLAttributes<HTMLTableRowElement>;
 export function TableRow({ className, ...props }: TableRowProps) {
   return (
     <tr
-      className={cn(
-        "hover:bg-secondary-50 dark:hover:bg-dark-surface-100",
-        className,
-      )}
+      className={cn("hover:bg-secondary-50 dark:hover:bg-dark-surface-100", className)}
       {...props}
     />
   );
@@ -60,10 +51,7 @@ type TableCellProps = React.TdHTMLAttributes<HTMLTableCellElement>;
 export function TableCell({ className, ...props }: TableCellProps) {
   return (
     <td
-      className={cn(
-        "text-secondary-800 dark:text-dark-secondary-200 px-4 py-3 text-sm",
-        className,
-      )}
+      className={cn("text-secondary-800 dark:text-dark-secondary-200 px-4 py-3 text-sm", className)}
       {...props}
     />
   );

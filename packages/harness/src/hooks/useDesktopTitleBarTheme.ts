@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useTheme } from '../lib/ThemeProvider';
+import { useTheme } from '../lib/themeContext';
 
 /** Keeps the native caption-button overlay in step with the renderer theme (no-op in the browser). */
 export function useDesktopTitleBarTheme(): void {

@@ -70,7 +70,10 @@ describe('planDefaultSelection', () => {
   });
   it('falls back to any backend with models', () => {
     const s = status([backend('openai-codex', []), backend('ollama', ['llama3'])]);
-    expect(planDefaultSelection(s, 'openai-codex')).toEqual({ provider: 'ollama', model: 'llama3' });
+    expect(planDefaultSelection(s, 'openai-codex')).toEqual({
+      provider: 'ollama',
+      model: 'llama3',
+    });
   });
 });
 
@@ -84,10 +87,17 @@ describe('chatModelsFor', () => {
 
 describe('onlyDefaultsMissing', () => {
   const issue = (code: string) =>
-    ({ code, severity: 'error', category: 'defaults', message: '' }) as SetupStatus['issues'][number];
+    ({
+      code,
+      severity: 'error',
+      category: 'defaults',
+      message: '',
+    }) as SetupStatus['issues'][number];
   it('is true when only default keys are missing', () => {
     expect(
-      onlyDefaultsMissing(status([backend('openai-codex', ['gpt-5.4'])], [issue('missing_default_model')])),
+      onlyDefaultsMissing(
+        status([backend('openai-codex', ['gpt-5.4'])], [issue('missing_default_model')]),
+      ),
     ).toBe(true);
   });
   it('is false when no backend is reachable yet (fresh install)', () => {

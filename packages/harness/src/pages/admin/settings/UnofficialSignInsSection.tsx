@@ -1,8 +1,9 @@
 import { Button, Checkbox, Dialog, H2, InlineNotice, P, Panel } from '@contenox/ui';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCLIConfig } from '../../../hooks/useCLIConfig';
 import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
+import { useResetAfterSuccess } from '../../../hooks/useResetAfterSuccess';
 import { AuthContext } from '../../../lib/authContext';
 
 export function UnofficialSignInsSection() {
@@ -15,11 +16,7 @@ export function UnofficialSignInsSection() {
 
   const enabled = data?.unofficialSignIns === 'true';
 
-  useEffect(() => {
-    if (!putConfig.isSuccess) return;
-    const timer = window.setTimeout(() => putConfig.reset(), 3000);
-    return () => window.clearTimeout(timer);
-  }, [putConfig.isSuccess, putConfig.reset]);
+  useResetAfterSuccess(putConfig.isSuccess, putConfig.reset);
 
   const save = (on: boolean) => {
     putConfig.reset();

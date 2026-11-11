@@ -70,9 +70,7 @@ export const Highlighted: Story = {
 
 export const ErrorEdge: Story = {
   render: () => (
-    <SvgFrame>
-      {renderEdgeWithNodes(sourceH, targetH, { isError: true, label: "error" })}
-    </SvgFrame>
+    <SvgFrame>{renderEdgeWithNodes(sourceH, targetH, { isError: true, label: "error" })}</SvgFrame>
   ),
 };
 

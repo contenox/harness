@@ -1,13 +1,7 @@
 import { cn } from "../utils";
 import { ProgressBar } from "./ProgressBar";
 
-export type Status =
-  | "planned"
-  | "in-progress"
-  | "completed"
-  | "error"
-  | "warning"
-  | "info";
+export type Status = "planned" | "in-progress" | "completed" | "error" | "warning" | "info";
 export type Size = "sm" | "md" | "lg";
 
 export interface StatusIndicatorProps {
@@ -19,10 +13,7 @@ export interface StatusIndicatorProps {
   showIcon?: boolean;
 }
 
-const statusConfig: Record<
-  Status,
-  { dot: string; text: string; icon: string }
-> = {
+const statusConfig: Record<Status, { dot: string; text: string; icon: string }> = {
   planned: { dot: "bg-text-subtle", text: "text-text-muted", icon: "○" },
   "in-progress": { dot: "bg-warning", text: "text-text-warning", icon: "⟳" },
   completed: { dot: "bg-success", text: "text-text-success", icon: "✓" },
@@ -49,13 +40,7 @@ export function StatusIndicator({
 
       <div className="flex-1">
         {label && (
-          <p
-            className={cn(
-              "font-medium",
-              cfg.text,
-              size === "sm" ? "text-xs" : "text-[13px]",
-            )}
-          >
+          <p className={cn("font-medium", cfg.text, size === "sm" ? "text-xs" : "text-[13px]")}>
             {label}
           </p>
         )}

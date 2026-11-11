@@ -44,7 +44,6 @@ export const getConnectorPath = (
     const midY = startY + (endY - startY) / 2;
     return `M${startX},${startY} C${startX},${midY} ${endX},${midY} ${endX},${endY}`;
   } else {
-
     const startX = source.x + source.width;
     const startY = source.y + source.height / 2;
     const endX = target.x;
@@ -185,7 +184,6 @@ export const calculateLayout = (
       fromNodeId: node.id,
     });
   });
-
 
   return { nodePositions, edges, addButtons };
 };

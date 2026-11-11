@@ -1,9 +1,9 @@
-import { Button } from '../../components/Button';
-import { Dialog } from '../../components/Dialog';
-import { P } from '../../components/Typography';
-import { useState, type ReactNode } from 'react';
-import { ScreenError } from './ScreenState';
-import { TextField } from '../../components/forms/Fields';
+import { Button } from "../../components/Button";
+import { Dialog } from "../../components/Dialog";
+import { P } from "../../components/Typography";
+import { useState, type ReactNode } from "react";
+import { ScreenError } from "./ScreenState";
+import { TextField } from "../../components/forms/Fields";
 
 export function ConfirmDialog({
   open,
@@ -31,11 +31,11 @@ export function ConfirmDialog({
   confirmPhraseLabel?: string;
   children: ReactNode;
 }) {
-  const [typed, setTyped] = useState('');
+  const [typed, setTyped] = useState("");
   const phraseSatisfied = confirmPhrase === undefined || typed.trim() === confirmPhrase;
 
   const close = () => {
-    setTyped('');
+    setTyped("");
     onClose();
   };
 
@@ -48,7 +48,7 @@ export function ConfirmDialog({
           <TextField
             label={confirmPhraseLabel ?? `Type ${confirmPhrase} to confirm`}
             value={typed}
-            onChange={event => setTyped(event.target.value)}
+            onChange={(event) => setTyped(event.target.value)}
             disabled={pending}
             autoCapitalize="none"
             autoCorrect="off"
@@ -64,7 +64,8 @@ export function ConfirmDialog({
             className="flex-1"
             isLoading={pending}
             disabled={!phraseSatisfied || pending === true}
-            onClick={onConfirm}>
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
           <Button variant="outline" className="flex-1" onClick={close} disabled={pending}>

@@ -28,8 +28,7 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
     try {
       await navigator.clipboard.writeText(text);
       return true;
-    } catch {
-    }
+    } catch {}
   }
   try {
     return copyWithTextarea(text);

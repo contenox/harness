@@ -4,7 +4,6 @@ import { Label } from "./Label";
 import { Tooltip } from "./Tooltip";
 
 export type LabelWithHelpProps = {
-
   label: string;
 
   tooltip?: string;
@@ -24,25 +23,19 @@ export function LabelWithHelp({
   htmlFor,
 }: LabelWithHelpProps) {
   const textClassName =
-    as === "span"
-      ? "text-text-muted dark:text-dark-text-muted text-xs"
-      : "text-sm font-medium";
+    as === "span" ? "text-text-muted dark:text-dark-text-muted text-xs" : "text-sm font-medium";
 
   return (
     <div className={cn("flex items-center gap-1", className)}>
       {as === "label" ? (
         <Label htmlFor={htmlFor} className={textClassName}>
           {label}
-          {required && (
-            <span className="text-error dark:text-dark-error">*</span>
-          )}
+          {required && <span className="text-error dark:text-dark-error">*</span>}
         </Label>
       ) : (
         <span className={textClassName}>
           {label}
-          {required && (
-            <span className="text-error dark:text-dark-error">*</span>
-          )}
+          {required && <span className="text-error dark:text-dark-error">*</span>}
         </span>
       )}
       {tooltip && (

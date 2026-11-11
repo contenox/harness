@@ -38,7 +38,9 @@ export const Default: Story = {};
 
 export const Planned: Story = { args: { status: "planned", label: "Planned" } };
 
-export const Completed: Story = { args: { status: "completed", label: "Completed", progress: 100 } };
+export const Completed: Story = {
+  args: { status: "completed", label: "Completed", progress: 100 },
+};
 
 export const ErrorStatus: Story = { args: { status: "error", label: "Failed" } };
 

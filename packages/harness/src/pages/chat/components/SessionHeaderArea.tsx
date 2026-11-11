@@ -1,9 +1,9 @@
 import { InlineNotice } from '@contenox/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AdoptedSessionBanner } from '../../../components/AdoptedSessionBanner';
 import type { AcpSessionState } from '../../../hooks/acpSessionState';
 import type { AcpWorkspaceStatus } from '../../../hooks/acpWorkspaceState';
-import { AdoptedSessionBanner } from '../../../components/AdoptedSessionBanner';
 import type { AdoptResult } from '../../../lib/adoptMeta';
 import { PlanPanel } from './PlanPanel';
 import { ResumedBanner } from './SessionBanners';
@@ -28,7 +28,11 @@ export const SessionHeaderArea = memo(function SessionHeaderArea({
   return (
     <>
       {adopted && (
-        <AdoptedSessionBanner instanceId={adopted.instanceId} controller={adopted.controller} agentName={agentName} />
+        <AdoptedSessionBanner
+          instanceId={adopted.instanceId}
+          controller={adopted.controller}
+          agentName={agentName}
+        />
       )}
       {workspaceStatus === 'reconnecting' && (
         <InlineNotice variant="warning">{t('acp_chat.banner_reconnecting')}</InlineNotice>

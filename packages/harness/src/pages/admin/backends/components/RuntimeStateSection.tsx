@@ -1,12 +1,4 @@
-import {
-  EmptyState,
-  LoadingState,
-  Panel,
-  Section,
-  Table,
-  TableCell,
-  TableRow,
-} from '@contenox/ui';
+import { EmptyState, LoadingState, Panel, Section, Table, TableCell, TableRow } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
 import { backendDisplayUrl } from '../../../../lib/displayUrl';
 import type { BackendRuntimeState } from '../../../../lib/types';
@@ -28,14 +20,8 @@ export default function RuntimeStateSection({
 
   return (
     <Section title={t('state.runtime_title')} description={t('state.runtime_intro')}>
-      {isLoading && (
-        <LoadingState />
-      )}
-      {isError && (
-        <Panel variant="error">
-          {errorMessage || t('state.runtime_error')}
-        </Panel>
-      )}
+      {isLoading && <LoadingState />}
+      {isError && <Panel variant="error">{errorMessage || t('state.runtime_error')}</Panel>}
       {!isLoading && !isError && data && data.length === 0 && (
         <EmptyState
           title={t('state.runtime_empty_title')}
@@ -62,14 +48,13 @@ export default function RuntimeStateSection({
               </TableCell>
               <TableCell className="max-w-[300px]">
                 {row.error?.trim() ? (
-                  <div 
-                    className="line-clamp-3 overflow-hidden rounded-md bg-error/10 px-2 py-1 text-xs font-mono text-error-600 dark:text-dark-error-800"
-                    title={row.error}
-                  >
+                  <div
+                    className="bg-error/10 text-error-600 dark:text-dark-error-800 line-clamp-3 overflow-hidden rounded-md px-2 py-1 font-mono text-xs"
+                    title={row.error}>
                     {row.error}
                   </div>
                 ) : (
-                  <span className="text-sm text-text-muted dark:text-dark-text-muted">—</span>
+                  <span className="text-text-muted dark:text-dark-text-muted text-sm">—</span>
                 )}
               </TableCell>
               <TableCell>{row.pulledModels?.length ?? row.models?.length ?? 0}</TableCell>

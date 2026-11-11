@@ -9,10 +9,7 @@ interface LayoutControlsProps {
   onChangeDirection: (dir: LayoutDirection) => void;
 }
 
-export const LayoutControls: React.FC<LayoutControlsProps> = ({
-  direction,
-  onChangeDirection,
-}) => {
+export const LayoutControls: React.FC<LayoutControlsProps> = ({ direction, onChangeDirection }) => {
   return (
     <div className="flex gap-1 rounded-md border border-surface-300 dark:border-dark-surface-300 bg-surface-50 dark:bg-dark-surface-50 p-1">
       <Button

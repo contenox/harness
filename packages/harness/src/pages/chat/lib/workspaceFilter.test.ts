@@ -71,7 +71,9 @@ describe('axisMatches', () => {
     const unreachable = verdict(undefined, undefined, false);
     expect(axisMatches(unreachable, 'read', 'unreachable')).toBe(true);
     expect(axisMatches(unreachable, 'write', 'unreachable')).toBe(true);
-    expect(axisMatches(verdict({ action: 'allow' }, { action: 'allow' }), 'read', 'unreachable')).toBe(false);
+    expect(
+      axisMatches(verdict({ action: 'allow' }, { action: 'allow' }), 'read', 'unreachable'),
+    ).toBe(false);
   });
 
   it('excludes a path with no verdict yet (not evaluated)', () => {
@@ -127,7 +129,10 @@ describe('buildTreeFromMatches', () => {
   it('threads the agent-view decorator onto file leaves (not the synthesized dirs)', () => {
     const decorate: NodeDecorator = path => {
       const table: Record<string, NodeDecoration> = {
-        'secret.env': { dimmed: false, indicators: [{ key: 'write', icon: null, status: 'deny', title: 'Write: blocked' }] },
+        'secret.env': {
+          dimmed: false,
+          indicators: [{ key: 'write', icon: null, status: 'deny', title: 'Write: blocked' }],
+        },
       };
       return table[path];
     };

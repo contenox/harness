@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { WorkspaceRoot } from './types';
 import {
   activeWorkspaceRoot,
   displayRootForPath,
@@ -9,7 +10,6 @@ import {
   shortenRootPath,
   workspaceNameForCwd,
 } from './workspaceRoots';
-import type { WorkspaceRoot } from './types';
 
 describe('activeWorkspaceRoot', () => {
   it('prefers the default-flagged root over position', () => {
@@ -104,7 +104,9 @@ describe('isWorkspaceRootRefusal', () => {
       ),
     ).toBe(true);
     expect(
-      isWorkspaceRootRefusal('workspace directory "/tmp" is not under any configured workspace root; roots: /srv'),
+      isWorkspaceRootRefusal(
+        'workspace directory "/tmp" is not under any configured workspace root; roots: /srv',
+      ),
     ).toBe(true);
   });
 
@@ -166,7 +168,11 @@ describe('projectName', () => {
 describe('projectName for the default project', () => {
   it('shows the stored name, not a translated label', () => {
     expect(
-      projectName({ path: 'C:/Users/me/Contenox Scratchpad', default: true, name: 'Contenox Scratchpad' }),
+      projectName({
+        path: 'C:/Users/me/Contenox Scratchpad',
+        default: true,
+        name: 'Contenox Scratchpad',
+      }),
     ).toBe('Contenox Scratchpad');
     expect(projectName({ path: 'C:/Users/me/Contenox Scratchpad', default: true })).toBe(
       'Contenox Scratchpad',
@@ -226,7 +232,9 @@ describe('extractRefusedRoot', () => {
 
   it('pulls the path from the "workspace directory" cwd-check variant', () => {
     expect(
-      extractRefusedRoot('workspace directory "/tmp/x" is not under any configured workspace root; roots: /srv'),
+      extractRefusedRoot(
+        'workspace directory "/tmp/x" is not under any configured workspace root; roots: /srv',
+      ),
     ).toBe('/tmp/x');
   });
 

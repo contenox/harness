@@ -81,6 +81,6 @@ describe('artifactsToInlineAttachments', () => {
       { kind: 'unknown' },
       Artifact.terminalOutput({ output: 'x' }),
     ]);
-    expect(got.map((a) => a.kind)).toEqual(['file_view', 'terminal_excerpt']);
+    expect(got.map(a => a.kind)).toEqual(['file_view', 'terminal_excerpt']);
   });
 });

@@ -36,7 +36,6 @@ export type InlineAttachment =
     };
 
 export type InlineAttachmentLabels = {
-
   line?: string;
 
   lines?: string;
@@ -84,13 +83,8 @@ function FileViewAttachment({
           <FileText className="h-3.5 w-3.5" />
           <span className="font-mono">{attachment.path}</span>
           <Span variant="muted" className="text-[10px]">
-            {lineCount}{" "}
-            {lineCount === 1
-              ? (labels?.line ?? "line")
-              : (labels?.lines ?? "lines")}
-            {attachment.truncated
-              ? ` · ${labels?.truncated ?? "truncated"}`
-              : ""}
+            {lineCount} {lineCount === 1 ? (labels?.line ?? "line") : (labels?.lines ?? "lines")}
+            {attachment.truncated ? ` · ${labels?.truncated ?? "truncated"}` : ""}
           </Span>
         </span>
       }
@@ -194,17 +188,15 @@ function DAGAttachment({
       title={
         <span className="inline-flex items-center gap-1.5 text-xs">
           <Workflow className="h-3.5 w-3.5" />
-          <span>
-            {attachment.description ??
-              labels?.compiledChainDag ??
-              "Compiled chain DAG"}
-          </span>
+          <span>{attachment.description ?? labels?.compiledChainDag ?? "Compiled chain DAG"}</span>
         </span>
       }
       defaultExpanded={false}
       className="border-surface-300 dark:border-dark-surface-400 bg-surface-100 dark:bg-dark-surface-200 mt-2 rounded border"
     >
-      <CodeBlock className="px-3 py-2 text-[11px] leading-relaxed">{attachment.chainJSON}</CodeBlock>
+      <CodeBlock className="px-3 py-2 text-[11px] leading-relaxed">
+        {attachment.chainJSON}
+      </CodeBlock>
     </Collapsible>
   );
 }
@@ -242,7 +234,6 @@ function StateUnitAttachment({
     </Collapsible>
   );
 }
-
 
 function ImageAttachmentView({
   attachment,
@@ -283,17 +274,12 @@ function ImageAttachmentView({
   );
 }
 
-export function InlineAttachmentRenderer({
-  attachment,
-  labels,
-}: InlineAttachmentRendererProps) {
+export function InlineAttachmentRenderer({ attachment, labels }: InlineAttachmentRendererProps) {
   switch (attachment.kind) {
     case "file_view":
       return <FileViewAttachment attachment={attachment} labels={labels} />;
     case "terminal_excerpt":
-      return (
-        <TerminalExcerptAttachment attachment={attachment} labels={labels} />
-      );
+      return <TerminalExcerptAttachment attachment={attachment} labels={labels} />;
     case "plan_summary":
       return <PlanSummaryAttachment attachment={attachment} labels={labels} />;
     case "dag":

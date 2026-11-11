@@ -17,7 +17,12 @@ export function ProjectGroup({ title, open, onToggle, actions, onContextMenu, ch
   return (
     <div className="flex flex-col gap-0.5">
       <div onContextMenu={onContextMenu}>
-        <SidebarItem icon={<Icon aria-hidden />} expanded={open} onClick={onToggle} trailing={actions} title={title}>
+        <SidebarItem
+          icon={<Icon aria-hidden />}
+          expanded={open}
+          onClick={onToggle}
+          trailing={actions}
+          title={title}>
           {title}
         </SidebarItem>
       </div>

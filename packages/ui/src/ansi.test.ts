@@ -45,9 +45,7 @@ describe("sanitizeTerminalText", () => {
 
   it("is idempotent", () => {
     const raw = "\x1b[?2004h\x1b[32mgreen\x1b[0m\x1b[?2004l";
-    expect(sanitizeTerminalText(sanitizeTerminalText(raw))).toBe(
-      sanitizeTerminalText(raw),
-    );
+    expect(sanitizeTerminalText(sanitizeTerminalText(raw))).toBe(sanitizeTerminalText(raw));
   });
 });
 

@@ -1,4 +1,3 @@
-
 import { AcpClient, type AcpClientOptions } from './client';
 import type { Transport } from './transport';
 import type { ClientCapabilities } from './types';

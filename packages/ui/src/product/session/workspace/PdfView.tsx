@@ -1,4 +1,4 @@
-import type { PreviewViewerProps } from './previewRegistry';
+import type { PreviewViewerProps } from "./previewRegistry";
 
 export default function PdfView({ content, name }: PreviewViewerProps) {
   return (

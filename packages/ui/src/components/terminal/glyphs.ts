@@ -1,6 +1,4 @@
-
 export const TERMINAL_GLYPH = {
-
   prompt: "❯",
 
   tool: "⏺",

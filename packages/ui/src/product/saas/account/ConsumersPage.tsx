@@ -1,16 +1,16 @@
-import { Button, Card, EmptyState, InlineNotice, P, Page, Small } from '@contenox/ui';
-import { Webhook } from 'lucide-react';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ConfirmDialog } from '../ConfirmDialog';
-import { CopyRow, InlineCode } from '@contenox/ui';
-import { SectionForm, SelectField, TextField } from '@contenox/ui';
-import { RefusalCta } from '../RefusalCta';
-import { ListSkeleton, ScreenError } from '../ScreenState';
-import { ScreenBody } from '@contenox/ui';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { BackTo } from '../../shell/BackTo';
-import { useProductPorts } from '../../ports';
+import { Button, Card, EmptyState, InlineNotice, P, Page, Small } from "@contenox/ui";
+import { Webhook } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { ConfirmDialog } from "../ConfirmDialog";
+import { CopyRow, InlineCode } from "@contenox/ui";
+import { SectionForm, SelectField, TextField } from "@contenox/ui";
+import { RefusalCta } from "../RefusalCta";
+import { ListSkeleton, ScreenError } from "../ScreenState";
+import { ScreenBody } from "@contenox/ui";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { BackTo } from "../../shell/BackTo";
+import { useProductPorts } from "../../ports";
 import type {
   ConsumerSessionMode,
   ConsumerSource,
@@ -18,7 +18,7 @@ import type {
   CreateConsumerResponse,
   EventConsumer,
   Instance,
-} from '../../lib/api/types';
+} from "../../lib/api/types";
 import {
   ingestSummary,
   receiverLabel,
@@ -28,42 +28,38 @@ import {
   sourceLabel,
   targetNameRefusal,
   targetSentence,
-} from './lib/consumers';
-import { partitionFormError, type FormErrors } from './lib/formErrors';
-
+} from "./lib/consumers";
+import { partitionFormError, type FormErrors } from "./lib/formErrors";
 
 const CONSUMER_FIELDS = [
-  'name',
-  'source',
-  'allowed_origins',
-  'instance_id',
-  'chain',
-  'agent_name',
-  'session_mode',
-  'session_name',
+  "name",
+  "source",
+  "allowed_origins",
+  "instance_id",
+  "chain",
+  "agent_name",
+  "session_mode",
+  "session_name",
 ] as const;
 
-
-const MODE_OPTIONS = (['new', 'reused'] as const).map(mode => ({
+const MODE_OPTIONS = (["new", "reused"] as const).map((mode) => ({
   value: mode,
   label: sessionModeLabel(mode),
 }));
 
-
 const TARGET_OPTIONS: { value: ConsumerTargetKind; label: string }[] = [
-  { value: 'agent', label: 'An agent declared on that machine' },
-  { value: 'chain', label: 'A chain file on that machine' },
+  { value: "agent", label: "An agent declared on that machine" },
+  { value: "chain", label: "A chain file on that machine" },
 ];
 
-
-const SOURCE_OPTIONS = (['generic', 'form'] as const).map(source => ({
+const SOURCE_OPTIONS = (["generic", "form"] as const).map((source) => ({
   value: source,
   label: sourceLabel(source),
 }));
 
 export default function ConsumersPage() {
   const { routes, useAuth, useConsumers, useHosts } = useProductPorts();
-  const accountID = useAuth().accountID ?? '';
+  const accountID = useAuth().accountID ?? "";
   const consumers = useConsumers(accountID);
   const hosts = useHosts(accountID);
 
@@ -88,7 +84,7 @@ export default function ConsumersPage() {
             are lost, delete the consumer and create another.
           </Small>
         )}
-        {consumers.data?.map(consumer => (
+        {consumers.data?.map((consumer) => (
           <ConsumerCard
             key={consumer.id}
             consumer={consumer}
@@ -107,7 +103,6 @@ export default function ConsumersPage() {
     </Page>
   );
 }
-
 
 function CreateConsumerSection({
   accountID,
@@ -144,9 +139,7 @@ function CreateConsumerSection({
   );
 }
 
-
 const NO_FORM_ERRORS: FormErrors = { retryable: false, fields: {} };
-
 
 function CreateConsumerForm({
   create,
@@ -154,20 +147,20 @@ function CreateConsumerForm({
   hostsError,
   onCreated,
 }: {
-  create: ReturnType<ReturnType<typeof useProductPorts>['useCreateConsumer']>;
+  create: ReturnType<ReturnType<typeof useProductPorts>["useCreateConsumer"]>;
   hosts: Instance[] | undefined;
   hostsError: unknown;
   onCreated: (created: CreateConsumerResponse) => void;
 }) {
   const { routes, refusalSell } = useProductPorts();
-  const [name, setName] = useState('');
-  const [source, setSource] = useState<ConsumerSource>('generic');
-  const [origin, setOrigin] = useState('');
-  const [instanceID, setInstanceID] = useState('');
-  const [targetKind, setTargetKind] = useState<ConsumerTargetKind>('agent');
-  const [target, setTarget] = useState('');
-  const [mode, setMode] = useState<ConsumerSessionMode>('new');
-  const [sessionName, setSessionName] = useState('');
+  const [name, setName] = useState("");
+  const [source, setSource] = useState<ConsumerSource>("generic");
+  const [origin, setOrigin] = useState("");
+  const [instanceID, setInstanceID] = useState("");
+  const [targetKind, setTargetKind] = useState<ConsumerTargetKind>("agent");
+  const [target, setTarget] = useState("");
+  const [mode, setMode] = useState<ConsumerSessionMode>("new");
+  const [sessionName, setSessionName] = useState("");
 
   const receivers = receiverOptions(hosts ?? []);
   const noReceivers = hosts !== undefined && receivers.length === 0;
@@ -175,20 +168,17 @@ function CreateConsumerForm({
   const sell = refusalSell(create.error);
   const errors = sell === null ? partitionFormError(create.error, CONSUMER_FIELDS) : NO_FORM_ERRORS;
 
-
-
-
-  const needsSessionName = mode === 'reused';
-  const targetRefusal = targetNameRefusal(target, targetKind === 'agent' ? 'agent' : 'session');
-  const sessionRefusal = targetNameRefusal(sessionName, 'session');
+  const needsSessionName = mode === "reused";
+  const targetRefusal = targetNameRefusal(target, targetKind === "agent" ? "agent" : "session");
+  const sessionRefusal = targetNameRefusal(sessionName, "session");
   const canSubmit =
-    name.trim() !== '' &&
-    instanceID !== '' &&
-    target.trim() !== '' &&
+    name.trim() !== "" &&
+    instanceID !== "" &&
+    target.trim() !== "" &&
     targetRefusal === null &&
     sessionRefusal === null &&
-    (!needsSessionName || sessionName.trim() !== '') &&
-    (source !== 'form' || origin.trim() !== '');
+    (!needsSessionName || sessionName.trim() !== "") &&
+    (source !== "form" || origin.trim() !== "");
 
   const submit = () => {
     if (!canSubmit) return;
@@ -197,22 +187,18 @@ function CreateConsumerForm({
         name: name.trim(),
         source,
 
-
-        ...(source === 'form' && { allowed_origins: [origin.trim()] }),
+        ...(source === "form" && { allowed_origins: [origin.trim()] }),
         instance_id: instanceID,
 
-
-
-
-        ...(targetKind === 'agent' ? { agent_name: target.trim() } : { chain: target.trim() }),
+        ...(targetKind === "agent" ? { agent_name: target.trim() } : { chain: target.trim() }),
         session_mode: mode,
         ...(needsSessionName && { session_name: sessionName.trim() }),
       },
       {
-        onSuccess: response => {
-          setName('');
-          setTarget('');
-          setSessionName('');
+        onSuccess: (response) => {
+          setName("");
+          setTarget("");
+          setSessionName("");
           onCreated(response);
         },
       },
@@ -227,12 +213,13 @@ function CreateConsumerForm({
       pending={create.isPending}
       canSubmit={canSubmit}
       onSubmit={submit}
-      note={<RefusalCta error={create.error} />}>
+      note={<RefusalCta error={create.error} />}
+    >
       <TextField
         label="Name"
         required
         value={name}
-        onChange={event => setName(event.target.value)}
+        onChange={(event) => setName(event.target.value)}
         disabled={create.isPending}
         error={errors.fields.name}
         hint="For telling consumers apart."
@@ -240,18 +227,18 @@ function CreateConsumerForm({
       <SelectField
         label="Events arrive as"
         value={source}
-        onChange={event => setSource(event.target.value as ConsumerSource)}
+        onChange={(event) => setSource(event.target.value as ConsumerSource)}
         disabled={create.isPending}
         options={SOURCE_OPTIONS}
         error={errors.fields.source}
       />
-      {source === 'form' && (
+      {source === "form" && (
         <>
           <TextField
             label="Origin"
             required
             value={origin}
-            onChange={event => setOrigin(event.target.value)}
+            onChange={(event) => setOrigin(event.target.value)}
             disabled={create.isPending}
             autoCapitalize="none"
             autoCorrect="off"
@@ -266,10 +253,10 @@ function CreateConsumerForm({
         label="Receiver"
         required
         value={instanceID}
-        onChange={event => setInstanceID(event.target.value)}
+        onChange={(event) => setInstanceID(event.target.value)}
         disabled={create.isPending || receivers.length === 0}
         options={[
-          { value: '', label: hosts === undefined ? 'Loading machines' : 'Choose a machine' },
+          { value: "", label: hosts === undefined ? "Loading machines" : "Choose a machine" },
           ...receivers,
         ]}
         error={errors.fields.instance_id}
@@ -277,29 +264,30 @@ function CreateConsumerForm({
       {hostsError !== null && hostsError !== undefined && <ScreenError error={hostsError} />}
       {noReceivers && (
         <Small>
-          No machine can receive events yet. Pair one on{' '}
+          No machine can receive events yet. Pair one on{" "}
           <Link
             to={routes.hosts}
-            className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline">
+            className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline"
+          >
             Hosts
-          </Link>{' '}
+          </Link>{" "}
           first.
         </Small>
       )}
       <SelectField
         label="Runs"
         value={targetKind}
-        onChange={event => setTargetKind(event.target.value as ConsumerTargetKind)}
+        onChange={(event) => setTargetKind(event.target.value as ConsumerTargetKind)}
         disabled={create.isPending}
         options={TARGET_OPTIONS}
       />
-      {targetKind === 'agent' ? (
+      {targetKind === "agent" ? (
         <>
           <TextField
             label="Agent name"
             required
             value={target}
-            onChange={event => setTarget(event.target.value)}
+            onChange={(event) => setTarget(event.target.value)}
             disabled={create.isPending}
             autoCapitalize="none"
             autoCorrect="off"
@@ -319,7 +307,7 @@ function CreateConsumerForm({
             label="Chain"
             required
             value={target}
-            onChange={event => setTarget(event.target.value)}
+            onChange={(event) => setTarget(event.target.value)}
             disabled={create.isPending}
             autoCapitalize="none"
             autoCorrect="off"
@@ -335,7 +323,7 @@ function CreateConsumerForm({
       <SelectField
         label="Session mode"
         value={mode}
-        onChange={event => setMode(event.target.value as ConsumerSessionMode)}
+        onChange={(event) => setMode(event.target.value as ConsumerSessionMode)}
         disabled={create.isPending}
         options={MODE_OPTIONS}
         error={errors.fields.session_mode}
@@ -346,7 +334,7 @@ function CreateConsumerForm({
             label="Session name"
             required
             value={sessionName}
-            onChange={event => setSessionName(event.target.value)}
+            onChange={(event) => setSessionName(event.target.value)}
             disabled={create.isPending}
             autoCapitalize="none"
             autoCorrect="off"
@@ -359,7 +347,7 @@ function CreateConsumerForm({
           </Small>
         </>
       )}
-      {source === 'generic' ? (
+      {source === "generic" ? (
         <Small>
           Creating a consumer answers with its ingest URL and a signing secret. The secret is shown
           once, right after creation.
@@ -373,7 +361,6 @@ function CreateConsumerForm({
     </SectionForm>
   );
 }
-
 
 function CreatedConsumerPanel({
   created,
@@ -405,7 +392,7 @@ function CreatedConsumerPanel({
 
           <P className="text-sm">
             Your system POSTs each event to the ingest URL as a JSON body. Sign every request with
-            the secret — HMAC-SHA256 over the raw request body — and send the hex digest in the{' '}
+            the secret — HMAC-SHA256 over the raw request body — and send the hex digest in the{" "}
             <InlineCode>X-Contenox-Signature</InlineCode> header.
           </P>
         </>
@@ -417,10 +404,10 @@ function CreatedConsumerPanel({
           </InlineNotice>
 
           <P className="text-sm">
-            Point a form&rsquo;s <InlineCode>action</InlineCode> on{' '}
+            Point a form&rsquo;s <InlineCode>action</InlineCode> on{" "}
             <InlineCode>
-              {created.allowed_origins?.join(', ') ?? 'the registered origin'}
-            </InlineCode>{' '}
+              {created.allowed_origins?.join(", ") ?? "the registered origin"}
+            </InlineCode>{" "}
             at the ingest URL. Posts from any other origin are refused, and there is no secret to
             hold.
           </P>
@@ -433,7 +420,6 @@ function CreatedConsumerPanel({
     </Card>
   );
 }
-
 
 function ConsumerCard({
   consumer,
@@ -458,12 +444,13 @@ function ConsumerCard({
         </Small>
         <Small>{sessionSentence(consumer)}</Small>
 
-        {(consumer.agent_name ?? '') !== '' && (
+        {(consumer.agent_name ?? "") !== "" && (
           <P className="text-sm">
             <Link
               to={routes.askAgent(consumer.agent_name!)}
               aria-label={`Everything from ${consumer.agent_name}`}
-              className="text-primary-700 dark:text-dark-primary-500 inline underline underline-offset-4">
+              className="text-primary-700 dark:text-dark-primary-500 inline underline underline-offset-4"
+            >
               What this agent is waiting on
             </Link>
           </P>
@@ -483,7 +470,8 @@ function ConsumerCard({
         confirmLabel="Delete the consumer"
         pending={remove.isPending}
         error={remove.error}
-        onConfirm={() => remove.mutate(consumer.id, { onSuccess: () => setConfirming(false) })}>
+        onConfirm={() => remove.mutate(consumer.id, { onSuccess: () => setConfirming(false) })}
+      >
         <P className="text-sm">
           Its ingest URL stops accepting immediately — anything your systems post there after this
           is refused, and no chain runs for those events.

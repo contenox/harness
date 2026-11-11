@@ -39,9 +39,13 @@ export function groupSessionsByProject(
     else other.push(session);
   }
   // Projects with the most recent activity first; projects without sessions follow by name.
-  const projects: ProjectGroup[] = roots.map(root => ({ root, sessions: byPath.get(root.path) ?? [] }));
+  const projects: ProjectGroup[] = roots.map(root => ({
+    root,
+    sessions: byPath.get(root.path) ?? [],
+  }));
   // Sessions are already newest first, so a project's latest activity is its first session.
-  const latest = (group: ProjectGroup) => (group.sessions.length ? updatedMs(group.sessions[0]) : null);
+  const latest = (group: ProjectGroup) =>
+    group.sessions.length ? updatedMs(group.sessions[0]) : null;
   const label = (group: ProjectGroup) => projectName(group.root);
   projects.sort((a, b) => {
     const la = latest(a);

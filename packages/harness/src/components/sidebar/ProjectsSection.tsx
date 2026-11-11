@@ -9,8 +9,8 @@ import { OTHER_GROUP_KEY } from './collapsedGroups';
 import { OtherSessionsGroup } from './OtherSessionsGroup';
 import { ProjectActions } from './ProjectActions';
 import { ProjectGroup } from './ProjectGroup';
-import { SessionList } from './SessionList';
 import type { SessionGroups } from './sessionGroups';
+import { SessionList } from './SessionList';
 
 type Props = {
   groups: SessionGroups;
@@ -108,7 +108,7 @@ export function ProjectsSection(props: Props) {
         </>
       )}
       {props.removeFailed && (
-        <Span className="block px-2 text-xs text-text-error" role="alert">
+        <Span className="text-text-error block px-2 text-xs" role="alert">
           {t('acp_sidebar.remove_project_error')}
         </Span>
       )}

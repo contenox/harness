@@ -1,22 +1,20 @@
-import { InlineNotice } from '@contenox/ui';
-import { useState } from 'react';
-import { PasswordField } from '@contenox/ui';
-import { useProductPorts } from '../../ports';
-import { partitionFormError } from './formErrors';
-import { AuthForm, AuthLink, AuthScreen } from './AuthScreen';
-
+import { InlineNotice } from "@contenox/ui";
+import { useState } from "react";
+import { PasswordField } from "@contenox/ui";
+import { useProductPorts } from "../../ports";
+import { partitionFormError } from "./formErrors";
+import { AuthForm, AuthLink, AuthScreen } from "./AuthScreen";
 
 const MIN_PASSWORD_LENGTH = 12;
 
-
-const FIELDS = ['password'] as const;
+const FIELDS = ["password"] as const;
 
 export function ResetPasswordScreen({ token }: { token: string }) {
   const { routes, useConfirmPasswordReset } = useProductPorts();
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const reset = useConfirmPasswordReset();
 
-  if (token === '') {
+  if (token === "") {
     return (
       <AuthScreen footer={<AuthLink to={routes.forgotPassword}>Request a new link</AuthLink>}>
         <InlineNotice variant="error">
@@ -34,7 +32,7 @@ export function ResetPasswordScreen({ token }: { token: string }) {
     );
   }
 
-  const tooShort = password !== '' && password.length < MIN_PASSWORD_LENGTH;
+  const tooShort = password !== "" && password.length < MIN_PASSWORD_LENGTH;
   const canSubmit = password.length >= MIN_PASSWORD_LENGTH;
   const errors = partitionFormError(reset.error, FIELDS);
   const submit = () => {
@@ -50,16 +48,16 @@ export function ResetPasswordScreen({ token }: { token: string }) {
         errors={errors}
         pending={reset.isPending}
         canSubmit={canSubmit}
-        onSubmit={submit}>
+        onSubmit={submit}
+      >
         <PasswordField
           label="New password"
           required
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           disabled={reset.isPending}
           autoComplete="new-password"
           hint={`${MIN_PASSWORD_LENGTH}+ characters`}
-
           error={tooShort ? `At least ${MIN_PASSWORD_LENGTH} characters.` : errors.fields.password}
         />
       </AuthForm>

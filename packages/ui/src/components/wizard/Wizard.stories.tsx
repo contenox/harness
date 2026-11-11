@@ -70,10 +70,7 @@ function renderSteps(current: number) {
 
 export const Default: Story = {
   render: () => (
-    <Wizard
-      title="Getting started"
-      description="Three quick steps to your first chat."
-    >
+    <Wizard title="Getting started" description="Three quick steps to your first chat.">
       {renderSteps(1)}
     </Wizard>
   ),
@@ -81,10 +78,7 @@ export const Default: Story = {
 
 export const Middle: Story = {
   render: () => (
-    <Wizard
-      title="Getting started"
-      description="Three quick steps to your first chat."
-    >
+    <Wizard title="Getting started" description="Three quick steps to your first chat.">
       {renderSteps(2)}
     </Wizard>
   ),
@@ -92,10 +86,7 @@ export const Middle: Story = {
 
 export const LastStep: Story = {
   render: () => (
-    <Wizard
-      title="Getting started"
-      description="Three quick steps to your first chat."
-    >
+    <Wizard title="Getting started" description="Three quick steps to your first chat.">
       {renderSteps(3)}
     </Wizard>
   ),

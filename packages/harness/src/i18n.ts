@@ -70,15 +70,19 @@ const resources = {
           'Contenox uses the key where it is: a file in your .ssh folder or a key loaded in your SSH agent. It never copies or uploads it, and agents cannot read it.',
         agent_identity_key_none: 'No key',
         agent_identity_key_missing: '{{ref}} (not found)',
-        agent_identity_key_problem_passphrase_protected: 'has a passphrase, add it to your SSH agent',
+        agent_identity_key_problem_passphrase_protected:
+          'has a passphrase, add it to your SSH agent',
         agent_identity_key_problem_unreadable: 'cannot be read',
         agent_identity_key_problem_unsupported_type: 'DSA keys are not supported',
         agent_identity_key_fix_passphrase_protected:
           'This key has a passphrase. Load it into your SSH agent with ssh-add, then reopen this page, or generate a key for the agent.',
-        agent_identity_key_fix_unreadable: 'This key file cannot be read. Choose another key or generate one for the agent.',
-        agent_identity_key_fix_unsupported_type: 'DSA keys cannot sign commits. Choose another key or generate one for the agent.',
+        agent_identity_key_fix_unreadable:
+          'This key file cannot be read. Choose another key or generate one for the agent.',
+        agent_identity_key_fix_unsupported_type:
+          'DSA keys cannot sign commits. Choose another key or generate one for the agent.',
         agent_identity_generate: 'Generate a key for the agent',
-        agent_identity_no_keys: 'No SSH keys found in your .ssh folder or SSH agent. Generate one for the agent.',
+        agent_identity_no_keys:
+          'No SSH keys found in your .ssh folder or SSH agent. Generate one for the agent.',
         agent_identity_public_key_label: 'Public key',
         agent_identity_copy: 'Copy public key',
         agent_identity_copied: 'Copied',
@@ -90,7 +94,8 @@ const resources = {
         agent_identity_credit_label: 'Credit me as co-author',
         agent_identity_credit_description:
           'Adds a “Co-authored-by” line naming whoever git commits as in that repository, so the host shows you beside the agent. Here that is {{me}}.',
-        agent_identity_credit_no_me: 'No git identity found. Type who to credit below, or set user.name and user.email in git.',
+        agent_identity_credit_no_me:
+          'No git identity found. Type who to credit below, or set user.name and user.email in git.',
         agent_identity_credit_as_label: 'Credit as',
         agent_identity_credit_as_tooltip:
           'Optional. When set, this name and email are credited in every repository, instead of what git uses there.',
@@ -116,7 +121,8 @@ const resources = {
         agent_identity_check_host_failed: '{{host}}: {{message}}',
         agent_identity_check_host_key_rejected:
           '{{host}} does not accept this key yet. Add the public key above to the agent’s account as an authentication key.',
-        agent_identity_check_host_unreachable: '{{host}} cannot be reached. Check your network connection.',
+        agent_identity_check_host_unreachable:
+          '{{host}} cannot be reached. Check your network connection.',
         agent_identity_check_host_unknown_host:
           '{{host}} is not a known host. Connect to it once with ssh to accept its host key.',
         agent_identity_check_host_key_unusable: 'This key cannot be used to connect to {{host}}.',
@@ -218,13 +224,15 @@ const resources = {
         unofficial_warning_body:
           'These sign-ins connect the way other apps do. Anthropic does not allow third-party apps to offer Claude subscription sign-in without its approval, and GitHub has not approved Contenox for Copilot. Either service can block these sign-ins or limit your account.',
         unofficial_label: 'Allow unofficial sign-ins',
-        unofficial_off_description: 'Claude Code offers only Anthropic Console sign-in, and GitHub Copilot is not listed under Providers.',
+        unofficial_off_description:
+          'Claude Code offers only Anthropic Console sign-in, and GitHub Copilot is not listed under Providers.',
         unofficial_on_description:
           'Claude Code uses your Claude sign-in from ~/.claude, and GitHub Copilot is listed under Providers. Turning this off stops both until you turn it on again.',
         unofficial_confirm_title: 'Turn on unofficial sign-ins?',
         unofficial_confirm_body:
           'Your Claude or GitHub account may be limited or suspended for using these sign-ins, and Contenox cannot undo that. Use them only if you accept that risk.',
-        unofficial_confirm_ack: 'I understand this may break the services’ terms and put my accounts at risk.',
+        unofficial_confirm_ack:
+          'I understand this may break the services’ terms and put my accounts at risk.',
         unofficial_confirm_cancel: 'Keep off',
         unofficial_confirm_accept: 'Turn on',
       },
@@ -383,7 +391,8 @@ const resources = {
         no_events_description: 'No events found matching your criteria.',
       },
       agentsView: {
-        description: "Agents are Markdown files in the runtime's agents folder. Edit one here, or open the folder.",
+        description:
+          "Agents are Markdown files in the runtime's agents folder. Edit one here, or open the folder.",
         search_placeholder: 'Search agents',
         open_folder: 'Open folder',
         new_agent: 'New agent',
@@ -413,9 +422,9 @@ const resources = {
         editor_error: 'Could not open the file: {{message}}',
         no_bridge: 'The desktop shell is not available, so files cannot be opened here.',
       },
-       agents: {
-         title: 'Agents',
-       },
+      agents: {
+        title: 'Agents',
+      },
 
       navbar: {
         title: 'Contenox',
@@ -981,6 +990,7 @@ const resources = {
         group_label: 'Side panes',
         terminal: 'Terminal',
         files: 'Files',
+        search: 'Search',
         diff: 'Diff',
         close: 'Close pane',
         resize_editor: 'Resize editor',
@@ -1499,7 +1509,8 @@ const resources = {
         composer_placeholder: 'Message the agent…',
         composer_placeholder_connecting: 'Connecting…',
         composer_send: 'Send',
-        composer_send_failed: 'Your message was not sent and is back in the box. Check the connection, then send it again.',
+        composer_send_failed:
+          'Your message was not sent and is back in the box. Check the connection, then send it again.',
         composer_stop: 'Stop',
         attach_image_label: 'Attach image',
         attach_image_tooltip: 'Attach an image — paste or drag & drop works too',
@@ -1575,7 +1586,8 @@ const resources = {
         error_banner_headline: 'Execution failed',
         error_details_label: 'Technical details',
         error_dismiss: 'Dismiss',
-        error_generic_description: 'The request could not be completed. The technical details may help find the cause.',
+        error_generic_description:
+          'The request could not be completed. The technical details may help find the cause.',
         error_model_hint:
           'The selected model doesn\'t match any available backend — pick a different model above under "Model".',
         turn_failed_label: 'This request failed',
@@ -1609,7 +1621,8 @@ const resources = {
         code_copy: 'Copy',
         code_copied: 'Copied',
         step_confirm_title: 'Confirm access',
-        step_confirm_desc: 'Allow Contenox to use your ChatGPT account. This window continues automatically.',
+        step_confirm_desc:
+          'Allow Contenox to use your ChatGPT account. This window continues automatically.',
         waiting: 'Waiting for confirmation…',
         cancel: 'Cancel',
         device_hint:
@@ -1632,7 +1645,8 @@ const resources = {
           '{{name}} needs you to sign in before it can answer. Sign in on the Agents page, then send your message again.',
         agent_sign_in_action: 'Sign in',
         agent_unavailable_title: '{{name}} could not be started',
-        agent_unavailable_description: 'The agent did not start. The Agents page shows what is wrong and how to fix it.',
+        agent_unavailable_description:
+          'The agent did not start. The Agents page shows what is wrong and how to fix it.',
         agent_unavailable_action: 'Open the agent',
       },
       permissions: {
@@ -1644,7 +1658,8 @@ const resources = {
         open_file_error: 'Couldn’t open the file. {{message}}',
         intro_home: 'Your configuration. New chats use {{chat}}. Missions use {{mission}}.',
         intro_home_no_mission: 'Your configuration. New chats use {{chat}}.',
-        intro_workspace: 'Changes here apply only to {{name}} and are saved in its .contenox folder.',
+        intro_workspace:
+          'Changes here apply only to {{name}} and are saved in its .contenox folder.',
         group_in_use: 'In use',
         group_all: 'All sets',
         used_by_chats: 'New chats',
@@ -1759,6 +1774,76 @@ const resources = {
         project_empty: 'No sessions yet',
         other_sessions: 'Other',
         navigation: 'Navigation',
+      },
+      replace: {
+        find: 'Find',
+        replace_with: 'Replace with',
+        include: 'Only in files like *.go, src/*.ts',
+        case_sensitive: 'Match case',
+        whole_word: 'Whole word',
+        regex: 'Regular expression',
+        preview: 'Preview',
+        apply_one: 'Replace {{count}} match',
+        apply_other: 'Replace {{count}} matches',
+        summary: '{{matches}} matches in {{files}} files.',
+        no_matches: 'No matches.',
+        truncated: 'Only the first part is shown; narrow the search to see the rest.',
+        matches_one: '{{count}} match',
+        matches_other: '{{count}} matches',
+        include_file: 'Replace in {{path}}',
+        unsaved_file:
+          'This file has unsaved changes in the editor, so it is left out. Save it first to include it.',
+        more_hunks: 'More changes in this file are not shown; they are replaced too.',
+        applied_one: 'Replaced in {{count}} file.',
+        applied_other: 'Replaced in {{count}} files.',
+        conflicts: 'Changed since the preview, left alone: {{files}}',
+        failed: 'Could not write {{path}}: {{message}}',
+        retry_hint:
+          'The files that could not be written are still selected below. Fix the cause, then replace again.',
+      },
+      tree: {
+        menu: 'Actions for {{name}}',
+        new_file: 'New file',
+        new_folder: 'New folder',
+        rename: 'Rename',
+        rename_title: 'Rename or move',
+        rename_label: 'Path',
+        rename_hint: 'Change the folder part of the path to move it.',
+        name_label: 'Name',
+        create_in: 'Created in {{dir}}. A name with slashes creates the folders too.',
+        create_in_root:
+          'Created at the top of the project. A name with slashes creates the folders too.',
+        create: 'Create',
+        exists: '{{name}} already exists.',
+        delete: 'Delete',
+        delete_file_title: 'Delete {{name}}?',
+        delete_folder_title: 'Delete the folder {{name}}?',
+        delete_file_body: 'The file is removed from disk. This cannot be undone here.',
+        delete_folder_body:
+          'The folder and everything in it are removed from disk. This cannot be undone here.',
+      },
+      editor: {
+        save: 'Save',
+        saving: 'Saving…',
+        saved: 'Saved',
+        unsaved: 'Unsaved changes',
+        save_failed: 'Could not save',
+        conflict_save_title: 'This file changed since you opened it',
+        conflict_disk_title: 'This file changed on disk',
+        conflict_deleted_title: 'This file was deleted',
+        conflict_body:
+          'Someone else saved a newer version, maybe the agent or another program. Your changes are still here and have not been saved.',
+        conflict_deleted_body:
+          'The file is gone from disk. Your text is still here; save it again to recreate the file.',
+        take_disk: 'Use the version on disk',
+        keep_mine: 'Save mine over it',
+        recreate: 'Save it again',
+        compare: 'Compare',
+        hide_compare: 'Back to editing',
+        discard_title: 'Close {{name}} without saving?',
+        discard_body: 'Your changes to this file have not been saved.',
+        discard: 'Close without saving',
+        save_and_close: 'Save and close',
       },
       workspace: {
         panel_title: 'Project',
@@ -1938,7 +2023,8 @@ const resources = {
           'Connectors give agents more tools: an MCP server you run on this computer, a remote MCP server, or an OpenAPI service. Add one for every chat, or only for one project folder. Every tool call still follows your permission rules.',
         load_error: 'Could not load connectors: {{message}}',
         empty_title: 'No connectors yet',
-        empty_description: 'Add an MCP server or an OpenAPI service, and its tools show up in your chats.',
+        empty_description:
+          'Add an MCP server or an OpenAPI service, and its tools show up in your chats.',
         group_everywhere: 'Every chat',
         group_workspace: 'Only in {{name}}',
         group_agents: 'Brought by agents',
@@ -1984,8 +2070,10 @@ const resources = {
           kind_openapi: 'OpenAPI service',
           kind_openapi_hint: 'Turns the operations of an HTTP API into tools.',
           name: 'Name',
-          name_hint: 'Lowercase letters, digits, dashes and underscores. Tools are grouped under this name.',
-          name_invalid: 'Use lowercase letters, digits, dashes and underscores, starting with a letter or digit.',
+          name_hint:
+            'Lowercase letters, digits, dashes and underscores. Tools are grouped under this name.',
+          name_invalid:
+            'Use lowercase letters, digits, dashes and underscores, starting with a letter or digit.',
           name_taken: 'A connector with this name already exists.',
           scope: 'Where it works',
           scope_hint: 'A project folder limits it to chats in that folder and its subfolders.',
@@ -2004,7 +2092,8 @@ const resources = {
           endpoint: 'Service URL',
           endpoint_hint: 'The base address the API calls go to.',
           transport: 'Connection',
-          transport_hint: 'Most servers use streamable HTTP. Choose SSE only if the server says so.',
+          transport_hint:
+            'Most servers use streamable HTTP. Choose SSE only if the server says so.',
           transport_http: 'Streamable HTTP',
           transport_sse: 'Server-sent events (SSE)',
           auth: 'Sign-in',
@@ -2019,7 +2108,8 @@ const resources = {
           oauth_client: 'OAuth client ID',
           oauth_client_hint: 'Leave empty if the server registers clients itself.',
           spec: 'OpenAPI document',
-          spec_hint: 'Optional. A URL or file:// path to the spec, if the service does not serve it itself.',
+          spec_hint:
+            'Optional. A URL or file:// path to the spec, if the service does not serve it itself.',
           spec_invalid: 'Enter an http(s):// URL or a file:// path.',
           timeout: 'Timeout (milliseconds)',
           timeout_invalid: 'Enter a whole number above zero.',
@@ -2028,13 +2118,16 @@ const resources = {
           headers_invalid: 'Write each line as Name: value.',
           advanced: 'Advanced',
           inject: 'Fixed values',
-          inject_hint: 'One name=value per line. Sent with every call and hidden from the agent, for example a tenant or account ID.',
+          inject_hint:
+            'One name=value per line. Sent with every call and hidden from the agent, for example a tenant or account ID.',
           inject_invalid: 'Write each line as name=value.',
           connect_timeout: 'Connection timeout (seconds)',
           oauth_secret_env: 'OAuth client secret variable',
-          oauth_secret_env_hint: 'The name of an environment variable that holds the client secret, if the server needs one.',
+          oauth_secret_env_hint:
+            'The name of an environment variable that holds the client secret, if the server needs one.',
           prop: 'Injected value',
-          prop_hint: 'One more value Contenox adds to every call, in the place you choose. The agent never sees it.',
+          prop_hint:
+            'One more value Contenox adds to every call, in the place you choose. The agent never sees it.',
           prop_name: 'Name',
           prop_value: 'Value',
           prop_in: 'Where it goes',
@@ -2047,18 +2140,21 @@ const resources = {
           login_method: 'Login method',
           login_url: 'Login URL',
           login_body: 'Login body',
-          login_body_hint: 'JSON sent to the login URL. ${NAME} is replaced with the environment variable NAME.',
+          login_body_hint:
+            'JSON sent to the login URL. ${NAME} is replaced with the environment variable NAME.',
           extract: 'Take the session from',
           extract_hint: 'A cookie name, or a JSON path in the response.',
           extract_cookie: 'Cookie name',
           extract_json: 'JSON path',
           extract_required: 'Enter a cookie name or a JSON path.',
           login_inject: 'Send it as',
-          login_inject_hint: 'The header and its format, for example Authorization and Bearer %s. Without them the cookie is sent.',
+          login_inject_hint:
+            'The header and its format, for example Authorization and Bearer %s. Without them the cookie is sent.',
           login_inject_header: 'Header',
           login_inject_format: 'Format',
           insecure: 'Accept certificates that cannot be verified',
-          insecure_warning: 'Only use this for a service on your own network. Anyone in between can read and change the traffic.',
+          insecure_warning:
+            'Only use this for a service on your own network. Anyone in between can read and change the traffic.',
           show: 'Show',
           hide: 'Hide',
           add: 'Add and check',
@@ -2070,7 +2166,8 @@ const resources = {
           title_other: '{{count}} tools',
           scope: 'Where these settings apply',
           hint_everywhere: 'Switch a tool off to hide it from agents in every chat.',
-          hint_workspace: 'Switch a tool off to hide it from agents in chats in this project folder.',
+          hint_workspace:
+            'Switch a tool off to hide it from agents in chats in this project folder.',
           visible: 'Agents can use {{name}}',
         },
         rules: {
@@ -2085,9 +2182,11 @@ const resources = {
           keys: {
             allowed_commands: 'Programs the agent may run, separated by commas.',
             denied_commands: 'Programs the agent may never run, separated by commas.',
-            allowed_dir: 'The folder these tools may work in. A relative path starts at the chat folder.',
+            allowed_dir:
+              'The folder these tools may work in. A relative path starts at the chat folder.',
             allowed_tool_dirs: 'Folders programs may be started from, separated by commas.',
-            denied_path_substrings: 'Paths containing any of these parts are refused, separated by commas.',
+            denied_path_substrings:
+              'Paths containing any of these parts are refused, separated by commas.',
             skip_dir_names: 'Folder names left out of listings and searches, separated by commas.',
             list_extensions: 'Only list files with these extensions, separated by commas.',
             use_gitignore: 'Leave out files ignored by .gitignore (true or false).',
@@ -2115,7 +2214,8 @@ const resources = {
         chat: {
           menu_item: 'Connectors',
           title: 'Connectors in this chat',
-          description: 'Switch tools on or off for this chat only. Your permission rules still apply to every call.',
+          description:
+            'Switch tools on or off for this chat only. Your permission rules still apply to every call.',
           loading: 'Loading connectors…',
           load_error: 'Could not load the connectors of this chat: {{message}}',
           not_ready: 'Send a message first, then manage connectors for this chat.',
@@ -2172,8 +2272,10 @@ const resources = {
           unchecked: 'Not checked yet',
         },
         problem: {
-          sandbox_unavailable: 'The agent sandbox cannot be set up on this computer, so Contenox does not start the agent.',
-          command_not_found: "The agent's program was not found. Check the command, or install the agent.",
+          sandbox_unavailable:
+            'The agent sandbox cannot be set up on this computer, so Contenox does not start the agent.',
+          command_not_found:
+            "The agent's program was not found. Check the command, or install the agent.",
           start_failed: 'The agent could not be started.',
           handshake_failed:
             'The agent started but did not answer. It may not speak ACP, or it needs an extra argument such as --acp.',
@@ -2189,7 +2291,8 @@ const resources = {
         install: {
           explain:
             "Installs {{name}} ({{package}} {{version}}) into Contenox's data folder. Nothing else on your computer changes.",
-          update_explain: 'Version {{version}} of {{name}} is ready. Your sign-in and settings stay.',
+          update_explain:
+            'Version {{version}} of {{name}} is ready. Your sign-in and settings stay.',
           node_missing: 'This agent runs on Node.js {{min}} or later, which was not found.',
           node_too_old: 'This agent needs Node.js {{min}} or later; this computer has {{found}}.',
           get_node: 'Download Node.js',
@@ -2218,7 +2321,8 @@ const resources = {
           writes: 'Writes',
           writes_value: "Only in the chat's project folder and {{folders}}",
           reads: 'Reads',
-          reads_open: 'Any file your Windows account can read. Windows cannot limit what a program reads.',
+          reads_open:
+            'Any file your Windows account can read. Windows cannot limit what a program reads.',
           reads_limited: "Only the project folder and the agent's extra folders",
           asks: 'Asks you',
           asks_value: "Before anything the chat's permission set does not allow on its own",
@@ -2233,7 +2337,8 @@ const resources = {
         form: {
           name: 'Name',
           name_hint: 'Lowercase letters, digits and dashes. Shown in the agent picker.',
-          name_invalid: 'Use lowercase letters, digits and dashes, starting with a letter or digit.',
+          name_invalid:
+            'Use lowercase letters, digits and dashes, starting with a letter or digit.',
           name_taken: 'An agent with this name already exists.',
           command: 'Command',
           command_hint: 'The program to start, for example goose or a full path.',
@@ -2244,7 +2349,8 @@ const resources = {
           env_hint: 'One NAME=value per line.',
           env_invalid: 'Each line needs a NAME=value.',
           paths: 'Extra folders',
-          paths_hint: 'Folders outside the project the agent needs, such as where it keeps its sign-in.',
+          paths_hint:
+            'Folders outside the project the agent needs, such as where it keeps its sign-in.',
           path_label: 'Folder',
           path_mode: 'Access',
           mode_rw: 'Can change',
@@ -2519,7 +2625,8 @@ const resources = {
           'Contenox nutzt den Schlüssel dort, wo er liegt: als Datei in deinem .ssh-Ordner oder geladen in deinem SSH-Agent. Er wird nie kopiert oder hochgeladen, und Agenten können ihn nicht lesen.',
         agent_identity_key_none: 'Kein Schlüssel',
         agent_identity_key_missing: '{{ref}} (nicht gefunden)',
-        agent_identity_key_problem_passphrase_protected: 'hat eine Passphrase, lade ihn in deinen SSH-Agent',
+        agent_identity_key_problem_passphrase_protected:
+          'hat eine Passphrase, lade ihn in deinen SSH-Agent',
         agent_identity_key_problem_unreadable: 'nicht lesbar',
         agent_identity_key_problem_unsupported_type: 'DSA-Schlüssel werden nicht unterstützt',
         agent_identity_key_fix_passphrase_protected:
@@ -2537,18 +2644,22 @@ const resources = {
         agent_identity_public_key_hint:
           'Hinterlege diesen Schlüssel zweimal im Konto des Agenten: als Authentifizierungsschlüssel, damit er pushen kann, und als Signaturschlüssel, damit seine Commits als verifiziert erscheinen. Bei GitHub findest du das unter Settings, SSH and GPG keys.',
         agent_identity_sign_label: 'Commits signieren',
-        agent_identity_sign_description: 'Jeder Commit trägt eine SSH-Signatur mit diesem Schlüssel.',
-        agent_identity_sign_needs_key: 'Wähle oder erzeuge einen Schlüssel, um Commits zu signieren.',
+        agent_identity_sign_description:
+          'Jeder Commit trägt eine SSH-Signatur mit diesem Schlüssel.',
+        agent_identity_sign_needs_key:
+          'Wähle oder erzeuge einen Schlüssel, um Commits zu signieren.',
         agent_identity_credit_label: 'Mich als Co-Autor nennen',
         agent_identity_credit_description:
           'Fügt eine „Co-authored-by“-Zeile mit der Person hinzu, als die git im jeweiligen Repository committet, damit der Host dich neben dem Agenten zeigt. Hier ist das {{me}}.',
-        agent_identity_credit_no_me: 'Keine git-Identität gefunden. Trag unten ein, wer genannt werden soll, oder setze user.name und user.email in git.',
+        agent_identity_credit_no_me:
+          'Keine git-Identität gefunden. Trag unten ein, wer genannt werden soll, oder setze user.name und user.email in git.',
         agent_identity_credit_as_label: 'Nennen als',
         agent_identity_credit_as_tooltip:
           'Optional. Wenn gesetzt, werden dieser Name und diese E-Mail in jedem Repository genannt, statt dem, was git dort verwendet.',
         agent_identity_credit_as_placeholder: 'Dein Name <du@example.com>',
         agent_identity_check_host_label: 'Zu prüfender Host',
-        agent_identity_key_problem_security_key: 'Hardware-Schlüssel, braucht für jeden Commit eine Berührung',
+        agent_identity_key_problem_security_key:
+          'Hardware-Schlüssel, braucht für jeden Commit eine Berührung',
         agent_identity_key_fix_security_key:
           'Hardware-Sicherheitsschlüssel brauchen für jede Signatur eine Berührung, die ein selbstständig arbeitender Agent nicht geben kann. Wähle einen normalen Schlüssel oder erzeuge einen für den Agenten.',
         agent_identity_issue_credit_as_invalid: 'Schreib „Nennen als“ im Format Name <E-Mail>.',
@@ -2560,18 +2671,22 @@ const resources = {
         agent_identity_preview_none:
           'Keine Identität gesetzt. Agenten committen mit der git-Identität des Repositorys, meist deiner eigenen.',
         agent_identity_check: 'Prüfen',
-        agent_identity_check_hint: 'Signiert einen Test-Commit und verbindet sich mit diesem Schlüssel mit {{host}}.',
+        agent_identity_check_hint:
+          'Signiert einen Test-Commit und verbindet sich mit diesem Schlüssel mit {{host}}.',
         agent_identity_check_signing_ok: 'Signieren funktioniert',
         agent_identity_check_signing_failed: 'Signieren fehlgeschlagen: {{message}}',
-        agent_identity_check_host_ok_account: '{{host}} akzeptiert diesen Schlüssel als {{account}}',
+        agent_identity_check_host_ok_account:
+          '{{host}} akzeptiert diesen Schlüssel als {{account}}',
         agent_identity_check_host_ok: '{{host}} akzeptiert diesen Schlüssel',
         agent_identity_check_host_failed: '{{host}}: {{message}}',
         agent_identity_check_host_key_rejected:
           '{{host}} akzeptiert diesen Schlüssel noch nicht. Hinterlege den öffentlichen Schlüssel oben im Konto des Agenten als Authentifizierungsschlüssel.',
-        agent_identity_check_host_unreachable: '{{host}} ist nicht erreichbar. Prüf deine Netzwerkverbindung.',
+        agent_identity_check_host_unreachable:
+          '{{host}} ist nicht erreichbar. Prüf deine Netzwerkverbindung.',
         agent_identity_check_host_unknown_host:
           '{{host}} ist kein bekannter Host. Verbinde dich einmal per ssh, um seinen Host-Schlüssel zu akzeptieren.',
-        agent_identity_check_host_key_unusable: 'Mit diesem Schlüssel ist keine Verbindung zu {{host}} möglich.',
+        agent_identity_check_host_key_unusable:
+          'Mit diesem Schlüssel ist keine Verbindung zu {{host}} möglich.',
         agent_identity_issue_name_without_email: 'Ergänze eine E-Mail oder leere den Namen.',
         agent_identity_issue_email_without_name: 'Ergänze einen Namen oder leere die E-Mail.',
         agent_identity_issue_email_invalid: 'Die E-Mail ist keine gültige Adresse.',
@@ -2672,13 +2787,15 @@ const resources = {
         unofficial_warning_body:
           'Diese Anmeldungen verbinden sich so wie andere Apps. Anthropic erlaubt Drittanbieter-Apps die Anmeldung mit dem Claude-Abo nur mit Freigabe, und GitHub hat Contenox für Copilot nicht freigegeben. Beide Dienste können diese Anmeldungen sperren oder dein Konto einschränken.',
         unofficial_label: 'Inoffizielle Anmeldungen erlauben',
-        unofficial_off_description: 'Claude Code bietet nur die Anmeldung über die Anthropic Console an, und GitHub Copilot erscheint nicht unter Anbieter.',
+        unofficial_off_description:
+          'Claude Code bietet nur die Anmeldung über die Anthropic Console an, und GitHub Copilot erscheint nicht unter Anbieter.',
         unofficial_on_description:
           'Claude Code nutzt deine Claude-Anmeldung aus ~/.claude, und GitHub Copilot erscheint unter Anbieter. Ausschalten stoppt beides, bis du es wieder einschaltest.',
         unofficial_confirm_title: 'Inoffizielle Anmeldungen einschalten?',
         unofficial_confirm_body:
           'Dein Claude- oder GitHub-Konto kann wegen dieser Anmeldungen eingeschränkt oder gesperrt werden, und Contenox kann das nicht rückgängig machen. Nutze sie nur, wenn du dieses Risiko akzeptierst.',
-        unofficial_confirm_ack: 'Ich verstehe, dass das gegen die Bedingungen der Dienste verstoßen und meine Konten gefährden kann.',
+        unofficial_confirm_ack:
+          'Ich verstehe, dass das gegen die Bedingungen der Dienste verstoßen und meine Konten gefährden kann.',
         unofficial_confirm_cancel: 'Aus lassen',
         unofficial_confirm_accept: 'Einschalten',
       },
@@ -2839,7 +2956,8 @@ const resources = {
         no_events_description: 'Keine Ereignisse gefunden, die deinen Kriterien entsprechen.',
       },
       agentsView: {
-        description: 'Agenten sind Markdown-Dateien im Agents-Ordner der Runtime. Bearbeite sie hier oder öffne den Ordner.',
+        description:
+          'Agenten sind Markdown-Dateien im Agents-Ordner der Runtime. Bearbeite sie hier oder öffne den Ordner.',
         search_placeholder: 'Agenten durchsuchen',
         open_folder: 'Ordner öffnen',
         new_agent: 'Neuer Agent',
@@ -2848,7 +2966,8 @@ const resources = {
         state_edited: 'Bearbeitet',
         state_user: 'Eigener',
         empty_title: 'Noch keine Agenten',
-        empty_description: 'Lege einen an, oder öffne den Ordner und lege eine Markdown-Datei hinein.',
+        empty_description:
+          'Lege einen an, oder öffne den Ordner und lege eine Markdown-Datei hinein.',
         problems_title: 'Die Runtime meldet Probleme',
         detail_tools: 'Werkzeuge',
         detail_effort: 'Aufwand',
@@ -2857,7 +2976,8 @@ const resources = {
         edit: 'Bearbeiten',
         reset: 'Auf mitgeliefert zurücksetzen',
         delete: 'Löschen',
-        confirm_reset_body: 'Die Datei wird gelöscht, die Runtime schreibt die mitgelieferte Fassung neu.',
+        confirm_reset_body:
+          'Die Datei wird gelöscht, die Runtime schreibt die mitgelieferte Fassung neu.',
         confirm_delete_body: 'Die Datei wird endgültig entfernt.',
         confirm: 'Bestätigen',
         cancel: 'Abbrechen',
@@ -2867,7 +2987,8 @@ const resources = {
         save: 'Speichern',
         saved: 'Übernommen.',
         editor_error: 'Datei konnte nicht geöffnet werden: {{message}}',
-        no_bridge: 'Die Desktop-Hülle ist nicht verfügbar, Dateien können hier nicht geöffnet werden.',
+        no_bridge:
+          'Die Desktop-Hülle ist nicht verfügbar, Dateien können hier nicht geöffnet werden.',
       },
       agents: {
         title: 'Agenten',
@@ -3342,7 +3463,8 @@ const resources = {
           'Das sieht nach einem Schlüssel aus. Trage hier nur den Variablennamen ein oder den Schlüssel selbst ins Feld „API-Schlüssel“ oben.',
         api_key_unused_with_env: 'Wird nicht verwendet, solange eine Umgebungsvariable gesetzt ist',
         env_found: 'Variable in der Runtime-Umgebung gefunden',
-        env_missing: 'Variable ist in der Runtime-Umgebung nicht gesetzt. Setze sie und starte Contenox neu.',
+        env_missing:
+          'Variable ist in der Runtime-Umgebung nicht gesetzt. Setze sie und starte Contenox neu.',
         base_url: 'Basis-URL',
         base_url_optional: 'Basis-URL (optional)',
         secret_source_error: 'Inline-Secret oder Umgebungsvariable verwenden, nicht beides.',
@@ -3402,6 +3524,7 @@ const resources = {
         group_label: 'Seitenbereiche',
         terminal: 'Terminal',
         files: 'Dateien',
+        search: 'Suchen',
         diff: 'Diff',
         close: 'Bereich schließen',
         resize_editor: 'Editor-Größe ändern',
@@ -3840,8 +3963,7 @@ const resources = {
         delete_confirm: 'Plan „{{name}}“ löschen? Dies kann nicht rückgängig gemacht werden.',
         active_title: 'Aktiver Plan',
         active_loading: 'Aktiver Plan wird geladen…',
-        no_active:
-          'Kein aktiver Plan. Aktiviere einen aus der Liste oder erstelle einen neuen.',
+        no_active: 'Kein aktiver Plan. Aktiviere einen aus der Liste oder erstelle einen neuen.',
         active_error_banner: 'Aktiver Plan konnte nicht geladen werden',
         run_next_step: 'Nächsten Schritt ausführen',
         executor_chain_label: 'Executor-Kette',
@@ -3912,7 +4034,8 @@ const resources = {
         composer_placeholder: 'Nachricht an den Agenten…',
         composer_placeholder_connecting: 'Verbinde…',
         composer_send: 'Senden',
-        composer_send_failed: 'Deine Nachricht wurde nicht gesendet und steht wieder im Eingabefeld. Prüfe die Verbindung und sende sie erneut.',
+        composer_send_failed:
+          'Deine Nachricht wurde nicht gesendet und steht wieder im Eingabefeld. Prüfe die Verbindung und sende sie erneut.',
         composer_stop: 'Stopp',
         attach_image_label: 'Bild anhängen',
         attach_image_tooltip: 'Bild anhängen — Einfügen oder Hineinziehen funktioniert auch',
@@ -3989,7 +4112,8 @@ const resources = {
         error_banner_headline: 'Ausführung fehlgeschlagen',
         error_details_label: 'Technische Details',
         error_dismiss: 'Ausblenden',
-        error_generic_description: 'Die Anfrage konnte nicht abgeschlossen werden. Die technischen Details helfen bei der Ursachensuche.',
+        error_generic_description:
+          'Die Anfrage konnte nicht abgeschlossen werden. Die technischen Details helfen bei der Ursachensuche.',
         error_model_hint:
           'Das gewählte Modell passt nicht zu den verfügbaren Backends — wähle oben unter »Model« ein anderes Modell.',
         turn_failed_label: 'Diese Anfrage ist fehlgeschlagen',
@@ -4059,9 +4183,11 @@ const resources = {
         scope_no_match: 'Kein Arbeitsbereich passt.',
         open_file: 'agents.toml öffnen',
         open_file_error: 'Die Datei konnte nicht geöffnet werden. {{message}}',
-        intro_home: 'Deine Konfiguration. Neue Chats nutzen {{chat}}. Missionen nutzen {{mission}}.',
+        intro_home:
+          'Deine Konfiguration. Neue Chats nutzen {{chat}}. Missionen nutzen {{mission}}.',
         intro_home_no_mission: 'Deine Konfiguration. Neue Chats nutzen {{chat}}.',
-        intro_workspace: 'Änderungen hier gelten nur für {{name}} und werden in dessen .contenox-Ordner gespeichert.',
+        intro_workspace:
+          'Änderungen hier gelten nur für {{name}} und werden in dessen .contenox-Ordner gespeichert.',
         group_in_use: 'In Verwendung',
         group_all: 'Alle Sets',
         used_by_chats: 'Neue Chats',
@@ -4176,6 +4302,78 @@ const resources = {
         project_empty: 'Noch keine Sitzungen',
         other_sessions: 'Weitere',
         navigation: 'Navigation',
+      },
+      replace: {
+        find: 'Suchen',
+        replace_with: 'Ersetzen durch',
+        include: 'Nur in Dateien wie *.go, src/*.ts',
+        case_sensitive: 'Groß-/Kleinschreibung beachten',
+        whole_word: 'Ganzes Wort',
+        regex: 'Regulärer Ausdruck',
+        preview: 'Vorschau',
+        apply_one: '{{count}} Treffer ersetzen',
+        apply_other: '{{count}} Treffer ersetzen',
+        summary: '{{matches}} Treffer in {{files}} Dateien.',
+        no_matches: 'Keine Treffer.',
+        truncated: 'Nur der erste Teil wird gezeigt; grenze die Suche ein, um den Rest zu sehen.',
+        matches_one: '{{count}} Treffer',
+        matches_other: '{{count}} Treffer',
+        include_file: 'In {{path}} ersetzen',
+        unsaved_file:
+          'Diese Datei hat ungespeicherte Änderungen im Editor und bleibt deshalb außen vor. Speichere sie zuerst, um sie einzubeziehen.',
+        more_hunks:
+          'Weitere Änderungen in dieser Datei sind nicht gezeigt; sie werden mit ersetzt.',
+        applied_one: 'In {{count}} Datei ersetzt.',
+        applied_other: 'In {{count}} Dateien ersetzt.',
+        conflicts: 'Seit der Vorschau geändert, nicht angefasst: {{files}}',
+        failed: '{{path}} konnte nicht geschrieben werden: {{message}}',
+        retry_hint:
+          'Die Dateien, die nicht geschrieben werden konnten, sind unten weiter ausgewählt. Behebe die Ursache und ersetze dann erneut.',
+      },
+      tree: {
+        menu: 'Aktionen für {{name}}',
+        new_file: 'Neue Datei',
+        new_folder: 'Neuer Ordner',
+        rename: 'Umbenennen',
+        rename_title: 'Umbenennen oder verschieben',
+        rename_label: 'Pfad',
+        rename_hint: 'Ändere den Ordner im Pfad, um es zu verschieben.',
+        name_label: 'Name',
+        create_in: 'Wird in {{dir}} angelegt. Ein Name mit Schrägstrichen legt die Ordner mit an.',
+        create_in_root:
+          'Wird oben im Projekt angelegt. Ein Name mit Schrägstrichen legt die Ordner mit an.',
+        create: 'Anlegen',
+        exists: '{{name}} gibt es schon.',
+        delete: 'Löschen',
+        delete_file_title: '{{name}} löschen?',
+        delete_folder_title: 'Den Ordner {{name}} löschen?',
+        delete_file_body:
+          'Die Datei wird von der Festplatte entfernt. Das lässt sich hier nicht rückgängig machen.',
+        delete_folder_body:
+          'Der Ordner und alles darin werden von der Festplatte entfernt. Das lässt sich hier nicht rückgängig machen.',
+      },
+      editor: {
+        save: 'Speichern',
+        saving: 'Wird gespeichert…',
+        saved: 'Gespeichert',
+        unsaved: 'Ungespeicherte Änderungen',
+        save_failed: 'Speichern fehlgeschlagen',
+        conflict_save_title: 'Die Datei hat sich geändert, seit du sie geöffnet hast',
+        conflict_disk_title: 'Die Datei hat sich auf der Festplatte geändert',
+        conflict_deleted_title: 'Die Datei wurde gelöscht',
+        conflict_body:
+          'Jemand anderes hat eine neuere Fassung gespeichert, vielleicht der Agent oder ein anderes Programm. Deine Änderungen sind noch da und nicht gespeichert.',
+        conflict_deleted_body:
+          'Die Datei ist nicht mehr auf der Festplatte. Dein Text ist noch da; speichere ihn erneut, um die Datei wiederherzustellen.',
+        take_disk: 'Fassung von der Festplatte nehmen',
+        keep_mine: 'Meine darüber speichern',
+        recreate: 'Erneut speichern',
+        compare: 'Vergleichen',
+        hide_compare: 'Zurück zum Bearbeiten',
+        discard_title: '{{name}} schließen, ohne zu speichern?',
+        discard_body: 'Deine Änderungen an dieser Datei sind nicht gespeichert.',
+        discard: 'Ohne Speichern schließen',
+        save_and_close: 'Speichern und schließen',
       },
       workspace: {
         panel_title: 'Projekt',
@@ -4357,7 +4555,8 @@ const resources = {
           'Konnektoren geben Agenten mehr Werkzeuge: ein MCP-Server auf diesem Computer, ein entfernter MCP-Server oder ein OpenAPI-Dienst. Füge einen für alle Chats hinzu oder nur für einen Projektordner. Jeder Werkzeugaufruf folgt weiter deinen Berechtigungsregeln.',
         load_error: 'Konnektoren konnten nicht geladen werden: {{message}}',
         empty_title: 'Noch keine Konnektoren',
-        empty_description: 'Füge einen MCP-Server oder einen OpenAPI-Dienst hinzu, dann erscheinen seine Werkzeuge in deinen Chats.',
+        empty_description:
+          'Füge einen MCP-Server oder einen OpenAPI-Dienst hinzu, dann erscheinen seine Werkzeuge in deinen Chats.',
         group_everywhere: 'Alle Chats',
         group_workspace: 'Nur in {{name}}',
         group_agents: 'Von Agenten mitgebracht',
@@ -4384,7 +4583,8 @@ const resources = {
         tools_count_other: '{{count}} Werkzeuge',
         no_tools: 'Verbunden, bietet aber keine Werkzeuge an.',
         needs_sign_in_hint: 'Melde dich im Browser bei diesem Server an und prüfe dann erneut.',
-        unavailable_hint: 'Contenox konnte diesen Konnektor nicht erreichen oder seine Werkzeuge nicht abrufen.',
+        unavailable_hint:
+          'Contenox konnte diesen Konnektor nicht erreichen oder seine Werkzeuge nicht abrufen.',
         details: 'Details',
         check_again: 'Erneut prüfen',
         sign_in: 'Anmelden',
@@ -4403,14 +4603,18 @@ const resources = {
           kind_openapi: 'OpenAPI-Dienst',
           kind_openapi_hint: 'Macht die Operationen einer HTTP-API zu Werkzeugen.',
           name: 'Name',
-          name_hint: 'Kleinbuchstaben, Ziffern, Binde- und Unterstriche. Die Werkzeuge erscheinen unter diesem Namen.',
-          name_invalid: 'Nutze Kleinbuchstaben, Ziffern, Binde- und Unterstriche, beginnend mit Buchstabe oder Ziffer.',
+          name_hint:
+            'Kleinbuchstaben, Ziffern, Binde- und Unterstriche. Die Werkzeuge erscheinen unter diesem Namen.',
+          name_invalid:
+            'Nutze Kleinbuchstaben, Ziffern, Binde- und Unterstriche, beginnend mit Buchstabe oder Ziffer.',
           name_taken: 'Ein Konnektor mit diesem Namen existiert bereits.',
           scope: 'Wo er gilt',
-          scope_hint: 'Ein Projektordner beschränkt ihn auf Chats in diesem Ordner und seinen Unterordnern.',
+          scope_hint:
+            'Ein Projektordner beschränkt ihn auf Chats in diesem Ordner und seinen Unterordnern.',
           choose_folder: 'Ordner wählen…',
           command: 'Befehl',
-          command_hint: 'Das Programm, das gestartet wird, zum Beispiel npx, uvx, docker oder ein vollständiger Pfad.',
+          command_hint:
+            'Das Programm, das gestartet wird, zum Beispiel npx, uvx, docker oder ein vollständiger Pfad.',
           command_required: 'Gib den Befehl zum Starten ein.',
           args: 'Argumente',
           args_hint: 'Ein Argument pro Zeile.',
@@ -4423,7 +4627,8 @@ const resources = {
           endpoint: 'Dienst-URL',
           endpoint_hint: 'Die Basisadresse, an die die API-Aufrufe gehen.',
           transport: 'Verbindung',
-          transport_hint: 'Die meisten Server nutzen Streamable HTTP. Wähle SSE nur, wenn der Server es verlangt.',
+          transport_hint:
+            'Die meisten Server nutzen Streamable HTTP. Wähle SSE nur, wenn der Server es verlangt.',
           transport_http: 'Streamable HTTP',
           transport_sse: 'Server-Sent Events (SSE)',
           auth: 'Anmeldung',
@@ -4438,7 +4643,8 @@ const resources = {
           oauth_client: 'OAuth-Client-ID',
           oauth_client_hint: 'Leer lassen, wenn der Server Clients selbst registriert.',
           spec: 'OpenAPI-Dokument',
-          spec_hint: 'Optional. Eine URL oder ein file://-Pfad zur Spezifikation, falls der Dienst sie nicht selbst ausliefert.',
+          spec_hint:
+            'Optional. Eine URL oder ein file://-Pfad zur Spezifikation, falls der Dienst sie nicht selbst ausliefert.',
           spec_invalid: 'Gib eine http(s)://-URL oder einen file://-Pfad ein.',
           timeout: 'Zeitlimit (Millisekunden)',
           timeout_invalid: 'Gib eine ganze Zahl größer als null ein.',
@@ -4447,13 +4653,16 @@ const resources = {
           headers_invalid: 'Schreibe jede Zeile als Name: Wert.',
           advanced: 'Erweitert',
           inject: 'Feste Werte',
-          inject_hint: 'Ein Name=Wert pro Zeile. Wird bei jedem Aufruf mitgeschickt und vor dem Agenten verborgen, zum Beispiel eine Mandanten- oder Konto-ID.',
+          inject_hint:
+            'Ein Name=Wert pro Zeile. Wird bei jedem Aufruf mitgeschickt und vor dem Agenten verborgen, zum Beispiel eine Mandanten- oder Konto-ID.',
           inject_invalid: 'Schreibe jede Zeile als Name=Wert.',
           connect_timeout: 'Verbindungs-Zeitlimit (Sekunden)',
           oauth_secret_env: 'Variable für das OAuth-Client-Secret',
-          oauth_secret_env_hint: 'Der Name einer Umgebungsvariable mit dem Client-Secret, falls der Server eines braucht.',
+          oauth_secret_env_hint:
+            'Der Name einer Umgebungsvariable mit dem Client-Secret, falls der Server eines braucht.',
           prop: 'Eingefügter Wert',
-          prop_hint: 'Ein weiterer Wert, den Contenox jedem Aufruf an der gewählten Stelle hinzufügt. Der Agent sieht ihn nie.',
+          prop_hint:
+            'Ein weiterer Wert, den Contenox jedem Aufruf an der gewählten Stelle hinzufügt. Der Agent sieht ihn nie.',
           prop_name: 'Name',
           prop_value: 'Wert',
           prop_in: 'Wohin er geht',
@@ -4466,18 +4675,21 @@ const resources = {
           login_method: 'Anmeldemethode',
           login_url: 'Anmelde-URL',
           login_body: 'Anmelde-Body',
-          login_body_hint: 'JSON, das an die Anmelde-URL geht. ${NAME} wird durch die Umgebungsvariable NAME ersetzt.',
+          login_body_hint:
+            'JSON, das an die Anmelde-URL geht. ${NAME} wird durch die Umgebungsvariable NAME ersetzt.',
           extract: 'Sitzung übernehmen aus',
           extract_hint: 'Ein Cookie-Name oder ein JSON-Pfad in der Antwort.',
           extract_cookie: 'Cookie-Name',
           extract_json: 'JSON-Pfad',
           extract_required: 'Gib einen Cookie-Namen oder einen JSON-Pfad ein.',
           login_inject: 'Senden als',
-          login_inject_hint: 'Der Header und sein Format, zum Beispiel Authorization und Bearer %s. Ohne Angabe wird das Cookie gesendet.',
+          login_inject_hint:
+            'Der Header und sein Format, zum Beispiel Authorization und Bearer %s. Ohne Angabe wird das Cookie gesendet.',
           login_inject_header: 'Header',
           login_inject_format: 'Format',
           insecure: 'Nicht prüfbare Zertifikate akzeptieren',
-          insecure_warning: 'Nur für einen Dienst im eigenen Netz nutzen. Jeder dazwischen kann den Verkehr lesen und ändern.',
+          insecure_warning:
+            'Nur für einen Dienst im eigenen Netz nutzen. Jeder dazwischen kann den Verkehr lesen und ändern.',
           show: 'Anzeigen',
           hide: 'Verbergen',
           add: 'Hinzufügen und prüfen',
@@ -4488,8 +4700,10 @@ const resources = {
           title_one: '{{count}} Werkzeug',
           title_other: '{{count}} Werkzeuge',
           scope: 'Wo diese Einstellungen gelten',
-          hint_everywhere: 'Schalte ein Werkzeug aus, um es in allen Chats vor Agenten zu verbergen.',
-          hint_workspace: 'Schalte ein Werkzeug aus, um es in Chats dieses Projektordners vor Agenten zu verbergen.',
+          hint_everywhere:
+            'Schalte ein Werkzeug aus, um es in allen Chats vor Agenten zu verbergen.',
+          hint_workspace:
+            'Schalte ein Werkzeug aus, um es in Chats dieses Projektordners vor Agenten zu verbergen.',
           visible: 'Agenten dürfen {{name}} nutzen',
         },
         rules: {
@@ -4504,9 +4718,12 @@ const resources = {
           keys: {
             allowed_commands: 'Programme, die der Agent ausführen darf, durch Kommas getrennt.',
             denied_commands: 'Programme, die der Agent nie ausführen darf, durch Kommas getrennt.',
-            allowed_dir: 'Der Ordner, in dem diese Werkzeuge arbeiten dürfen. Ein relativer Pfad beginnt im Chat-Ordner.',
-            allowed_tool_dirs: 'Ordner, aus denen Programme gestartet werden dürfen, durch Kommas getrennt.',
-            denied_path_substrings: 'Pfade mit einem dieser Teile werden abgelehnt, durch Kommas getrennt.',
+            allowed_dir:
+              'Der Ordner, in dem diese Werkzeuge arbeiten dürfen. Ein relativer Pfad beginnt im Chat-Ordner.',
+            allowed_tool_dirs:
+              'Ordner, aus denen Programme gestartet werden dürfen, durch Kommas getrennt.',
+            denied_path_substrings:
+              'Pfade mit einem dieser Teile werden abgelehnt, durch Kommas getrennt.',
             skip_dir_names: 'Ordnernamen, die in Listen und Suchen fehlen, durch Kommas getrennt.',
             list_extensions: 'Nur Dateien mit diesen Endungen auflisten, durch Kommas getrennt.',
             use_gitignore: 'Dateien auslassen, die .gitignore ignoriert (true oder false).',
@@ -4518,7 +4735,8 @@ const resources = {
             max_find_results: 'Höchstzahl der Dateien einer Dateisuche.',
             max_find_depth: 'Wie viele Ordnerebenen eine Dateisuche hinabgeht.',
             model_context_tokens: 'Bemisst Antworten, wenn kein Byte-Limit gesetzt ist.',
-            verbose_tool_descriptions: 'Dem Agenten längere Werkzeugbeschreibungen geben (true oder false).',
+            verbose_tool_descriptions:
+              'Dem Agenten längere Werkzeugbeschreibungen geben (true oder false).',
             allowed_hosts: 'Hosts, die der Agent aufrufen darf, durch Kommas getrennt.',
             denied_hosts: 'Hosts, die der Agent nie aufrufen darf, durch Kommas getrennt.',
             allowed_schemes: 'Erlaubte URL-Schemata, zum Beispiel http,https.',
@@ -4534,20 +4752,24 @@ const resources = {
         chat: {
           menu_item: 'Konnektoren',
           title: 'Konnektoren in diesem Chat',
-          description: 'Schalte Werkzeuge nur für diesen Chat ein oder aus. Deine Berechtigungsregeln gelten weiter für jeden Aufruf.',
+          description:
+            'Schalte Werkzeuge nur für diesen Chat ein oder aus. Deine Berechtigungsregeln gelten weiter für jeden Aufruf.',
           loading: 'Konnektoren werden geladen…',
           load_error: 'Die Konnektoren dieses Chats konnten nicht geladen werden: {{message}}',
-          not_ready: 'Sende zuerst eine Nachricht, dann kannst du die Konnektoren dieses Chats verwalten.',
+          not_ready:
+            'Sende zuerst eine Nachricht, dann kannst du die Konnektoren dieses Chats verwalten.',
           group_chat: 'Zu diesem Chat hinzugefügt',
           group_workspace: 'Aus diesem Projekt',
           group_everywhere: 'Alle Chats',
           group_builtin: 'Eingebaute Werkzeuge',
           toggle: '{{name}} in diesem Chat nutzen',
           add: 'Für diesen Chat hinzufügen',
-          add_description: 'Nur dieser Chat sieht ihn. Er verschwindet, wenn der Chat geschlossen wird.',
+          add_description:
+            'Nur dieser Chat sieht ihn. Er verschwindet, wenn der Chat geschlossen wird.',
           remove: 'Aus diesem Chat entfernen',
           manage: 'Konnektoren verwalten',
-          tools_off: 'Dieser Konnektor ist in diesem Chat aus. Schalte ihn ein, um seine Werkzeuge zu wählen.',
+          tools_off:
+            'Dieser Konnektor ist in diesem Chat aus. Schalte ihn ein, um seine Werkzeuge zu wählen.',
           hidden_by_settings: 'Auf der Konnektoren-Seite verborgen',
           close: 'Schließen',
         },
@@ -4568,11 +4790,13 @@ const resources = {
         remove: 'Entfernen',
         cancel: 'Abbrechen',
         details: 'Details',
-        remove_confirm: '{{name}} entfernen? Chats mit dem Agenten bleiben erhalten, du kannst sie aber nicht mehr fortsetzen.',
+        remove_confirm:
+          '{{name}} entfernen? Chats mit dem Agenten bleiben erhalten, du kannst sie aber nicht mehr fortsetzen.',
         remove_confirm_preset:
           '{{name}} entfernen? Die installierten Dateien und die Anmeldung bleiben, eine erneute Installation geht also schnell.',
         remove_confirm_action: 'Entfernen',
-        off_hint: '{{name}} ist ausgeschaltet. Schalte den Agenten über das Menü ein, um mit ihm zu chatten.',
+        off_hint:
+          '{{name}} ist ausgeschaltet. Schalte den Agenten über das Menü ein, um mit ihm zu chatten.',
         checking: '{{name}} wird in der Sandbox gestartet…',
         check_again: 'Erneut prüfen',
         sign_in_needed: 'Melde dich bei {{name}} an, bevor du mit dem Agenten chattest.',
@@ -4593,7 +4817,8 @@ const resources = {
         problem: {
           sandbox_unavailable:
             'Die Sandbox für Agenten lässt sich auf diesem Computer nicht einrichten, deshalb startet Contenox den Agenten nicht.',
-          command_not_found: 'Das Programm des Agenten wurde nicht gefunden. Prüfe den Befehl oder installiere den Agenten.',
+          command_not_found:
+            'Das Programm des Agenten wurde nicht gefunden. Prüfe den Befehl oder installiere den Agenten.',
           start_failed: 'Der Agent konnte nicht gestartet werden.',
           handshake_failed:
             'Der Agent ist gestartet, antwortet aber nicht. Vielleicht spricht er kein ACP oder braucht ein zusätzliches Argument wie --acp.',
@@ -4603,15 +4828,19 @@ const resources = {
           npm_missing: 'npm wurde neben Node.js nicht gefunden.',
           install_failed: 'Der Agent konnte nicht installiert werden.',
           login_failed: 'Die Anmeldung hat nicht geklappt. Versuch es noch einmal.',
-          login_timed_out: 'Die Anmeldung hat zu lange gedauert und wurde abgebrochen. Versuch es noch einmal.',
+          login_timed_out:
+            'Die Anmeldung hat zu lange gedauert und wurde abgebrochen. Versuch es noch einmal.',
           generic: 'Mit diesem Agenten ist etwas schiefgelaufen.',
         },
         install: {
           explain:
             'Installiert {{name}} ({{package}} {{version}}) im Datenordner von Contenox. Sonst ändert sich nichts auf deinem Computer.',
-          update_explain: 'Version {{version}} von {{name}} ist verfügbar. Anmeldung und Einstellungen bleiben erhalten.',
-          node_missing: 'Dieser Agent braucht Node.js {{min}} oder neuer, das wurde nicht gefunden.',
-          node_too_old: 'Dieser Agent braucht Node.js {{min}} oder neuer; auf diesem Computer ist {{found}} installiert.',
+          update_explain:
+            'Version {{version}} von {{name}} ist verfügbar. Anmeldung und Einstellungen bleiben erhalten.',
+          node_missing:
+            'Dieser Agent braucht Node.js {{min}} oder neuer, das wurde nicht gefunden.',
+          node_too_old:
+            'Dieser Agent braucht Node.js {{min}} oder neuer; auf diesem Computer ist {{found}} installiert.',
           get_node: 'Node.js herunterladen',
           running: '{{name}} wird installiert. Das kann eine Minute dauern.',
           retry: 'Erneut versuchen',
@@ -4638,7 +4867,8 @@ const resources = {
           writes: 'Schreiben',
           writes_value: 'Nur im Projektordner des Chats und {{folders}}',
           reads: 'Lesen',
-          reads_open: 'Jede Datei, die dein Windows-Konto lesen kann. Windows kann nicht einschränken, was ein Programm liest.',
+          reads_open:
+            'Jede Datei, die dein Windows-Konto lesen kann. Windows kann nicht einschränken, was ein Programm liest.',
           reads_limited: 'Nur den Projektordner und die zusätzlichen Ordner des Agenten',
           asks: 'Fragt dich',
           asks_value: 'Vor allem, was das Berechtigungsset des Chats nicht von sich aus erlaubt',
@@ -4652,11 +4882,14 @@ const resources = {
         },
         form: {
           name: 'Name',
-          name_hint: 'Kleinbuchstaben, Ziffern und Bindestriche. Wird in der Agentenauswahl angezeigt.',
-          name_invalid: 'Nutze Kleinbuchstaben, Ziffern und Bindestriche, beginnend mit einem Buchstaben oder einer Ziffer.',
+          name_hint:
+            'Kleinbuchstaben, Ziffern und Bindestriche. Wird in der Agentenauswahl angezeigt.',
+          name_invalid:
+            'Nutze Kleinbuchstaben, Ziffern und Bindestriche, beginnend mit einem Buchstaben oder einer Ziffer.',
           name_taken: 'Es gibt schon einen Agenten mit diesem Namen.',
           command: 'Befehl',
-          command_hint: 'Das Programm, das gestartet wird, zum Beispiel goose oder ein vollständiger Pfad.',
+          command_hint:
+            'Das Programm, das gestartet wird, zum Beispiel goose oder ein vollständiger Pfad.',
           command_required: 'Gib das Programm an, das gestartet wird.',
           args: 'Argumente',
           args_hint: 'Eines pro Zeile.',
@@ -4664,7 +4897,8 @@ const resources = {
           env_hint: 'Ein NAME=Wert pro Zeile.',
           env_invalid: 'Jede Zeile braucht ein NAME=Wert.',
           paths: 'Zusätzliche Ordner',
-          paths_hint: 'Ordner außerhalb des Projekts, die der Agent braucht, etwa für seine Anmeldung.',
+          paths_hint:
+            'Ordner außerhalb des Projekts, die der Agent braucht, etwa für seine Anmeldung.',
           path_label: 'Ordner',
           path_mode: 'Zugriff',
           mode_rw: 'Darf ändern',

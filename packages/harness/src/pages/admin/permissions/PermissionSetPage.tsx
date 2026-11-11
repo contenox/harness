@@ -1,10 +1,29 @@
-import { BackButton, Container, H1, InlineNotice, P, Page, SettingsGroup, Spinner } from '@contenox/ui';
+import {
+  BackButton,
+  Container,
+  H1,
+  InlineNotice,
+  P,
+  Page,
+  SettingsGroup,
+  Spinner,
+} from '@contenox/ui';
 import { FilePen, FileSearch, MessageCircleQuestion, Rocket, SquareTerminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCLIConfig } from '../../../hooks/useCLIConfig';
-import { useEnvelopeSection, useRemoveEnvelope, useSaveEnvelope } from '../../../hooks/usePermissions';
-import { CHAT_ENVELOPE, displayName, parentOf, policyEnvelopeName, rawEnvelopes } from '../../../lib/permissions';
+import {
+  useEnvelopeSection,
+  useRemoveEnvelope,
+  useSaveEnvelope,
+} from '../../../hooks/usePermissions';
+import {
+  CHAT_ENVELOPE,
+  displayName,
+  parentOf,
+  policyEnvelopeName,
+  rawEnvelopes,
+} from '../../../lib/permissions';
 import { AxisRow } from './components/AxisRow';
 import { RemoveSet } from './components/RemoveSet';
 import { ScopeBar } from './components/ScopeBar';
@@ -75,7 +94,9 @@ export default function PermissionSetPage() {
                 </P>
                 {parent && (
                   <P variant="muted" className="text-xs">
-                    <Link className="hover:text-text hover:underline" to={permissionsPath(parent, workspace)}>
+                    <Link
+                      className="hover:text-text hover:underline"
+                      to={permissionsPath(parent, workspace)}>
                       {t('permissions.builds_on', { name: displayName(parent) })}
                     </Link>
                   </P>

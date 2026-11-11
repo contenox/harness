@@ -17,7 +17,16 @@ export type ChipProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "chi
  * Works as a Dropdown / Popover trigger (forwards ref and onClick).
  */
 export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
-  { icon, label, caret = false, variant = "ghost", active = false, className, type = "button", ...props },
+  {
+    icon,
+    label,
+    caret = false,
+    variant = "ghost",
+    active = false,
+    className,
+    type = "button",
+    ...props
+  },
   ref,
 ) {
   return (

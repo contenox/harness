@@ -1,19 +1,15 @@
-
-import type { ChatContextArtifact } from '../types';
-import type { InlineAttachment } from '../types';
 import {
   isTypedArtifact,
+  type CommandOutputPayload,
   type FileExcerptPayload,
   type OpenFilePayload,
-  type TerminalOutputPayload,
   type PlanStepPayload,
-  type CommandOutputPayload,
   type RuntimeStatePayload,
+  type TerminalOutputPayload,
 } from '../artifacts/types';
+import type { ChatContextArtifact, InlineAttachment } from '../types';
 
-export function artifactToInlineAttachment(
-  artifact: ChatContextArtifact,
-): InlineAttachment | null {
+export function artifactToInlineAttachment(artifact: ChatContextArtifact): InlineAttachment | null {
   if (!isTypedArtifact(artifact)) return null;
   switch (artifact.kind) {
     case 'file_excerpt': {
@@ -63,9 +59,7 @@ export function artifactToInlineAttachment(
   }
 }
 
-export function artifactsToInlineAttachments(
-  artifacts: ChatContextArtifact[],
-): InlineAttachment[] {
+export function artifactsToInlineAttachments(artifacts: ChatContextArtifact[]): InlineAttachment[] {
   const out: InlineAttachment[] = [];
   for (const a of artifacts) {
     const inline = artifactToInlineAttachment(a);

@@ -56,9 +56,7 @@ export const CustomFallback: Story = {
 
 export const StaticFallback: Story = {
   render: () => (
-    <ErrorBoundary
-      fallback={<div style={{ padding: "1rem" }}>Static fallback node shown.</div>}
-    >
+    <ErrorBoundary fallback={<div style={{ padding: "1rem" }}>Static fallback node shown.</div>}>
       <Boom shouldThrow message="Boom from static fallback story" />
     </ErrorBoundary>
   ),

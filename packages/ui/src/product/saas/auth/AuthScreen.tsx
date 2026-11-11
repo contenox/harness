@@ -1,9 +1,9 @@
-import { Card, Form, P, Page, Small } from '@contenox/ui';
-import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { FormErrorBanner, SubmitButton } from '@contenox/ui';
-import { LegalLinksNav } from '../LegalScreens';
-import type { FormErrors } from './formErrors';
+import { Card, Form, P, Page, Small } from "@contenox/ui";
+import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { FormErrorBanner, SubmitButton } from "@contenox/ui";
+import { LegalLinksNav } from "../LegalScreens";
+import type { FormErrors } from "./formErrors";
 
 export function AuthScreen({
   children,
@@ -68,14 +68,12 @@ export function AuthForm({
         <SubmitButton pending={pending} disabled={!canSubmit}>
           {submitLabel}
         </SubmitButton>
-      }>
+      }
+    >
       {children}
       <FormErrorBanner
         message={errors.message}
         pending={pending}
-
-
-
         onRetry={errors.retryable && canSubmit ? onSubmit : undefined}
       />
     </Form>
@@ -87,12 +85,13 @@ export function ProductIntro() {
     <div className="mb-6 w-full max-w-sm text-center">
       <P className="text-xl font-semibold">contenox</P>
       <Small>
-        Resume the agent sessions running on your own machines, from anywhere. The runtime is{' '}
+        Resume the agent sessions running on your own machines, from anywhere. The runtime is{" "}
         <a
           href="https://contenox.com"
           target="_blank"
           rel="noreferrer"
-          className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline">
+          className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline"
+        >
           open source
         </a>
         .
@@ -114,7 +113,8 @@ export function AuthLink({
     <Link
       to={to}
       state={state}
-      className="text-primary-700 dark:text-dark-primary-500 py-1 underline-offset-4 hover:underline">
+      className="text-primary-700 dark:text-dark-primary-500 py-1 underline-offset-4 hover:underline"
+    >
       {children}
     </Link>
   );

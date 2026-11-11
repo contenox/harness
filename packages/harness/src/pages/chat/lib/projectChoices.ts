@@ -5,5 +5,7 @@ import { projectName } from '../../../lib/workspaceRoots';
 export function filterProjects(roots: readonly WorkspaceRoot[], query: string): WorkspaceRoot[] {
   const q = query.trim().toLowerCase();
   if (q === '') return [...roots];
-  return roots.filter(r => projectName(r).toLowerCase().includes(q) || r.path.toLowerCase().includes(q));
+  return roots.filter(
+    r => projectName(r).toLowerCase().includes(q) || r.path.toLowerCase().includes(q),
+  );
 }

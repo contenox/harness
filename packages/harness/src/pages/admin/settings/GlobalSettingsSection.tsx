@@ -3,6 +3,7 @@ import { FormEvent, useContext, useEffect, useId, useMemo, useState } from 'reac
 import { useTranslation } from 'react-i18next';
 import { useCLIConfig } from '../../../hooks/useCLIConfig';
 import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
+import { useResetAfterSuccess } from '../../../hooks/useResetAfterSuccess';
 import { useSetupStatus } from '../../../hooks/useSetupStatus';
 import { AuthContext } from '../../../lib/authContext';
 import type { CLIConfigUpdateRequest } from '../../../lib/types';
@@ -37,11 +38,7 @@ export function GlobalSettingsSection() {
     setAltProvider(cliConfig.defaultAltProvider || '');
   }, [cliConfig]);
 
-  useEffect(() => {
-    if (!putConfig.isSuccess) return;
-    const timer = window.setTimeout(() => putConfig.reset(), 3000);
-    return () => window.clearTimeout(timer);
-  }, [putConfig.isSuccess, putConfig.reset]);
+  useResetAfterSuccess(putConfig.isSuccess, putConfig.reset);
 
   const modelOptions = useMemo(() => {
     const values = uniqueSorted(

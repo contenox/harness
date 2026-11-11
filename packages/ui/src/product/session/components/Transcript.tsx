@@ -5,22 +5,21 @@ import {
   ChatThread,
   chatTranscriptMarkdownComponents,
   useChatScroll,
-} from '../../../components/chat';
-import { Span } from '../../../components/Typography';
-import { InlineAttachments, type InlineAttachment } from '../../../components/InlineAttachmentRenderer';
-import { InlineNotice } from '../../../components/InlineNotice';
-import { ToolCallCard, type ToolCallStatus as CardStatus } from '../../../components/ToolCallCard';
-import { ImageOff, VolumeX } from 'lucide-react';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import type {
-  AcpChatMessage,
-  AcpSessionState,
-  AcpToolCallState,
-} from '../state/acpSessionState';
-import { DROPPED_KIND_AUDIO, DROPPED_KIND_IMAGE } from '../lib/droppedContent';
-import { toolCallError } from '../lib/toolCallError';
-import type { ImagePart, ToolCallStatus } from '@contenox/acp-client';
+} from "../../../components/chat";
+import { Span } from "../../../components/Typography";
+import {
+  InlineAttachments,
+  type InlineAttachment,
+} from "../../../components/InlineAttachmentRenderer";
+import { InlineNotice } from "../../../components/InlineNotice";
+import { ToolCallCard, type ToolCallStatus as CardStatus } from "../../../components/ToolCallCard";
+import { ImageOff, VolumeX } from "lucide-react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import type { AcpChatMessage, AcpSessionState, AcpToolCallState } from "../state/acpSessionState";
+import { DROPPED_KIND_AUDIO, DROPPED_KIND_IMAGE } from "../lib/droppedContent";
+import { toolCallError } from "../lib/toolCallError";
+import type { ImagePart, ToolCallStatus } from "@contenox/acp-client";
 
 export function Transcript({ session }: { session: AcpSessionState }) {
   const { containerRef, endRef } = useChatScroll({
@@ -32,17 +31,17 @@ export function Transcript({ session }: { session: AcpSessionState }) {
       {session.items.map((item, index) => {
         const isLatest = index === session.items.length - 1;
         switch (item.kind) {
-          case 'message': {
+          case "message": {
             const message = session.messages[item.id];
             return message ? (
               <MessageItem key={item.id} message={message} isLatest={isLatest} />
             ) : null;
           }
-          case 'tool_call': {
+          case "tool_call": {
             const call = session.toolCalls[item.id];
             return call ? <ToolCallItem key={item.id} call={call} /> : null;
           }
-          case 'terminal': {
+          case "terminal": {
             const card = session.terminals[item.id];
             return card ? (
               <ToolCallCard
@@ -54,7 +53,7 @@ export function Transcript({ session }: { session: AcpSessionState }) {
               />
             ) : null;
           }
-          case 'error': {
+          case "error": {
             const card = session.errorCards[item.id];
             return card ? (
               <InlineNotice key={item.id} variant="error" role="alert">
@@ -68,23 +67,23 @@ export function Transcript({ session }: { session: AcpSessionState }) {
   );
 }
 
-
 function MessageItem({ message, isLatest }: { message: AcpChatMessage; isLatest: boolean }) {
   return (
     <ChatMessage
       role={message.role}
-      roleLabel={message.role === 'user' ? 'You' : 'Agent'}
+      roleLabel={message.role === "user" ? "You" : "Agent"}
       appearance="transcript"
       collapsible={false}
       isLatest={isLatest}
-      copyText={message.text || undefined}>
+      copyText={message.text || undefined}
+    >
       {message.thinking && (
         <ChatStreamThinkingBox className="mb-2">
           {message.thinking}
           {message.thinkingStreaming && <ChatStreamingCaret />}
         </ChatStreamThinkingBox>
       )}
-      {message.text !== '' && (
+      {message.text !== "" && (
         <div className="prose prose-compact dark:prose-invert max-w-none text-sm break-words">
           <Markdown remarkPlugins={[remarkGfm]} components={chatTranscriptMarkdownComponents}>
             {message.text}
@@ -98,23 +97,20 @@ function MessageItem({ message, isLatest }: { message: AcpChatMessage; isLatest:
   );
 }
 
-
 function inlineImage(image: ImagePart, index: number, total: number): InlineAttachment {
   return {
-    kind: 'image',
+    kind: "image",
     data: image.data,
     mimeType: image.mimeType,
-    alt: total === 1 ? 'Attached image' : `Attached image ${index + 1} of ${total}`,
+    alt: total === 1 ? "Attached image" : `Attached image ${index + 1} of ${total}`,
   };
 }
-
 
 function MessageImages({ message }: { message: AcpChatMessage }) {
   const images = message.images ?? [];
   if (images.length === 0) return null;
   const dropped = message.droppedContent?.includes(DROPPED_KIND_IMAGE) === true;
   return (
-
     <div className="not-prose">
       <InlineAttachments
         attachments={images.map((image, index) => inlineImage(image, index, images.length))}
@@ -125,8 +121,8 @@ function MessageImages({ message }: { message: AcpChatMessage }) {
           <ImageOff className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
           <Span className="text-warning-700 dark:text-dark-warning-700 text-xs">
             {images.length === 1
-              ? 'The machine could not pass this picture to the model — it answered without seeing it.'
-              : 'The machine could not pass these pictures to the model — it answered without seeing them.'}
+              ? "The machine could not pass this picture to the model — it answered without seeing it."
+              : "The machine could not pass these pictures to the model — it answered without seeing them."}
           </Span>
         </p>
       )}
@@ -134,17 +130,11 @@ function MessageImages({ message }: { message: AcpChatMessage }) {
   );
 }
 
-
-
-
-
-
 function MessageAudio({ message }: { message: AcpChatMessage }) {
   const clips = message.audio ?? [];
   if (clips.length === 0) return null;
   const dropped = message.droppedContent?.includes(DROPPED_KIND_AUDIO) === true;
   return (
-
     <div className="not-prose flex flex-col gap-1.5">
       {clips.map((clip, index) => (
         <audio
@@ -154,7 +144,7 @@ function MessageAudio({ message }: { message: AcpChatMessage }) {
           src={`data:${clip.mimeType};base64,${clip.data}`}
           className="h-10 w-full max-w-xs"
           aria-label={
-            clips.length === 1 ? 'Attached audio' : `Attached audio ${index + 1} of ${clips.length}`
+            clips.length === 1 ? "Attached audio" : `Attached audio ${index + 1} of ${clips.length}`
           }
         />
       ))}
@@ -164,8 +154,8 @@ function MessageAudio({ message }: { message: AcpChatMessage }) {
           <VolumeX className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
           <Span className="text-warning-700 dark:text-dark-warning-700 text-xs">
             {clips.length === 1
-              ? 'The machine could not pass this audio to the model — it answered without hearing it.'
-              : 'The machine could not pass these clips to the model — it answered without hearing them.'}
+              ? "The machine could not pass this audio to the model — it answered without hearing it."
+              : "The machine could not pass these clips to the model — it answered without hearing them."}
           </Span>
         </p>
       )}
@@ -173,12 +163,11 @@ function MessageAudio({ message }: { message: AcpChatMessage }) {
   );
 }
 
-
 const CARD_STATUS: Record<ToolCallStatus, CardStatus> = {
-  pending: 'pending',
-  in_progress: 'running',
-  completed: 'success',
-  failed: 'error',
+  pending: "pending",
+  in_progress: "running",
+  completed: "success",
+  failed: "error",
 };
 
 function ToolCallItem({ call }: { call: AcpToolCallState }) {
@@ -189,15 +178,21 @@ function ToolCallItem({ call }: { call: AcpToolCallState }) {
     ) : undefined;
   return (
     <ToolCallCard
-      tool={call.kind ?? 'tool'}
+      tool={call.kind ?? "tool"}
       title={call.title ?? call.toolCallId}
-      status={call.status ? CARD_STATUS[call.status] : 'pending'}
+      status={call.status ? CARD_STATUS[call.status] : "pending"}
       detail={detail}
     />
   );
 }
 
-function ToolCallDetail({ errorText, rawOutput }: { errorText: string | null; rawOutput?: unknown }) {
+function ToolCallDetail({
+  errorText,
+  rawOutput,
+}: {
+  errorText: string | null;
+  rawOutput?: unknown;
+}) {
   return (
     <div className="space-y-2">
       {errorText != null && <InlineNotice variant="error">{errorText}</InlineNotice>}
@@ -206,8 +201,7 @@ function ToolCallDetail({ errorText, rawOutput }: { errorText: string | null; ra
   );
 }
 
-
 function RawDetail({ value }: { value: unknown }) {
-  const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
   return <pre className="overflow-x-auto font-mono text-xs whitespace-pre-wrap">{text}</pre>;
 }

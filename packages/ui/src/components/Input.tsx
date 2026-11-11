@@ -24,9 +24,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             "h-8 w-full rounded-lg border bg-raised px-3 text-[13px] text-text transition-colors",
             "placeholder:text-text-subtle",
             "disabled:cursor-not-allowed disabled:opacity-50",
-            error
-              ? "border-error/60"
-              : "border-line-strong focus-visible:border-accent/60",
+            error ? "border-error/60" : "border-line-strong focus-visible:border-accent/60",
             startIcon && "pl-8",
             endIcon && "pr-8",
             mono && "font-mono",
@@ -66,12 +64,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, InputProps>(
     );
 
     return (
-      <Input
-        {...props}
-        ref={ref}
-        type={showPassword ? "text" : "password"}
-        endIcon={toggleIcon}
-      />
+      <Input {...props} ref={ref} type={showPassword ? "text" : "password"} endIcon={toggleIcon} />
     );
   },
 );

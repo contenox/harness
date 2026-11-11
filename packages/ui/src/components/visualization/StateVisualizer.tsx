@@ -34,7 +34,6 @@ export const StateVisualizer = ({ state, labels }: StateVisualizerProps) => {
 
   const l = { ...DEFAULT_LABELS, ...labels };
 
-
   const formatDuration = (ns: number): string => {
     if (ns < 1000) return `${Math.round(ns)} ns`;
     const us = ns / 1000;
@@ -46,15 +45,8 @@ export const StateVisualizer = ({ state, labels }: StateVisualizerProps) => {
 
   return (
     <Table
-      columns={[
-        l.taskId,
-        l.taskType,
-        l.inputType,
-        l.outputType,
-        l.transition,
-        l.duration,
-        l.error,
-      ]}>
+      columns={[l.taskId, l.taskType, l.inputType, l.outputType, l.transition, l.duration, l.error]}
+    >
       {state.map((unit, index) => (
         <TableRow key={index} className={unit.error ? "bg-error/10" : ""}>
           <TableCell>{unit.taskID}</TableCell>

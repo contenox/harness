@@ -103,11 +103,16 @@ export function AgentIdentitySection() {
   const keyOptions = useMemo(() => {
     const options = [{ value: '', label: t('settings.agent_identity_key_none') }];
     for (const key of keys) {
-      const suffix = key.usable ? '' : ` — ${t(`settings.agent_identity_key_problem_${key.problem ?? 'unreadable'}`)}`;
+      const suffix = key.usable
+        ? ''
+        : ` — ${t(`settings.agent_identity_key_problem_${key.problem ?? 'unreadable'}`)}`;
       options.push({ value: key.ref, label: `${key.label} · ${key.type}${suffix}` });
     }
     if (draft.key && !keys.some(key => key.ref === draft.key)) {
-      options.push({ value: draft.key, label: t('settings.agent_identity_key_missing', { ref: draft.key }) });
+      options.push({
+        value: draft.key,
+        label: t('settings.agent_identity_key_missing', { ref: draft.key }),
+      });
     }
     return options;
   }, [draft.key, keys, t]);
@@ -213,7 +218,9 @@ export function AgentIdentitySection() {
                 {t('settings.agent_identity_no_keys')}
               </P>
             )}
-            {generate.isError && <P className="text-error mt-1 text-xs">{generate.error.message}</P>}
+            {generate.isError && (
+              <P className="text-error mt-1 text-xs">{generate.error.message}</P>
+            )}
           </FormField>
 
           {selectedKey && (
@@ -239,7 +246,9 @@ export function AgentIdentitySection() {
             <SwitchRow
               label={t('settings.agent_identity_sign_label')}
               description={
-                draft.key ? t('settings.agent_identity_sign_description') : t('settings.agent_identity_sign_needs_key')
+                draft.key
+                  ? t('settings.agent_identity_sign_description')
+                  : t('settings.agent_identity_sign_needs_key')
               }
               checked={draft.sign && !!draft.key}
               disabled={!draft.key}
@@ -249,7 +258,9 @@ export function AgentIdentitySection() {
               label={t('settings.agent_identity_credit_label')}
               description={
                 state?.me
-                  ? t('settings.agent_identity_credit_description', { me: `${state.me.name} <${state.me.email}>` })
+                  ? t('settings.agent_identity_credit_description', {
+                      me: `${state.me.name} <${state.me.email}>`,
+                    })
                   : t('settings.agent_identity_credit_no_me')
               }
               checked={draft.creditMe}
@@ -277,7 +288,7 @@ export function AgentIdentitySection() {
           <div className="space-y-2">
             <P className="text-sm font-medium">{t('settings.agent_identity_preview_title')}</P>
             {preview ? (
-              <CodeBlock className="border-line bg-sidebar rounded-lg border px-3 py-2 text-xs whitespace-pre-wrap break-all">
+              <CodeBlock className="border-line bg-sidebar rounded-lg border px-3 py-2 text-xs break-all whitespace-pre-wrap">
                 {[
                   `${t('settings.agent_identity_preview_author')}: ${preview.author}`,
                   preview.signedBy
@@ -319,7 +330,9 @@ export function AgentIdentitySection() {
                   }}
                 />
                 <P variant="muted" className="text-xs">
-                  {t('settings.agent_identity_check_hint', { host: checkHost.trim() || CHECK_HOST })}
+                  {t('settings.agent_identity_check_hint', {
+                    host: checkHost.trim() || CHECK_HOST,
+                  })}
                 </P>
               </div>
               {check.isError && <P className="text-error text-xs">{check.error.message}</P>}
@@ -331,7 +344,9 @@ export function AgentIdentitySection() {
                     label={
                       check.data.signing.ok
                         ? t('settings.agent_identity_check_signing_ok')
-                        : t('settings.agent_identity_check_signing_failed', { message: check.data.signing.message })
+                        : t('settings.agent_identity_check_signing_failed', {
+                            message: check.data.signing.message,
+                          })
                     }
                   />
                   {check.data.host && (
@@ -345,9 +360,13 @@ export function AgentIdentitySection() {
                                 host: check.data.host.host,
                                 account: check.data.host.account,
                               })
-                            : t('settings.agent_identity_check_host_ok', { host: check.data.host.host })
+                            : t('settings.agent_identity_check_host_ok', {
+                                host: check.data.host.host,
+                              })
                           : check.data.host.reason && check.data.host.reason !== 'failed'
-                            ? t(`settings.agent_identity_check_host_${check.data.host.reason}`, { host: check.data.host.host })
+                            ? t(`settings.agent_identity_check_host_${check.data.host.reason}`, {
+                                host: check.data.host.host,
+                              })
                             : t('settings.agent_identity_check_host_failed', {
                                 host: check.data.host.host,
                                 message: check.data.host.message,

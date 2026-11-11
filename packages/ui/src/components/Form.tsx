@@ -2,8 +2,7 @@ import { cn } from "../utils";
 import { Panel } from "./Panel";
 import { H2 } from "./Typography";
 
-interface FormProps
-  extends Omit<React.HTMLAttributes<HTMLFormElement>, "onError"> {
+interface FormProps extends Omit<React.HTMLAttributes<HTMLFormElement>, "onError"> {
   title?: string;
   onSubmit: (e: React.FormEvent) => void;
   error?: string;
@@ -47,11 +46,7 @@ export function Form({
         }}
         className="space-y-6"
       >
-        {title && (
-          <H2 className="text-text text-lg font-semibold">
-            {title}
-          </H2>
-        )}
+        {title && <H2 className="text-text text-lg font-semibold">{title}</H2>}
 
         <div className="space-y-4">{children}</div>
 

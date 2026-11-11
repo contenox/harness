@@ -79,9 +79,9 @@ describe('connectionStatus', () => {
     expect(connectionStatus(make({ health: 'unavailable' })).summaryKey).toBe(
       'connections.status.unavailable',
     );
-    expect(
-      connectionStatus(make({ health: 'unavailable', errorCode: 'weird' })).summaryKey,
-    ).toBe('connections.status.unavailable');
+    expect(connectionStatus(make({ health: 'unavailable', errorCode: 'weird' })).summaryKey).toBe(
+      'connections.status.unavailable',
+    );
   });
 
   it('shows a missing configuration as unknown that needs attention', () => {

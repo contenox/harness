@@ -1,11 +1,11 @@
-import { Card } from './Card';
-import { P } from './Typography';
-import { cn } from '../utils';
-import type { ReactNode } from 'react';
+import { Card } from "./Card";
+import { P } from "./Typography";
+import { cn } from "../utils";
+import type { ReactNode } from "react";
 
 export function ListCard({
   title,
-  titleClassName = 'truncate font-medium',
+  titleClassName = "truncate font-medium",
   meta,
   trailing,
   muted = false,
@@ -21,10 +21,10 @@ export function ListCard({
   className?: string;
 }) {
   return (
-    <Card className={cn('flex flex-col gap-3', muted && 'opacity-60', className)}>
+    <Card className={cn("flex flex-col gap-3", muted && "opacity-60", className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <P className={cn('text-[13px]', titleClassName)}>{title}</P>
+          <P className={cn("text-[13px]", titleClassName)}>{title}</P>
           {meta}
         </div>
         {trailing}

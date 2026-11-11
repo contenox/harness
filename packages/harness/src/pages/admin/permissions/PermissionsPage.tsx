@@ -1,10 +1,24 @@
-import { Badge, Container, InlineNotice, P, Page, SettingsGroup, SettingsRow, Spinner } from '@contenox/ui';
+import {
+  Badge,
+  Container,
+  InlineNotice,
+  P,
+  Page,
+  SettingsGroup,
+  SettingsRow,
+  Spinner,
+} from '@contenox/ui';
 import { ChevronRight, ShieldCheck, ShieldHalf } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCLIConfig } from '../../../hooks/useCLIConfig';
 import { useEnvelopeSection, useSaveEnvelope } from '../../../hooks/usePermissions';
-import { CHAT_ENVELOPE, displayName, policyEnvelopeName, rawEnvelopes } from '../../../lib/permissions';
+import {
+  CHAT_ENVELOPE,
+  displayName,
+  policyEnvelopeName,
+  rawEnvelopes,
+} from '../../../lib/permissions';
 import { NewSetForm } from './components/NewSetForm';
 import { ScopeBar } from './components/ScopeBar';
 import { permissionsPath, usePermissionScope } from './usePermissionScope';
@@ -31,13 +45,14 @@ export default function PermissionsPage() {
   const row = (name: string) => {
     const item = items.find(i => i.name === name);
     const raw = envelopes.get(name);
-    const description = typeof raw?.description === 'string' && raw.description.trim() ? raw.description : undefined;
+    const description =
+      typeof raw?.description === 'string' && raw.description.trim() ? raw.description : undefined;
     const changedHere = permission.scope.workspace !== undefined && item?.inLayer;
     return (
       <Link
         key={name}
         to={permissionsPath(name, permission.scope.workspace)}
-        className="block transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60">
+        className="hover:bg-hover focus-visible:ring-accent/60 block transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset">
         <SettingsRow
           icon={usedBy(name).length > 0 ? <ShieldCheck /> : <ShieldHalf />}
           title={displayName(name)}
@@ -54,7 +69,7 @@ export default function PermissionsPage() {
                   {t('permissions.changed_here')}
                 </Badge>
               )}
-              <ChevronRight className="size-4 text-text-subtle" aria-hidden />
+              <ChevronRight className="text-text-subtle size-4" aria-hidden />
             </>
           }
         />
@@ -62,13 +77,18 @@ export default function PermissionsPage() {
     );
   };
 
-  const inUse = names.filter(n => usedBy(n).length > 0).sort((a, b) => (a === CHAT_ENVELOPE ? -1 : b === CHAT_ENVELOPE ? 1 : 0));
+  const inUse = names
+    .filter(n => usedBy(n).length > 0)
+    .sort((a, b) => (a === CHAT_ENVELOPE ? -1 : b === CHAT_ENVELOPE ? 1 : 0));
   const others = names.filter(n => usedBy(n).length === 0);
 
   const intro = permission.scope.workspace
     ? t('permissions.intro_workspace', { name: permission.workspaceName })
     : missionSet
-      ? t('permissions.intro_home', { chat: displayName(CHAT_ENVELOPE), mission: displayName(missionSet) })
+      ? t('permissions.intro_home', {
+          chat: displayName(CHAT_ENVELOPE),
+          mission: displayName(missionSet),
+        })
       : t('permissions.intro_home_no_mission', { chat: displayName(CHAT_ENVELOPE) });
 
   return (
@@ -91,7 +111,11 @@ export default function PermissionsPage() {
           )}
           {section.data && (
             <>
-              {inUse.length > 0 && <SettingsGroup title={t('permissions.group_in_use')}>{inUse.map(row)}</SettingsGroup>}
+              {inUse.length > 0 && (
+                <SettingsGroup title={t('permissions.group_in_use')}>
+                  {inUse.map(row)}
+                </SettingsGroup>
+              )}
               <SettingsGroup title={t('permissions.group_all')}>
                 {others.map(row)}
                 <NewSetForm

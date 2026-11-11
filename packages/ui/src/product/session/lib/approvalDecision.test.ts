@@ -23,15 +23,11 @@ describe("approvalDecisionFromMeta", () => {
     expect(approvalDecisionFromMeta({})).toBeNull();
     expect(approvalDecisionFromMeta({ error: "boom" })).toBeNull();
     expect(approvalDecisionFromMeta({ "contenox.approval": "yes" })).toBeNull();
-    expect(
-      approvalDecisionFromMeta({ "contenox.approval": { decidedBy: "inbox" } }),
-    ).toBeNull();
+    expect(approvalDecisionFromMeta({ "contenox.approval": { decidedBy: "inbox" } })).toBeNull();
   });
 
   it("fills missing strings so the caller never renders undefined", () => {
-    expect(
-      approvalDecisionFromMeta({ "contenox.approval": { approved: false } }),
-    ).toEqual({
+    expect(approvalDecisionFromMeta({ "contenox.approval": { approved: false } })).toEqual({
       decidedBy: "",
       approved: false,
       note: "",

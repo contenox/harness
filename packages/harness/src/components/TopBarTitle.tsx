@@ -1,11 +1,11 @@
 import { Span } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
-import { useMatch, useLocation } from 'react-router-dom';
+import { useLocation, useMatch } from 'react-router-dom';
 import { isChatPath, pageTitleKey } from '../config/pageTitles';
 import { useAcpWorkspace } from '../hooks/useAcpWorkspace';
 import { useWorkspaceRoots } from '../hooks/useWorkspaceRoots';
-import { meaningfulTitle } from '../pages/chat/lib/sessionLabel';
 import { projectForCwd, projectName } from '../lib/workspaceRoots';
+import { meaningfulTitle } from '../pages/chat/lib/sessionLabel';
 
 const TITLE_CLASS = 'truncate text-sm font-semibold text-text';
 

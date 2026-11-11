@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import type { SessionConfigOptionValue } from '../lib/acp';
-import { useAcpWorkspaceContext } from '../lib/acp/AcpWorkspaceProvider';
+import { useAcpWorkspaceContext } from '../lib/acp/acpWorkspaceContext';
 import type { AdoptRef } from '../lib/adoptMeta';
 import type { PendingAudioAttachment } from '../pages/chat/lib/audioAttachments';
 import type { PendingImageAttachment } from '../pages/chat/lib/imageAttachments';

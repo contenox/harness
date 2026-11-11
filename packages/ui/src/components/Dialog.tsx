@@ -1,4 +1,3 @@
-
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
@@ -30,11 +29,8 @@ export function Dialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
-
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-
-
 
   useEffect(() => {
     if (!open) return;
@@ -50,8 +46,7 @@ export function Dialog({
       if (e.key !== "Tab") return;
       const panel = panelRef.current;
       if (!panel) return;
-      const focusables =
-        panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      const focusables = panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
       if (focusables.length === 0) {
         e.preventDefault();
         return;
@@ -75,7 +70,6 @@ export function Dialog({
       previouslyFocused?.focus?.();
     };
   }, [open]);
-
 
   useEffect(() => {
     if (!open) return;
@@ -123,10 +117,7 @@ export function Dialog({
 }
 
 /** Right-aligned button row for the bottom of a Dialog. */
-export function DialogFooter({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+export function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn("mt-5 flex shrink-0 items-center justify-end gap-2", className)}

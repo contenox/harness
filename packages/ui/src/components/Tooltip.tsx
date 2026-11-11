@@ -25,9 +25,7 @@ export function Tooltip({
   className,
   delay = 300,
 }: TooltipProps) {
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(
-    null,
-  );
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number | undefined>(undefined);
   const tooltipId = useId();

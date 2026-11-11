@@ -176,10 +176,7 @@ export function Dropdown({
     const items = itemElements();
     if (items.length === 0) return;
     if (target === "first") {
-      (
-        items.find((el) => el.getAttribute("aria-selected") === "true") ??
-        items[0]
-      ).focus();
+      (items.find((el) => el.getAttribute("aria-selected") === "true") ?? items[0]).focus();
       return;
     }
     if (target === "last") {
@@ -187,8 +184,7 @@ export function Dropdown({
       return;
     }
     const current = items.indexOf(document.activeElement as HTMLElement);
-    const next =
-      current === -1 ? 0 : (current + target + items.length) % items.length;
+    const next = current === -1 ? 0 : (current + target + items.length) % items.length;
     items[next].focus();
   };
 
@@ -209,9 +205,7 @@ export function Dropdown({
         e.preventDefault();
         if (!isOpen) {
           setOpen(true);
-          requestAnimationFrame(() =>
-            focusItem(e.key === "ArrowDown" ? "first" : "last"),
-          );
+          requestAnimationFrame(() => focusItem(e.key === "ArrowDown" ? "first" : "last"));
         } else {
           focusItem(e.key === "ArrowDown" ? 1 : -1);
         }
@@ -237,11 +231,7 @@ export function Dropdown({
 
   const handleBlur = (e: React.FocusEvent) => {
     const next = e.relatedTarget as Node | null;
-    if (
-      isOpen &&
-      !e.currentTarget.contains(next) &&
-      !contentRef.current?.contains(next)
-    ) {
+    if (isOpen && !e.currentTarget.contains(next) && !contentRef.current?.contains(next)) {
       close();
     }
   };
@@ -344,7 +334,17 @@ export type DropdownItemProps = React.ButtonHTMLAttributes<HTMLButtonElement> & 
 /** Menu row: 32px, 8px radius, hover overlay. */
 export const DropdownItem = React.forwardRef<HTMLButtonElement, DropdownItemProps>(
   function DropdownItem(
-    { icon, selected, danger, trailing, className, children, type = "button", role = "menuitem", ...props },
+    {
+      icon,
+      selected,
+      danger,
+      trailing,
+      className,
+      children,
+      type = "button",
+      role = "menuitem",
+      ...props
+    },
     ref,
   ) {
     return (
@@ -370,10 +370,7 @@ export const DropdownItem = React.forwardRef<HTMLButtonElement, DropdownItemProp
   },
 );
 
-export function DropdownLabel({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+export function DropdownLabel({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(

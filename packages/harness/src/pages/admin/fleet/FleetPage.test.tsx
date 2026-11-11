@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
 import { agentKeys, fleetKeys, missionKeys } from '../../../lib/queryKeys';
+import { createStopFlow, stopConfirmCopy } from '../../../lib/stopFlow';
 import type {
   Agent,
   FleetEntry,
@@ -12,7 +13,7 @@ import type {
   InstanceStatus,
   Mission,
 } from '../../../lib/types';
-import FleetPage, { createStopFlow, stopConfirmCopy } from './FleetPage';
+import FleetPage from './FleetPage';
 
 vi.mock('../../../lib/api', () => ({
   api: {
@@ -333,7 +334,9 @@ describe('FleetPage — open session (adopt) + plan progress', () => {
         agentId: 'agent-1',
         agentName: 'Researcher',
         kind: 'claude-code',
-        instances: [instance({ id: 'inst-1', state: 'running', sessions: 1, sessionIds: ['sess-a'] })],
+        instances: [
+          instance({ id: 'inst-1', state: 'running', sessions: 1, sessionIds: ['sess-a'] }),
+        ],
       },
     ]);
     expect(html).toContain('Open session sess-a in chat');
@@ -345,7 +348,9 @@ describe('FleetPage — open session (adopt) + plan progress', () => {
         agentId: 'agent-1',
         agentName: 'Researcher',
         kind: 'claude-code',
-        instances: [instance({ id: 'inst-1', state: 'error', sessions: 1, sessionIds: ['sess-a'] })],
+        instances: [
+          instance({ id: 'inst-1', state: 'error', sessions: 1, sessionIds: ['sess-a'] }),
+        ],
       },
     ]);
     expect(html).not.toContain('Open session sess-a in chat');
@@ -359,7 +364,9 @@ describe('FleetPage — open session (adopt) + plan progress', () => {
           agentId: 'agent-1',
           agentName: 'Researcher',
           kind: 'claude-code',
-          instances: [instance({ id: 'inst-1', state: 'running', sessions: 1, sessionIds: ['sess-a'] })],
+          instances: [
+            instance({ id: 'inst-1', state: 'running', sessions: 1, sessionIds: ['sess-a'] }),
+          ],
         },
       ],
       [

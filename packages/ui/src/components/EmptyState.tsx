@@ -42,9 +42,7 @@ export function EmptyState({
     <div
       className={cn(
         "p-8 text-text",
-        orientation === "horizontal"
-          ? "flex items-center gap-4 text-left"
-          : "text-center",
+        orientation === "horizontal" ? "flex items-center gap-4 text-left" : "text-center",
         className,
       )}
     >
@@ -67,9 +65,7 @@ export function EmptyState({
       <div className="min-w-0">
         <H3
           className={cn(
-            size === "hero"
-              ? "text-3xl font-semibold tracking-tight"
-              : "text-base font-semibold",
+            size === "hero" ? "text-3xl font-semibold tracking-tight" : "text-base font-semibold",
           )}
         >
           {title}

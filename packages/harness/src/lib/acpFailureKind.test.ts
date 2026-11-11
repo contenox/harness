@@ -1,23 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import { acpFailureCopyKeys, classifyAcpExecutionError, classifySetupIssueCode, failedAgentName } from './acpFailureKind';
+import {
+  acpFailureCopyKeys,
+  classifyAcpExecutionError,
+  classifySetupIssueCode,
+  failedAgentName,
+} from './acpFailureKind';
 
 describe('classifyAcpExecutionError', () => {
   it('classifies the runtime-state-empty resolver error as backend_unreachable', () => {
-    expect(classifyAcpExecutionError('no models found in runtime state')).toBe('backend_unreachable');
+    expect(classifyAcpExecutionError('no models found in runtime state')).toBe(
+      'backend_unreachable',
+    );
   });
 
   it('classifies modeld-specific connectivity phrasings as backend_unreachable', () => {
-    expect(classifyAcpExecutionError('backend error: modeld is not running')).toBe('backend_unreachable');
+    expect(classifyAcpExecutionError('backend error: modeld is not running')).toBe(
+      'backend_unreachable',
+    );
     expect(classifyAcpExecutionError('dial tcp 127.0.0.1:11434: connect: connection refused')).toBe(
       'backend_unreachable',
     );
   });
 
   it('classifies "no model matched"/"client resolution failed" as model_unavailable', () => {
-    expect(classifyAcpExecutionError('prompt execute: client resolution failed: no model matched the requirements')).toBe(
+    expect(
+      classifyAcpExecutionError(
+        'prompt execute: client resolution failed: no model matched the requirements',
+      ),
+    ).toBe('model_unavailable');
+    expect(classifyAcpExecutionError('chat: client resolution failed: some wrapped error')).toBe(
       'model_unavailable',
     );
-    expect(classifyAcpExecutionError('chat: client resolution failed: some wrapped error')).toBe('model_unavailable');
   });
 
   it('classifies a context-overflow message as model_unavailable (config problem, not connectivity)', () => {
@@ -28,7 +41,7 @@ describe('classifyAcpExecutionError', () => {
     ).toBe('model_unavailable');
   });
 
-  it('classifies the agent host\'s fail-closed sandbox refusal as workspace_required, even wrapped deep in the acpsvc/agentinstance/agenthost chain', () => {
+  it("classifies the agent host's fail-closed sandbox refusal as workspace_required, even wrapped deep in the acpsvc/agentinstance/agenthost chain", () => {
     expect(
       classifyAcpExecutionError(
         'acpsvc: start agent "claude" instance: agentinstance: start agent "claude": agenthost: sandbox external ACP agent "/home/naro/.contenox/claude-code-acp.sh": cwd is required to confine the agent (the wall needs a workspace; it will not default to the whole filesystem)',
@@ -108,7 +121,9 @@ describe('external agent failures', () => {
 
   it('keeps the workspace error ahead of the agent one', () => {
     expect(
-      classifyAcpExecutionError('acpsvc: spawn agent "a": cwd is required to confine the agent (the wall needs a workspace)'),
+      classifyAcpExecutionError(
+        'acpsvc: spawn agent "a": cwd is required to confine the agent (the wall needs a workspace)',
+      ),
     ).toBe('workspace_required');
   });
 

@@ -1,5 +1,5 @@
-import { ConfigOptionControl } from '../config/ConfigOptionControl';
-import { agentControlOption, type SessionAgentsState } from '../lib/sessionAgents';
+import { ConfigOptionControl } from "../config/ConfigOptionControl";
+import { agentControlOption, type SessionAgentsState } from "../lib/sessionAgents";
 
 export interface AgentSelectorProps {
   state: SessionAgentsState;
@@ -15,15 +15,10 @@ export function AgentSelector({ state, value, onChange, disabled }: AgentSelecto
   return (
     <ConfigOptionControl
       option={option}
-      value={value ?? ''}
+      value={value ?? ""}
       disabled={disabled}
-
-
-
-
-
       hint="Fixed at creation"
-      onChange={next => onChange(String(next))}
+      onChange={(next) => onChange(String(next))}
     />
   );
 }

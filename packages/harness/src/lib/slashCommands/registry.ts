@@ -38,7 +38,7 @@ export class SlashCommandRegistry {
 
   register(cmd: SlashCommand): () => void {
     const trigger = entryTrigger(cmd);
-    const keys = [cmd.name, ...(cmd.aliases ?? [])].map((k) => keyFor(trigger, k));
+    const keys = [cmd.name, ...(cmd.aliases ?? [])].map(k => keyFor(trigger, k));
     for (const k of keys) {
       this.commands.set(k, cmd);
     }
@@ -115,7 +115,7 @@ export function useSlashCommand(command: SlashCommand | null) {
 export function useSlashCommands(): SlashCommand[] {
   const registry = useSlashCommandRegistry();
   return useSyncExternalStore(
-    (cb) => registry.subscribe(cb),
+    cb => registry.subscribe(cb),
     () => registry.list(),
     () => [],
   );
@@ -133,7 +133,8 @@ export function parseSlashInvocation(text: string): {
   const newlineIdx = text.indexOf('\n');
   const firstLine = newlineIdx >= 0 ? text.slice(0, newlineIdx) : text;
   const body = newlineIdx >= 0 ? text.slice(newlineIdx + 1) : '';
-  const re = trigger === '/' ? /^\/([a-zA-Z][a-zA-Z0-9_-]*)\s*(.*)$/ : /^@([a-zA-Z][a-zA-Z0-9_-]*)\s*(.*)$/;
+  const re =
+    trigger === '/' ? /^\/([a-zA-Z][a-zA-Z0-9_-]*)\s*(.*)$/ : /^@([a-zA-Z][a-zA-Z0-9_-]*)\s*(.*)$/;
   const match = firstLine.match(re);
   if (!match) return null;
   return {

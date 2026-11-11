@@ -9,14 +9,20 @@ beforeAll(async () => {
   await i18n.changeLanguage('en');
 });
 
-function permissionRequest(sessionId: string, toolCallId: string, title: string): RequestPermissionRequest {
+function permissionRequest(
+  sessionId: string,
+  toolCallId: string,
+  title: string,
+): RequestPermissionRequest {
   return {
     sessionId,
     toolCall: {
       toolCallId,
       title,
       kind: 'edit',
-      content: [{ type: 'diff', path: 'src/config.ts', oldText: 'const a = 1;', newText: 'const a = 2;' }],
+      content: [
+        { type: 'diff', path: 'src/config.ts', oldText: 'const a = 1;', newText: 'const a = 2;' },
+      ],
       rawInput: { path: 'src/config.ts' },
     },
     options: [

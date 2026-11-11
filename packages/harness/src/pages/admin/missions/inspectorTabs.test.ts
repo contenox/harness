@@ -32,7 +32,11 @@ describe('resolveActiveTab', () => {
 
   it('respects a custom tab list (subset registration)', () => {
     const custom = [
-      { id: 'changes', icon: MISSION_INSPECTOR_TABS[0].icon, labelKey: 'inspector.tab_overview' as const },
+      {
+        id: 'changes',
+        icon: MISSION_INSPECTOR_TABS[0].icon,
+        labelKey: 'inspector.tab_overview' as const,
+      },
     ];
     expect(resolveActiveTab('terminal', custom)).toBe('changes');
     expect(resolveActiveTab('changes', custom)).toBe('changes');

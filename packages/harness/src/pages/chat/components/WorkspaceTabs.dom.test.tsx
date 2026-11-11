@@ -1,4 +1,3 @@
-import '../../../test/fakeDomGlobals';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -46,7 +45,10 @@ describe('WorkspaceTabs pane key', () => {
           createElement(
             Routes,
             null,
-            createElement(Route, { path: '/chat/:sessionId', element: createElement(WorkspaceTabs) }),
+            createElement(Route, {
+              path: '/chat/:sessionId',
+              element: createElement(WorkspaceTabs),
+            }),
           ),
         ),
       );

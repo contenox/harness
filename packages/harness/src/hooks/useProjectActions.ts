@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { startNewChat } from '../components/sidebar/newChatIntent';
+import { folderBasename } from '../components/workspace/folderTree';
 import { api } from '../lib/api';
 import {
   ensureProjectPrefix,
@@ -13,7 +14,6 @@ import { workspaceRootKeys } from '../lib/queryKeys';
 import { useStagedAgent } from '../lib/stagedAgent';
 import { useStagedRoot } from '../lib/stagedRoot';
 import { projectName } from '../lib/workspaceRoots';
-import { folderBasename } from '../components/workspace/folderTree';
 import { useAcpWorkspace } from './useAcpWorkspace';
 import { useAddWorkspaceRoot } from './useWorkspaceRootMutations';
 

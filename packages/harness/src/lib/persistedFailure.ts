@@ -1,4 +1,5 @@
-const STEP_FAILURE = /^\[step "[^"]*" \([^)]*\) (?:failed: ([\s\S]*)|was cancelled before completion|timed out)\]$/;
+const STEP_FAILURE =
+  /^\[step "[^"]*" \([^)]*\) (?:failed: ([\s\S]*)|was cancelled before completion|timed out)\]$/;
 const CHAIN_FAILURE = /^\[chain failed: ([\s\S]*)\]$/;
 
 const INTERNAL_SEGMENT =

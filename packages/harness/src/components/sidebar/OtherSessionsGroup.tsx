@@ -12,7 +12,10 @@ type Props = SessionListProps & {
 export function OtherSessionsGroup({ open, onToggle, ...list }: Props) {
   const { t } = useTranslation();
   return (
-    <ProjectGroup title={t('acp_sidebar.other_sessions')} open={open} onToggle={() => onToggle(OTHER_GROUP_KEY)}>
+    <ProjectGroup
+      title={t('acp_sidebar.other_sessions')}
+      open={open}
+      onToggle={() => onToggle(OTHER_GROUP_KEY)}>
       <SessionList {...list} />
     </ProjectGroup>
   );

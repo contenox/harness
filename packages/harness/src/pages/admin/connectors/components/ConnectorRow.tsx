@@ -19,7 +19,6 @@ import {
 import { ConnectorIcon } from '../../../../components/connectors/ConnectorIcon';
 import { ConnectorToolsPanel } from '../../../../components/connectors/ConnectorToolsPanel';
 import { ToolRulesPanel } from '../../../../components/connectors/ToolRulesPanel';
-import { hasPolicies } from '../../../../lib/toolPolicies';
 import {
   useCheckConnector,
   useMcpServer,
@@ -36,6 +35,7 @@ import {
   isOwnedConnector,
 } from '../../../../lib/connectorStatus';
 import type { Connector } from '../../../../lib/connectorTypes';
+import { hasPolicies } from '../../../../lib/toolPolicies';
 
 type Props = {
   connector: Connector;

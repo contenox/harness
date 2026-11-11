@@ -40,13 +40,32 @@ export const SidePanelHeader = forwardRef<HTMLDivElement, SidePanelHeaderProps>(
 
 export type SidePanelBodyProps = React.HTMLAttributes<HTMLDivElement>;
 
-export const SidePanelBody = forwardRef<HTMLDivElement, SidePanelBodyProps>(
-  function SidePanelBody({ className, ...props }, ref) {
+export const SidePanelBody = forwardRef<HTMLDivElement, SidePanelBodyProps>(function SidePanelBody(
+  { className, ...props },
+  ref,
+) {
+  return (
+    <div
+      ref={ref}
+      className={cn("flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-2", className)}
+      {...props}
+    />
+  );
+});
+
+export type SidePanelRailButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  side?: "left" | "right";
+};
+
+export const SidePanelRailButton = forwardRef<HTMLButtonElement, SidePanelRailButtonProps>(
+  function SidePanelRailButton({ className, side = "right", type = "button", ...props }, ref) {
     return (
-      <div
+      <button
         ref={ref}
+        type={type}
         className={cn(
-          "flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-2",
+          "flex h-full min-h-11 w-9 shrink-0 flex-col items-center justify-center border-line bg-sidebar text-text-muted hover:bg-hover hover:text-text",
+          side === "right" ? "border-l" : "border-r",
           className,
         )}
         {...props}
@@ -54,30 +73,3 @@ export const SidePanelBody = forwardRef<HTMLDivElement, SidePanelBodyProps>(
     );
   },
 );
-
-export type SidePanelRailButtonProps =
-  React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    side?: "left" | "right";
-  };
-
-
-export const SidePanelRailButton = forwardRef<
-  HTMLButtonElement,
-  SidePanelRailButtonProps
->(function SidePanelRailButton(
-  { className, side = "right", type = "button", ...props },
-  ref,
-) {
-  return (
-    <button
-      ref={ref}
-      type={type}
-      className={cn(
-        "flex h-full min-h-11 w-9 shrink-0 flex-col items-center justify-center border-line bg-sidebar text-text-muted hover:bg-hover hover:text-text",
-        side === "right" ? "border-l" : "border-r",
-        className,
-      )}
-      {...props}
-    />
-  );
-});

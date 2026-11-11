@@ -1,7 +1,7 @@
-import type { FileTreeNode } from '@contenox/ui';
-import type { WorkspaceFileRef } from './mentions';
+import type { FileTreeNode } from "@contenox/ui";
+import type { WorkspaceFileRef } from "./mentions";
 
-export type NodeDecoration = Pick<FileTreeNode, 'indicators' | 'dimmed' | 'title'>;
+export type NodeDecoration = Pick<FileTreeNode, "indicators" | "dimmed" | "title">;
 
 export type NodeDecorator = (path: string) => NodeDecoration | undefined;
 
@@ -13,7 +13,7 @@ export interface WorkspaceEntry {
 
 export type DirCache = Record<string, WorkspaceEntry[] | undefined>;
 
-export const ROOT_DIR = '';
+export const ROOT_DIR = "";
 
 export function toFileTreeNodes(
   cache: DirCache,
@@ -22,7 +22,7 @@ export function toFileTreeNodes(
 ): FileTreeNode[] {
   const entries = cache[dirPath];
   if (!entries) return [];
-  return entries.map(e => ({
+  return entries.map((e) => ({
     id: e.path,
     name: e.name,
     path: e.path,
@@ -37,7 +37,7 @@ export function toFileTreeNodes(
 }
 
 export function parentDir(path: string): string {
-  const slash = path.lastIndexOf('/');
+  const slash = path.lastIndexOf("/");
   return slash === -1 ? ROOT_DIR : path.slice(0, slash);
 }
 
@@ -63,7 +63,7 @@ export function replaceDirectory(
   dir: string,
   entries: WorkspaceEntry[],
 ): DirCache {
-  const kept = new Set(entries.filter(e => e.isDirectory).map(e => e.path));
+  const kept = new Set(entries.filter((e) => e.isDirectory).map((e) => e.path));
   const next: DirCache = {};
   for (const [key, value] of Object.entries(cache)) {
     const beneath = key !== dir && isWithin(dir, key);

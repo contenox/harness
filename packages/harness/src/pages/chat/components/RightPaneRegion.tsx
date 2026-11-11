@@ -34,9 +34,15 @@ export function RightPaneRegion({ pane, paneContent, children, className }: Righ
 
   return (
     <ResizablePanelGroup className={cn('min-w-0 flex-1', className)}>
-      <ResizablePanel minSize={360} className="flex min-h-0 flex-col">{children}</ResizablePanel>
+      <ResizablePanel minSize={360} className="flex min-h-0 flex-col">
+        {children}
+      </ResizablePanel>
       <ResizablePanelHandle orientation="horizontal" />
-      <ResizablePanel defaultSize="480px" minSize={320} maxSize={960} className="flex min-h-0 flex-col">
+      <ResizablePanel
+        defaultSize="480px"
+        minSize={320}
+        maxSize={960}
+        className="flex min-h-0 flex-col">
         {paneContent}
       </ResizablePanel>
     </ResizablePanelGroup>

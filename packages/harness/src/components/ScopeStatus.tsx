@@ -2,7 +2,6 @@ import { Badge } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
 import type { MissionChangeScope } from '../lib/types';
 
-
 export function ScopeBadge({ scope }: { scope: MissionChangeScope }) {
   const { t } = useTranslation();
   return (

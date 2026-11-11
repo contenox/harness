@@ -4,7 +4,14 @@ import { splitComposerOptions } from './composerChips';
 import { footerEndLayout } from './footerLayout';
 
 const sel = (id: string, category?: string): SessionConfigOption =>
-  ({ id, name: id, type: 'select', category, currentValue: 'a', options: [{ value: 'a', name: 'A' }] }) as SessionConfigOption;
+  ({
+    id,
+    name: id,
+    type: 'select',
+    category,
+    currentValue: 'a',
+    options: [{ value: 'a', name: 'A' }],
+  }) as SessionConfigOption;
 
 const options = splitComposerOptions([
   sel('workspace-root'),
@@ -39,6 +46,11 @@ describe('footerEndLayout', () => {
   it('moves mode and model into the overflow below 360px', () => {
     const l = footerEndLayout(300, options);
     expect(l.chipsInOverflow).toBe(true);
-    expect(l.overflowOptions.map(o => o.id)).toEqual(['hitl-policy', 'model', 'think', 'token-limit']);
+    expect(l.overflowOptions.map(o => o.id)).toEqual([
+      'hitl-policy',
+      'model',
+      'think',
+      'token-limit',
+    ]);
   });
 });

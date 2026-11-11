@@ -134,21 +134,11 @@ export default function BackendForm({
           />
         </FormField>
 
-        {configType === 'ollama' && (
-          <Panel variant="flat">{t('backends.hint_ollama')}</Panel>
-        )}
-        {configType === 'vllm' && (
-          <Panel variant="flat">{t('backends.hint_vllm')}</Panel>
-        )}
-        {configType === 'local' && (
-          <Panel variant="flat">{t('backends.hint_local')}</Panel>
-        )}
-        {configType === 'openvino' && (
-          <Panel variant="flat">{t('backends.hint_openvino')}</Panel>
-        )}
-        {configType === 'modeld' && (
-          <Panel variant="flat">{t('backends.hint_modeld')}</Panel>
-        )}
+        {configType === 'ollama' && <Panel variant="flat">{t('backends.hint_ollama')}</Panel>}
+        {configType === 'vllm' && <Panel variant="flat">{t('backends.hint_vllm')}</Panel>}
+        {configType === 'local' && <Panel variant="flat">{t('backends.hint_local')}</Panel>}
+        {configType === 'openvino' && <Panel variant="flat">{t('backends.hint_openvino')}</Panel>}
+        {configType === 'modeld' && <Panel variant="flat">{t('backends.hint_modeld')}</Panel>}
       </Form>
     </Section>
   );

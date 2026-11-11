@@ -1,13 +1,11 @@
-
-export type ApiErrorSource = 'relay' | 'upstream' | 'transport';
-
+export type ApiErrorSource = "relay" | "upstream" | "transport";
 
 const COPY = {
   offline: "Can't reach contenox. Check your connection and try again.",
   upstream: "Can't reach contenox right now. This is on our side — try again in a moment.",
-  rateLimited: 'Too many attempts. Wait a moment and try again.',
-  server: 'Something went wrong on our side. Try again in a moment.',
-  generic: 'Something went wrong. Try again.',
+  rateLimited: "Too many attempts. Wait a moment and try again.",
+  server: "Something went wrong on our side. Try again in a moment.",
+  generic: "Something went wrong. Try again.",
 } as const;
 
 export function statusMessage(status: number): string {
@@ -40,7 +38,7 @@ export class ApiError extends Error {
 
   constructor(message: string, status: number, init: ApiErrorInit) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
     this.source = init.source;
     this.code = init.code;
@@ -48,7 +46,6 @@ export class ApiError extends Error {
     this.param = init.param;
     this.detail = init.detail;
   }
-
 
   get retryable(): boolean {
     return isRetryableStatus(this.status);
@@ -70,21 +67,19 @@ export function isRetryable(error: unknown): boolean {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 function asString(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
+  return typeof value === "string" ? value : undefined;
 }
 
-
 const KEY_LIMIT = 12;
-
 
 const KEY_LENGTH_LIMIT = 40;
 
 export interface UnexplainedBody {
-  readonly kind: 'empty' | 'json' | 'html' | 'text';
+  readonly kind: "empty" | "json" | "html" | "text";
   readonly length: number;
   readonly keys?: readonly string[];
 }
@@ -92,24 +87,23 @@ export interface UnexplainedBody {
 export function describeBody(text: string, body: unknown): UnexplainedBody {
   const length = text.length;
   if (body === undefined) {
-    if (length === 0) return { kind: 'empty', length };
-    return { kind: /^\s*</.test(text) ? 'html' : 'text', length };
+    if (length === 0) return { kind: "empty", length };
+    return { kind: /^\s*</.test(text) ? "html" : "text", length };
   }
   if (isRecord(body) && !Array.isArray(body)) {
     return {
-      kind: 'json',
+      kind: "json",
       length,
       keys: Object.keys(body)
         .slice(0, KEY_LIMIT)
-        .map(key => key.slice(0, KEY_LENGTH_LIMIT)),
+        .map((key) => key.slice(0, KEY_LENGTH_LIMIT)),
     };
   }
-  return { kind: 'json', length };
+  return { kind: "json", length };
 }
 
-
 function reportUnexplained(status: number, url: string, described: UnexplainedBody): void {
-  const where = url || '(no url)';
+  const where = url || "(no url)";
   console.error(`[api] ${status} ${where} was not the relay's error envelope`, described);
 }
 
@@ -119,14 +113,12 @@ export async function decodeErrorResponse(response: Response): Promise<ApiError>
   try {
     text = await response.text();
   } catch (cause) {
-
-
-    console.error(`[api] ${status} ${url || '(no url)'} could not be read`, cause);
-    return new ApiError(statusMessage(status), status, { source: 'upstream', detail: cause });
+    console.error(`[api] ${status} ${url || "(no url)"} could not be read`, cause);
+    return new ApiError(statusMessage(status), status, { source: "upstream", detail: cause });
   }
 
   let body: unknown;
-  if (response.headers.get('Content-Type')?.includes('json') === true) {
+  if (response.headers.get("Content-Type")?.includes("json") === true) {
     try {
       body = JSON.parse(text);
     } catch {
@@ -137,9 +129,9 @@ export async function decodeErrorResponse(response: Response): Promise<ApiError>
   const envelope = isRecord(body) ? body.error : undefined;
   if (isRecord(envelope)) {
     const message = asString(envelope.message);
-    if (message !== undefined && message !== '') {
+    if (message !== undefined && message !== "") {
       return new ApiError(message, status, {
-        source: 'relay',
+        source: "relay",
         type: asString(envelope.type),
         code: asString(envelope.code),
         param: asString(envelope.param),
@@ -150,5 +142,5 @@ export async function decodeErrorResponse(response: Response): Promise<ApiError>
 
   const described = describeBody(text, body);
   reportUnexplained(status, url, described);
-  return new ApiError(statusMessage(status), status, { source: 'upstream', detail: described });
+  return new ApiError(statusMessage(status), status, { source: "upstream", detail: described });
 }

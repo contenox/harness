@@ -28,16 +28,14 @@ export function resolveActiveTab(
 export function readStoredTab(): string | null {
   try {
     if (typeof localStorage !== 'undefined') return localStorage.getItem(STORAGE_KEY);
-  } catch {
-  }
+  } catch {}
   return null;
 }
 
 export function writeStoredTab(id: string): void {
   try {
     if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, id);
-  } catch {
-  }
+  } catch {}
 }
 
 export function useInspectorTab(

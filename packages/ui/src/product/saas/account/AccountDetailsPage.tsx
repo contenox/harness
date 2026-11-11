@@ -1,29 +1,27 @@
-import { InlineNotice, Page, Small } from '@contenox/ui';
-import { useEffect, useState } from 'react';
-import { SectionForm, SelectField, TextField } from '@contenox/ui';
-import { ScreenError, ScreenLoading } from '../ScreenState';
-import { ScreenBody } from '@contenox/ui';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { BackTo } from '../../shell/BackTo';
-import { useProductPorts } from '../../ports';
+import { InlineNotice, Page, Small } from "@contenox/ui";
+import { useEffect, useState } from "react";
+import { SectionForm, SelectField, TextField } from "@contenox/ui";
+import { ScreenError, ScreenLoading } from "../ScreenState";
+import { ScreenBody } from "@contenox/ui";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { BackTo } from "../../shell/BackTo";
+import { useProductPorts } from "../../ports";
 import type {
   Account,
   AccountType,
   BusinessDetails,
   UpdateAccountRequest,
-} from '../../lib/api/types';
-import { partitionFormError } from './lib/formErrors';
+} from "../../lib/api/types";
+import { partitionFormError } from "./lib/formErrors";
 
+const FIELDS = ["name", "slug", "account_type", "business"] as const;
 
-const FIELDS = ['name', 'slug', 'account_type', 'business'] as const;
-
-
-const UNSET = '';
+const UNSET = "";
 
 const ACCOUNT_TYPE_OPTIONS = [
-  { value: UNSET, label: 'Not recorded' },
-  { value: 'consumer', label: 'An individual' },
-  { value: 'business', label: 'A business' },
+  { value: UNSET, label: "Not recorded" },
+  { value: "consumer", label: "An individual" },
+  { value: "business", label: "A business" },
 ];
 
 interface BusinessForm {
@@ -37,22 +35,22 @@ interface BusinessForm {
 }
 
 const EMPTY_BUSINESS: BusinessForm = {
-  legal_name: '',
-  vat_id: '',
-  address_line1: '',
-  address_line2: '',
-  postal_code: '',
-  city: '',
-  country: '',
+  legal_name: "",
+  vat_id: "",
+  address_line1: "",
+  address_line2: "",
+  postal_code: "",
+  city: "",
+  country: "",
 };
 
 function businessFormOf(business: BusinessDetails | undefined): BusinessForm {
   if (business === undefined) return EMPTY_BUSINESS;
   return {
     legal_name: business.legal_name,
-    vat_id: business.vat_id ?? '',
+    vat_id: business.vat_id ?? "",
     address_line1: business.address_line1,
-    address_line2: business.address_line2 ?? '',
+    address_line2: business.address_line2 ?? "",
     postal_code: business.postal_code,
     city: business.city,
     country: business.country,
@@ -61,11 +59,11 @@ function businessFormOf(business: BusinessDetails | undefined): BusinessForm {
 
 function businessComplete(form: BusinessForm): boolean {
   return (
-    form.legal_name.trim() !== '' &&
-    form.address_line1.trim() !== '' &&
-    form.postal_code.trim() !== '' &&
-    form.city.trim() !== '' &&
-    form.country.trim() !== ''
+    form.legal_name.trim() !== "" &&
+    form.address_line1.trim() !== "" &&
+    form.postal_code.trim() !== "" &&
+    form.city.trim() !== "" &&
+    form.country.trim() !== ""
   );
 }
 
@@ -77,14 +75,14 @@ function businessPayload(form: BusinessForm): BusinessDetails {
     city: form.city.trim(),
     country: form.country.trim().toUpperCase(),
   };
-  if (form.vat_id.trim() !== '') details.vat_id = form.vat_id.trim();
-  if (form.address_line2.trim() !== '') details.address_line2 = form.address_line2.trim();
+  if (form.vat_id.trim() !== "") details.vat_id = form.vat_id.trim();
+  if (form.address_line2.trim() !== "") details.address_line2 = form.address_line2.trim();
   return details;
 }
 
 export default function AccountDetailsPage() {
   const { routes, useAccount, useAuth } = useProductPorts();
-  const accountID = useAuth().accountID ?? '';
+  const accountID = useAuth().accountID ?? "";
   const { data, isPending, error, refetch, isFetching } = useAccount(accountID);
 
   return (
@@ -109,10 +107,6 @@ function DetailsForm({ account }: { account: Account }) {
   const [accountType, setAccountType] = useState<string>(account.account_type ?? UNSET);
   const [business, setBusiness] = useState<BusinessForm>(businessFormOf(account.business));
 
-
-
-
-
   useEffect(() => {
     setName(account.name);
     setSlug(account.slug);
@@ -121,15 +115,13 @@ function DetailsForm({ account }: { account: Account }) {
   }, [account]);
 
   const errors = partitionFormError(update.error, FIELDS);
-  const isBusiness = accountType === 'business';
+  const isBusiness = accountType === "business";
   const canSubmit =
-    name.trim() !== '' && slug.trim() !== '' && (!isBusiness || businessComplete(business));
+    name.trim() !== "" && slug.trim() !== "" && (!isBusiness || businessComplete(business));
 
   const submit = () => {
     if (!canSubmit) return;
     const body: UpdateAccountRequest = { name: name.trim(), slug: slug.trim() };
-
-
 
     if (accountType !== UNSET) body.account_type = accountType as AccountType;
     if (isBusiness) body.business = businessPayload(business);
@@ -152,12 +144,13 @@ function DetailsForm({ account }: { account: Account }) {
             Saved.
           </InlineNotice>
         ) : undefined
-      }>
+      }
+    >
       <TextField
         label="Account name"
         required
         value={name}
-        onChange={e => setName(e.target.value)}
+        onChange={(e) => setName(e.target.value)}
         disabled={busy}
         error={errors.fields.name}
       />
@@ -165,7 +158,7 @@ function DetailsForm({ account }: { account: Account }) {
         label="Handle"
         required
         value={slug}
-        onChange={e => setSlug(e.target.value)}
+        onChange={(e) => setSlug(e.target.value)}
         disabled={busy}
         autoCapitalize="none"
         autoCorrect="off"
@@ -179,7 +172,7 @@ function DetailsForm({ account }: { account: Account }) {
       <SelectField
         label="This account is for"
         value={accountType}
-        onChange={e => setAccountType(e.target.value)}
+        onChange={(e) => setAccountType(e.target.value)}
         disabled={busy}
         options={ACCOUNT_TYPE_OPTIONS}
         error={errors.fields.account_type}
@@ -205,7 +198,7 @@ function DetailsForm({ account }: { account: Account }) {
             label="Legal name"
             required
             value={business.legal_name}
-            onChange={e => setBusiness({ ...business, legal_name: e.target.value })}
+            onChange={(e) => setBusiness({ ...business, legal_name: e.target.value })}
             disabled={busy}
             autoComplete="organization"
           />
@@ -213,7 +206,7 @@ function DetailsForm({ account }: { account: Account }) {
           <TextField
             label="VAT ID"
             value={business.vat_id}
-            onChange={e => setBusiness({ ...business, vat_id: e.target.value })}
+            onChange={(e) => setBusiness({ ...business, vat_id: e.target.value })}
             disabled={busy}
             autoCapitalize="characters"
             autoCorrect="off"
@@ -226,14 +219,14 @@ function DetailsForm({ account }: { account: Account }) {
             label="Address"
             required
             value={business.address_line1}
-            onChange={e => setBusiness({ ...business, address_line1: e.target.value })}
+            onChange={(e) => setBusiness({ ...business, address_line1: e.target.value })}
             disabled={busy}
             autoComplete="address-line1"
           />
           <TextField
             label="Address line 2"
             value={business.address_line2}
-            onChange={e => setBusiness({ ...business, address_line2: e.target.value })}
+            onChange={(e) => setBusiness({ ...business, address_line2: e.target.value })}
             disabled={busy}
             autoComplete="address-line2"
           />
@@ -241,7 +234,7 @@ function DetailsForm({ account }: { account: Account }) {
             label="Postal code"
             required
             value={business.postal_code}
-            onChange={e => setBusiness({ ...business, postal_code: e.target.value })}
+            onChange={(e) => setBusiness({ ...business, postal_code: e.target.value })}
             disabled={busy}
             autoComplete="postal-code"
           />
@@ -249,7 +242,7 @@ function DetailsForm({ account }: { account: Account }) {
             label="City"
             required
             value={business.city}
-            onChange={e => setBusiness({ ...business, city: e.target.value })}
+            onChange={(e) => setBusiness({ ...business, city: e.target.value })}
             disabled={busy}
             autoComplete="address-level2"
           />
@@ -257,7 +250,7 @@ function DetailsForm({ account }: { account: Account }) {
             label="Country"
             required
             value={business.country}
-            onChange={e => setBusiness({ ...business, country: e.target.value })}
+            onChange={(e) => setBusiness({ ...business, country: e.target.value })}
             disabled={busy}
             autoComplete="country"
             autoCapitalize="characters"

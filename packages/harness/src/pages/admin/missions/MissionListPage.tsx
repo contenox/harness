@@ -17,10 +17,10 @@ import { UnitStatus } from '../../../components/UnitStatus';
 import { useApprovals, useInboxReports } from '../../../hooks/useApprovals';
 import { useFleet } from '../../../hooks/useFleet';
 import { useMissions } from '../../../hooks/useMissions';
+import { envelopeDisplayName } from '../../../lib/envelopeName';
 import { missionProblem } from '../../../lib/missionProblem';
 import type { InstanceStatus } from '../../../lib/types';
 import { needsYouMissionIds } from '../../../lib/unitStatus';
-import { envelopeDisplayName } from '../../../lib/envelopeName';
 
 export default function MissionListPage() {
   const { t } = useTranslation();

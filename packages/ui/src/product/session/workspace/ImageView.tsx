@@ -1,25 +1,25 @@
-import type { PreviewViewerProps } from './previewRegistry';
+import type { PreviewViewerProps } from "./previewRegistry";
 
 function imageMime(path: string): string {
-  const ext = path.split('.').pop()?.toLowerCase() ?? '';
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
   switch (ext) {
-    case 'png':
-      return 'image/png';
-    case 'jpg':
-    case 'jpeg':
-      return 'image/jpeg';
-    case 'gif':
-      return 'image/gif';
-    case 'webp':
-      return 'image/webp';
-    case 'bmp':
-      return 'image/bmp';
-    case 'ico':
-      return 'image/x-icon';
-    case 'avif':
-      return 'image/avif';
+    case "png":
+      return "image/png";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "gif":
+      return "image/gif";
+    case "webp":
+      return "image/webp";
+    case "bmp":
+      return "image/bmp";
+    case "ico":
+      return "image/x-icon";
+    case "avif":
+      return "image/avif";
     default:
-      return 'application/octet-stream';
+      return "application/octet-stream";
   }
 }
 

@@ -44,7 +44,13 @@ describe('toFileTreeNodes', () => {
     const nodes = toFileTreeNodes(cache);
     const dir = nodes.find(n => n.id === 'src')!;
     expect(dir.children).toEqual([
-      { id: 'src/app.ts', name: 'app.ts', path: 'src/app.ts', isDirectory: false, children: undefined },
+      {
+        id: 'src/app.ts',
+        name: 'app.ts',
+        path: 'src/app.ts',
+        isDirectory: false,
+        children: undefined,
+      },
     ]);
   });
 
@@ -98,7 +104,11 @@ describe('toFileTreeNodes decorator threading', () => {
   const decorate: NodeDecorator = path => {
     const table: Record<string, NodeDecoration> = {
       src: { indicators: [{ key: 'read', icon: null, status: 'allow', title: 'Read: allowed' }] },
-      'README.md': { indicators: [{ key: 'write', icon: null, status: 'approve', title: 'Write: needs approval' }] },
+      'README.md': {
+        indicators: [
+          { key: 'write', icon: null, status: 'approve', title: 'Write: needs approval' },
+        ],
+      },
       'src/app.ts': { dimmed: true, title: 'Outside' },
     };
     return table[path];
@@ -111,7 +121,9 @@ describe('toFileTreeNodes decorator threading', () => {
   });
 
   it('threads the decorator into loaded children too', () => {
-    const child = toFileTreeNodes(cache, undefined, decorate).find(n => n.id === 'src')!.children!.find(n => n.id === 'src/app.ts')!;
+    const child = toFileTreeNodes(cache, undefined, decorate)
+      .find(n => n.id === 'src')!
+      .children!.find(n => n.id === 'src/app.ts')!;
     expect(child.dimmed).toBe(true);
     expect(child.title).toBe('Outside');
   });

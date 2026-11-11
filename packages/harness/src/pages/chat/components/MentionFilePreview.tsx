@@ -23,7 +23,8 @@ export function MentionFilePreview({ state }: MentionFilePreviewProps) {
         <span className="min-w-0 flex-1 truncate font-mono">{path}</span>
         {state.status === 'text' && (
           <span className="shrink-0 text-[10px]">
-            {lineCount(state.text)} {lineCount(state.text) === 1 ? t('workspace.line') : t('workspace.lines')}
+            {lineCount(state.text)}{' '}
+            {lineCount(state.text) === 1 ? t('workspace.line') : t('workspace.lines')}
           </span>
         )}
       </div>

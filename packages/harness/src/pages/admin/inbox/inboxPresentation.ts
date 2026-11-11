@@ -11,8 +11,6 @@ import type {
 } from '../../../lib/types';
 import { unitAttentionRank } from '../../../lib/unitStatus';
 
-
-
 export type InboxReportItem = {
   report: MissionReport;
   mission: Mission;
@@ -81,7 +79,6 @@ export function newestReportAt(items: InboxReportItem[]): string | undefined {
   return newest;
 }
 
-
 export function mergeOperatorInboxReports(
   items: InboxReportItem[],
   operatorItems: OperatorInboxItem[] | null | undefined,
@@ -125,7 +122,6 @@ function reportIdentity(missionId: string, reportId: string): string {
   return `${missionId}::${reportId}`;
 }
 
-
 export type ApprovalGroup = {
   mission?: Mission;
   missionId?: string;
@@ -161,7 +157,6 @@ export function groupApprovalsByMission(
 function newestApprovalTime(approvals: HITLApproval[]): number {
   return approvals.reduce((max, a) => Math.max(max, sortableTime(a.createdAt)), -Infinity);
 }
-
 
 export type StalledUnit = {
   instance: InstanceStatus;
@@ -233,7 +228,6 @@ export function missionsById(missions: Mission[]): Map<string, Mission> {
   return new Map(missions.map(m => [m.id, m]));
 }
 
-
 export function approvalToolLabel(approval: Pick<HITLApproval, 'toolsName' | 'toolName'>): string {
   const parts = [approval.toolsName, approval.toolName].map(p => p?.trim()).filter(Boolean);
   return parts.join(' / ');
@@ -274,7 +268,6 @@ function sortableTime(iso: string): number {
   const parsed = Date.parse(iso);
   return Number.isNaN(parsed) ? -Infinity : parsed;
 }
-
 
 export { REPORT_KIND_BADGE_VARIANT, REPORT_KIND_LABEL_KEY } from '../missions/missionPresentation';
 

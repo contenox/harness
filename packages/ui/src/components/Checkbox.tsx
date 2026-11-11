@@ -1,4 +1,3 @@
-
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { cn } from "../utils";
 import { Inbox } from "./Inbox";
@@ -18,9 +17,8 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
         if (typeof forwardedRef === "function") {
           forwardedRef(localRef.current);
         } else {
-          (
-            forwardedRef as React.MutableRefObject<HTMLInputElement | null>
-          ).current = localRef.current;
+          (forwardedRef as React.MutableRefObject<HTMLInputElement | null>).current =
+            localRef.current;
         }
       }
     }, [forwardedRef]);

@@ -6,10 +6,7 @@ export type ChatThreadSkeletonProps = {
   className?: string;
 };
 
-export function ChatThreadSkeleton({
-  rows = 5,
-  className,
-}: ChatThreadSkeletonProps) {
+export function ChatThreadSkeleton({ rows = 5, className }: ChatThreadSkeletonProps) {
   return (
     <div className={cn("flex h-full flex-col gap-4 p-6", className)}>
       {Array.from({ length: rows }).map((_, index) => (

@@ -41,9 +41,7 @@ export function PaneFrame({
     >
       <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-line px-2">
         <div className="flex min-w-0 flex-1 items-center">
-          {tabs ?? (
-            <span className="truncate px-1 text-[13px] font-medium">{title}</span>
-          )}
+          {tabs ?? <span className="truncate px-1 text-[13px] font-medium">{title}</span>}
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
           {actions}
@@ -54,13 +52,7 @@ export function PaneFrame({
           )}
         </div>
       </div>
-      <div
-        className={cn(
-          "min-h-0 flex-1 overflow-auto",
-          !flush && "p-3",
-          bodyClassName,
-        )}
-      >
+      <div className={cn("min-h-0 flex-1 overflow-auto", !flush && "p-3", bodyClassName)}>
         {children}
       </div>
     </div>

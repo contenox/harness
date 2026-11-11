@@ -25,7 +25,8 @@ export function Step({
         className={cn(
           "mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium",
           done ? "bg-solid text-on-solid" : "border border-line-strong text-text-muted",
-        )}>
+        )}
+      >
         {done ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : number}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2">

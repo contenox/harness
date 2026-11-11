@@ -10,12 +10,21 @@ export default meta;
 type Story = StoryObj<typeof DiffView>;
 
 const mixedLines: DiffLine[] = [
-  { type: "context", content: "import { useEffect, useState } from 'react';", oldLineNumber: 1, newLineNumber: 1 },
+  {
+    type: "context",
+    content: "import { useEffect, useState } from 'react';",
+    oldLineNumber: 1,
+    newLineNumber: 1,
+  },
   { type: "context", content: "", oldLineNumber: 2, newLineNumber: 2 },
   { type: "context", content: "export function Counter() {", oldLineNumber: 3, newLineNumber: 3 },
   { type: "remove", content: "  const [count, setCount] = useState(0);", oldLineNumber: 4 },
   { type: "add", content: "  const [count, setCount] = useState<number>(0);", newLineNumber: 4 },
-  { type: "add", content: "  const [label, setLabel] = useState<string>('clicks');", newLineNumber: 5 },
+  {
+    type: "add",
+    content: "  const [label, setLabel] = useState<string>('clicks');",
+    newLineNumber: 5,
+  },
   { type: "context", content: "", oldLineNumber: 5, newLineNumber: 6 },
   { type: "context", content: "  useEffect(() => {", oldLineNumber: 6, newLineNumber: 7 },
   { type: "remove", content: "    document.title = `count: ${count}`;", oldLineNumber: 7 },
@@ -48,15 +57,11 @@ export const Default: Story = {
 };
 
 export const AddsOnly: Story = {
-  render: () => (
-    <DiffView filePath="src/config/retry.ts" language="ts" lines={addsOnly} />
-  ),
+  render: () => <DiffView filePath="src/config/retry.ts" language="ts" lines={addsOnly} />,
 };
 
 export const RemovesOnly: Story = {
-  render: () => (
-    <DiffView filePath="src/config/legacy.ts" language="ts" lines={removesOnly} />
-  ),
+  render: () => <DiffView filePath="src/config/legacy.ts" language="ts" lines={removesOnly} />,
 };
 
 export const Mixed: Story = {

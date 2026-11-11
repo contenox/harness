@@ -1,5 +1,5 @@
-import { ArrowLeft } from 'lucide-react';
-import { Button } from './Button';
+import { ArrowLeft } from "lucide-react";
+import { Button } from "./Button";
 
 export function BackButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { useAcpWorkspace } from './useAcpWorkspace';
-import { EMPTY_SESSION_KEY } from './acpWorkspaceState';
 import { splitTerminalLines } from '../pages/chat/lib/terminalPassthrough';
+import { EMPTY_SESSION_KEY } from './acpWorkspaceState';
+import { useAcpWorkspace } from './useAcpWorkspace';
 
 export interface TerminalStream {
   lines: string[];

@@ -1,4 +1,3 @@
-
 export function isValidMaxTokens(value: string): boolean {
   const trimmed = value.trim();
   if (trimmed === '') return true;

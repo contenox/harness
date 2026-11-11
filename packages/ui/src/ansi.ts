@@ -1,15 +1,8 @@
-
-
-
 const OSC_RE = /\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
-
 
 const CSI_NON_SGR_RE = /\x1b\[[0-9;?]*[@-ln-~]/g;
 
-
 const ESC_SINGLE_RE = /\x1b[@-Zut\\-_=><]/g;
-
-
 
 // eslint-disable-next-line no-control-regex
 const STRAY_CONTROL_RE = /[\x00-\x08\x0b-\x1a\x1c-\x1f\x7f]/g;

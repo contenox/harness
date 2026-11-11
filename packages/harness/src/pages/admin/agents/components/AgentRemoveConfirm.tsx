@@ -14,7 +14,11 @@ export function AgentRemoveConfirm({ name, title, preset, onDone }: Props) {
   const remove = useDeleteExternalAgent();
   return (
     <InlineNotice variant="warning" className="flex flex-col gap-3">
-      <span>{t(preset ? 'external_agents.remove_confirm_preset' : 'external_agents.remove_confirm', { name: title })}</span>
+      <span>
+        {t(preset ? 'external_agents.remove_confirm_preset' : 'external_agents.remove_confirm', {
+          name: title,
+        })}
+      </span>
       {remove.error && <span role="alert">{remove.error.message}</span>}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onDone}>

@@ -18,7 +18,9 @@ export async function applyUiLanguage(
     if (trimmed) storage?.setItem(UI_LANGUAGE_STORAGE_KEY, trimmed);
     else storage?.removeItem(UI_LANGUAGE_STORAGE_KEY);
   } catch {
-    return i18n.changeLanguage(uiLanguageFor(trimmed, detected, navigatorLanguage)).then(() => undefined);
+    return i18n
+      .changeLanguage(uiLanguageFor(trimmed, detected, navigatorLanguage))
+      .then(() => undefined);
   }
   await i18n.changeLanguage(uiLanguageFor(trimmed, detected, navigatorLanguage));
 }

@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 import path from 'path';
 import type { Plugin } from 'vite';
-import { defineConfig, loadEnv } from 'vite';
+import { loadEnv } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 const harnessPackageRoot = path.dirname(fileURLToPath(import.meta.url));
 const harnessDistDir = path.resolve(harnessPackageRoot, 'dist');
@@ -49,26 +50,47 @@ function harnessSpaFallback(): Plugin {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, harnessPackageRoot, '');
-  const devApiProxy = env.VITE_DEV_API_PROXY === '1' || env.VITE_DEV_API_PROXY === 'true' || process.env.VITE_DEV_API_PROXY === '1';
-  const proxyTarget = env.VITE_DEV_PROXY_TARGET || process.env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:32123';
+  const devApiProxy =
+    env.VITE_DEV_API_PROXY === '1' ||
+    env.VITE_DEV_API_PROXY === 'true' ||
+    process.env.VITE_DEV_API_PROXY === '1';
+  const proxyTarget =
+    env.VITE_DEV_PROXY_TARGET || process.env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:32123';
 
   return {
     envDir: harnessPackageRoot,
-    plugins: [
-      react(),
-      tailwindcss(),
-      ...(devApiProxy ? [harnessSpaFallback()] : []),
-    ],
+    plugins: [react(), tailwindcss(), ...(devApiProxy ? [harnessSpaFallback()] : [])],
     resolve: {
       alias: {
         '@': path.resolve(harnessPackageRoot, './src'),
       },
+      dedupe: ['@monaco-editor/react', '@monaco-editor/loader', 'monaco-editor'],
     },
     build: {
       outDir: harnessDistDir,
       emptyOutDir: true,
     },
     base: '/',
+    test: {
+      projects: [
+        {
+          extends: true,
+          test: {
+            name: 'unit',
+            include: ['src/**/*.test.{ts,tsx}'],
+            exclude: ['src/**/*.dom.test.{ts,tsx}'],
+          },
+        },
+        {
+          extends: true,
+          test: {
+            name: 'dom',
+            include: ['src/**/*.dom.test.{ts,tsx}'],
+            setupFiles: ['src/test/fakeDomGlobals.ts'],
+          },
+        },
+      ],
+    },
     server: devApiProxy
       ? {
           proxy: {

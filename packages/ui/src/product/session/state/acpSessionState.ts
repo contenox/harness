@@ -14,11 +14,10 @@ import type {
   ToolCallStatus,
   ToolKind,
   UsageEvent,
-} from '@contenox/acp-client';
-import { shellCommandLine, shellOutputLines } from '../lib/shellExecution';
+} from "@contenox/acp-client";
+import { shellCommandLine, shellOutputLines } from "../lib/shellExecution";
 
-
-export type AcpTimelineItemKind = 'message' | 'tool_call' | 'terminal' | 'error';
+export type AcpTimelineItemKind = "message" | "tool_call" | "terminal" | "error";
 
 export interface AcpTimelineItem {
   kind: AcpTimelineItemKind;
@@ -28,7 +27,7 @@ export interface AcpTimelineItem {
 
 export interface AcpChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   text: string;
   images?: ImagePart[];
   audio?: AudioPart[];
@@ -74,7 +73,7 @@ export interface AcpErrorCard {
   message: string;
 }
 
-export type AcpSessionConnectionBanner = 'disconnected' | 'resumed' | null;
+export type AcpSessionConnectionBanner = "disconnected" | "resumed" | null;
 
 export interface AcpSessionState {
   sessionId: string | null;
@@ -125,34 +124,33 @@ export const initialAcpSessionState: AcpSessionState = {
 };
 
 export type AcpSessionAction =
-
-  | { type: 'session_reset'; sessionId: string | null }
-  | { type: 'event_seq'; seq: number }
-  | { type: 'user_message_chunk'; id: string; text: string; image?: ImagePart; audio?: AudioPart }
+  | { type: "session_reset"; sessionId: string | null }
+  | { type: "event_seq"; seq: number }
+  | { type: "user_message_chunk"; id: string; text: string; image?: ImagePart; audio?: AudioPart }
   | {
-      type: 'message_chunk';
+      type: "message_chunk";
       id: string;
       text: string;
       image?: ImagePart;
       audio?: AudioPart;
       missionAsk?: MissionAsk;
     }
-  | { type: 'thought_chunk'; id: string; text: string }
-  | { type: 'tool_call'; event: ToolCallEvent }
-  | { type: 'terminal_output'; payload: TerminalOutputPayload }
-  | { type: 'terminal_card'; id: string; command: string; output: string }
-  | { type: 'plan'; entries: PlanEntry[] }
-  | { type: 'usage'; usage: UsageEvent }
-  | { type: 'available_commands'; commands: AvailableCommand[] }
-  | { type: 'config_options'; configOptions: SessionConfigOption[] }
-  | { type: 'permission_request'; request: RequestPermissionRequest }
-  | { type: 'permission_resolved' }
-  | { type: 'prompt_start' }
-  | { type: 'content_dropped'; messageId: string; kinds: string[] }
-  | { type: 'prompt_end'; stopReason: StopReason }
-  | { type: 'prompt_error'; message: string }
-  | { type: 'connection_lost' }
-  | { type: 'connection_resumed' };
+  | { type: "thought_chunk"; id: string; text: string }
+  | { type: "tool_call"; event: ToolCallEvent }
+  | { type: "terminal_output"; payload: TerminalOutputPayload }
+  | { type: "terminal_card"; id: string; command: string; output: string }
+  | { type: "plan"; entries: PlanEntry[] }
+  | { type: "usage"; usage: UsageEvent }
+  | { type: "available_commands"; commands: AvailableCommand[] }
+  | { type: "config_options"; configOptions: SessionConfigOption[] }
+  | { type: "permission_request"; request: RequestPermissionRequest }
+  | { type: "permission_resolved" }
+  | { type: "prompt_start" }
+  | { type: "content_dropped"; messageId: string; kinds: string[] }
+  | { type: "prompt_end"; stopReason: StopReason }
+  | { type: "prompt_error"; message: string }
+  | { type: "connection_lost" }
+  | { type: "connection_resumed" };
 
 function ensureItem(
   items: AcpTimelineItem[],
@@ -160,15 +158,14 @@ function ensureItem(
   id: string,
   turnId?: string,
 ): AcpTimelineItem[] {
-  if (items.some(it => it.kind === kind && it.id === id)) return items;
+  if (items.some((it) => it.kind === kind && it.id === id)) return items;
   return [...items, turnId !== undefined ? { kind, id, turnId } : { kind, id }];
 }
-
 
 function upsertMessage(
   messages: Record<string, AcpChatMessage>,
   id: string,
-  role: 'user' | 'assistant',
+  role: "user" | "assistant",
   patch: {
     text?: string;
     thinking?: string;
@@ -179,15 +176,12 @@ function upsertMessage(
   activeTurn: boolean,
 ): Record<string, AcpChatMessage> {
   const existing = messages[id];
-  const next: AcpChatMessage = existing ? { ...existing } : { id, role, text: '' };
+  const next: AcpChatMessage = existing ? { ...existing } : { id, role, text: "" };
   if (patch.text !== undefined) {
     next.text = next.text + patch.text;
     next.streaming = activeTurn;
   }
   if (patch.image !== undefined) {
-
-
-
     next.images = [...(next.images ?? []), patch.image];
     next.streaming = activeTurn;
   }
@@ -196,17 +190,14 @@ function upsertMessage(
     next.streaming = activeTurn;
   }
   if (patch.missionAsk !== undefined) {
-
-
     next.missionAsk = patch.missionAsk;
   }
   if (patch.thinking !== undefined) {
-    next.thinking = (next.thinking ?? '') + patch.thinking;
+    next.thinking = (next.thinking ?? "") + patch.thinking;
     next.thinkingStreaming = activeTurn;
   }
   return { ...messages, [id]: next };
 }
-
 
 function endStreaming(messages: Record<string, AcpChatMessage>): Record<string, AcpChatMessage> {
   let changed = false;
@@ -221,7 +212,6 @@ function endStreaming(messages: Record<string, AcpChatMessage>): Record<string, 
   }
   return changed ? next : messages;
 }
-
 
 function resolveTurnMessageId(
   state: AcpSessionState,
@@ -243,37 +233,27 @@ export function acpSessionReducer(
   action: AcpSessionAction,
 ): AcpSessionState {
   switch (action.type) {
-    case 'event_seq': {
+    case "event_seq": {
       if (action.seq <= state.lastSeq) return state;
       return { ...state, lastSeq: action.seq };
     }
-    case 'session_reset':
+    case "session_reset":
       return { ...initialAcpSessionState, sessionId: action.sessionId };
 
-    case 'user_message_chunk':
+    case "user_message_chunk":
       return {
         ...state,
-        items: ensureItem(state.items, 'message', action.id),
+        items: ensureItem(state.items, "message", action.id),
         messages: upsertMessage(
           state.messages,
           action.id,
-          'user',
+          "user",
           { text: action.text, image: action.image, audio: action.audio },
           state.isPrompting,
         ),
       };
 
-    case 'message_chunk': {
-
-
-
-
-
-
-
-
-
-
+    case "message_chunk": {
       const outOfBand = action.missionAsk !== undefined;
       const active = state.isPrompting && !outOfBand;
       const { id, establishesNew } = resolveTurnMessageId(state, action.id, active);
@@ -281,21 +261,20 @@ export function acpSessionReducer(
         ...state,
         items: ensureItem(
           state.items,
-          'message',
+          "message",
           id,
           active ? (state.currentTurnId ?? undefined) : undefined,
         ),
         messages: upsertMessage(
           state.messages,
           id,
-          'assistant',
+          "assistant",
           {
             text: action.text,
             image: action.image,
             audio: action.audio,
             missionAsk: action.missionAsk,
           },
-
 
           active,
         ),
@@ -306,20 +285,20 @@ export function acpSessionReducer(
       };
     }
 
-    case 'thought_chunk': {
+    case "thought_chunk": {
       const { id, establishesNew } = resolveTurnMessageId(state, action.id, state.isPrompting);
       return {
         ...state,
         items: ensureItem(
           state.items,
-          'message',
+          "message",
           id,
           state.isPrompting ? (state.currentTurnId ?? undefined) : undefined,
         ),
         messages: upsertMessage(
           state.messages,
           id,
-          'assistant',
+          "assistant",
           { thinking: action.text },
           state.isPrompting,
         ),
@@ -330,7 +309,7 @@ export function acpSessionReducer(
       };
     }
 
-    case 'tool_call': {
+    case "tool_call": {
       const { event } = action;
       const existing = state.toolCalls[event.toolCallId];
       const newStatus = event.status ?? existing?.status;
@@ -339,7 +318,7 @@ export function acpSessionReducer(
       const shouldCaptureStartTime =
         statusChanged &&
         !existing?.startTime &&
-        (newStatus === 'pending' || newStatus === 'in_progress');
+        (newStatus === "pending" || newStatus === "in_progress");
       const merged: AcpToolCallState = {
         toolCallId: event.toolCallId,
         title: event.title ?? existing?.title,
@@ -353,27 +332,21 @@ export function acpSessionReducer(
         startTime: shouldCaptureStartTime ? Date.now() : existing?.startTime,
       };
 
-
-
-
-
-
-
       const outputLines =
-        merged.kind === 'execute' &&
-        (merged.status === 'completed' || merged.status === 'failed') &&
+        merged.kind === "execute" &&
+        (merged.status === "completed" || merged.status === "failed") &&
         !state.printedShellToolCalls[event.toolCallId]
           ? shellOutputLines(merged.rawOutput)
           : null;
       const terminal = outputLines
         ? {
             text:
-              (state.terminal?.text ?? '') +
-              (state.terminal?.text ? '\n' : '') +
+              (state.terminal?.text ?? "") +
+              (state.terminal?.text ? "\n" : "") +
               [shellCommandLine(merged.rawInput), ...outputLines]
                 .filter((l): l is string => l != null)
-                .join('\n') +
-              '\n',
+                .join("\n") +
+              "\n",
             offset: state.terminal?.offset ?? 0,
           }
         : state.terminal;
@@ -381,7 +354,7 @@ export function acpSessionReducer(
         ...state,
         items: ensureItem(
           state.items,
-          'tool_call',
+          "tool_call",
           event.toolCallId,
           state.isPrompting ? (state.currentTurnId ?? undefined) : undefined,
         ),
@@ -393,46 +366,41 @@ export function acpSessionReducer(
       };
     }
 
-    case 'terminal_output': {
+    case "terminal_output": {
       const { chunk, offset, reset } = action.payload;
-      const text = reset ? chunk : (state.terminal?.text ?? '') + chunk;
+      const text = reset ? chunk : (state.terminal?.text ?? "") + chunk;
       return { ...state, terminal: { text, offset } };
     }
 
-    case 'terminal_card':
+    case "terminal_card":
       return {
         ...state,
-        items: ensureItem(state.items, 'terminal', action.id),
+        items: ensureItem(state.items, "terminal", action.id),
         terminals: {
           ...state.terminals,
           [action.id]: { id: action.id, command: action.command, output: action.output },
         },
       };
 
-    case 'plan':
+    case "plan":
       return { ...state, plan: action.entries };
 
-    case 'usage':
+    case "usage":
       return { ...state, usage: { used: action.usage.used, size: action.usage.size } };
 
-    case 'available_commands':
+    case "available_commands":
       return { ...state, availableCommands: action.commands };
 
-    case 'config_options':
+    case "config_options":
       return { ...state, configOptions: action.configOptions };
 
-    case 'permission_request':
+    case "permission_request":
       return { ...state, pendingPermission: action.request };
 
-    case 'permission_resolved':
+    case "permission_resolved":
       return { ...state, pendingPermission: null };
 
-    case 'prompt_start':
-
-
-
-
-
+    case "prompt_start":
       return {
         ...state,
         isPrompting: true,
@@ -441,9 +409,8 @@ export function acpSessionReducer(
         currentTurnId: `turn-${state.items.length}`,
       };
 
-    case 'content_dropped': {
+    case "content_dropped": {
       const message = state.messages[action.messageId];
-
 
       if (!message || action.kinds.length === 0) return state;
       return {
@@ -455,7 +422,7 @@ export function acpSessionReducer(
       };
     }
 
-    case 'prompt_end':
+    case "prompt_end":
       return {
         ...state,
         isPrompting: false,
@@ -464,39 +431,29 @@ export function acpSessionReducer(
         messages: endStreaming(state.messages),
       };
 
-    case 'prompt_error': {
-
-
-
-
-
-
+    case "prompt_error": {
       const id = `error-${state.items.length}`;
       return {
         ...state,
         isPrompting: false,
         error: action.message,
-        items: ensureItem(state.items, 'error', id),
+        items: ensureItem(state.items, "error", id),
         errorCards: { ...state.errorCards, [id]: { id, message: action.message } },
         messages: endStreaming(state.messages),
       };
     }
 
-    case 'connection_lost':
-
-
-
-
+    case "connection_lost":
       return {
         ...state,
-        connectionBanner: 'disconnected',
+        connectionBanner: "disconnected",
         pendingPermission: null,
         isPrompting: false,
         messages: endStreaming(state.messages),
       };
 
-    case 'connection_resumed':
-      return { ...state, connectionBanner: 'resumed' };
+    case "connection_resumed":
+      return { ...state, connectionBanner: "resumed" };
 
     default:
       return state;

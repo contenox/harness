@@ -16,7 +16,6 @@ const envTimeout = import.meta.env.VITE_API_TIMEOUT;
 const parsedTimeout = envTimeout ? parseInt(envTimeout, 10) : NaN;
 const API_TIMEOUT = !isNaN(parsedTimeout) ? parsedTimeout : 100000;
 
-
 export class ApiError extends Error {
   constructor(
     message: string,

@@ -3,6 +3,7 @@ import { FormEvent, useContext, useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCLIConfig } from '../../../hooks/useCLIConfig';
 import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
+import { useResetAfterSuccess } from '../../../hooks/useResetAfterSuccess';
 import { AuthContext } from '../../../lib/authContext';
 import type { CLIConfigUpdateRequest } from '../../../lib/types';
 import { isValidMaxTokens } from './settingsValidation';
@@ -26,11 +27,7 @@ export function ResponseSettingsSection() {
     setThink(data.defaultThink ?? '');
   }, [data]);
 
-  useEffect(() => {
-    if (!putConfig.isSuccess) return;
-    const timer = window.setTimeout(() => putConfig.reset(), 3000);
-    return () => window.clearTimeout(timer);
-  }, [putConfig.isSuccess, putConfig.reset]);
+  useResetAfterSuccess(putConfig.isSuccess, putConfig.reset);
 
   const thinkOptions = [
     { value: '', label: t('settingsAdvanced.not_set') },

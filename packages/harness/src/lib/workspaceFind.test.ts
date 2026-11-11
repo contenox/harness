@@ -51,7 +51,14 @@ describe('buildFindUrl', () => {
   });
 
   it('omits path when it is the default "."', () => {
-    const url = buildFindUrl({ globs: ['*.md'], path: '.', onMatch: noop, onDone: noop, onRefusal: noop, onError: noop });
+    const url = buildFindUrl({
+      globs: ['*.md'],
+      path: '.',
+      onMatch: noop,
+      onDone: noop,
+      onRefusal: noop,
+      onError: noop,
+    });
     expect(new URLSearchParams(url.split('?')[1]).has('path')).toBe(false);
   });
 });
@@ -86,7 +93,14 @@ describe('runWorkspaceFind', () => {
         'e":"a.md","isDirectory":false}\n\nevent: done\ndata: {"done":true,"matches":1,"truncated":false}\n\n',
       ]);
     const matches: WorkspaceFindMatch[] = [];
-    await runWorkspaceFind({ globs: ['*.md'], fetchImpl, onMatch: m => matches.push(m), onDone: noop, onRefusal: noop, onError: noop });
+    await runWorkspaceFind({
+      globs: ['*.md'],
+      fetchImpl,
+      onMatch: m => matches.push(m),
+      onDone: noop,
+      onRefusal: noop,
+      onError: noop,
+    });
     expect(matches.map(m => m.path)).toEqual(['a.md']);
   });
 
@@ -122,7 +136,14 @@ describe('runWorkspaceFind', () => {
       body: null,
     });
     let error = '';
-    await runWorkspaceFind({ globs: ['*.md'], fetchImpl, onMatch: noop, onDone: noop, onRefusal: noop, onError: m => (error = m) });
+    await runWorkspaceFind({
+      globs: ['*.md'],
+      fetchImpl,
+      onMatch: noop,
+      onDone: noop,
+      onRefusal: noop,
+      onError: m => (error = m),
+    });
     expect(error).toBe('boom');
   });
 });

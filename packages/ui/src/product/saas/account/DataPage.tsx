@@ -1,24 +1,23 @@
-import { Button, Card, KeyValue, P, Page, Small } from '@contenox/ui';
-import { useState } from 'react';
-import { ConfirmDialog, Consequence } from '../ConfirmDialog';
-import { ScreenError, ScreenLoading } from '../ScreenState';
-import { ScreenBody } from '@contenox/ui';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { BackTo } from '../../shell/BackTo';
-import { useProductPorts } from '../../ports';
-import type { Account, ConsentRecord } from '../../lib/api/types';
-import { formatDate } from '../../lib/relativeTime';
-
+import { Button, Card, KeyValue, P, Page, Small } from "@contenox/ui";
+import { useState } from "react";
+import { ConfirmDialog, Consequence } from "../ConfirmDialog";
+import { ScreenError, ScreenLoading } from "../ScreenState";
+import { ScreenBody } from "@contenox/ui";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { BackTo } from "../../shell/BackTo";
+import { useProductPorts } from "../../ports";
+import type { Account, ConsentRecord } from "../../lib/api/types";
+import { formatDate } from "../../lib/relativeTime";
 
 const DOCUMENT_LABELS: Record<string, string> = {
-  terms: 'Terms of service',
-  privacy: 'Privacy policy',
-  withdrawal_waiver: 'Withdrawal waiver',
+  terms: "Terms of service",
+  privacy: "Privacy policy",
+  withdrawal_waiver: "Withdrawal waiver",
 };
 
 export default function DataPage() {
   const { routes, useAccount, useAuth } = useProductPorts();
-  const accountID = useAuth().accountID ?? '';
+  const accountID = useAuth().accountID ?? "";
   const { data, isPending, error, refetch, isFetching } = useAccount(accountID);
 
   return (
@@ -38,7 +37,6 @@ export default function DataPage() {
   );
 }
 
-
 function ExportCard() {
   const { useExportMyData } = useProductPorts();
   const exportData = useExportMyData();
@@ -53,7 +51,8 @@ function ExportCard() {
       <Button
         variant="outline"
         onClick={() => exportData.mutate()}
-        isLoading={exportData.isPending}>
+        isLoading={exportData.isPending}
+      >
         Download
       </Button>
       {exportData.error && <ScreenError error={exportData.error} />}
@@ -61,7 +60,6 @@ function ExportCard() {
     </Card>
   );
 }
-
 
 function ConsentCard({ consents }: { consents: ConsentRecord[] }) {
   return (
@@ -73,7 +71,7 @@ function ConsentCard({ consents }: { consents: ConsentRecord[] }) {
           is the absence of a record rather than a record of refusal.
         </Small>
       ) : (
-        consents.map(consent => (
+        consents.map((consent) => (
           <div key={`${consent.document}:${consent.version}`} className="flex flex-col">
             <KeyValue
               label={DOCUMENT_LABELS[consent.document] ?? consent.document}
@@ -87,14 +85,13 @@ function ConsentCard({ consents }: { consents: ConsentRecord[] }) {
   );
 }
 
-
 function DeleteAccountCard({ account }: { account: Account }) {
   const { useDeleteAccount, useMembers } = useProductPorts();
   const members = useMembers(account.id);
   const remove = useDeleteAccount(account.id);
   const [confirming, setConfirming] = useState(false);
 
-  const active = (members.data ?? []).filter(member => member.is_active).length;
+  const active = (members.data ?? []).filter((member) => member.is_active).length;
 
   return (
     <Card variant="filled" className="flex flex-col gap-3">
@@ -107,7 +104,6 @@ function DeleteAccountCard({ account }: { account: Account }) {
         Delete this account
       </Button>
 
-
       <ConfirmDialog
         open={confirming}
         onClose={() => setConfirming(false)}
@@ -117,7 +113,8 @@ function DeleteAccountCard({ account }: { account: Account }) {
         confirmPhraseLabel={`Type ${account.slug} to confirm`}
         pending={remove.isPending}
         error={remove.error}
-        onConfirm={() => remove.mutate(undefined, { onSuccess: () => setConfirming(false) })}>
+        onConfirm={() => remove.mutate(undefined, { onSuccess: () => setConfirming(false) })}
+      >
         <P className="text-sm">This cannot be undone. It deletes:</P>
         <Consequence count={account.active_instances} one="paired machine" many="paired machines" />
         <Consequence count={active} one="membership" many="memberships" />
@@ -134,7 +131,6 @@ function DeleteAccountCard({ account }: { account: Account }) {
     </Card>
   );
 }
-
 
 function DeleteMeCard() {
   const { useAuth, useDeleteMe } = useProductPorts();
@@ -162,7 +158,8 @@ function DeleteMeCard() {
         confirmPhraseLabel="Type your email address to confirm"
         pending={remove.isPending}
         error={remove.error}
-        onConfirm={() => remove.mutate()}>
+        onConfirm={() => remove.mutate()}
+      >
         <P className="text-sm">This cannot be undone. You are a member of:</P>
         <Consequence count={accounts.length} one="account" many="accounts" />
         <P className="text-sm">

@@ -1,4 +1,3 @@
-import type { Connector, SessionMcpServerInput } from '../lib/connectorTypes';
 import {
   AcpClient,
   AcpError,
@@ -17,6 +16,7 @@ import {
   type Transport,
 } from '../lib/acp';
 import { adoptMeta, type AdoptRef } from '../lib/adoptMeta';
+import type { Connector, SessionMcpServerInput } from '../lib/connectorTypes';
 import type { PendingAudioAttachment } from '../pages/chat/lib/audioAttachments';
 import type { PendingImageAttachment } from '../pages/chat/lib/imageAttachments';
 import { promptBlocksFromDraft, type WorkspaceFileRef } from '../pages/chat/lib/mentions';
@@ -85,7 +85,12 @@ export interface AcpWorkspaceController {
   sessionConnectors(sessionId: string): Promise<Connector[]>;
   setSessionConnector(sessionId: string, name: string, enabled: boolean): Promise<Connector[]>;
   addSessionConnector(sessionId: string, server: SessionMcpServerInput): Promise<Connector[]>;
-  setSessionConnectorTool(sessionId: string, name: string, tool: string, enabled: boolean): Promise<Connector[]>;
+  setSessionConnectorTool(
+    sessionId: string,
+    name: string,
+    tool: string,
+    enabled: boolean,
+  ): Promise<Connector[]>;
   removeSessionConnector(sessionId: string, name: string): Promise<Connector[]>;
   /** Replaces the workspace config options (e.g. from a change notification). */
   setWorkspaceConfigOptions(configOptions: SessionConfigOption[]): void;
@@ -488,7 +493,8 @@ export function createAcpWorkspaceController(
     currentTransport = transport;
     transport.onClose(() => handleTransportClose(transport));
     c.onWorkspaceConfigOptionsChanged?.(setWorkspaceConfigOptions);
-    if (deps.onAgentDeclarationsChanged) c.onAgentDeclarationsChanged?.(deps.onAgentDeclarationsChanged);
+    if (deps.onAgentDeclarationsChanged)
+      c.onAgentDeclarationsChanged?.(deps.onAgentDeclarationsChanged);
   }
 
   async function refreshSessionsInternal(c: AcpClient): Promise<void> {
@@ -544,7 +550,11 @@ export function createAcpWorkspaceController(
     return connectorClient(sessionId).sessionConnectors<Connector>(sessionId);
   }
 
-  async function setSessionConnector(sessionId: string, name: string, enabled: boolean): Promise<Connector[]> {
+  async function setSessionConnector(
+    sessionId: string,
+    name: string,
+    enabled: boolean,
+  ): Promise<Connector[]> {
     return connectorClient(sessionId).setSessionConnector<Connector>(sessionId, name, enabled);
   }
 
@@ -554,10 +564,18 @@ export function createAcpWorkspaceController(
     tool: string,
     enabled: boolean,
   ): Promise<Connector[]> {
-    return connectorClient(sessionId).setSessionConnectorTool<Connector>(sessionId, name, tool, enabled);
+    return connectorClient(sessionId).setSessionConnectorTool<Connector>(
+      sessionId,
+      name,
+      tool,
+      enabled,
+    );
   }
 
-  async function addSessionConnector(sessionId: string, server: SessionMcpServerInput): Promise<Connector[]> {
+  async function addSessionConnector(
+    sessionId: string,
+    server: SessionMcpServerInput,
+  ): Promise<Connector[]> {
     return connectorClient(sessionId).addSessionConnector<Connector>(sessionId, server);
   }
 

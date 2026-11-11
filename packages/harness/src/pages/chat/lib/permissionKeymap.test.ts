@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { PermissionOption } from '../../../lib/acp';
-import { keyHintForOption, optionForKey, orderedPermissionOptions, safestRejectOption } from './permissionKeymap';
+import {
+  keyHintForOption,
+  optionForKey,
+  orderedPermissionOptions,
+  safestRejectOption,
+} from './permissionKeymap';
 
 function opt(optionId: string, kind: PermissionOption['kind'], name = optionId): PermissionOption {
   return { optionId, kind, name };
@@ -31,7 +36,11 @@ describe('optionForKey', () => {
   });
 
   it('resolves by KIND, not position — reordering the options array does not rebind keys', () => {
-    const reordered = [opt('reject-1', 'reject_once'), opt('allow-2', 'allow_always'), opt('allow-1', 'allow_once')];
+    const reordered = [
+      opt('reject-1', 'reject_once'),
+      opt('allow-2', 'allow_always'),
+      opt('allow-1', 'allow_once'),
+    ];
     expect(optionForKey(reordered, 'y')?.optionId).toBe('allow-1');
     expect(optionForKey(reordered, 'n')?.optionId).toBe('reject-1');
   });
@@ -62,7 +71,12 @@ describe('orderedPermissionOptions', () => {
       opt('r2', 'reject_always'),
       opt('a2', 'allow_always'),
     ];
-    expect(orderedPermissionOptions(options).map(o => o.optionId)).toEqual(['a1', 'a2', 'r1', 'r2']);
+    expect(orderedPermissionOptions(options).map(o => o.optionId)).toEqual([
+      'a1',
+      'a2',
+      'r1',
+      'r2',
+    ]);
   });
 
   it('is a no-op copy when already ordered', () => {

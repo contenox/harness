@@ -226,7 +226,8 @@ describe('TranscriptItems: collapsed log tail', () => {
 });
 
 describe('TranscriptItems: dismissed failure cards after a reload', () => {
-  const FAILURE = '[step "chain-acp-route" (route) failed: provider error (status 400): model refused]';
+  const FAILURE =
+    '[step "chain-acp-route" (route) failed: provider error (status 400): model refused]';
   const session: AcpSessionState = {
     ...initialAcpSessionState,
     sessionId: 'sess-dismiss',
@@ -273,7 +274,11 @@ describe('TranscriptItems: dismissed failure cards after a reload', () => {
       ],
       messages: {
         'r-77': { id: 'r-77', role: 'user', text: 'hi' },
-        'r-78': { id: 'r-78', role: 'assistant', text: '[step "x" (route) failed: another text entirely]' },
+        'r-78': {
+          id: 'r-78',
+          role: 'assistant',
+          text: '[step "x" (route) failed: another text entirely]',
+        },
       },
     };
     expect(render(replayed)).not.toContain('role="alert"');

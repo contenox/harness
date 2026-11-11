@@ -1,13 +1,9 @@
-import type { SessionConfigOption } from '@contenox/acp-client';
-import { findConfigOption, selectableValues } from './configOptions';
+import type { SessionConfigOption } from "@contenox/acp-client";
+import { findConfigOption, selectableValues } from "./configOptions";
 
+export const AGENT_CONFIG_ID = "agent";
 
-
-
-export const AGENT_CONFIG_ID = 'agent';
-
-
-export const NATIVE_AGENT_VALUE = '';
+export const NATIVE_AGENT_VALUE = "";
 
 export function isNativeAgent(value: string): boolean {
   return value.trim() === NATIVE_AGENT_VALUE;
@@ -26,7 +22,6 @@ export interface SessionAgentsState {
   isAbsent: boolean;
 }
 
-
 const ABSENT: SessionAgentsState = {
   option: null,
   agents: [],
@@ -34,8 +29,7 @@ const ABSENT: SessionAgentsState = {
   isAbsent: true,
 };
 
-
-const NATIVE_FALLBACK_NAME = 'contenox';
+const NATIVE_FALLBACK_NAME = "contenox";
 
 export function deriveSessionAgents(
   options: readonly SessionConfigOption[] | undefined,
@@ -46,28 +40,26 @@ export function deriveSessionAgents(
   const agents: SessionAgent[] = [];
   const seen = new Set<string>();
   for (const value of selectableValues(option)) {
-    const name = typeof value.value === 'string' ? value.value.trim() : '';
+    const name = typeof value.value === "string" ? value.value.trim() : "";
     if (seen.has(name)) continue;
     seen.add(name);
-    const label = typeof value.name === 'string' ? value.name.trim() : '';
+    const label = typeof value.name === "string" ? value.name.trim() : "";
     const native = isNativeAgent(name);
     agents.push({
       value: name,
-      name: label !== '' ? label : native ? NATIVE_FALLBACK_NAME : name,
+      name: label !== "" ? label : native ? NATIVE_FALLBACK_NAME : name,
       native,
     });
   }
 
-  const current = typeof option.currentValue === 'string' ? option.currentValue.trim() : '';
+  const current = typeof option.currentValue === "string" ? option.currentValue.trim() : "";
 
-
-
-  const defaultAgent = agents.some(agent => agent.value === current) ? current : null;
+  const defaultAgent = agents.some((agent) => agent.value === current) ? current : null;
   return { option, agents, defaultAgent, isAbsent: false };
 }
 
 export function isAdvertisedAgent(state: SessionAgentsState, value: string | null): boolean {
-  return value !== null && state.agents.some(agent => agent.value === value);
+  return value !== null && state.agents.some((agent) => agent.value === value);
 }
 
 export function selectedAgent(state: SessionAgentsState, picked: string | null): string | null {
@@ -96,8 +88,8 @@ export function agentControlOption(
   if (state.option === null || !hasAgentChoice(state)) return null;
   return {
     ...state.option,
-    name: 'Agent',
+    name: "Agent",
     currentValue: selected ?? NATIVE_AGENT_VALUE,
-    options: state.agents.map(agent => ({ value: agent.value, name: agentLabel(state, agent) })),
+    options: state.agents.map((agent) => ({ value: agent.value, name: agentLabel(state, agent) })),
   };
 }

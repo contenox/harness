@@ -8,8 +8,8 @@ import {
   type RecoveryAction,
 } from '../../lib/backendErrors';
 import { redactProject } from '../../lib/displayUrl';
-import { translateRuntimeText } from '../../lib/runtimeTexts';
 import { signInAccountName } from '../../lib/providerCatalog';
+import { translateRuntimeText } from '../../lib/runtimeTexts';
 import type { Connection } from '../../lib/types';
 
 export type ConnectionRecoveryProps = {
@@ -87,13 +87,17 @@ export function ConnectionRecovery({
                 size="sm"
                 isLoading={action === 'retry' && retrying}
                 onClick={handlers[action]}>
-                {t(RECOVERY_ACTION_LABEL[action], { name: signInAccountName(t, connection.providerType) })}
+                {t(RECOVERY_ACTION_LABEL[action], {
+                  name: signInAccountName(t, connection.providerType),
+                })}
               </Button>
             ))}
           </>
         ) : undefined
       }>
-      {headline ? translateRuntimeText(redactProject(headline), t) : t(recovery.textKey, recovery.values)}
+      {headline
+        ? translateRuntimeText(redactProject(headline), t)
+        : t(recovery.textKey, recovery.values)}
     </RecoveryCard>
   );
 }

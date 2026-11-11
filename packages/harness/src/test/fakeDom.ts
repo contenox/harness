@@ -184,7 +184,15 @@ export function installFakeDom(): FakeDomHandle {
     document,
     event: undefined,
     navigator: { userAgent: 'node', language: 'en', languages: ['en'] },
-    location: { search: '', hash: '', pathname: '/', href: 'http://localhost/', origin: 'http://localhost', hostname: 'localhost', protocol: 'http:' },
+    location: {
+      search: '',
+      hash: '',
+      pathname: '/',
+      href: 'http://localhost/',
+      origin: 'http://localhost',
+      hostname: 'localhost',
+      protocol: 'http:',
+    },
     localStorage: memoryStorage(),
     sessionStorage: memoryStorage(),
     getComputedStyle: () => ({ getPropertyValue: () => '' }),
@@ -207,7 +215,11 @@ export function installFakeDom(): FakeDomHandle {
   g.window = win;
   g.document = document;
   g.localStorage = win.localStorage;
-  Object.defineProperty(globalThis, 'navigator', { value: win.navigator, configurable: true, writable: true });
+  Object.defineProperty(globalThis, 'navigator', {
+    value: win.navigator,
+    configurable: true,
+    writable: true,
+  });
   g.IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -223,7 +235,12 @@ export function installFakeDom(): FakeDomHandle {
   };
 }
 
-function dispatch(container: FakeNode, target: FakeNode, type: string, init: Record<string, unknown> = {}) {
+function dispatch(
+  container: FakeNode,
+  target: FakeNode,
+  type: string,
+  init: Record<string, unknown> = {},
+) {
   const native = {
     type,
     target,
@@ -245,7 +262,12 @@ function dispatch(container: FakeNode, target: FakeNode, type: string, init: Rec
 }
 
 /** Types `text` into a controlled textarea one character at a time (keydown, input, keyup each). */
-export function typeInto(container: FakeNode, textarea: FakeNode, text: string, wrap: (fn: () => void) => void) {
+export function typeInto(
+  container: FakeNode,
+  textarea: FakeNode,
+  text: string,
+  wrap: (fn: () => void) => void,
+) {
   for (const ch of text) {
     wrap(() => dispatch(container, textarea, 'keydown', { key: ch }));
     const next = textarea.value + ch;
@@ -262,7 +284,12 @@ export function clickOn(container: FakeNode, target: FakeNode, wrap: (fn: () => 
 }
 
 /** Dispatches a bubbling DOM event through the mounted container and the target's own listeners. */
-export function fireEvent(container: FakeNode, target: FakeNode, type: string, init: Record<string, unknown> = {}) {
+export function fireEvent(
+  container: FakeNode,
+  target: FakeNode,
+  type: string,
+  init: Record<string, unknown> = {},
+) {
   dispatch(container, target, type, init);
   const event = {
     type,
@@ -280,7 +307,11 @@ export function fireEvent(container: FakeNode, target: FakeNode, type: string, i
   for (const listener of target.listeners[type] ?? []) listener.fn(event);
 }
 
-export function findAll(root: FakeNode, pred: (n: FakeNode) => boolean, out: FakeNode[] = []): FakeNode[] {
+export function findAll(
+  root: FakeNode,
+  pred: (n: FakeNode) => boolean,
+  out: FakeNode[] = [],
+): FakeNode[] {
   if (pred(root)) out.push(root);
   for (const c of root.childNodes) findAll(c, pred, out);
   return out;

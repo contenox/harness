@@ -1,6 +1,5 @@
 import type { AcpChatMessage, AcpSessionState } from '../../../hooks/acpSessionState';
 
-
 export function shouldShowStreamingPlaceholder(message: AcpChatMessage): boolean {
   return !message.text && !!message.streaming;
 }

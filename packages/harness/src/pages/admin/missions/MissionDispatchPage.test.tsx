@@ -97,14 +97,20 @@ describe('MissionDispatchPage', () => {
   it('offers every declared envelope as a choice', () => {
     const html = renderForm(
       [agent({ name: 'researcher' })],
-      [{ name: 'dev', description: 'development' }, { name: 'strict', description: 'locked down' }],
+      [
+        { name: 'dev', description: 'development' },
+        { name: 'strict', description: 'locked down' },
+      ],
     );
     expect(html).toContain('dev');
     expect(html).toContain('strict');
   });
 
   it('marks agent, intent, and envelope as required, and cwd as optional', () => {
-    const html = renderForm([agent({ name: 'researcher' })], [{ name: 'dev', description: 'development' }]);
+    const html = renderForm(
+      [agent({ name: 'researcher' })],
+      [{ name: 'dev', description: 'development' }],
+    );
     const agentLabelIdx = html.indexOf('Agent');
     const cwdLabelIdx = html.indexOf('Working directory');
     expect(html).toContain('Intent');
@@ -114,7 +120,10 @@ describe('MissionDispatchPage', () => {
   });
 
   it('renders no validation errors and issues no dispatch merely by rendering', async () => {
-    const html = renderForm([agent({ name: 'researcher' })], [{ name: 'dev', description: 'development' }]);
+    const html = renderForm(
+      [agent({ name: 'researcher' })],
+      [{ name: 'dev', description: 'development' }],
+    );
     expect(html).not.toContain('Choose an agent.');
     expect(html).not.toContain('Intent is required.');
     expect(html).not.toContain('Choose an envelope.');
@@ -123,8 +132,10 @@ describe('MissionDispatchPage', () => {
   });
 
   it('shows the fire-a-mission submit action', () => {
-    const html = renderForm([agent({ name: 'researcher' })], [{ name: 'dev', description: 'development' }]);
+    const html = renderForm(
+      [agent({ name: 'researcher' })],
+      [{ name: 'dev', description: 'development' }],
+    );
     expect(html).toContain('Fire mission');
   });
 });
-

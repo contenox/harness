@@ -74,9 +74,7 @@ export function SidebarItem({
         )}
       >
         {icon && (
-          <span className="flex shrink-0 items-center text-text-muted [&>svg]:size-4">
-            {icon}
-          </span>
+          <span className="flex shrink-0 items-center text-text-muted [&>svg]:size-4">{icon}</span>
         )}
         <span className="min-w-0 flex-1 truncate">{children}</span>
         {meta && (

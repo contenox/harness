@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Button } from '../../../components/Button';
-import { copyTextToClipboard } from '../../../components/chat/clipboard';
-import type { AssetAction, AssetActionResult } from '@contenox/acp-client';
-import type { PreviewKind } from '../../../components/editors/previewKind';
+import { useEffect, useState } from "react";
+import { Button } from "../../../components/Button";
+import { copyTextToClipboard } from "../../../components/chat/clipboard";
+import type { AssetAction, AssetActionResult } from "@contenox/acp-client";
+import type { PreviewKind } from "../../../components/editors/previewKind";
 
 export interface AssetActionToolbarProps {
   kind: PreviewKind;
@@ -27,9 +27,9 @@ export function AssetActionToolbar({
     let alive = true;
     setActions([]);
     if (!listActions) return;
-    void listActions().then(all => {
+    void listActions().then((all) => {
       if (!alive) return;
-      setActions(all.filter(action => action.kinds.includes(kind)));
+      setActions(all.filter((action) => action.kinds.includes(kind)));
     });
     return () => {
       alive = false;
@@ -37,11 +37,8 @@ export function AssetActionToolbar({
   }, [listActions, kind]);
 
   const copyPath = () => {
-
-
-
-    void copyTextToClipboard(path).then(ok =>
-      setNotice(ok ? 'Path copied.' : 'Could not copy the path.'),
+    void copyTextToClipboard(path).then((ok) =>
+      setNotice(ok ? "Path copied." : "Could not copy the path."),
     );
   };
 
@@ -50,11 +47,11 @@ export function AssetActionToolbar({
     setBusyId(action.id);
     setNotice(null);
     void runAction(action.id, path)
-      .then(result => {
+      .then((result) => {
         setNotice(result.notice);
         if (result.artifact && onArtifact) onArtifact(result.artifact.path);
       })
-      .catch((err: unknown) => setNotice(err instanceof Error ? err.message : 'The action failed.'))
+      .catch((err: unknown) => setNotice(err instanceof Error ? err.message : "The action failed."))
       .finally(() => setBusyId(null));
   };
 
@@ -63,18 +60,20 @@ export function AssetActionToolbar({
   return (
     <div
       className="border-surface-200 dark:border-dark-surface-600 flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5"
-      aria-label={`Actions for ${path}`}>
+      aria-label={`Actions for ${path}`}
+    >
       <Button variant="outline" size="sm" onClick={copyPath}>
         Copy path
       </Button>
-      {machineActions.map(action => (
+      {machineActions.map((action) => (
         <Button
           key={action.id}
           variant="outline"
           size="sm"
           onClick={() => run(action)}
           disabled={busyId !== null}
-          isLoading={busyId === action.id}>
+          isLoading={busyId === action.id}
+        >
           {action.label}
         </Button>
       ))}

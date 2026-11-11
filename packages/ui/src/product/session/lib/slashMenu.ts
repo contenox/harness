@@ -1,19 +1,17 @@
-
-import type { AvailableCommand } from '@contenox/acp-client';
-import type { CommandValueDomains } from './commandValueDomains';
+import type { AvailableCommand } from "@contenox/acp-client";
+import type { CommandValueDomains } from "./commandValueDomains";
 
 export interface SlashMenuQuery {
   open: boolean;
   query: string;
 }
 
-
 const SLASH_TOKEN_RE = /^\/([a-zA-Z0-9_-]*)$/;
 
 export function deriveSlashMenuQuery(draft: string): SlashMenuQuery {
   const match = SLASH_TOKEN_RE.exec(draft);
-  if (match === null) return { open: false, query: '' };
-  return { open: true, query: match[1] ?? '' };
+  if (match === null) return { open: false, query: "" };
+  return { open: true, query: match[1] ?? "" };
 }
 
 export function filterSlashCommands(
@@ -21,15 +19,15 @@ export function filterSlashCommands(
   query: string,
 ): AvailableCommand[] {
   const lowered = query.toLowerCase();
-  return commands.filter(command => command.name.toLowerCase().startsWith(lowered));
+  return commands.filter((command) => command.name.toLowerCase().startsWith(lowered));
 }
 
 export function commandArgumentHint(command: AvailableCommand, valueCount = 0): string | null {
-  const size = valueCount > 0 ? `(${valueCount} ${valueCount === 1 ? 'value' : 'values'})` : '';
-  if (command.input === undefined) return size === '' ? null : size;
-  const hint = command.input.hint?.trim() ?? '';
-  if (hint === '') return size === '' ? '…' : size;
-  return size === '' ? hint : `${hint} ${size}`;
+  const size = valueCount > 0 ? `(${valueCount} ${valueCount === 1 ? "value" : "values"})` : "";
+  if (command.input === undefined) return size === "" ? null : size;
+  const hint = command.input.hint?.trim() ?? "";
+  if (hint === "") return size === "" ? "…" : size;
+  return size === "" ? hint : `${hint} ${size}`;
 }
 
 export interface SlashArgumentQuery {
@@ -40,13 +38,13 @@ export interface SlashArgumentQuery {
 const ARGUMENT_BREAK_RE = /[ \t\n]/;
 
 export function deriveSlashArgument(draft: string): SlashArgumentQuery | null {
-  if (!draft.startsWith('/')) return null;
+  if (!draft.startsWith("/")) return null;
   const rest = draft.slice(1);
   const space = rest.search(ARGUMENT_BREAK_RE);
   if (space < 0) return null;
   const command = rest.slice(0, space);
   const arg = rest.slice(space + 1);
-  if (command === '' || ARGUMENT_BREAK_RE.test(arg)) return null;
+  if (command === "" || ARGUMENT_BREAK_RE.test(arg)) return null;
   return { command, arg };
 }
 
@@ -63,9 +61,9 @@ const FLAG_ARGUMENT_RE =
 export function deriveSlashFlagArgument(draft: string): SlashFlagArgumentQuery | null {
   const match = FLAG_ARGUMENT_RE.exec(draft);
   if (match === null) return null;
-  const command = match[1] ?? '';
-  const flag = match[2] ?? '';
-  const arg = match[3] ?? '';
+  const command = match[1] ?? "";
+  const flag = match[2] ?? "";
+  const arg = match[3] ?? "";
   return { command, flag, arg, prefix: draft.slice(0, draft.length - arg.length) };
 }
 
@@ -83,7 +81,7 @@ export function valueDomainFor(
 
 export function filterValueDomain(values: readonly string[], partial: string): string[] {
   const query = partial.trim().toLowerCase();
-  if (query === '') return [...values];
+  if (query === "") return [...values];
   const prefix: string[] = [];
   const contains: string[] = [];
   for (const value of values) {
@@ -103,7 +101,6 @@ export interface ValueHighlight {
   value: string | null;
 }
 
-
 export const TOP_OF_LIST: ValueHighlight = { index: 0, value: null };
 
 export function resolveValueIndex(values: readonly string[], highlight: ValueHighlight): number {
@@ -120,20 +117,22 @@ export function slashCompletion(command: AvailableCommand): string {
 }
 
 export type SlashMenuKeyAction =
-  { type: 'move'; delta: 1 | -1 } | { type: 'accept' } | { type: 'close' };
+  | { type: "move"; delta: 1 | -1 }
+  | { type: "accept" }
+  | { type: "close" };
 
 export function slashMenuKeyFromEvent(key: string): SlashMenuKeyAction | null {
   switch (key) {
-    case 'ArrowDown':
-      return { type: 'move', delta: 1 };
-    case 'ArrowUp':
-      return { type: 'move', delta: -1 };
-    case 'Tab':
-      return { type: 'accept' };
-    case 'Enter':
-      return { type: 'accept' };
-    case 'Escape':
-      return { type: 'close' };
+    case "ArrowDown":
+      return { type: "move", delta: 1 };
+    case "ArrowUp":
+      return { type: "move", delta: -1 };
+    case "Tab":
+      return { type: "accept" };
+    case "Enter":
+      return { type: "accept" };
+    case "Escape":
+      return { type: "close" };
     default:
       return null;
   }

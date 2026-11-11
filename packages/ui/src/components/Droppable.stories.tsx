@@ -19,15 +19,7 @@ interface Item {
 
 type Zones = Record<string, Item[]>;
 
-function Zone({
-  id,
-  items,
-  disabled,
-}: {
-  id: string;
-  items: Item[];
-  disabled?: boolean;
-}) {
+function Zone({ id, items, disabled }: { id: string; items: Item[]; disabled?: boolean }) {
   return (
     <Droppable
       droppableId={id}
@@ -59,13 +51,7 @@ function Zone({
   );
 }
 
-function Demo({
-  initial,
-  disabledZones = [],
-}: {
-  initial: Zones;
-  disabledZones?: string[];
-}) {
+function Demo({ initial, disabledZones = [] }: { initial: Zones; disabledZones?: string[] }) {
   const [zones, setZones] = useState<Zones>(initial);
   const handleDragEnd = (result: {
     draggableId: string;
@@ -91,12 +77,7 @@ function Demo({
     <DragDropContextProvider onDragEnd={handleDragEnd}>
       <div className="flex gap-4 p-4">
         {Object.entries(zones).map(([id, items]) => (
-          <Zone
-            key={id}
-            id={id}
-            items={items}
-            disabled={disabledZones.includes(id)}
-          />
+          <Zone key={id} id={id} items={items} disabled={disabledZones.includes(id)} />
         ))}
       </div>
     </DragDropContextProvider>

@@ -8,12 +8,7 @@ type SidebarToggleProps = {
 
 export function SidebarToggle({ isOpen, onToggle }: SidebarToggleProps) {
   return (
-    <IconButton
-      label="Toggle sidebar"
-      onClick={onToggle}
-      aria-expanded={isOpen}
-      noTooltip
-    >
+    <IconButton label="Toggle sidebar" onClick={onToggle} aria-expanded={isOpen} noTooltip>
       <PanelLeft className="size-4" />
     </IconButton>
   );

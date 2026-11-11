@@ -1,9 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-  ResizablePanel,
-  ResizablePanelGroup,
-  ResizablePanelHandle,
-} from "./ResizablePanel";
+import { ResizablePanel, ResizablePanelGroup, ResizablePanelHandle } from "./ResizablePanel";
 import { P } from "./Typography";
 
 const meta: Meta<typeof ResizablePanelGroup> = {

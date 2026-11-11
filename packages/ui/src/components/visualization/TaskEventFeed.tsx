@@ -35,7 +35,10 @@ export interface TaskEventFeedProps {
 const DEFAULT_OMITTED_LABEL = (count: number) =>
   `… ${count} earlier event${count === 1 ? "" : "s"} omitted`;
 
-export function TaskEventFeed({ events, omittedLabel = DEFAULT_OMITTED_LABEL }: TaskEventFeedProps) {
+export function TaskEventFeed({
+  events,
+  omittedLabel = DEFAULT_OMITTED_LABEL,
+}: TaskEventFeedProps) {
   if (!events.length) return null;
   const tail = events.length > TAIL ? events.slice(-TAIL) : events;
   const omitted = events.length - tail.length;

@@ -7,7 +7,13 @@ const meta: Meta<typeof Disclosure> = {
   title: "Components/Disclosure",
   component: Disclosure,
   args: { label: "Advanced", children: <Input aria-label="Base URL" placeholder="https://" /> },
-  decorators: [(Story) => <div className="max-w-sm"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="max-w-sm">
+        <Story />
+      </div>
+    ),
+  ],
 };
 export default meta;
 type Story = StoryObj<typeof Disclosure>;

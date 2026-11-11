@@ -37,9 +37,7 @@ export function ErrorState({
     <Panel variant="error" className="p-6">
       <div className="text-center space-y-4">
         <P className="font-medium">{title}</P>
-        <P variant="muted">
-          {typeof error === "string" ? error : error?.message || description}
-        </P>
+        <P variant="muted">{typeof error === "string" ? error : error?.message || description}</P>
         {onRetry && (
           <Button variant="outline" onClick={onRetry}>
             Try Again

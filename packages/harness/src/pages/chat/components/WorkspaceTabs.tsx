@@ -1,9 +1,9 @@
 import { TabPanel, TabPanels } from '@contenox/ui';
 import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAcpWorkspace } from '../../../hooks/useAcpWorkspace';
-import { setActiveChatPaneKey } from '../../../hooks/chatPaneStore';
 import { EMPTY_SESSION_KEY } from '../../../hooks/acpWorkspaceState';
+import { setActiveChatPaneKey } from '../../../hooks/chatPaneStore';
+import { useAcpWorkspace } from '../../../hooks/useAcpWorkspace';
 import { useWorkspaceTabs } from '../../../hooks/useWorkspaceTabs';
 import { useAdoptIntent } from '../../../lib/adoptIntent';
 import { routeForActiveTab } from '../lib/workspaceTabs';
@@ -32,8 +32,7 @@ export function WorkspaceTabs() {
       .then(sid => {
         open(sid);
       })
-      .catch(() => {
-      })
+      .catch(() => {})
       .finally(() => {
         adoptingRef.current = false;
       });
@@ -84,7 +83,6 @@ export function WorkspaceTabs() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-
       <TabPanels>
         {tabs.map(id => (
           <TabPanel key={id} tabId={id} activeTab={activeId ?? EMPTY_PANEL_ID}>
@@ -92,15 +90,18 @@ export function WorkspaceTabs() {
               sessionId={id}
               active={(activeId ?? EMPTY_PANEL_ID) === id}
               onSessionCreated={handleSessionCreated}
-                />
+            />
           </TabPanel>
         ))}
-        <TabPanel key={`empty-${emptyKeyRef.current}`} tabId={EMPTY_PANEL_ID} activeTab={activeId ?? EMPTY_PANEL_ID}>
+        <TabPanel
+          key={`empty-${emptyKeyRef.current}`}
+          tabId={EMPTY_PANEL_ID}
+          activeTab={activeId ?? EMPTY_PANEL_ID}>
           <ChatSessionTab
             sessionId={null}
             active={activeId === null}
             onSessionCreated={handleSessionCreated}
-            />
+          />
         </TabPanel>
       </TabPanels>
     </div>

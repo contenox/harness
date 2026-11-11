@@ -1,4 +1,3 @@
-
 import type {
   PermissionOptionKind as SdkPermissionOptionKind,
   PlanEntryPriority as SdkPlanEntryPriority,
@@ -7,12 +6,7 @@ import type {
   ToolCallStatus as SdkToolCallStatus,
 } from '@agentclientprotocol/sdk';
 
-
 export const ACP_PROTOCOL_VERSION = 1;
-
-
-
-
 
 export interface Implementation {
   name: string;
@@ -97,7 +91,6 @@ export interface InitializeResponse {
   _meta?: Record<string, unknown>;
 }
 
-
 export const WORKSPACE_CONFIG_OPTIONS_META_KEY = 'contenox.workspaceConfigOptions';
 
 export function workspaceConfigOptionsFromInit(init: InitializeResponse): SessionConfigOption[] {
@@ -130,7 +123,6 @@ export function externalAgentFromMeta(
   return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
 }
 
-
 export const MISSION_META_KEY = 'contenox.mission';
 
 export function missionFromMeta(meta: Record<string, unknown> | undefined | null): string | null {
@@ -139,7 +131,6 @@ export function missionFromMeta(meta: Record<string, unknown> | undefined | null
   const id = (raw as { missionId?: unknown }).missionId;
   return typeof id === 'string' && id.trim() !== '' ? id.trim() : null;
 }
-
 
 export const MISSION_ASK_META_KEY = 'contenox.missionAsk';
 
@@ -177,10 +168,6 @@ export function agentMeta(name: string): Record<string, unknown> {
 export interface AuthenticateResponse {
   _meta?: unknown;
 }
-
-
-
-
 
 export type ContentBlockKind = 'text' | 'image' | 'audio' | 'resource' | 'resource_link';
 
@@ -246,12 +233,16 @@ export function audioPartFromBlock(block: ContentBlock): AudioPart | null {
   return { data: block.data, mimeType: block.mimeType };
 }
 
-
-
-
-
 export type ToolKind =
-  'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'think' | 'fetch' | 'other';
+  | 'read'
+  | 'edit'
+  | 'delete'
+  | 'move'
+  | 'search'
+  | 'execute'
+  | 'think'
+  | 'fetch'
+  | 'other';
 
 export type ToolCallStatus = SdkToolCallStatus;
 
@@ -270,10 +261,6 @@ export interface ToolCallContent {
   newText?: string;
   terminalId?: string;
 }
-
-
-
-
 
 export type PlanEntryPriority = SdkPlanEntryPriority;
 export type PlanEntryStatus = SdkPlanEntryStatus;
@@ -327,10 +314,6 @@ export function argumentCompletionsFromCommand(
   }
   return completions;
 }
-
-
-
-
 
 export type SessionId = string;
 
@@ -430,21 +413,7 @@ export interface ListSessionsResponse {
   nextCursor?: string;
 }
 
-
-
-
-
 export type StopReason = SdkStopReason;
-
-
-
-
-
-
-
-
-
-
 
 export interface PromptResponse {
   stopReason: StopReason;
@@ -455,10 +424,6 @@ export interface UsageCost {
   amount: number;
   currency: string;
 }
-
-
-
-
 
 export type SessionUpdateKind =
   | 'user_message_chunk'
@@ -474,9 +439,7 @@ export type SessionUpdateKind =
   | 'session_info_update'
   | typeof TERMINAL_OUTPUT_UPDATE_KIND;
 
-
 export const TERMINAL_OUTPUT_UPDATE_KIND = '_contenox.terminalOutput';
-
 
 export const TERMINAL_OUTPUT_META_KEY = 'contenox.terminalOutput';
 
@@ -538,17 +501,12 @@ export interface SessionNotification {
   _meta?: Record<string, unknown>;
 }
 
-
 export const EVENT_SEQ_META_KEY = 'contenox.seq';
 
 export function notificationSeq(n: SessionNotification): number {
   const seq = n._meta?.[EVENT_SEQ_META_KEY];
   return typeof seq === 'number' && seq > 0 ? seq : 0;
 }
-
-
-
-
 
 export type PermissionOptionKind = SdkPermissionOptionKind;
 
@@ -578,17 +536,12 @@ export interface RequestPermissionRequest {
 }
 
 export type RequestPermissionOutcome =
-  { outcome: 'cancelled' } | { outcome: 'selected'; optionId: string };
+  | { outcome: 'cancelled' }
+  | { outcome: 'selected'; optionId: string };
 
 export interface RequestPermissionResponse {
   outcome: RequestPermissionOutcome;
 }
-
-
-
-
-
-
 
 export interface ReadTextFileRequest {
   sessionId: SessionId;
@@ -640,10 +593,6 @@ export interface ReleaseTerminalRequest {
   sessionId: SessionId;
   terminalId: string;
 }
-
-
-
-
 
 export const JSON_RPC_ERROR_CODES = {
   parseError: -32700,

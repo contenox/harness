@@ -91,7 +91,9 @@ function useSummary(axis: AxisId, value: AxisValue | undefined): string | undefi
   if (!value) return undefined;
   const preview = (items: string[]) => {
     const shown = items.slice(0, 3).join(', ');
-    return items.length > 3 ? t('permissions.summary_more', { items: shown, count: items.length - 3 }) : shown;
+    return items.length > 3
+      ? t('permissions.summary_more', { items: shown, count: items.length - 3 })
+      : shown;
   };
   const parts: string[] = [];
   if (axis === 'files.read' || axis === 'files.write') {
@@ -112,7 +114,16 @@ function useSummary(axis: AxisId, value: AxisValue | undefined): string | undefi
   return parts.length > 0 ? parts.join(' · ') : t('permissions.summary_none');
 }
 
-export function AxisRow({ axis, icon, name, envelopes, layer, workspaceName, revision, onSave }: Props) {
+export function AxisRow({
+  axis,
+  icon,
+  name,
+  envelopes,
+  layer,
+  workspaceName,
+  revision,
+  onSave,
+}: Props) {
   const { t } = useTranslation();
   const resolved = resolveAxis(envelopes, name, axis);
   const fallback = resolveDefaultAction(envelopes, name);
@@ -138,7 +149,7 @@ export function AxisRow({ axis, icon, name, envelopes, layer, workspaceName, rev
       trailing={
         <>
           {origin}
-          <span className="font-medium text-text">{t(GRANT_LABEL[grant])}</span>
+          <span className="text-text font-medium">{t(GRANT_LABEL[grant])}</span>
         </>
       }>
       <AxisEditor
@@ -213,7 +224,9 @@ function AxisEditor({ axis, initial, previous, changedHere, onSave }: EditorProp
             className="w-64"
             value={draft.substitution ?? 'off'}
             options={SUBSTITUTIONS.map(s => ({ value: s, label: t(SUBSTITUTION_LABEL[s]) }))}
-            onChange={e => setDraft(prev => ({ ...prev, substitution: e.target.value as Substitution }))}
+            onChange={e =>
+              setDraft(prev => ({ ...prev, substitution: e.target.value as Substitution }))
+            }
           />
         </FormField>
       )}
@@ -223,7 +236,12 @@ function AxisEditor({ axis, initial, previous, changedHere, onSave }: EditorProp
         </InlineNotice>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" variant="primary" size="sm" isLoading={busy} disabled={!dirty || busy}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="sm"
+          isLoading={busy}
+          disabled={!dirty || busy}>
           {busy ? t('permissions.saving') : t('permissions.save')}
         </Button>
         {dirty && (

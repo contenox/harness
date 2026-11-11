@@ -114,7 +114,10 @@ function StepCollapsible({
         ) : isDone ? (
           <CheckCircle2 size={14} className="text-success" />
         ) : (
-          <Settings size={14} className="text-text-muted dark:text-dark-text-muted animate-spin-slow" />
+          <Settings
+            size={14}
+            className="text-text-muted dark:text-dark-text-muted animate-spin-slow"
+          />
         )}
       </span>
       <Span className="font-mono text-xs font-semibold">{title}</Span>
@@ -134,7 +137,9 @@ function StepCollapsible({
             <Span className="text-text-muted opacity-50 shrink-0">
               {new Date(e.timestamp).toLocaleTimeString([], { hour12: false })}
             </Span>
-            <Span className={cn(e.error ? "text-error font-medium" : "text-text dark:text-dark-text")}>
+            <Span
+              className={cn(e.error ? "text-error font-medium" : "text-text dark:text-dark-text")}
+            >
               {e.kind}
               {e.task_handler && e.task_handler !== group.id ? ` [${e.task_handler}]` : ""}
               {e.error ? ` - ${e.error}` : ""}
@@ -153,7 +158,6 @@ function HistoricalState({
   state: CapturedStateUnit[];
   l: Required<ExecutionTimelineLabels>;
 }) {
-
   const formatDuration = (ns: number): string => {
     const ms = ns / 1_000_000;
     if (ms < 1000) return `${Math.round(ms)} ms`;
@@ -170,8 +174,7 @@ function HistoricalState({
   return (
     <Collapsible title={TitleElement} className="mt-1">
       <div className="border border-surface-300 dark:border-dark-surface-400 rounded-b-md overflow-x-auto">
-        <Table
-          columns={[l.taskId, l.taskType, l.transition, l.duration, l.error]}>
+        <Table columns={[l.taskId, l.taskType, l.transition, l.duration, l.error]}>
           {state.map((unit, index) => (
             <TableRow key={index}>
               <TableCell className="font-mono text-xs">{unit.taskID}</TableCell>

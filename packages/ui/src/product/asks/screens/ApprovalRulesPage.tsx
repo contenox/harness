@@ -1,14 +1,14 @@
-import { Button, Card, InlineNotice, P, Page, Small } from '@contenox/ui';
-import { useEffect, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { AskSection } from '@contenox/ui';
-import { SectionForm, SelectField, TextField } from '@contenox/ui';
-import { ScreenError, ScreenLoading } from '../../saas/ScreenState';
-import { ScreenBody } from '@contenox/ui';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { BackTo } from '../../shell/BackTo';
-import { useProductPorts } from '../../ports';
-import type { SetApprovalRuleRequest } from '../../lib/api/types';
+import { Button, Card, InlineNotice, P, Page, Small } from "@contenox/ui";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { AskSection } from "@contenox/ui";
+import { SectionForm, SelectField, TextField } from "@contenox/ui";
+import { ScreenError, ScreenLoading } from "../../saas/ScreenState";
+import { ScreenBody } from "@contenox/ui";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { BackTo } from "../../shell/BackTo";
+import { useProductPorts } from "../../ports";
+import type { SetApprovalRuleRequest } from "../../lib/api/types";
 import {
   ALL_AGENTS_RULE,
   APPROVER_ROLE_CHOICES,
@@ -22,20 +22,18 @@ import {
   ruledAgents,
   type EffectiveRule,
   type RuleSet,
-} from '../../lib/approvalRules';
-import { agentCatalogue } from '../../lib/askAgents';
-import { partitionFormError } from '../../saas/account/lib/formErrors';
+} from "../../lib/approvalRules";
+import { agentCatalogue } from "../../lib/askAgents";
+import { partitionFormError } from "../../saas/account/lib/formErrors";
 
+const FIELDS = ["agent_name", "approvals_required", "approver_role"] as const;
 
-const FIELDS = ['agent_name', 'approvals_required', 'approver_role'] as const;
-
-
-const INHERIT = 'inherit';
+const INHERIT = "inherit";
 
 export default function ApprovalRulesPage() {
   const { routes, useApprovalRules, useAskBoard, useAskSubscriptions, useAuth, useConsumers } =
     useProductPorts();
-  const accountID = useAuth().accountID ?? '';
+  const accountID = useAuth().accountID ?? "";
   const rules = useApprovalRules(accountID);
   const subscriptions = useAskSubscriptions(accountID);
   const consumers = useConsumers(accountID);
@@ -48,7 +46,7 @@ export default function ApprovalRulesPage() {
     board,
     subscriptions: subscriptions.data,
     consumers: consumers.data,
-  }).map(agent => agent.name);
+  }).map((agent) => agent.name);
   const agents =
     set === null
       ? []
@@ -86,7 +84,7 @@ export default function ApprovalRulesPage() {
                   Name one below to give it a stricter one.
                 </Small>
               ) : (
-                agents.map(agent => <AgentRuleForm key={agent} agent={agent} set={set} />)
+                agents.map((agent) => <AgentRuleForm key={agent} agent={agent} set={set} />)
               )}
 
               <InlineNotice variant="info">
@@ -97,7 +95,7 @@ export default function ApprovalRulesPage() {
 
             <NameAnAgent
               known={agents}
-              onName={agent => setNamed(current => [...current, agent])}
+              onName={(agent) => setNamed((current) => [...current, agent])}
             />
           </>
         )}
@@ -105,7 +103,6 @@ export default function ApprovalRulesPage() {
     </Page>
   );
 }
-
 
 function DefaultRuleForm({ set }: { set: RuleSet }) {
   const rule = defaultRule(set);
@@ -118,17 +115,15 @@ function DefaultRuleForm({ set }: { set: RuleSet }) {
       inherit={null}
       note={
         <Small className="text-text-muted dark:text-dark-text-muted">
-
-          {rule.source === 'built-in'
-            ? 'Nothing is set, so the built-in rule applies. '
-            : 'This is what an agent needs unless it has a rule of its own. '}
+          {rule.source === "built-in"
+            ? "Nothing is set, so the built-in rule applies. "
+            : "This is what an agent needs unless it has a rule of its own. "}
           Agents with a rule of their own are not affected by this one.
         </Small>
       }
     />
   );
 }
-
 
 function AgentRuleForm({ agent, set }: { agent: string; set: RuleSet }) {
   const { routes } = useProductPorts();
@@ -150,7 +145,8 @@ function AgentRuleForm({ agent, set }: { agent: string; set: RuleSet }) {
             <Link
               to={routes.askAgent(agent)}
               aria-label={`Everything from ${agent}`}
-              className="text-primary-700 dark:text-dark-primary-500 inline underline underline-offset-4">
+              className="text-primary-700 dark:text-dark-primary-500 inline underline underline-offset-4"
+            >
               What it is waiting on
             </Link>
           </P>
@@ -159,7 +155,6 @@ function AgentRuleForm({ agent, set }: { agent: string; set: RuleSet }) {
     />
   );
 }
-
 
 function RuleForm({
   title,
@@ -178,15 +173,11 @@ function RuleForm({
   note: ReactNode;
 }) {
   const { useAuth, useSetApprovalRule } = useProductPorts();
-  const accountID = useAuth().accountID ?? '';
+  const accountID = useAuth().accountID ?? "";
   const save = useSetApprovalRule(accountID);
-  const inherited = inherit !== null && rule.source !== 'agent';
+  const inherited = inherit !== null && rule.source !== "agent";
   const [count, setCount] = useState<string>(inherited ? INHERIT : String(rule.approvalsRequired));
   const [role, setRole] = useState<string>(rule.approverRole);
-
-
-
-
 
   useEffect(() => {
     setCount(inherited ? INHERIT : String(rule.approvalsRequired));
@@ -204,12 +195,11 @@ function RuleForm({
     const body: SetApprovalRuleRequest = inheriting
       ? { agent_name: agent, unset: true }
       : { agent_name: agent, approvals_required: Number(count) };
-    if (!inheriting && role !== '') body.approver_role = role;
+    if (!inheriting && role !== "") body.approver_role = role;
     save.mutate(body);
   };
 
   return (
-
     <section aria-label={title}>
       <SectionForm
         title={title}
@@ -227,11 +217,12 @@ function RuleForm({
               </InlineNotice>
             )}
           </>
-        }>
+        }
+      >
         <SelectField
           label="People who must approve"
           value={count}
-          onChange={event => setCount(event.target.value)}
+          onChange={(event) => setCount(event.target.value)}
           disabled={save.isPending}
           options={countOptions(max, inherit)}
           error={errors.fields.approvals_required}
@@ -239,8 +230,7 @@ function RuleForm({
         <SelectField
           label="Who may approve"
           value={role}
-          onChange={event => setRole(event.target.value)}
-
+          onChange={(event) => setRole(event.target.value)}
           disabled={save.isPending || inheriting}
           options={APPROVER_ROLE_CHOICES}
           error={errors.fields.approver_role}
@@ -255,25 +245,23 @@ function RuleForm({
   );
 }
 
-
 function countOptions(max: number, inherit: EffectiveRule | null) {
   const counts = Array.from({ length: max }, (_, index) => ({
     value: String(index + 1),
-    label: index === 0 ? '1 person' : `${index + 1} different people`,
+    label: index === 0 ? "1 person" : `${index + 1} different people`,
   }));
   if (inherit === null) return counts;
   return [
     {
       value: INHERIT,
-      label: `Same as the team default (${inherit.approvalsRequired === 1 ? '1 person' : `${inherit.approvalsRequired} people`})`,
+      label: `Same as the team default (${inherit.approvalsRequired === 1 ? "1 person" : `${inherit.approvalsRequired} people`})`,
     },
     ...counts,
   ];
 }
 
-
 function NameAnAgent({ known, onName }: { known: string[]; onName: (agent: string) => void }) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
   const typed = ruleAgentName(name);
   const refusal = ruleAgentNameRefusal(name);
   const alreadyListed = typed !== null && known.includes(typed);
@@ -283,7 +271,7 @@ function NameAnAgent({ known, onName }: { known: string[]; onName: (agent: strin
       <TextField
         label="Agent name"
         value={name}
-        onChange={event => setName(event.target.value)}
+        onChange={(event) => setName(event.target.value)}
         autoCapitalize="none"
         autoCorrect="off"
         error={refusal ?? undefined}
@@ -301,8 +289,9 @@ function NameAnAgent({ known, onName }: { known: string[]; onName: (agent: strin
         onClick={() => {
           if (typed === null) return;
           onName(typed);
-          setName('');
-        }}>
+          setName("");
+        }}
+      >
         Give this agent a rule
       </Button>
     </Card>

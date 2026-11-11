@@ -112,7 +112,8 @@ export function ApprovalCard({ approval, onRespond, labels }: Props) {
             variant="ghost"
             size="sm"
             className="px-0 text-text-muted dark:text-dark-text-muted"
-            onClick={() => setDiffExpanded((e) => !e)}>
+            onClick={() => setDiffExpanded((e) => !e)}
+          >
             {diffExpanded ? l.hideDiff : l.showDiff}
           </Button>
           {diffExpanded &&

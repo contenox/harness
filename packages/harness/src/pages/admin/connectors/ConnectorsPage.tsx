@@ -15,9 +15,9 @@ import { useSearchParams } from 'react-router-dom';
 import { ConnectorForm, type WorkspaceChoice } from '../../../components/connectors/ConnectorForm';
 import { folderBasename } from '../../../components/workspace/folderTree';
 import { useConnectors, useSaveConnector } from '../../../hooks/useConnectors';
-import { projectName } from '../../../lib/workspaceRoots';
 import { useWorkspaceRoots } from '../../../hooks/useWorkspaceRoots';
 import type { Connector } from '../../../lib/connectorTypes';
+import { projectName } from '../../../lib/workspaceRoots';
 import { ConnectorRow } from './components/ConnectorRow';
 
 function samePath(a: string, b: string) {

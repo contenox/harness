@@ -2,7 +2,6 @@ import { forwardRef } from "react";
 import { cn } from "../utils";
 
 export type MonoLogListProps = React.HTMLAttributes<HTMLUListElement> & {
-
   maxHeightClassName?: string;
 };
 

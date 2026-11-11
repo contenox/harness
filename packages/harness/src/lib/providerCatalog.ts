@@ -17,7 +17,11 @@ import {
 import type { TranslationKey } from '../i18n';
 import type { CloudProviderType } from './types';
 
-export type ProviderSecretKind = 'api-key' | 'service-account-json' | 'aws-credentials-json' | 'none';
+export type ProviderSecretKind =
+  | 'api-key'
+  | 'service-account-json'
+  | 'aws-credentials-json'
+  | 'none';
 
 /** Where a provider appears in the provider list. */
 export type ProviderGroup = 'recommended' | 'cloud' | 'local' | 'more';
@@ -313,7 +317,8 @@ export function fieldsFor(setup: CloudProviderSetup): {
         id: 'apiKeyEnv',
         kind: 'text',
         labelKey: 'cloud_providers.api_key_env',
-        placeholder: setup.apiKeyEnv ?? `${setup.provider.toUpperCase().replace(/-/g, '_')}_API_KEY`,
+        placeholder:
+          setup.apiKeyEnv ?? `${setup.provider.toUpperCase().replace(/-/g, '_')}_API_KEY`,
         required: false,
       },
       false,

@@ -7,6 +7,7 @@ import { ComposerFooterEnd } from './ComposerFooter';
 import { DiffPane } from './DiffPane';
 import { FilesPane } from './FilesPane';
 import { PaneTabs } from './PaneTabs';
+import { SearchPane } from './SearchPane';
 import { SessionConnectorsDialog } from './SessionConnectorsDialog';
 import { SessionHeaderArea } from './SessionHeaderArea';
 import { TerminalPane } from './TerminalPane';
@@ -84,6 +85,14 @@ export const ChatSessionTab = memo(function ChatSessionTab({
         onClose={closePane}
         paneTabs={paneTabs}
       />
+    ) : paneState.pane === 'search' ? (
+      <SearchPane
+        root={workspaceRoot}
+        files={chat.files}
+        onOpenFile={chat.openFile}
+        onClose={closePane}
+        paneTabs={paneTabs}
+      />
     ) : paneState.pane === 'diff' ? (
       <DiffPane
         session={session}
@@ -105,6 +114,8 @@ export const ChatSessionTab = memo(function ChatSessionTab({
             files={chat.files}
             selectedFilePath={paneState.activeFile}
             onOpenFile={chat.openFile}
+            onPathMoved={(from, to) => chat.dispatchPane({ type: 'movePath', from, to })}
+            onPathDeleted={path => chat.dispatchPane({ type: 'closeUnder', path })}
           />
         }
         header={

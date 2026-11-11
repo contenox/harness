@@ -103,10 +103,22 @@ const simpleEdges: Edge[] = [
 
 const complexNodes: GraphNode[] = [
   { id: "ingest", label: "Ingest", type: "compose", description: "Parse user query." },
-  { id: "classify", label: "Classify", type: "condition_key", description: "Pick branch.", status: "success" },
+  {
+    id: "classify",
+    label: "Classify",
+    type: "condition_key",
+    description: "Pick branch.",
+    status: "success",
+  },
   { id: "rag", label: "RAG", type: "retriever", description: "Vector search.", status: "success" },
   { id: "direct", label: "Direct", type: "model_exec", description: "Skip retrieval." },
-  { id: "synthesize", label: "Synthesize", type: "model_exec", description: "Compose final answer.", status: "warning" },
+  {
+    id: "synthesize",
+    label: "Synthesize",
+    type: "model_exec",
+    description: "Compose final answer.",
+    status: "warning",
+  },
   { id: "deliver", label: "Deliver", type: "noop", description: "Return to caller." },
 ];
 

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { emptyAgentForm, formFromAgent, inputFromForm, parseEnv, validateAgentForm } from './externalAgentForm';
+import {
+  emptyAgentForm,
+  formFromAgent,
+  inputFromForm,
+  parseEnv,
+  validateAgentForm,
+} from './externalAgentForm';
 
 describe('externalAgentForm', () => {
   it('turns the text fields into the runtime shape', () => {
@@ -55,13 +61,23 @@ describe('externalAgentForm', () => {
       name: 'external_agents.form.name_invalid',
       command: 'external_agents.form.command_required',
     });
-    expect(validateAgentForm({ ...emptyAgentForm, name: 'taken', command: 'x' }, ['taken'], false).name).toBe(
-      'external_agents.form.name_taken',
-    );
-    expect(validateAgentForm({ ...emptyAgentForm, name: 'Bad Name', command: 'x' }, [], true).name).toBeUndefined();
     expect(
-      validateAgentForm({ ...emptyAgentForm, name: 'a', command: 'x', paths: [{ path: '~/x', mode: 'rw', needs: '' }] }, [], false)
-        .paths,
+      validateAgentForm({ ...emptyAgentForm, name: 'taken', command: 'x' }, ['taken'], false).name,
+    ).toBe('external_agents.form.name_taken');
+    expect(
+      validateAgentForm({ ...emptyAgentForm, name: 'Bad Name', command: 'x' }, [], true).name,
+    ).toBeUndefined();
+    expect(
+      validateAgentForm(
+        {
+          ...emptyAgentForm,
+          name: 'a',
+          command: 'x',
+          paths: [{ path: '~/x', mode: 'rw', needs: '' }],
+        },
+        [],
+        false,
+      ).paths,
     ).toBe('external_agents.form.path_needs_reason');
   });
 });

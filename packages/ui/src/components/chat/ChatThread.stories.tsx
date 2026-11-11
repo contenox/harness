@@ -39,8 +39,7 @@ export const Default: Story = {
             isLatest
             latestLabel="Latest"
           >
-            The change was a refactor of the chain executor to support
-            structured tool outputs.
+            The change was a refactor of the chain executor to support structured tool outputs.
           </ChatMessage>
         </ChatThread>
       </div>

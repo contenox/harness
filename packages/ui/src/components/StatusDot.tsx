@@ -1,11 +1,6 @@
 import { cn } from "../utils";
 
-export type StatusDotStatus =
-  | "available"
-  | "checking"
-  | "attention"
-  | "unavailable"
-  | "unknown";
+export type StatusDotStatus = "available" | "checking" | "attention" | "unavailable" | "unknown";
 
 export type StatusDotProps = {
   status: StatusDotStatus;

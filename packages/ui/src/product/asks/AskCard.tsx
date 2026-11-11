@@ -1,14 +1,14 @@
-import { Badge } from '../../components/Badge';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { Collapsible } from '../../components/Collapsible';
-import { P, Small } from '../../components/Typography';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { TextAreaField } from '../../components/forms/Fields';
-import { ScreenError } from '../saas/ScreenState';
-import { useProductPorts } from '../ports';
-import type { AnswerAskRequest, Ask, Instance } from '../lib/api/types';
+import { Badge } from "../../components/Badge";
+import { Button } from "../../components/Button";
+import { Card } from "../../components/Card";
+import { Collapsible } from "../../components/Collapsible";
+import { P, Small } from "../../components/Typography";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { TextAreaField } from "../../components/forms/Fields";
+import { ScreenError } from "../saas/ScreenState";
+import { useProductPorts } from "../ports";
+import type { AnswerAskRequest, Ask, Instance } from "../lib/api/types";
 import {
   approverRoleLabel,
   askHeadline,
@@ -19,8 +19,8 @@ import {
   quorum,
   type AskKind,
   type AskOutcome,
-} from '../lib/asks';
-import { formatDateTime } from '../lib/relativeTime';
+} from "../lib/asks";
+import { formatDateTime } from "../lib/relativeTime";
 
 export function AskCard({
   ask,
@@ -41,17 +41,17 @@ export function AskCard({
   pending?: boolean;
   error?: unknown;
 
-  here?: 'agent' | 'host';
+  here?: "agent" | "host";
 
   block?: string | null;
 }) {
-  const [answer, setAnswer] = useState('');
-  const [guidance, setGuidance] = useState('');
+  const [answer, setAnswer] = useState("");
+  const [guidance, setGuidance] = useState("");
   const kind = askKind(ask);
   const pair = quorum(ask);
   const closed = outcome !== undefined;
   const standing =
-    block === undefined || block === null || block.trim() === '' ? null : block.trim();
+    block === undefined || block === null || block.trim() === "" ? null : block.trim();
 
   return (
     <Card
@@ -59,7 +59,8 @@ export function AskCard({
       aria-label={`Ask: ${askHeadline(ask)}`}
       variant="filled"
       statusBorder={statusBorderFor(outcome)}
-      className="flex flex-col gap-3 p-4 sm:p-5">
+      className="flex flex-col gap-3 p-4 sm:p-5"
+    >
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <StateBadge ask={ask} outcome={outcome} blocked={standing !== null} />
@@ -70,12 +71,10 @@ export function AskCard({
           )}
         </div>
 
-
         <P className="max-h-40 overflow-y-auto overscroll-contain text-base leading-snug font-medium break-words">
           {askHeadline(ask)}
         </P>
       </div>
-
 
       <div className="flex flex-col gap-1">
         <Provenance ask={ask} instances={instances} here={here} />
@@ -92,11 +91,11 @@ export function AskCard({
         <Standing reason={standing} />
       ) : (
         <>
-          {kind === 'question' ? (
+          {kind === "question" ? (
             <TextAreaField
               label="Your answer"
               value={answer}
-              onChange={event => setAnswer(event.target.value)}
+              onChange={(event) => setAnswer(event.target.value)}
               disabled={pending}
               rows={3}
               placeholder="What should the agent do?"
@@ -107,7 +106,7 @@ export function AskCard({
                 <TextAreaField
                   label="Note"
                   value={guidance}
-                  onChange={event => setGuidance(event.target.value)}
+                  onChange={(event) => setGuidance(event.target.value)}
                   disabled={pending}
                   rows={2}
                   placeholder="Why, or what to do instead."
@@ -118,21 +117,22 @@ export function AskCard({
 
           {error !== undefined && error !== null && <ScreenError error={error} />}
 
-
           <div className="border-surface-200 dark:border-dark-surface-500 flex flex-col gap-2 border-t pt-3">
-            {kind === 'question' ? (
+            {kind === "question" ? (
               <>
                 <Button
                   variant="primary"
-                  disabled={pending || answer.trim() === ''}
-                  onClick={() => onAnswer({ decision: 'answer', answer: answer.trim() })}>
+                  disabled={pending || answer.trim() === ""}
+                  onClick={() => onAnswer({ decision: "answer", answer: answer.trim() })}
+                >
                   Send this answer
                 </Button>
 
                 <Button
                   variant="danger"
                   disabled={pending}
-                  onClick={() => onAnswer(withGuidance({ decision: 'deny' }, answer))}>
+                  onClick={() => onAnswer(withGuidance({ decision: "deny" }, answer))}
+                >
                   Refuse
                 </Button>
               </>
@@ -141,13 +141,15 @@ export function AskCard({
                 <Button
                   variant="primary"
                   disabled={pending}
-                  onClick={() => onAnswer(withGuidance({ decision: 'allow' }, guidance))}>
-                  {pair === null ? 'Allow' : 'Approve'}
+                  onClick={() => onAnswer(withGuidance({ decision: "allow" }, guidance))}
+                >
+                  {pair === null ? "Allow" : "Approve"}
                 </Button>
                 <Button
                   variant="danger"
                   disabled={pending}
-                  onClick={() => onAnswer(withGuidance({ decision: 'deny' }, guidance))}>
+                  onClick={() => onAnswer(withGuidance({ decision: "deny" }, guidance))}
+                >
                   Deny
                 </Button>
               </>
@@ -159,18 +161,15 @@ export function AskCard({
   );
 }
 
-
 function withGuidance(body: AnswerAskRequest, guidance: string): AnswerAskRequest {
   const trimmed = guidance.trim();
-  return trimmed === '' ? body : { ...body, guidance: trimmed };
+  return trimmed === "" ? body : { ...body, guidance: trimmed };
 }
 
-
-function statusBorderFor(outcome: AskOutcome | undefined): 'warning' | 'success' | 'error' {
-  if (outcome === undefined) return 'warning';
-  return outcomeIsRefusal(outcome) ? 'error' : 'success';
+function statusBorderFor(outcome: AskOutcome | undefined): "warning" | "success" | "error" {
+  if (outcome === undefined) return "warning";
+  return outcomeIsRefusal(outcome) ? "error" : "success";
 }
-
 
 function StateBadge({
   ask,
@@ -183,7 +182,7 @@ function StateBadge({
 }) {
   if (outcome !== undefined) {
     return (
-      <Badge variant={outcomeIsRefusal(outcome) ? 'error' : 'success'} size="sm">
+      <Badge variant={outcomeIsRefusal(outcome) ? "error" : "success"} size="sm">
         Closed
       </Badge>
     );
@@ -216,7 +215,6 @@ function StateBadge({
   );
 }
 
-
 function Provenance({
   ask,
   instances,
@@ -224,16 +222,16 @@ function Provenance({
 }: {
   ask: Ask;
   instances: Instance[] | undefined;
-  here: 'agent' | 'host' | undefined;
+  here: "agent" | "host" | undefined;
 }) {
   const { routes } = useProductPorts();
-  const agent = (ask.agent_name ?? '').trim();
+  const agent = (ask.agent_name ?? "").trim();
   const machine = askMachineName(ask.instance_id, instances);
   return (
     <Small className="text-text dark:text-dark-text">
-      {agent === '' || here === 'agent' ? (
-        agent === '' ? (
-          'An agent'
+      {agent === "" || here === "agent" ? (
+        agent === "" ? (
+          "An agent"
         ) : (
           agent
         )
@@ -241,9 +239,9 @@ function Provenance({
         <ProvenanceLink to={routes.askAgent(agent)} label={`Everything from ${agent}`}>
           {agent}
         </ProvenanceLink>
-      )}{' '}
-      on{' '}
-      {here === 'host' ? (
+      )}{" "}
+      on{" "}
+      {here === "host" ? (
         machine
       ) : (
         <ProvenanceLink to={routes.askHost(ask.instance_id)} label={`Everything on ${machine}`}>
@@ -254,33 +252,32 @@ function Provenance({
   );
 }
 
-
 function ProvenanceLink({ to, label, children }: { to: string; label: string; children: string }) {
   return (
     <Link
       to={to}
       aria-label={label}
-      className="text-primary-700 dark:text-dark-primary-500 inline underline underline-offset-4">
+      className="text-primary-700 dark:text-dark-primary-500 inline underline underline-offset-4"
+    >
       {children}
     </Link>
   );
 }
 
-
 function Rule({ ask, kind }: { ask: Ask; kind: AskKind }) {
-  if (kind === 'question') return null;
-  const policy = (ask.policy_name ?? '').trim();
-  const tool = (ask.tool_name ?? '').trim();
-  if (policy === '' && tool === '') return null;
+  if (kind === "question") return null;
+  const policy = (ask.policy_name ?? "").trim();
+  const tool = (ask.tool_name ?? "").trim();
+  if (policy === "" && tool === "") return null;
   return (
     <div className="border-surface-200 dark:border-dark-surface-500 flex flex-col border-l-2 pl-3">
-      {tool !== '' && (
+      {tool !== "" && (
         <Small className="text-text-muted dark:text-dark-text-muted">
           Action <span className="text-text dark:text-dark-text font-mono">{tool}</span>
-          {(ask.tools_name ?? '') !== '' && <> from {ask.tools_name}</>}
+          {(ask.tools_name ?? "") !== "" && <> from {ask.tools_name}</>}
         </Small>
       )}
-      {policy !== '' && (
+      {policy !== "" && (
         <Small className="text-text-muted dark:text-dark-text-muted">
           Stopped by <span className="text-text dark:text-dark-text">{policy}</span>
           {ask.matched_rule !== undefined && <>, rule #{ask.matched_rule}</>}
@@ -290,18 +287,16 @@ function Rule({ ask, kind }: { ask: Ask; kind: AskKind }) {
   );
 }
 
-
 function Silence({ ask, closed }: { ask: Ask; closed: boolean }) {
   if (closed) return null;
-  const expires = (ask.expires_at ?? '').trim();
-  if (expires === '') return null;
+  const expires = (ask.expires_at ?? "").trim();
+  if (expires === "") return null;
   return (
     <Small className="text-text-warning dark:text-dark-text-warning">
       If nobody answers by {formatDateTime(expires)}, it is refused.
     </Small>
   );
 }
-
 
 function PairReview({
   ask,
@@ -317,38 +312,36 @@ function PairReview({
   return (
     <Small className="text-text dark:text-dark-text">
       {ask.answered_by_caller
-        ? `You have approved this. It needs ${remaining} more ${remaining === 1 ? 'person' : 'people'}.`
+        ? `You have approved this. It needs ${remaining} more ${remaining === 1 ? "person" : "people"}.`
         : `This needs ${pair.required} people. ${approvedSoFar(pair.recorded)}`}
     </Small>
   );
 }
 
-
 function approvedSoFar(recorded: number): string {
-  if (recorded === 0) return 'Nobody has approved it yet.';
-  return recorded === 1 ? '1 person has approved it.' : `${recorded} people have approved it.`;
+  if (recorded === 0) return "Nobody has approved it yet.";
+  return recorded === 1 ? "1 person has approved it." : `${recorded} people have approved it.`;
 }
 
-
 function Restricted({ ask }: { ask: Ask }) {
-  const role = (ask.approver_role ?? '').trim();
+  const role = (ask.approver_role ?? "").trim();
   return (
     <div className="border-surface-200 dark:border-dark-surface-500 border-t pt-4">
       <Small className="text-text-muted dark:text-dark-text-muted">
-        {role === ''
-          ? 'You cannot answer this one.'
+        {role === ""
+          ? "You cannot answer this one."
           : `Only ${approverRoleLabel(role)} of this account can answer this.`}
       </Small>
     </div>
   );
 }
 
-
 function Standing({ reason }: { reason: string }) {
   return (
     <div
       role="status"
-      className="border-surface-200 dark:border-dark-surface-500 flex flex-col gap-2 border-t pt-4">
+      className="border-surface-200 dark:border-dark-surface-500 flex flex-col gap-2 border-t pt-4"
+    >
       <Small className="text-text-warning dark:text-dark-text-warning">{reason}</Small>
 
       <Small className="text-text-muted dark:text-dark-text-muted">
@@ -358,7 +351,6 @@ function Standing({ reason }: { reason: string }) {
   );
 }
 
-
 function Outcome({ outcome }: { outcome: AskOutcome }) {
   const refusal = outcomeIsRefusal(outcome);
   return (
@@ -366,9 +358,10 @@ function Outcome({ outcome }: { outcome: AskOutcome }) {
       <P
         className={`text-sm font-medium ${
           refusal
-            ? 'text-text-error dark:text-dark-text-error'
-            : 'text-text-success dark:text-dark-text-success'
-        }`}>
+            ? "text-text-error dark:text-dark-text-error"
+            : "text-text-success dark:text-dark-text-success"
+        }`}
+      >
         {outcomeSentence(outcome)}
       </P>
     </div>

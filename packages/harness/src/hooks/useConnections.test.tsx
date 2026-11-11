@@ -21,7 +21,10 @@ vi.mock('../lib/api', () => ({
     patchConnection: vi.fn(async () => ({ id: 'c1' })),
     deleteConnection: vi.fn(async () => 'deleted'),
     checkConnection: vi.fn(async () => ({ id: 'c1', health: 'available' })),
-    cancelConnectionLogin: vi.fn(async () => ({ provider: 'openai-codex', state: 'login_required' })),
+    cancelConnectionLogin: vi.fn(async () => ({
+      provider: 'openai-codex',
+      state: 'login_required',
+    })),
     cancelProviderLogin: vi.fn(async () => ({ provider: 'openai-codex', state: 'login_required' })),
     logoutConnection: vi.fn(async () => 'ok'),
     logoutProvider: vi.fn(async () => 'ok'),
@@ -116,7 +119,8 @@ describe('login cancel wiring', () => {
 });
 
 describe('connectionsRefetchInterval', () => {
-  const c = (patch: Partial<Connection>) => ({ health: 'available', authState: 'not_required', ...patch }) as Connection;
+  const c = (patch: Partial<Connection>) =>
+    ({ health: 'available', authState: 'not_required', ...patch }) as Connection;
   it('polls while a connection is checking or signing in', () => {
     expect(connectionsRefetchInterval([c({}), c({ health: 'checking' })])).toBe(2000);
     expect(connectionsRefetchInterval([c({ authState: 'login_pending' })])).toBe(2000);

@@ -27,7 +27,9 @@ describe('provider catalog', () => {
     expect(alibaba.secretKind).toBe('api-key');
     expect(alibaba.secretRequired).toBe(true);
     expect(alibaba.defaultBaseUrl).toBe('https://dashscope-intl.aliyuncs.com/compatible-mode/v1');
-    expect(alibaba.baseUrlPlaceholder).toBe('https://dashscope-intl.aliyuncs.com/compatible-mode/v1');
+    expect(alibaba.baseUrlPlaceholder).toBe(
+      'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    );
     expect(alibaba.keyUrl).toBe(
       'https://modelstudio.console.alibabacloud.com/ap-southeast-1/model/settings/api-key',
     );
@@ -56,9 +58,7 @@ describe('provider groups and metadata', () => {
     );
     expect(group('cloud')).toEqual(['vertex-google', 'bedrock', 'vllm']);
     expect(group('local')).toEqual(['ollama']);
-    expect(group('more').sort()).toEqual(
-      ['openrouter', 'openai', 'mistral'].sort(),
-    );
+    expect(group('more').sort()).toEqual(['openrouter', 'openai', 'mistral'].sort());
   });
 
   it('keeps ChatGPT out of the list groups', () => {

@@ -1,4 +1,3 @@
-
 export interface FrecencyEntry {
   count: number;
   lastUsed: number;
@@ -31,14 +30,12 @@ export function blend(matchScore: number, boost: number): number {
   return matchScore * boost;
 }
 
-
 const memoryFallback = new Map<string, string>();
 
 function getRaw(): string | null {
   try {
     if (typeof localStorage !== 'undefined') return localStorage.getItem(STORAGE_KEY);
-  } catch {
-  }
+  } catch {}
   return memoryFallback.get(STORAGE_KEY) ?? null;
 }
 
@@ -48,8 +45,7 @@ function setRaw(value: string): void {
       localStorage.setItem(STORAGE_KEY, value);
       return;
     }
-  } catch {
-  }
+  } catch {}
   memoryFallback.set(STORAGE_KEY, value);
 }
 
@@ -83,9 +79,7 @@ export function saveFrecency(store: FrecencyStore): void {
 export function pruneStore(store: FrecencyStore): FrecencyStore {
   const ids = Object.keys(store);
   if (ids.length <= MAX_ENTRIES) return store;
-  const kept = ids
-    .sort((a, b) => store[b].lastUsed - store[a].lastUsed)
-    .slice(0, MAX_ENTRIES);
+  const kept = ids.sort((a, b) => store[b].lastUsed - store[a].lastUsed).slice(0, MAX_ENTRIES);
   const out: FrecencyStore = {};
   for (const id of kept) out[id] = store[id];
   return out;

@@ -6,13 +6,15 @@ import {
   Tabs,
   type Tab,
 } from '@contenox/ui';
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import type { UseWorkspaceFilesResult } from '../../../hooks/useWorkspaceFiles';
+import { isDirty } from '../../../lib/editorBuffers';
 import type { PaneAction, PaneState } from '../lib/panes';
+import { DiscardChangesDialog } from './DiscardChangesDialog';
+import { FileEditorTab } from './FileEditorTab';
 import { FileTreePanel } from './FileTreePanel';
-import { FileViewTab } from './FileViewTab';
 import { PaneNotice } from './PaneNotice';
 
 export interface FilesPaneProps {
@@ -47,16 +49,49 @@ export function FilesPane({
   const { t } = useTranslation();
   const wide = useMediaQuery('(min-width: 1280px)');
   const activeFile = state.activeFile;
+  const { editor } = files;
+  const { open: openBuffer } = editor;
+  const [closing, setClosing] = useState<string | null>(null);
+
+  const { buffers } = editor;
+  useEffect(() => {
+    for (const path of state.files) {
+      if (!buffers[path]) openBuffer(path);
+    }
+  }, [state.files, buffers, openBuffer]);
+
   const tabs = useMemo<Tab[]>(
     () =>
-      state.files.map(path => ({
-        id: path,
-        label: <span className="block max-w-[12rem] truncate">{baseName(path)}</span>,
-        closable: true,
-        closeLabel: t('canvas.close_tab', { name: baseName(path) }),
-      })),
-    [state.files, t],
+      state.files.map(path => {
+        const dirty = isDirty(editor.buffers[path]);
+        return {
+          id: path,
+          label: (
+            <span className="flex max-w-[12rem] items-center gap-1">
+              <span className="truncate">{baseName(path)}</span>
+              {dirty && (
+                <span
+                  aria-label={t('editor.unsaved')}
+                  className="bg-text-muted size-1.5 shrink-0 rounded-full"
+                />
+              )}
+            </span>
+          ),
+          closable: true,
+          closeLabel: t('canvas.close_tab', { name: baseName(path) }),
+        };
+      }),
+    [state.files, editor.buffers, t],
   );
+
+  const closeNow = (path: string) => {
+    editor.close(path);
+    dispatch({ type: 'closeFile', path });
+  };
+  const requestClose = (path: string) => {
+    if (isDirty(editor.buffers[path])) setClosing(path);
+    else closeNow(path);
+  };
 
   const tree = (
     <FileTreePanel
@@ -64,21 +99,23 @@ export function FilesPane({
       files={files}
       onOpenFile={onOpenFile}
       selectedFilePath={activeFile}
+      onPathMoved={(from, to) => dispatch({ type: 'movePath', from, to })}
+      onPathDeleted={path => dispatch({ type: 'closeUnder', path })}
     />
   );
 
-  const editor =
+  const editorView =
     activeFile == null ? null : (
       <div className="flex min-h-0 flex-1 flex-col">
         <Tabs
           tabs={tabs}
           activeTab={activeFile}
           onTabChange={path => dispatch({ type: 'focusFile', path })}
-          onClose={path => dispatch({ type: 'closeFile', path })}
+          onClose={requestClose}
           className="border-line shrink-0 border-b px-2"
         />
         <div className="flex min-h-0 flex-1 flex-col p-2">
-          <FileViewTab key={activeFile} path={activeFile} readFile={files.readFile} />
+          <FileEditorTab key={activeFile} path={activeFile} editor={editor} />
         </div>
       </div>
     );
@@ -91,9 +128,25 @@ export function FilesPane({
       onClose={onClose}
       closeLabel={t('panes.close')}
       bodyClassName="flex flex-col overflow-hidden">
+      <DiscardChangesDialog
+        name={closing ? baseName(closing) : null}
+        onCancel={() => setClosing(null)}
+        onDiscard={() => {
+          if (closing) closeNow(closing);
+          setClosing(null);
+        }}
+        onSave={() => {
+          const path = closing;
+          setClosing(null);
+          if (!path) return;
+          void editor.save(path).then(saved => {
+            if (saved) closeNow(path);
+          });
+        }}
+      />
       {root ? (
         wide ? (
-          (editor ?? <PaneNotice>{t('panes.pick_file')}</PaneNotice>)
+          (editorView ?? <PaneNotice>{t('panes.pick_file')}</PaneNotice>)
         ) : activeFile != null ? (
           <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
             <ResizablePanel className="flex min-h-0 flex-col" style={{ minHeight: 80 }}>
@@ -104,7 +157,7 @@ export function FilesPane({
               defaultSize="60%"
               className="flex min-h-0 flex-col"
               style={{ minHeight: 160 }}>
-              {editor}
+              {editorView}
             </ResizablePanel>
           </ResizablePanelGroup>
         ) : (

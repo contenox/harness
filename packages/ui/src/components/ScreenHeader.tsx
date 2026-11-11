@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { H1, P } from './Typography';
+import type { ReactNode } from "react";
+import { H1, P } from "./Typography";
 
 export function ScreenHeader({
   title,

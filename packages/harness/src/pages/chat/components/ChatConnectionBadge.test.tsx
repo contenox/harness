@@ -30,12 +30,22 @@ describe('ChatConnectionBadge', () => {
   });
 
   it('never prints the agent name next to the pane toggles, even on the empty surface', () => {
-    mock.workspace = { status: 'ready', agentName: 'contenox', activeSessionId: null, sessions: [] };
+    mock.workspace = {
+      status: 'ready',
+      agentName: 'contenox',
+      activeSessionId: null,
+      sessions: [],
+    };
     expect(render()).not.toContain('contenox');
   });
 
   it('reflects a reconnecting status', () => {
-    mock.workspace = { status: 'reconnecting', agentName: 'contenox', activeSessionId: null, sessions: [] };
+    mock.workspace = {
+      status: 'reconnecting',
+      agentName: 'contenox',
+      activeSessionId: null,
+      sessions: [],
+    };
     const html = render();
     expect(html).toContain('Reconnecting');
     expect(html).not.toContain('contenox');
@@ -44,7 +54,12 @@ describe('ChatConnectionBadge', () => {
   it('shows an error pill only when the connection is broken', () => {
     mock.workspace = { status: 'error', agentName: null, activeSessionId: null, sessions: [] };
     expect(render()).toContain('Error');
-    mock.workspace = { status: 'disconnected', agentName: null, activeSessionId: null, sessions: [] };
+    mock.workspace = {
+      status: 'disconnected',
+      agentName: null,
+      activeSessionId: null,
+      sessions: [],
+    };
     expect(render()).toContain('Disconnected');
   });
 });

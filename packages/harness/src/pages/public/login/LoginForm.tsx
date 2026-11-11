@@ -37,7 +37,6 @@ export function LoginForm() {
           {isPending ? t('login.loading') : t('login.submit')}
         </Button>
       }>
-
       <p className="text-text-muted dark:text-dark-text-muted text-sm">
         {t('login.description', 'Enter the access token to reach this runtime.')}
       </p>

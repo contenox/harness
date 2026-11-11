@@ -41,7 +41,11 @@ export function RadioCardGroup<T extends string>({
   };
 
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className={cn("flex flex-col gap-1.5", className)}>
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      className={cn("flex flex-col gap-1.5", className)}
+    >
       {options.map((o, i) => {
         const selected = o.value === value;
         return (

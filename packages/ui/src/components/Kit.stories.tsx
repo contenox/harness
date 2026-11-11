@@ -1,6 +1,15 @@
 import { useState, type ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Archive, FolderOpen, MessageSquare, Plus, Search as SearchIcon, Settings, Trash2, X } from "lucide-react";
+import {
+  Archive,
+  FolderOpen,
+  MessageSquare,
+  Plus,
+  Search as SearchIcon,
+  Settings,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Badge } from "./Badge";
 import { Button } from "./Button";
 import { Card } from "./Card";
@@ -101,7 +110,9 @@ function KitOverview() {
           <P>Body 14px / 1.5. The quick brown fox jumps over the lazy dog.</P>
           <Small>Small 13px. The quick brown fox jumps over the lazy dog.</Small>
           <span className="text-xs text-text-muted">Extra small 12px muted</span>
-          <span className="text-[11px] font-medium tracking-[0.02em] text-text-subtle">SECTION HEADER 11PX</span>
+          <span className="text-[11px] font-medium tracking-[0.02em] text-text-subtle">
+            SECTION HEADER 11PX
+          </span>
           <code className="font-mono text-[13px]">Geist Mono: const x = 42;</code>
         </div>
       </Block>
@@ -141,15 +152,28 @@ function KitOverview() {
 
       <Block title="ICONBUTTON / CHIP / KBD">
         <div className="flex flex-wrap items-center gap-3">
-          <IconButton label="Settings" size="xs"><Settings className="size-3.5" /></IconButton>
-          <IconButton label="Settings" size="sm"><Settings className="size-4" /></IconButton>
-          <IconButton label="Settings"><Settings className="size-4" /></IconButton>
-          <IconButton label="Delete" variant="outline"><Trash2 className="size-4" /></IconButton>
-          <IconButton label="Send" variant="primary"><Plus className="size-4" /></IconButton>
+          <IconButton label="Settings" size="xs">
+            <Settings className="size-3.5" />
+          </IconButton>
+          <IconButton label="Settings" size="sm">
+            <Settings className="size-4" />
+          </IconButton>
+          <IconButton label="Settings">
+            <Settings className="size-4" />
+          </IconButton>
+          <IconButton label="Delete" variant="outline">
+            <Trash2 className="size-4" />
+          </IconButton>
+          <IconButton label="Send" variant="primary">
+            <Plus className="size-4" />
+          </IconButton>
           <Chip label="Model" icon={<MessageSquare />} caret />
           <Chip label="Outline" variant="outline" caret />
           <Chip label="Active" active caret />
-          <span className="flex items-center gap-1"><Kbd>Ctrl</Kbd><Kbd>K</Kbd></span>
+          <span className="flex items-center gap-1">
+            <Kbd>Ctrl</Kbd>
+            <Kbd>K</Kbd>
+          </span>
         </div>
       </Block>
 
@@ -158,8 +182,18 @@ function KitOverview() {
           <Input placeholder="Input" value={val} onChange={(e) => setVal(e.target.value)} />
           <Input placeholder="Error" error />
           <Input placeholder="Disabled" disabled />
-          <Select options={[{ value: "a", label: "Select option A" }, { value: "b", label: "Option B" }]} />
-          <SearchBar placeholder="Search" value={val} onChange={(e) => setVal(e.target.value)} onClear={() => setVal("")} />
+          <Select
+            options={[
+              { value: "a", label: "Select option A" },
+              { value: "b", label: "Option B" },
+            ]}
+          />
+          <SearchBar
+            placeholder="Search"
+            value={val}
+            onChange={(e) => setVal(e.target.value)}
+            onClear={() => setVal("")}
+          />
           <Textarea placeholder="Textarea" rows={3} />
           <div className="flex items-center gap-6">
             <Checkbox label="Checkbox" defaultChecked />
@@ -190,20 +224,32 @@ function KitOverview() {
         <div className="grid gap-2 sm:grid-cols-2">
           <InlineNotice>Info notice, neutral tint.</InlineNotice>
           <InlineNotice variant="warning">Warning notice.</InlineNotice>
-          <InlineNotice variant="error" onDismiss={() => {}}>Error notice, dismissible.</InlineNotice>
+          <InlineNotice variant="error" onDismiss={() => {}}>
+            Error notice, dismissible.
+          </InlineNotice>
           <InlineNotice variant="success">Success notice.</InlineNotice>
         </div>
       </Block>
 
       <Block title="CARD / PANEL / TABS">
         <div className="grid gap-3 sm:grid-cols-2">
-          <Card><H3>Card</H3><P variant="muted">Raised surface, 12px radius, hairline border, flat.</P></Card>
-          <Card interactive><H3>Interactive card</H3><P variant="muted">Hover for overlay.</P></Card>
+          <Card>
+            <H3>Card</H3>
+            <P variant="muted">Raised surface, 12px radius, hairline border, flat.</P>
+          </Card>
+          <Card interactive>
+            <H3>Interactive card</H3>
+            <P variant="muted">Hover for overlay.</P>
+          </Card>
           <Panel variant="bordered">Panel bordered</Panel>
           <Panel variant="warning">Panel warning (tinted)</Panel>
         </div>
         <Tabs
-          tabs={[{ id: "a", label: "Overview" }, { id: "b", label: "Files" }, { id: "c", label: "Closable", closable: true, closeLabel: "Close" }]}
+          tabs={[
+            { id: "a", label: "Overview" },
+            { id: "b", label: "Files" },
+            { id: "c", label: "Closable", closable: true, closeLabel: "Close" },
+          ]}
           activeTab={tab}
           onTabChange={setTab}
           onClose={() => {}}
@@ -212,16 +258,17 @@ function KitOverview() {
 
       <Block title="DROPDOWN / POPOVER / DIALOG / TOOLTIP (open state shown)">
         <div className="flex min-h-72 flex-wrap items-start gap-8">
-          <Dropdown
-            isOpen
-            trigger={<Chip label="Menu" caret active />}
-          >
+          <Dropdown isOpen trigger={<Chip label="Menu" caret active />}>
             <DropdownLabel>Section</DropdownLabel>
             <DropdownItem icon={<FolderOpen className="size-4" />}>Open folder</DropdownItem>
-            <DropdownItem icon={<Archive className="size-4" />} selected>Selected</DropdownItem>
+            <DropdownItem icon={<Archive className="size-4" />} selected>
+              Selected
+            </DropdownItem>
             <DropdownItem trailing="Ctrl+K">With shortcut</DropdownItem>
             <DropdownSeparator />
-            <DropdownItem danger icon={<Trash2 className="size-4" />}>Delete</DropdownItem>
+            <DropdownItem danger icon={<Trash2 className="size-4" />}>
+              Delete
+            </DropdownItem>
           </Dropdown>
           <Popover isOpen trigger={<Chip label="Popover" caret active variant="outline" />}>
             <div className="flex flex-col gap-2">
@@ -236,15 +283,23 @@ function KitOverview() {
             </Popover>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={() => setDialog(true)}>Open dialog</Button>
-            <Tooltip content="Tooltip text"><Button variant="outline">Hover me</Button></Tooltip>
+            <Button variant="secondary" onClick={() => setDialog(true)}>
+              Open dialog
+            </Button>
+            <Tooltip content="Tooltip text">
+              <Button variant="outline">Hover me</Button>
+            </Tooltip>
           </div>
         </div>
         <Dialog open={dialog} onClose={() => setDialog(false)} title="Delete session?">
           <P variant="muted">This removes the session and its transcript. This cannot be undone.</P>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDialog(false)}>Cancel</Button>
-            <Button variant="danger" solid onClick={() => setDialog(false)}>Delete</Button>
+            <Button variant="ghost" onClick={() => setDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" solid onClick={() => setDialog(false)}>
+              Delete
+            </Button>
           </DialogFooter>
         </Dialog>
       </Block>
@@ -253,31 +308,51 @@ function KitOverview() {
         <div className="grid h-80 grid-cols-[260px_1fr] overflow-hidden rounded-xl border border-line">
           <div className="flex flex-col gap-3 overflow-auto bg-sidebar p-2">
             <SidebarSection title="Pinned">
-              <SidebarItem icon={<SearchIcon />} onClick={() => {}}>Search</SidebarItem>
+              <SidebarItem icon={<SearchIcon />} onClick={() => {}}>
+                Search
+              </SidebarItem>
             </SidebarSection>
             <SidebarSection
               title="Projects"
               collapsible
-              action={<IconButton label="New project" size="xs"><Plus className="size-3.5" /></IconButton>}
+              action={
+                <IconButton label="New project" size="xs">
+                  <Plus className="size-3.5" />
+                </IconButton>
+              }
             >
-              <SidebarItem icon={<FolderOpen />} onClick={() => {}}>harness</SidebarItem>
+              <SidebarItem icon={<FolderOpen />} onClick={() => {}}>
+                harness
+              </SidebarItem>
               {["thread-1", "thread-2", "thread-3"].map((id, i) => (
                 <SidebarItem
                   key={id}
                   level={1}
                   active={active === id}
                   onClick={() => setActive(id)}
-                  trailing={<IconButton label="Archive" size="xs"><Archive className="size-3.5" /></IconButton>}
+                  trailing={
+                    <IconButton label="Archive" size="xs">
+                      <Archive className="size-3.5" />
+                    </IconButton>
+                  }
                 >
-                  {i === 1 ? "A very long thread title that must truncate nicely" : `Thread ${i + 1}`}
+                  {i === 1
+                    ? "A very long thread title that must truncate nicely"
+                    : `Thread ${i + 1}`}
                 </SidebarItem>
               ))}
-              <SidebarItem level={2} icon={<MessageSquare />}>Nested level 2</SidebarItem>
+              <SidebarItem level={2} icon={<MessageSquare />}>
+                Nested level 2
+              </SidebarItem>
             </SidebarSection>
           </div>
           <PaneFrame
             title="Preview"
-            actions={<IconButton label="Settings" size="sm"><Settings className="size-4" /></IconButton>}
+            actions={
+              <IconButton label="Settings" size="sm">
+                <Settings className="size-4" />
+              </IconButton>
+            }
             onClose={() => {}}
             closeLabel="Close pane"
           >
@@ -296,7 +371,9 @@ function KitOverview() {
             showCharCount={false}
             footerStart={
               <>
-                <IconButton label="Attach" size="sm"><Plus className="size-4" /></IconButton>
+                <IconButton label="Attach" size="sm">
+                  <Plus className="size-4" />
+                </IconButton>
                 <Chip label="gpt-5" caret />
                 <Chip label="Auto" caret icon={<X />} />
               </>

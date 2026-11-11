@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { initialAcpSessionState } from '../../../hooks/acpSessionState';
-import { useAgentTitles } from '../../../hooks/useAgentTitles';
 import { EMPTY_SESSION_KEY } from '../../../hooks/acpWorkspaceState';
 import { useChatPane } from '../../../hooks/chatPaneStore';
 import { useAcpWorkspace } from '../../../hooks/useAcpWorkspace';
+import { useAgentTitles } from '../../../hooks/useAgentTitles';
 import { useSetupStatus } from '../../../hooks/useSetupStatus';
 import { useWorkspaceFiles } from '../../../hooks/useWorkspaceFiles';
 import { useWorkspaceRoots } from '../../../hooks/useWorkspaceRoots';
@@ -206,7 +206,8 @@ export function useChatSession(
 
   const stagedAgentOptions = useQuery({
     queryKey: ['agent-config-options', stagedExternalAgent, workspaceRoot],
-    queryFn: () => controller.agentConfigOptions(stagedExternalAgent ?? '', workspaceRoot ?? undefined),
+    queryFn: () =>
+      controller.agentConfigOptions(stagedExternalAgent ?? '', workspaceRoot ?? undefined),
     enabled: !!stagedExternalAgent,
     staleTime: 30_000,
   });

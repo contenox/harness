@@ -44,11 +44,7 @@ export default function MissionChangesTab({ missionId, focusPath }: MissionChang
 
   if (changes.error) {
     return (
-      <ErrorState
-        error={changes.error}
-        onRetry={changes.refetch}
-        title={t('changes.load_error')}
-      />
+      <ErrorState error={changes.error} onRetry={changes.refetch} title={t('changes.load_error')} />
     );
   }
 
@@ -72,9 +68,7 @@ export default function MissionChangesTab({ missionId, focusPath }: MissionChang
             missionId={missionId}
             file={file}
             expanded={expanded === file.path}
-            onToggle={() =>
-              setExpanded(prev => (prev === file.path ? null : file.path))
-            }
+            onToggle={() => setExpanded(prev => (prev === file.path ? null : file.path))}
           />
         ))}
       </ul>
@@ -108,7 +102,10 @@ function ChangedFileRow({
         onClick={onToggle}
         aria-expanded={expanded}
         className="hover:bg-surface-100 dark:hover:bg-dark-surface-200 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left">
-        <Chevron aria-hidden="true" className="text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0" />
+        <Chevron
+          aria-hidden="true"
+          className="text-text-muted dark:text-dark-text-muted h-4 w-4 shrink-0"
+        />
         <Badge variant={CHANGE_STATUS_BADGE_VARIANT[file.status]} size="sm" className="shrink-0">
           {t(CHANGE_STATUS_LABEL_KEY[file.status])}
         </Badge>

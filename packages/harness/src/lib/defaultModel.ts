@@ -32,7 +32,11 @@ export function planDefaultSelection(
   const sameType = preferredProvider
     ? checks.filter(b => b.type === preferredProvider && !exact.includes(b))
     : [];
-  const candidates = [...exact, ...sameType, ...checks.filter(b => !exact.includes(b) && !sameType.includes(b))];
+  const candidates = [
+    ...exact,
+    ...sameType,
+    ...checks.filter(b => !exact.includes(b) && !sameType.includes(b)),
+  ];
   for (const backend of candidates) {
     const model = pickDefaultModel(backend.chatModels ?? []);
     if (model) return { provider: backend.type, model };

@@ -47,8 +47,7 @@ export function Draggable({
       className={cn(
         "cursor-grab active:cursor-grabbing",
         dragging && "opacity-50",
-        !isDragDisabled &&
-          "hover:bg-hover",
+        !isDragDisabled && "hover:bg-hover",
         className,
       )}
       data-draggable-id={draggableId}

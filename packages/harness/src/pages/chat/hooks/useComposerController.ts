@@ -3,12 +3,12 @@ import { useCallback, useState, type FormEvent, type KeyboardEvent, type MouseEv
 import { useFilePreview } from '../../../hooks/useFilePreview';
 import type { UseWorkspaceFilesResult } from '../../../hooks/useWorkspaceFiles';
 import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
-import { useImageAttachments } from '../components/ComposerImageAttachments';
-import { useMentionMenu } from '../components/MentionMenu';
 import type { PendingAudioAttachment } from '../lib/audioAttachments';
 import { activeMentions, mentionPreviewPath, type WorkspaceFileRef } from '../lib/mentions';
 import type { SubmitPayload } from '../lib/submitTurn';
 import { parseTerminalPassthrough } from '../lib/terminalPassthrough';
+import { useImageAttachments } from './useImageAttachments';
+import { useMentionMenu } from './useMentionMenu';
 
 export type ComposerFiles = Pick<
   UseWorkspaceFilesResult,

@@ -46,7 +46,9 @@ export function AdoptedSessionBanner({
               ? t('acp_chat.adopted_controller_title')
               : t('acp_chat.adopted_observer_title')
           }>
-          {controller ? t('acp_chat.adopted_controller_label') : t('acp_chat.adopted_observer_label')}
+          {controller
+            ? t('acp_chat.adopted_controller_label')
+            : t('acp_chat.adopted_observer_label')}
         </Badge>
         {agentName && (
           <Span className="text-text-muted text-xs">

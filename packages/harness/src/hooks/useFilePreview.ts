@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { WorkspaceFilePeek } from './useWorkspaceFiles';
 import {
   previewEntryFromPeek,
   selectPreview,
   type FilePreviewCache,
   type FilePreviewState,
 } from '../pages/chat/lib/filePreview';
+import type { WorkspaceFilePeek } from './useWorkspaceFiles';
 
 const DEFAULT_DEBOUNCE_MS = 160;
 

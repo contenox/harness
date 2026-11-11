@@ -34,14 +34,6 @@ export function TabPanel<T extends string = string>({
   );
 }
 
-export function TabPanels({
-  className,
-  children,
-}: {
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className={cn("flex min-h-0 min-w-0 flex-1 flex-col", className)}>{children}</div>
-  );
+export function TabPanels({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cn("flex min-h-0 min-w-0 flex-1 flex-col", className)}>{children}</div>;
 }

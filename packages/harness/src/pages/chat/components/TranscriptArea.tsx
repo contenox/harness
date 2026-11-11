@@ -37,7 +37,9 @@ export const TranscriptArea = memo(function TranscriptArea({
           size="hero"
           title={t('acp_chat.empty_title')}
           description={
-            stagedAgent ? t('acp_chat.empty_description_agent', { name: stagedAgent }) : t('acp_chat.empty_description')
+            stagedAgent
+              ? t('acp_chat.empty_description_agent', { name: stagedAgent })
+              : t('acp_chat.empty_description')
           }
           className="pb-6"
         />
@@ -57,7 +59,11 @@ export const TranscriptArea = memo(function TranscriptArea({
           onOpenSettings={onOpenSettings}
         />
       </ChatThread>
-      <ChatScrollToLatest visible={!isNearBottom} onClick={scrollToEnd} label={t('acp_chat.scroll_to_latest')} />
+      <ChatScrollToLatest
+        visible={!isNearBottom}
+        onClick={scrollToEnd}
+        label={t('acp_chat.scroll_to_latest')}
+      />
     </div>
   );
 });

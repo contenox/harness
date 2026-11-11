@@ -26,7 +26,10 @@ export type AgentIdentityIssue =
   | 'key_unusable'
   | 'credit_as_invalid';
 
-export function agentIdentityIssues(identity: AgentIdentity, keys: AgentKey[] = []): AgentIdentityIssue[] {
+export function agentIdentityIssues(
+  identity: AgentIdentity,
+  keys: AgentKey[] = [],
+): AgentIdentityIssue[] {
   const name = identity.name.trim();
   const email = identity.email.trim();
   const issues: AgentIdentityIssue[] = [];
@@ -41,7 +44,9 @@ export function agentIdentityIssues(identity: AgentIdentity, keys: AgentKey[] = 
 }
 
 export function hasGeneratedAgentKey(keys: AgentKey[]): boolean {
-  return keys.some(key => key.source === 'file' && key.ref.replace(/\\/g, '/').endsWith(`/${GENERATED_AGENT_KEY}`));
+  return keys.some(
+    key => key.source === 'file' && key.ref.replace(/\\/g, '/').endsWith(`/${GENERATED_AGENT_KEY}`),
+  );
 }
 
 export type CommitPreview = {

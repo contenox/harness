@@ -2,9 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function openSeededSession(page: Page): Promise<string | null> {
   await page.goto('/#/chats', { waitUntil: 'networkidle' });
-  const link = page
-    .getByRole('link', { name: /Show me what a seeded session looks like/ })
-    .first();
+  const link = page.getByRole('link', { name: /Show me what a seeded session looks like/ }).first();
   await link.waitFor({ state: 'attached', timeout: 8_000 }).catch(() => {});
   let href = await link.getAttribute('href').catch(() => null);
   if (href === null) {
@@ -26,15 +24,17 @@ test('mission start offers the envelope catalog', async ({ page }) => {
   const options: string[][] = [];
   for (let i = 0; i < count; i += 1) {
     options.push(
-      await selects.nth(i).evaluate(node =>
-        Array.from((node as HTMLSelectElement).options).map(option => option.textContent?.trim() ?? ''),
-      ),
+      await selects
+        .nth(i)
+        .evaluate(node =>
+          Array.from((node as HTMLSelectElement).options).map(
+            option => option.textContent?.trim() ?? '',
+          ),
+        ),
     );
   }
   console.info('mission selects', JSON.stringify(options));
-  expect(options.flat()).toEqual(
-    expect.arrayContaining(['strict', 'default', 'read_only']),
-  );
+  expect(options.flat()).toEqual(expect.arrayContaining(['strict', 'default', 'read_only']));
   await page.waitForTimeout(300);
   await expect(page).toHaveScreenshot('missions-new.png', { fullPage: true });
 });

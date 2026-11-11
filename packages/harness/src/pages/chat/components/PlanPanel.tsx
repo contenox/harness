@@ -30,8 +30,7 @@ export function PlanPanel({ entries }: { entries: PlanEntry[] }) {
               {done}/{entries.length}
             </Badge>
           </span>
-        }
-      >
+        }>
         <ol className="mt-2 space-y-1.5 text-sm">
           {entries.map((entry, i) => (
             <li key={`${entry.content}-${i}`} className="flex items-start gap-2">

@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
 import type { editor } from 'monaco-editor';
-import { useTheme } from './ThemeProvider';
+import { useMemo } from 'react';
+import { useTheme } from './themeContext';
 
 export const BEAM_MONACO_THEME_LIGHT = 'beam-light';
 export const BEAM_MONACO_THEME_DARK = 'beam-dark';
@@ -72,7 +72,9 @@ export function defineBeamMonacoThemes(monaco: MonacoNS): void {
   monaco.editor.defineTheme(BEAM_MONACO_THEME_DARK, beamDark);
 }
 
-export function useMonacoAppTheme(): typeof BEAM_MONACO_THEME_LIGHT | typeof BEAM_MONACO_THEME_DARK {
+export function useMonacoAppTheme():
+  | typeof BEAM_MONACO_THEME_LIGHT
+  | typeof BEAM_MONACO_THEME_DARK {
   const { theme } = useTheme();
   return useMemo(
     () => (theme === 'dark' ? BEAM_MONACO_THEME_DARK : BEAM_MONACO_THEME_LIGHT),

@@ -10,7 +10,9 @@ interface FakeTextarea {
   setSelectionRange: ReturnType<typeof vi.fn>;
 }
 
-function stubClipboard(options: { secure?: boolean; writeText?: (text: string) => Promise<void> } = {}) {
+function stubClipboard(
+  options: { secure?: boolean; writeText?: (text: string) => Promise<void> } = {},
+) {
   const area: FakeTextarea = {
     value: "",
     style: {} as CSSStyleDeclaration,

@@ -13,7 +13,10 @@ export function NewSessionButton({ onStart }: Props) {
   const { t } = useTranslation();
   return (
     <div className="flex shrink-0 items-center gap-1 p-2">
-      <Button variant="secondary" className="min-w-0 flex-1 justify-start" onClick={() => onStart(null)}>
+      <Button
+        variant="secondary"
+        className="min-w-0 flex-1 justify-start"
+        onClick={() => onStart(null)}>
         <SquarePen className="size-4" aria-hidden />
         <span className="truncate">{t('acp_sidebar.new_session')}</span>
       </Button>

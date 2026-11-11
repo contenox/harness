@@ -6,7 +6,10 @@ import {
   type WorkspaceTabsState,
 } from './workspaceTabs';
 
-function reduce(state: WorkspaceTabsState, ...actions: Parameters<typeof workspaceTabsReducer>[1][]): WorkspaceTabsState {
+function reduce(
+  state: WorkspaceTabsState,
+  ...actions: Parameters<typeof workspaceTabsReducer>[1][]
+): WorkspaceTabsState {
   return actions.reduce(workspaceTabsReducer, state);
 }
 
@@ -165,7 +168,11 @@ describe('workspaceTabsReducer', () => {
     });
 
     it('returns the same reference when nothing changes', () => {
-      const opened = reduce(initialWorkspaceTabsState, { type: 'open', id: 'a' }, { type: 'open', id: 'b' });
+      const opened = reduce(
+        initialWorkspaceTabsState,
+        { type: 'open', id: 'a' },
+        { type: 'open', id: 'b' },
+      );
       expect(workspaceTabsReducer(opened, { type: 'sync', openIds: ['a', 'b'] })).toBe(opened);
     });
 
@@ -181,7 +188,6 @@ describe('workspaceTabsReducer', () => {
 });
 
 describe('routeForActiveTab (tab -> URL sync decision)', () => {
-
   it('targets a real active tab’s own /chat/:id', () => {
     expect(routeForActiveTab('sess-a', false)).toBe('/chat/sess-a');
     expect(routeForActiveTab('sess-a', true)).toBe('/chat/sess-a');

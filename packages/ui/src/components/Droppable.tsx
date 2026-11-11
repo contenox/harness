@@ -39,10 +39,7 @@ export function Droppable({
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    if (
-      !isDropDisabled &&
-      !elementRef.current?.contains(e.relatedTarget as Node)
-    ) {
+    if (!isDropDisabled && !elementRef.current?.contains(e.relatedTarget as Node)) {
       updateDrag(null);
     }
   };
@@ -59,8 +56,7 @@ export function Droppable({
       ref={elementRef}
       className={cn(
         "transition-all duration-200 ease-in-out",
-        isDraggingOver &&
-          "ring-2 ring-accent-500 bg-accent-50 dark:bg-dark-accent-800 rounded-lg",
+        isDraggingOver && "ring-2 ring-accent-500 bg-accent-50 dark:bg-dark-accent-800 rounded-lg",
         className,
       )}
       onDragEnter={handleDragEnter}

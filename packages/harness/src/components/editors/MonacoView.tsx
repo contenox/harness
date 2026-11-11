@@ -1,18 +1,10 @@
-import { Editor } from '@monaco-editor/react';
+import '@contenox/ui/monaco';
+import { Editor, type OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
-import { defineBeamMonacoThemes, useMonacoAppTheme } from '../../lib/monacoAppTheme';
+import { useCallback, useEffect, useRef } from 'react';
 import { languageForPath } from '../../lib/missionChanges';
-
-
-export const MONACO_READONLY_OPTIONS: editor.IStandaloneEditorConstructionOptions = {
-  readOnly: true,
-  automaticLayout: true,
-  minimap: { enabled: false },
-  scrollBeyondLastLine: false,
-  fontFamily: '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
-  renderWhitespace: 'selection',
-  padding: { top: 8, bottom: 8 },
-};
+import { defineBeamMonacoThemes, useMonacoAppTheme } from '../../lib/monacoAppTheme';
+import { MONACO_READONLY_OPTIONS } from './monacoOptions';
 
 export interface MonacoViewProps {
   value: string;
@@ -22,10 +14,31 @@ export interface MonacoViewProps {
   options?: editor.IStandaloneEditorConstructionOptions;
   /** When set, the editor is writable and reports every change. */
   onChange?: (value: string) => void;
+  onSave?: () => void;
+  scrollResetKey?: number;
 }
 
-export default function MonacoView({ value, language, path, className, options, onChange }: MonacoViewProps) {
+export default function MonacoView({
+  value,
+  language,
+  path,
+  className,
+  options,
+  onChange,
+  onSave,
+  scrollResetKey,
+}: MonacoViewProps) {
   const theme = useMonacoAppTheme();
+  const saveRef = useRef(onSave);
+  saveRef.current = onSave;
+  const instanceRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const handleMount = useCallback<OnMount>((instance, monaco) => {
+    instanceRef.current = instance;
+    instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveRef.current?.());
+  }, []);
+  useEffect(() => {
+    if (scrollResetKey) instanceRef.current?.setScrollLeft(0);
+  }, [scrollResetKey]);
   const resolvedLanguage = language ?? (path ? languageForPath(path) : undefined);
   return (
     <div className={className ?? 'min-h-0 flex-1 overflow-hidden'}>
@@ -35,6 +48,7 @@ export default function MonacoView({ value, language, path, className, options, 
         language={resolvedLanguage}
         theme={theme}
         beforeMount={defineBeamMonacoThemes}
+        onMount={handleMount}
         onChange={onChange ? next => onChange(next ?? '') : undefined}
         options={options ? { ...MONACO_READONLY_OPTIONS, ...options } : MONACO_READONLY_OPTIONS}
       />

@@ -14,7 +14,12 @@ export const CustomCopiedLabel: Story = { args: { label: "Kopieren", copiedLabel
 export const Row: Story = {
   render: () => (
     <div className="max-w-sm">
-      <CopyRow label="Command" copyLabel="Kopieren" copiedLabel="Kopiert" value="contenox serve --port 8080" />
+      <CopyRow
+        label="Command"
+        copyLabel="Kopieren"
+        copiedLabel="Kopiert"
+        value="contenox serve --port 8080"
+      />
     </div>
   ),
 };

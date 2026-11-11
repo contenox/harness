@@ -3,8 +3,8 @@ import {
   FIRST_ARGUMENT_KEY,
   type ArgumentCompletion,
   type AvailableCommand,
-} from '@contenox/acp-client';
-import type { CommandValueDomains } from './commandValueDomains';
+} from "@contenox/acp-client";
+import type { CommandValueDomains } from "./commandValueDomains";
 
 export type RuntimeArgumentCompletions = ReadonlyMap<
   string,
@@ -51,6 +51,6 @@ export function runtimeArgumentHint(
   command: string,
   key: string,
 ): string | null {
-  const hint = runtime.get(command)?.get(key)?.hint ?? '';
-  return hint === '' ? null : hint;
+  const hint = runtime.get(command)?.get(key)?.hint ?? "";
+  return hint === "" ? null : hint;
 }

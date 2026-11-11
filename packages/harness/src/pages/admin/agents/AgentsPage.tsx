@@ -60,7 +60,9 @@ export default function AgentsPage() {
                       key={p.id}
                       icon={<Icon />}
                       title={p.title}
-                      description={t(`external_agents.presets.${p.id}` as never, { defaultValue: p.package })}
+                      description={t(`external_agents.presets.${p.id}` as never, {
+                        defaultValue: p.package,
+                      })}
                       preset={p}
                       agent={all.find(a => a.name === p.agentName)}
                       takenNames={takenNames}

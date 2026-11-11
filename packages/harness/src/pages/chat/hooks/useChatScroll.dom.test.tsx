@@ -1,9 +1,14 @@
-import '../../../test/fakeDomGlobals';
 import { useChatScroll } from '@contenox/ui';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FakeNode, findAll, fireEvent, installFakeDom, type FakeDomHandle } from '../../../test/fakeDom';
+import {
+  FakeNode,
+  findAll,
+  fireEvent,
+  installFakeDom,
+  type FakeDomHandle,
+} from '../../../test/fakeDom';
 
 let dom: FakeDomHandle;
 

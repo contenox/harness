@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { WorkspaceSearchDone, WorkspaceSearchMatch } from './types';
 import {
   buildSearchUrl,
   byteSlice,
@@ -7,7 +8,6 @@ import {
   runWorkspaceSearch,
   type SearchResponseLike,
 } from './workspaceSearch';
-import type { WorkspaceSearchDone, WorkspaceSearchMatch } from './types';
 
 describe('byteSlice — byte-offset highlighting', () => {
   it('splits an ASCII preview at the match', () => {
@@ -70,7 +70,6 @@ describe('buildSearchUrl', () => {
   });
 });
 
-
 function streamResponse(chunks: string[]): SearchResponseLike {
   const enc = new TextEncoder();
   let i = 0;
@@ -109,9 +108,7 @@ describe('runWorkspaceSearch', () => {
       onRefusal: () => expect.fail('should not refuse'),
       onError: () => expect.fail('should not error'),
     });
-    expect(matches).toEqual([
-      { path: 'a.txt', line: 1, column: 0, length: 5, preview: 'hello' },
-    ]);
+    expect(matches).toEqual([{ path: 'a.txt', line: 1, column: 0, length: 5, preview: 'hello' }]);
     expect(done).toEqual({ done: true, matches: 1, truncated: false });
   });
 
@@ -144,7 +141,11 @@ describe('runWorkspaceSearch', () => {
       onError: () => expect.fail('should be a refusal, not an error'),
     });
     expect(refusal).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'refusal', status: 422, message: expect.stringContaining('not permitted') }),
+      expect.objectContaining({
+        kind: 'refusal',
+        status: 422,
+        message: expect.stringContaining('not permitted'),
+      }),
     );
   });
 

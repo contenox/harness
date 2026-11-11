@@ -1,12 +1,4 @@
-import {
-  Button,
-  Card,
-  FormField,
-  GridLayout,
-  Panel,
-  Textarea,
-  cn,
-} from "../..";
+import { Button, Card, FormField, GridLayout, Panel, Textarea, cn } from "../..";
 import { useEffect, useState } from "react";
 
 export interface JsonEditorProps {
@@ -129,35 +121,17 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
   };
 
   return (
-    <GridLayout
-      className={cn("h-full min-h-0 gap-4", className)}
-      responsive={{ base: 1, lg: 2 }}
-    >
-
+    <GridLayout className={cn("h-full min-h-0 gap-4", className)} responsive={{ base: 1, lg: 2 }}>
       <Card className="flex h-full min-h-0 flex-col overflow-hidden p-4 gap-4">
         <div className="flex-shrink-0 space-y-2">
-          <h3 className="text-lg font-semibold text-text dark:text-dark-text">
-            {title}
-          </h3>
-          <p className="text-text-muted text-sm dark:text-dark-text-muted">
-            {description}
-          </p>
-          {error && (
-            <Panel variant="error">
-              {error}
-            </Panel>
-          )}
+          <h3 className="text-lg font-semibold text-text dark:text-dark-text">{title}</h3>
+          <p className="text-text-muted text-sm dark:text-dark-text-muted">{description}</p>
+          {error && <Panel variant="error">{error}</Panel>}
         </div>
-        <FormField
-          label={jsonDataLabel}
-          error={error}
-          className="flex min-h-0 flex-1 flex-col"
-        >
+        <FormField label={jsonDataLabel} error={error} className="flex min-h-0 flex-1 flex-col">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-text dark:text-dark-text">
-                {jsonLabel}
-              </span>
+              <span className="text-sm font-medium text-text dark:text-dark-text">{jsonLabel}</span>
               <Button size="sm" variant="outline" onClick={handleFormat}>
                 {formatButtonLabel}
               </Button>
@@ -198,10 +172,7 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
       </Card>
 
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <Panel
-          variant="surface"
-          className="flex h-full min-h-0 flex-col overflow-hidden p-4 gap-2"
-        >
+        <Panel variant="surface" className="flex h-full min-h-0 flex-col overflow-hidden p-4 gap-2">
           <h4 className="flex-shrink-0 font-medium text-text dark:text-dark-text">
             {exampleTitle}
           </h4>

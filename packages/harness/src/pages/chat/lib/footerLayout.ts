@@ -19,7 +19,9 @@ export function footerEndLayout(
     compactUsage: width !== null && width > 0 && width < FOOTER_COMPACT_USAGE_BELOW,
     chipsInOverflow,
     overflowOptions: chipsInOverflow
-      ? [options.mode, options.model, ...options.rest].filter((o): o is SessionConfigOption => o != null)
+      ? [options.mode, options.model, ...options.rest].filter(
+          (o): o is SessionConfigOption => o != null,
+        )
       : options.rest,
   };
 }

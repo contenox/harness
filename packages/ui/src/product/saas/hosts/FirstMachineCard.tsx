@@ -1,11 +1,9 @@
-import { Card, CodeBlock, P, Small } from '@contenox/ui';
-import { CopyValueButton, InlineCode } from '@contenox/ui';
+import { Card, CodeBlock, P, Small } from "@contenox/ui";
+import { CopyValueButton, InlineCode } from "@contenox/ui";
 
+const INSTALL_COMMAND = "curl -fsSL https://contenox.com/install.sh | sh";
 
-const INSTALL_COMMAND = 'curl -fsSL https://contenox.com/install.sh | sh';
-
-
-const QUICKSTART_URL = 'https://contenox.com/docs/guide/quickstart/';
+const QUICKSTART_URL = "https://contenox.com/docs/guide/quickstart/";
 
 export function FirstMachineCard() {
   return (
@@ -19,18 +17,18 @@ export function FirstMachineCard() {
 
       <Step number={1} title="Install the runtime on the machine you want to reach">
         <div className="flex flex-col gap-2">
-
           <CodeBlock className="bg-surface-200 dark:bg-dark-surface-300 rounded-lg px-3 py-2 whitespace-pre-wrap break-all">
             {INSTALL_COMMAND}
           </CodeBlock>
           <CopyValueButton value={INSTALL_COMMAND} label="Copy the install command" />
           <Small>
-            Windows and the manual install are in the{' '}
+            Windows and the manual install are in the{" "}
             <a
               href={QUICKSTART_URL}
               target="_blank"
               rel="noreferrer"
-              className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline">
+              className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline"
+            >
               install docs
             </a>
             . The runtime is open source.
@@ -55,7 +53,6 @@ export function FirstMachineCard() {
   );
 }
 
-
 function Step({
   number,
   title,
@@ -69,7 +66,8 @@ function Step({
     <div className="flex gap-3">
       <div
         aria-hidden
-        className="bg-surface-200 dark:bg-dark-surface-300 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+        className="bg-surface-200 dark:bg-dark-surface-300 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+      >
         {number}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2">

@@ -13,7 +13,14 @@ export type AgentFormErrors = Partial<Record<'name' | 'command' | 'env' | 'paths
 
 export const NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
-export const emptyAgentForm: AgentFormValues = { name: '', command: '', args: '', env: '', modes: '', paths: [] };
+export const emptyAgentForm: AgentFormValues = {
+  name: '',
+  command: '',
+  args: '',
+  env: '',
+  modes: '',
+  paths: [],
+};
 
 export function formFromAgent(agent: ExternalAgent): AgentFormValues {
   return {
@@ -67,7 +74,11 @@ export function inputFromForm(values: AgentFormValues, enabled?: boolean): Exter
   };
 }
 
-export function validateAgentForm(values: AgentFormValues, takenNames: string[], editing: boolean): AgentFormErrors {
+export function validateAgentForm(
+  values: AgentFormValues,
+  takenNames: string[],
+  editing: boolean,
+): AgentFormErrors {
   const errors: AgentFormErrors = {};
   const name = values.name.trim();
   if (!editing) {
@@ -76,6 +87,7 @@ export function validateAgentForm(values: AgentFormValues, takenNames: string[],
   }
   if (!values.command.trim()) errors.command = 'external_agents.form.command_required';
   if (parseEnv(values.env).bad.length > 0) errors.env = 'external_agents.form.env_invalid';
-  if (values.paths.some(p => p.path.trim() !== '' && p.needs.trim() === '')) errors.paths = 'external_agents.form.path_needs_reason';
+  if (values.paths.some(p => p.path.trim() !== '' && p.needs.trim() === ''))
+    errors.paths = 'external_agents.form.path_needs_reason';
   return errors;
 }

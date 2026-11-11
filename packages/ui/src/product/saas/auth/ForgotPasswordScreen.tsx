@@ -1,19 +1,18 @@
-import { InlineNotice } from '@contenox/ui';
-import { useState } from 'react';
-import { EmailField } from '@contenox/ui';
-import { useProductPorts } from '../../ports';
-import { partitionFormError } from './formErrors';
-import { AuthForm, AuthLink, AuthScreen } from './AuthScreen';
+import { InlineNotice } from "@contenox/ui";
+import { useState } from "react";
+import { EmailField } from "@contenox/ui";
+import { useProductPorts } from "../../ports";
+import { partitionFormError } from "./formErrors";
+import { AuthForm, AuthLink, AuthScreen } from "./AuthScreen";
 
-
-const FIELDS = ['email'] as const;
+const FIELDS = ["email"] as const;
 
 export function ForgotPasswordScreen() {
   const { routes, useRequestPasswordReset } = useProductPorts();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const reset = useRequestPasswordReset();
 
-  const canSubmit = email.trim() !== '';
+  const canSubmit = email.trim() !== "";
   const errors = partitionFormError(reset.error, FIELDS);
   const submit = () => {
     if (!canSubmit) return;
@@ -34,12 +33,13 @@ export function ForgotPasswordScreen() {
           errors={errors}
           pending={reset.isPending}
           canSubmit={canSubmit}
-          onSubmit={submit}>
+          onSubmit={submit}
+        >
           <EmailField
             label="Email"
             required
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             disabled={reset.isPending}
             error={errors.fields.email}
           />

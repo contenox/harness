@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAcpWorkspace } from '../../hooks/useAcpWorkspace';
 import { startAdoptSession, useAdoptIntent } from '../../lib/adoptIntent';
+import { buildPaletteItems } from '../../lib/palette/providers';
+import type { PaletteItem } from '../../lib/palette/types';
 import {
   agentKeys,
   approvalKeys,
@@ -11,8 +13,6 @@ import {
   missionKeys,
   workspaceRootKeys,
 } from '../../lib/queryKeys';
-import { buildPaletteItems } from '../../lib/palette/providers';
-import type { PaletteItem } from '../../lib/palette/types';
 import type { Agent, FleetEntry, HITLApproval, Mission, WorkspaceRoot } from '../../lib/types';
 
 export function usePaletteSources(open: boolean): PaletteItem[] {

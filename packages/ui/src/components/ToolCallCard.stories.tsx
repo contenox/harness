@@ -32,7 +32,12 @@ export const Pending: Story = {
 };
 
 export const Running: Story = {
-  args: { status: "running", tool: "webtools", title: "Fetching https://example.com/docs", duration: "0.4s" },
+  args: {
+    status: "running",
+    tool: "webtools",
+    title: "Fetching https://example.com/docs",
+    duration: "0.4s",
+  },
   render: (args) => (
     <div style={{ width: 540 }}>
       <ToolCallCard {...args} />
@@ -88,7 +93,12 @@ export const WithLogTail: Story = {
         {...args}
         preview={
           <pre className="whitespace-pre-wrap break-all">
-            {["vite v5 building", "transforming (212)", "transforming (480)", "rendering chunks"].join("\n")}
+            {[
+              "vite v5 building",
+              "transforming (212)",
+              "transforming (480)",
+              "rendering chunks",
+            ].join("\n")}
           </pre>
         }
       />

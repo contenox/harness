@@ -1,15 +1,25 @@
-import '../../../test/fakeDomGlobals';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
-import { clickOn, findAll, fireEvent, installFakeDom, typeInto, type FakeDomHandle } from '../../../test/fakeDom';
 import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
+import {
+  clickOn,
+  findAll,
+  fireEvent,
+  installFakeDom,
+  typeInto,
+  type FakeDomHandle,
+} from '../../../test/fakeDom';
 import type { ComposerFiles } from '../hooks/useComposerController';
 import { ChatComposerContainer } from './ChatComposerContainer';
 
 const COMMANDS: AvailableCommand[] = [
-  { name: 'model', description: 'Show the current model, or set it.', input: { hint: '[model-name]' } },
+  {
+    name: 'model',
+    description: 'Show the current model, or set it.',
+    input: { hint: '[model-name]' },
+  },
   { name: 'think', description: 'Set the reasoning level.', input: { hint: '[level]' } },
 ];
 
@@ -92,7 +102,10 @@ describe('ChatComposerContainer slash pickers', () => {
     typeInto(dom.container, textarea, '/model ', fn => {
       void act(fn);
     });
-    const valueList = findAll(dom.container, n => n.getAttribute?.('aria-label') === 'Values for /model')[0];
+    const valueList = findAll(
+      dom.container,
+      n => n.getAttribute?.('aria-label') === 'Values for /model',
+    )[0];
     expect(valueList).toBeDefined();
     const rows = findAll(valueList, n => n.tagName === 'BUTTON').map(n => n.textContent);
     expect(rows).toContain('deepseek/deepseek-flash');
@@ -141,7 +154,9 @@ describe('ChatComposerContainer slash pickers', () => {
       fireEvent(dom.container, form, 'submit');
     });
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'prompt', text: '/think auto' }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'prompt', text: '/think auto' }),
+    );
     await act(async () => root.unmount());
   });
 
@@ -175,7 +190,9 @@ describe('ChatComposerContainer slash pickers', () => {
       fireEvent(dom.container, form, 'submit');
     });
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'prompt', text: '/think auto' }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'prompt', text: '/think auto' }),
+    );
     await act(async () => root.unmount());
   });
 
@@ -199,7 +216,10 @@ describe('ChatComposerContainer slash pickers', () => {
         }),
       );
     });
-    const button = findAll(dom.container, n => n.getAttribute?.('data-testid') === 'composer-attach-image')[0];
+    const button = findAll(
+      dom.container,
+      n => n.getAttribute?.('data-testid') === 'composer-attach-image',
+    )[0];
     expect(button).toBeDefined();
     expect(button?.getAttribute('type')).toBe('button');
     await act(async () => root.unmount());
@@ -231,7 +251,9 @@ describe('ChatComposerContainer slash pickers', () => {
     expect(stop).toBeDefined();
     expect(stop?.getAttribute('type')).toBe('button');
     expect(stop?.getAttribute('disabled')).toBeNull();
-    const square = findAll(dom.container, n => (n.getAttribute?.('class') ?? '').includes('lucide-square'));
+    const square = findAll(dom.container, n =>
+      (n.getAttribute?.('class') ?? '').includes('lucide-square'),
+    );
     expect(square.length).toBeGreaterThan(0);
     clickOn(dom.container, stop!, fn => {
       void act(fn);
@@ -240,6 +262,3 @@ describe('ChatComposerContainer slash pickers', () => {
     await act(async () => root.unmount());
   });
 });
-
-
-

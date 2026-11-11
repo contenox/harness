@@ -4,7 +4,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
 import { agentRowStatus } from '../../../lib/externalAgentStatus';
-import type { ExternalAgent, ExternalAgentCheck, ExternalAgentPresetStatus } from '../../../lib/types';
+import type {
+  ExternalAgent,
+  ExternalAgentCheck,
+  ExternalAgentPresetStatus,
+} from '../../../lib/types';
 import { AgentDetails } from './components/AgentDetails';
 import { AgentForm } from './components/AgentForm';
 import { PresetInstall } from './components/PresetInstall';
@@ -53,10 +57,12 @@ const preset: ExternalAgentPresetStatus = {
 };
 
 const checkOf = (data: ExternalAgentCheck) =>
-  ({ data, isFetching: false, error: null, refetch: () => Promise.resolve() }) as unknown as UseQueryResult<
-    ExternalAgentCheck,
-    Error
-  >;
+  ({
+    data,
+    isFetching: false,
+    error: null,
+    refetch: () => Promise.resolve(),
+  }) as unknown as UseQueryResult<ExternalAgentCheck, Error>;
 
 describe('PresetInstall', () => {
   it('explains what installs and points to Node.js when it is missing', () => {
@@ -80,7 +86,9 @@ describe('AgentDetails', () => {
       checkedAt: '',
     });
     const status = agentRowStatus({ agent, check: check.data });
-    const html = render(<AgentDetails agent={agent} title="Claude Code" status={status} check={check} />);
+    const html = render(
+      <AgentDetails agent={agent} title="Claude Code" status={status} check={check} />,
+    );
     expect(html).toContain('Sign in to Claude Code before you chat with it.');
     expect(html).toContain('Sign in with Claude Subscription');
     expect(html).toContain('Sign in with Anthropic Console');
@@ -97,9 +105,15 @@ describe('AgentDetails', () => {
       checkedAt: '',
     });
     const status = agentRowStatus({ agent, check: check.data });
-    const html = render(<AgentDetails agent={agent} title="Claude Code" status={status} check={check} />);
-    expect(html.indexOf('Sign in with Anthropic Console')).toBeLessThan(html.indexOf('Sign in with Claude Subscription'));
-    expect(html).toContain('Claude Subscription is an unofficial sign-in you turned on in Settings.');
+    const html = render(
+      <AgentDetails agent={agent} title="Claude Code" status={status} check={check} />,
+    );
+    expect(html.indexOf('Sign in with Anthropic Console')).toBeLessThan(
+      html.indexOf('Sign in with Claude Subscription'),
+    );
+    expect(html).toContain(
+      'Claude Subscription is an unofficial sign-in you turned on in Settings.',
+    );
   });
 
   it('names the problem in plain words and keeps the raw error under details', () => {
@@ -107,18 +121,33 @@ describe('AgentDetails', () => {
       ready: false,
       authMethods: [],
       checkedAt: '',
-      problem: { kind: 'command_not_found', message: 'the agent command was not found', detail: 'exec: not found' },
+      problem: {
+        kind: 'command_not_found',
+        message: 'the agent command was not found',
+        detail: 'exec: not found',
+      },
     });
     const status = agentRowStatus({ agent, check: check.data });
-    const html = render(<AgentDetails agent={agent} title="Claude Code" status={status} check={check} />);
-    expect(html).toContain("The agent&#x27;s program was not found.");
+    const html = render(
+      <AgentDetails agent={agent} title="Claude Code" status={status} check={check} />,
+    );
+    expect(html).toContain('The agent&#x27;s program was not found.');
     expect(html.indexOf('exec: not found')).toBeGreaterThan(html.indexOf('Details'));
   });
 
   it('shows a ready agent with its sign-in and what it may do', () => {
-    const check = checkOf({ ready: true, signedIn: true, authLabel: 'Claude Max', authMethods: [], checkedAt: '', agent: { version: '0.100.0' } });
+    const check = checkOf({
+      ready: true,
+      signedIn: true,
+      authLabel: 'Claude Max',
+      authMethods: [],
+      checkedAt: '',
+      agent: { version: '0.100.0' },
+    });
     const status = agentRowStatus({ agent, check: check.data });
-    const html = render(<AgentDetails agent={agent} title="Claude Code" status={status} check={check} />);
+    const html = render(
+      <AgentDetails agent={agent} title="Claude Code" status={status} check={check} />,
+    );
     expect(html).toContain('Ready · Claude Max');
     expect(html).toContain('Start a chat');
     expect(html).toContain('What it may do');
@@ -128,7 +157,13 @@ describe('AgentDetails', () => {
 describe('AgentForm', () => {
   it('asks for a name only when adding an agent', () => {
     expect(render(<AgentForm takenNames={[]} onSaved={() => undefined} />)).toContain('Add agent');
-    const edit = render(<AgentForm agent={{ ...agent, preset: undefined }} takenNames={[]} onSaved={() => undefined} />);
+    const edit = render(
+      <AgentForm
+        agent={{ ...agent, preset: undefined }}
+        takenNames={[]}
+        onSaved={() => undefined}
+      />,
+    );
     expect(edit).toContain('Save');
     expect(edit).not.toContain('Lowercase letters, digits and dashes.');
   });

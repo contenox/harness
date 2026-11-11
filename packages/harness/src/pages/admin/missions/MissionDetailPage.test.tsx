@@ -235,7 +235,12 @@ describe('MissionDetailPage — plan', () => {
           explanation: 'Reordered after the runner came back.',
           entries: [
             { id: '1', content: 'Reproduce the flake', status: 'completed', priority: 'high' },
-            { id: '2', content: 'Bisect the regression', status: 'in_progress', priority: 'medium' },
+            {
+              id: '2',
+              content: 'Bisect the regression',
+              status: 'in_progress',
+              priority: 'medium',
+            },
           ],
         },
       }),

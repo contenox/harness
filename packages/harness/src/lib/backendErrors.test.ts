@@ -114,8 +114,8 @@ describe('recoveryCodeOf / needsRecovery', () => {
     expect(needsRecovery({ ...baseConnection, health: 'checking', errorCode: 'unreachable' })).toBe(
       false,
     );
-    expect(needsRecovery({ ...baseConnection, health: 'unavailable', errorCode: 'unreachable' })).toBe(
-      true,
-    );
+    expect(
+      needsRecovery({ ...baseConnection, health: 'unavailable', errorCode: 'unreachable' }),
+    ).toBe(true);
   });
 });

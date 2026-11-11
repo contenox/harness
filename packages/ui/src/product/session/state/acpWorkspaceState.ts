@@ -1,16 +1,25 @@
-import { acpSessionReducer, initialAcpSessionState, type AcpSessionAction, type AcpSessionState } from './acpSessionState';
-import type { AvailableCommand, PromptCapabilities, SessionConfigOption, SessionInfo } from '@contenox/acp-client';
-
+import {
+  acpSessionReducer,
+  initialAcpSessionState,
+  type AcpSessionAction,
+  type AcpSessionState,
+} from "./acpSessionState";
+import type {
+  AvailableCommand,
+  PromptCapabilities,
+  SessionConfigOption,
+  SessionInfo,
+} from "@contenox/acp-client";
 
 export type AcpWorkspaceStatus =
-  | 'connecting'
-  | 'ready'
-  | 'reconnecting'
-  | 'disconnected'
-  | 'setup_required'
-  | 'error';
+  | "connecting"
+  | "ready"
+  | "reconnecting"
+  | "disconnected"
+  | "setup_required"
+  | "error";
 
-export type AcpSessionLoadState = 'loading' | 'ready' | 'not_found' | 'error';
+export type AcpSessionLoadState = "loading" | "ready" | "not_found" | "error";
 
 export interface AcpWorkspaceState {
   status: AcpWorkspaceStatus;
@@ -27,12 +36,12 @@ export interface AcpWorkspaceState {
 }
 
 export const initialAcpWorkspaceState: AcpWorkspaceState = {
-  status: 'connecting',
+  status: "connecting",
   error: null,
   agentName: null,
   sessions: [],
   activeSessionId: null,
-  sessionLoadState: 'ready',
+  sessionLoadState: "ready",
   sessionLoadError: null,
   workspaceConfigOptions: [],
   promptCapabilities: {},
@@ -40,28 +49,27 @@ export const initialAcpWorkspaceState: AcpWorkspaceState = {
 };
 
 export type AcpWorkspaceAction =
-  | { type: 'connecting' }
+  | { type: "connecting" }
   | {
-      type: 'ready';
+      type: "ready";
       agentName: string | null;
       workspaceConfigOptions: SessionConfigOption[];
       promptCapabilities: PromptCapabilities;
     }
-  | { type: 'workspace_available_commands'; commands: AvailableCommand[] }
-  | { type: 'workspace_config_options'; configOptions: SessionConfigOption[] }
-  | { type: 'reconnecting' }
-  | { type: 'disconnected' }
-  | { type: 'setup_required'; message: string }
-  | { type: 'error'; message: string }
-  | { type: 'sessions_replaced'; sessions: SessionInfo[] }
-  | { type: 'session_upserted'; session: SessionInfo }
-  | { type: 'session_removed'; sessionId: string }
-  | { type: 'active_session_changed'; sessionId: string | null }
-  | { type: 'session_load_start' }
-  | { type: 'session_load_succeeded' }
-  | { type: 'session_load_not_found' }
-  | { type: 'session_load_failed'; message: string };
-
+  | { type: "workspace_available_commands"; commands: AvailableCommand[] }
+  | { type: "workspace_config_options"; configOptions: SessionConfigOption[] }
+  | { type: "reconnecting" }
+  | { type: "disconnected" }
+  | { type: "setup_required"; message: string }
+  | { type: "error"; message: string }
+  | { type: "sessions_replaced"; sessions: SessionInfo[] }
+  | { type: "session_upserted"; session: SessionInfo }
+  | { type: "session_removed"; sessionId: string }
+  | { type: "active_session_changed"; sessionId: string | null }
+  | { type: "session_load_start" }
+  | { type: "session_load_succeeded" }
+  | { type: "session_load_not_found" }
+  | { type: "session_load_failed"; message: string };
 
 function compareByFreshness(a: SessionInfo, b: SessionInfo): number {
   const at = a.updatedAt ? Date.parse(a.updatedAt) : NaN;
@@ -74,7 +82,6 @@ function compareByFreshness(a: SessionInfo, b: SessionInfo): number {
   return 0;
 }
 
-
 function mergeMeta(
   existing: Record<string, unknown> | undefined,
   incoming: Record<string, unknown> | undefined,
@@ -84,7 +91,6 @@ function mergeMeta(
   return { ...existing, ...incoming };
 }
 
-
 function mergeSessionInfo(existing: SessionInfo | undefined, incoming: SessionInfo): SessionInfo {
   if (!existing) return incoming;
   return {
@@ -93,65 +99,58 @@ function mergeSessionInfo(existing: SessionInfo | undefined, incoming: SessionIn
     title: incoming.title ?? existing.title,
     updatedAt: incoming.updatedAt ?? existing.updatedAt,
 
-
-
     _meta: mergeMeta(existing._meta, incoming._meta),
   };
 }
 
-export function acpWorkspaceReducer(state: AcpWorkspaceState, action: AcpWorkspaceAction): AcpWorkspaceState {
+export function acpWorkspaceReducer(
+  state: AcpWorkspaceState,
+  action: AcpWorkspaceAction,
+): AcpWorkspaceState {
   switch (action.type) {
-    case 'connecting':
-      return { ...state, status: 'connecting', error: null };
+    case "connecting":
+      return { ...state, status: "connecting", error: null };
 
-    case 'ready':
+    case "ready":
       return {
         ...state,
-        status: 'ready',
+        status: "ready",
         error: null,
         agentName: action.agentName,
         workspaceConfigOptions: action.workspaceConfigOptions,
         promptCapabilities: action.promptCapabilities,
       };
 
-    case 'workspace_available_commands':
-      return action.commands.length > 0 ? { ...state, workspaceAvailableCommands: action.commands } : state;
+    case "workspace_available_commands":
+      return action.commands.length > 0
+        ? { ...state, workspaceAvailableCommands: action.commands }
+        : state;
 
-    case 'workspace_config_options':
+    case "workspace_config_options":
       return { ...state, workspaceConfigOptions: action.configOptions };
 
-    case 'reconnecting':
-      return { ...state, status: 'reconnecting', error: null };
+    case "reconnecting":
+      return { ...state, status: "reconnecting", error: null };
 
-    case 'disconnected':
-      return { ...state, status: 'disconnected' };
+    case "disconnected":
+      return { ...state, status: "disconnected" };
 
-    case 'setup_required':
-      return { ...state, status: 'setup_required', error: action.message };
+    case "setup_required":
+      return { ...state, status: "setup_required", error: action.message };
 
-    case 'error':
-      return { ...state, status: 'error', error: action.message };
+    case "error":
+      return { ...state, status: "error", error: action.message };
 
-    case 'sessions_replaced': {
-
-
-
-
-
-
-
-
-
-
-
-
-      const known = new Map(state.sessions.map(s => [s.sessionId, s] as const));
-      const sessions = action.sessions.map(incoming => mergeSessionInfo(known.get(incoming.sessionId), incoming));
+    case "sessions_replaced": {
+      const known = new Map(state.sessions.map((s) => [s.sessionId, s] as const));
+      const sessions = action.sessions.map((incoming) =>
+        mergeSessionInfo(known.get(incoming.sessionId), incoming),
+      );
       return { ...state, sessions: sessions.sort(compareByFreshness) };
     }
 
-    case 'session_upserted': {
-      const idx = state.sessions.findIndex(s => s.sessionId === action.session.sessionId);
+    case "session_upserted": {
+      const idx = state.sessions.findIndex((s) => s.sessionId === action.session.sessionId);
       const sessions = state.sessions.slice();
       if (idx === -1) {
         sessions.push(action.session);
@@ -161,35 +160,30 @@ export function acpWorkspaceReducer(state: AcpWorkspaceState, action: AcpWorkspa
       return { ...state, sessions: sessions.sort(compareByFreshness) };
     }
 
-    case 'session_removed':
-      return { ...state, sessions: state.sessions.filter(s => s.sessionId !== action.sessionId) };
+    case "session_removed":
+      return { ...state, sessions: state.sessions.filter((s) => s.sessionId !== action.sessionId) };
 
-    case 'active_session_changed':
+    case "active_session_changed":
       return { ...state, activeSessionId: action.sessionId };
 
-    case 'session_load_start':
-      return { ...state, sessionLoadState: 'loading', sessionLoadError: null };
+    case "session_load_start":
+      return { ...state, sessionLoadState: "loading", sessionLoadError: null };
 
-    case 'session_load_succeeded':
-      return { ...state, sessionLoadState: 'ready', sessionLoadError: null };
+    case "session_load_succeeded":
+      return { ...state, sessionLoadState: "ready", sessionLoadError: null };
 
-    case 'session_load_not_found':
-      return { ...state, sessionLoadState: 'not_found', sessionLoadError: null };
+    case "session_load_not_found":
+      return { ...state, sessionLoadState: "not_found", sessionLoadError: null };
 
-    case 'session_load_failed':
-      return { ...state, sessionLoadState: 'error', sessionLoadError: action.message };
+    case "session_load_failed":
+      return { ...state, sessionLoadState: "error", sessionLoadError: action.message };
 
     default:
       return state;
   }
 }
 
-
-
-
-
-
-export const EMPTY_SESSION_KEY = '';
+export const EMPTY_SESSION_KEY = "";
 
 export interface AcpSessionsState {
   slices: Record<string, AcpSessionState>;
@@ -202,28 +196,30 @@ export const initialAcpSessionsState: AcpSessionsState = {
 };
 
 export type AcpSessionsAction =
+  | { type: "session_dispatch"; key: string; action: AcpSessionAction }
+  | { type: "session_closed"; key: string }
+  | { type: "session_focused"; key: string };
 
-  | { type: 'session_dispatch'; key: string; action: AcpSessionAction }
-  | { type: 'session_closed'; key: string }
-  | { type: 'session_focused'; key: string };
-
-export function acpSessionsReducer(state: AcpSessionsState, action: AcpSessionsAction): AcpSessionsState {
+export function acpSessionsReducer(
+  state: AcpSessionsState,
+  action: AcpSessionsAction,
+): AcpSessionsState {
   switch (action.type) {
-    case 'session_dispatch': {
+    case "session_dispatch": {
       const prev = state.slices[action.key] ?? initialAcpSessionState;
       const next = acpSessionReducer(prev, action.action);
       if (next === prev) return state;
       return { ...state, slices: { ...state.slices, [action.key]: next } };
     }
 
-    case 'session_closed': {
+    case "session_closed": {
       if (!(action.key in state.slices)) return state;
       const slices = { ...state.slices };
       delete slices[action.key];
       return { ...state, slices };
     }
 
-    case 'session_focused':
+    case "session_focused":
       return state.focusedKey === action.key ? state : { ...state, focusedKey: action.key };
 
     default:
@@ -236,5 +232,5 @@ export function selectFocusedSession(state: AcpSessionsState): AcpSessionState {
 }
 
 export function selectOpenSessionIds(state: AcpSessionsState): string[] {
-  return Object.keys(state.slices).filter(key => key !== EMPTY_SESSION_KEY);
+  return Object.keys(state.slices).filter((key) => key !== EMPTY_SESSION_KEY);
 }

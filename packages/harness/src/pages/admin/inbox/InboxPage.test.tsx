@@ -56,7 +56,12 @@ function mission(over: Partial<Mission> & { id: string }): Mission {
 }
 
 function report(over: Partial<MissionReport> & { id: string; missionId: string }): MissionReport {
-  return { kind: 'progress', summary: 'made progress', createdAt: new Date().toISOString(), ...over };
+  return {
+    kind: 'progress',
+    summary: 'made progress',
+    createdAt: new Date().toISOString(),
+    ...over,
+  };
 }
 
 function instance(over: Partial<InstanceStatus> & { id: string }): InstanceStatus {
@@ -160,7 +165,10 @@ describe('InboxPage — the all-clear state', () => {
           agentId: 'a1',
           agentName: 'Researcher',
           kind: 'chain',
-          instances: [instance({ id: 'ok-1', state: 'running' }), instance({ id: 'ok-2', state: 'running' })],
+          instances: [
+            instance({ id: 'ok-1', state: 'running' }),
+            instance({ id: 'ok-2', state: 'running' }),
+          ],
         },
       ],
     });
@@ -191,7 +199,10 @@ describe('InboxPage — what came back (tier 3, grouped by mission)', () => {
   });
 
   it('says so plainly when no reports have come back', () => {
-    const html = renderInbox({ missions: [mission({ id: 'mission-1' })], reports: { 'mission-1': [] } });
+    const html = renderInbox({
+      missions: [mission({ id: 'mission-1' })],
+      reports: { 'mission-1': [] },
+    });
     expect(html).toContain('No reports yet.');
     expect(html).not.toContain('undefined');
   });

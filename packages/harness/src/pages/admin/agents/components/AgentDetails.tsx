@@ -1,6 +1,6 @@
 import { Button, InlineNotice, P, Span, Spinner, StatusDot } from '@contenox/ui';
-import { MessageSquarePlus, RefreshCw } from 'lucide-react';
 import type { UseQueryResult } from '@tanstack/react-query';
+import { MessageSquarePlus, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { AgentRowStatus } from '../../../../lib/externalAgentStatus';
 import type { ExternalAgent, ExternalAgentCheck } from '../../../../lib/types';
@@ -56,7 +56,9 @@ export function AgentDetails({ agent, title, status, check }: Props) {
 
       {status.state === 'sign_in' && result && (
         <div className="flex flex-col gap-3">
-          <InlineNotice variant="warning">{t('external_agents.sign_in_needed', { name: title })}</InlineNotice>
+          <InlineNotice variant="warning">
+            {t('external_agents.sign_in_needed', { name: title })}
+          </InlineNotice>
           <AgentSignIn name={agent.name} title={title} methods={result.authMethods} />
         </div>
       )}
@@ -65,7 +67,11 @@ export function AgentDetails({ agent, title, status, check }: Props) {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <StatusDot
             status="available"
-            label={result.authLabel ? t('external_agents.ready_as', { label: result.authLabel }) : t('external_agents.status.ready')}
+            label={
+              result.authLabel
+                ? t('external_agents.ready_as', { label: result.authLabel })
+                : t('external_agents.status.ready')
+            }
           />
           {result.agent?.version && (
             <Span variant="muted" className="text-xs">
@@ -85,7 +91,10 @@ export function AgentDetails({ agent, title, status, check }: Props) {
             size="sm"
             disabled={check.isFetching}
             onClick={recheck}>
-            <RefreshCw className={check.isFetching ? 'size-3.5 animate-spin' : 'size-3.5'} aria-hidden />
+            <RefreshCw
+              className={check.isFetching ? 'size-3.5 animate-spin' : 'size-3.5'}
+              aria-hidden
+            />
             {t('external_agents.check_again')}
           </Button>
           <Button

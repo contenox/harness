@@ -8,7 +8,6 @@ import {
 import { createAcpClient, type AcpCapabilityProvider } from './clientFactory';
 import type { Transport } from './transport';
 
-
 class MockTransport implements Transport {
   readonly sentRaw: string[] = [];
   private readonly messageCbs: Array<(text: string) => void> = [];
@@ -31,12 +30,10 @@ class MockTransport implements Transport {
     this.closeCalls++;
   }
 
-
   feed(msg: unknown): void {
     const text = JSON.stringify(msg);
     for (const cb of this.messageCbs) cb(text);
   }
-
 
   fireClose(err?: Error): void {
     for (const cb of this.closeCbs) cb(err);
@@ -52,7 +49,6 @@ class MockTransport implements Transport {
     return JSON.parse(raw) as Record<string, unknown>;
   }
 }
-
 
 async function flushMicrotasks(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 0));
@@ -124,7 +120,6 @@ describe('AcpClient: request/response id correlation', () => {
     expect(newSessionReq.id).toBe(1);
     expect(listSessionsReq.method).toBe('session/list');
     expect(listSessionsReq.id).toBe(2);
-
 
     transport.feed({ jsonrpc: '2.0', id: 2, result: { sessions: [] } });
     transport.feed({
@@ -313,7 +308,6 @@ describe('AcpClient: prompt turn update routing', () => {
     const req = transport.lastSent();
     transport.feed({ jsonrpc: '2.0', id: req.id, result: { stopReason: 'end_turn' } });
     await promptPromise;
-
 
     expect(() =>
       transport.feed({
@@ -579,7 +573,6 @@ describe('AcpClient: subscribe() out-of-turn routing', () => {
       onMessageChunk: text => events.push(`message:${text}`),
     });
 
-
     transport.feed({
       jsonrpc: '2.0',
       method: 'session/update',
@@ -663,8 +656,6 @@ describe('AcpClient: subscribe() out-of-turn routing', () => {
 
     expect(subCall).toHaveBeenCalledTimes(1);
 
-
-
     expect(subCall).toHaveBeenCalledWith('only once', undefined, undefined, undefined, undefined);
     expect(promptCall).not.toHaveBeenCalled();
   });
@@ -680,8 +671,6 @@ describe('AcpClient: subscribe() out-of-turn routing', () => {
     const req = transport.lastSent();
     transport.feed({ jsonrpc: '2.0', id: req.id, result: { stopReason: 'end_turn' } });
     await promptPromise;
-
-
 
     transport.feed({
       jsonrpc: '2.0',
@@ -710,7 +699,6 @@ describe('AcpClient: subscribe() out-of-turn routing', () => {
     });
     const req = transport.lastSent();
 
-
     transport.feed({
       jsonrpc: '2.0',
       method: 'session/update',
@@ -725,8 +713,6 @@ describe('AcpClient: subscribe() out-of-turn routing', () => {
 
     unsubscribe();
 
-
-
     transport.feed({
       jsonrpc: '2.0',
       method: 'session/update',
@@ -738,7 +724,6 @@ describe('AcpClient: subscribe() out-of-turn routing', () => {
         },
       },
     });
-
 
     expect(() => unsubscribe()).not.toThrow();
 
@@ -811,18 +796,11 @@ describe('AcpClient: session/load replay routing (matches acpsvc/session.go)', (
       },
     };
 
-
-
-
-
-
-
     client.subscribe('sess-replay', handlers);
 
     const loadPromise = client.loadSession('sess-replay', '/work/replay');
     const req = transport.lastSent();
     expect(req.method).toBe('session/load');
-
 
     transport.feed({
       jsonrpc: '2.0',
@@ -891,7 +869,6 @@ describe('AcpClient: session/load replay routing (matches acpsvc/session.go)', (
       },
     });
 
-
     transport.feed({
       jsonrpc: '2.0',
       method: 'session/update',
@@ -900,9 +877,6 @@ describe('AcpClient: session/load replay routing (matches acpsvc/session.go)', (
         update: { sessionUpdate: 'usage_update', used: 0, size: 8000 },
       },
     });
-
-
-
 
     transport.feed({
       jsonrpc: '2.0',
@@ -914,8 +888,6 @@ describe('AcpClient: session/load replay routing (matches acpsvc/session.go)', (
       },
     });
     const loadResult = await loadPromise;
-
-
 
     transport.feed({
       jsonrpc: '2.0',
@@ -1080,8 +1052,6 @@ describe('AcpClient: image content blocks in message chunks', () => {
       onUserMessageChunk: (text, messageId, image) => events.push({ text, messageId, image }),
     });
 
-
-
     transport.feed({
       jsonrpc: '2.0',
       method: 'session/update',
@@ -1175,7 +1145,11 @@ describe('AcpClient: workspace config options', () => {
     const client = new AcpClient(transport);
     const listener = vi.fn();
     const unsubscribe = client.onWorkspaceConfigOptionsChanged(listener);
-    const frame = { jsonrpc: '2.0', method: '_contenox/workspaceConfigOptionsChanged', params: { configOptions: options } };
+    const frame = {
+      jsonrpc: '2.0',
+      method: '_contenox/workspaceConfigOptionsChanged',
+      params: { configOptions: options },
+    };
     transport.feed(frame);
     expect(listener).toHaveBeenCalledWith(options);
     unsubscribe();
@@ -1188,7 +1162,11 @@ describe('AcpClient: workspace config options', () => {
     const client = new AcpClient(transport);
     const listener = vi.fn();
     client.onWorkspaceConfigOptionsChanged(listener);
-    transport.feed({ jsonrpc: '2.0', method: '_contenox/workspaceConfigOptionsChanged', params: {} });
+    transport.feed({
+      jsonrpc: '2.0',
+      method: '_contenox/workspaceConfigOptionsChanged',
+      params: {},
+    });
     expect(listener).not.toHaveBeenCalled();
   });
 });
@@ -1207,7 +1185,11 @@ describe('AcpClient: agent declarations', () => {
         dir: 'C:\\Users\\me\\.contenox-harness\\agents',
         files: [
           { path: 'acp/agent.md', state: 'shipped' },
-          { path: 'mine.md', state: 'user', problems: [{ source: 'agents/mine.md', action: 'refused', reason: 'bad frontmatter' }] },
+          {
+            path: 'mine.md',
+            state: 'user',
+            problems: [{ source: 'agents/mine.md', action: 'refused', reason: 'bad frontmatter' }],
+          },
         ],
         problems: [{ source: 'agents.toml', action: 'ignored', reason: 'no such agent' }],
       },

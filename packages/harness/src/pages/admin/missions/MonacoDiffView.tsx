@@ -1,14 +1,12 @@
-import { DiffEditor } from '@monaco-editor/react';
 import { Button, InlineNotice, Span } from '@contenox/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import MonacoView, { MONACO_READONLY_OPTIONS } from '../../../components/editors/MonacoView';
+import MonacoDiff from '../../../components/editors/MonacoDiff';
+import MonacoView from '../../../components/editors/MonacoView';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import type { TranslationKey } from '../../../i18n';
-import { defineBeamMonacoThemes, useMonacoAppTheme } from '../../../lib/monacoAppTheme';
 import { languageForPath } from '../../../lib/missionChanges';
 import type { MissionChangeStatus, MissionFileDiff } from '../../../lib/types';
-
 
 type DiffView = 'old' | 'diff' | 'new';
 
@@ -23,7 +21,6 @@ export default function MonacoDiffView({
 }) {
   const { t } = useTranslation();
   const [view, setView] = useState<DiffView>('diff');
-  const theme = useMonacoAppTheme();
   const language = languageForPath(path);
   const sideBySide = useMediaQuery('(min-width: 768px)');
 
@@ -68,14 +65,11 @@ export default function MonacoDiffView({
       ) : (
         <div className="border-surface-200 dark:border-dark-surface-600 h-[50vh] min-h-[18rem] overflow-hidden rounded-lg border">
           {view === 'diff' ? (
-            <DiffEditor
-              height="100%"
+            <MonacoDiff
               original={diff.original}
               modified={diff.modified}
               language={language}
-              theme={theme}
-              beforeMount={defineBeamMonacoThemes}
-              options={{ ...MONACO_READONLY_OPTIONS, renderSideBySide: sideBySide }}
+              options={{ renderSideBySide: sideBySide }}
             />
           ) : (
             <MonacoView

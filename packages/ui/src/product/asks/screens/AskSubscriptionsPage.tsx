@@ -1,23 +1,23 @@
-import { Badge, Button, Card, EmptyState, InlineNotice, P, Page, Small } from '@contenox/ui';
-import { BellOff } from 'lucide-react';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AskSection } from '@contenox/ui';
-import { CheckboxField, TextField } from '@contenox/ui';
-import { ScreenError, ScreenLoading } from '../../saas/ScreenState';
-import { ScreenBody } from '@contenox/ui';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { BackTo } from '../../shell/BackTo';
-import { useProductPorts } from '../../ports';
-import type { Instance } from '../../lib/api/types';
-import { ALL_AGENTS, subscribedAgents } from '../../lib/asks';
+import { Badge, Button, Card, EmptyState, InlineNotice, P, Page, Small } from "@contenox/ui";
+import { BellOff } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { AskSection } from "@contenox/ui";
+import { CheckboxField, TextField } from "@contenox/ui";
+import { ScreenError, ScreenLoading } from "../../saas/ScreenState";
+import { ScreenBody } from "@contenox/ui";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { BackTo } from "../../shell/BackTo";
+import { useProductPorts } from "../../ports";
+import type { Instance } from "../../lib/api/types";
+import { ALL_AGENTS, subscribedAgents } from "../../lib/asks";
 import {
   agentCatalogue,
   agentInstances,
   agentNameRefusal,
   subscribableAgentName,
   type AgentReach,
-} from '../../lib/askAgents';
+} from "../../lib/askAgents";
 
 export default function AskSubscriptionsPage() {
   const {
@@ -29,13 +29,13 @@ export default function AskSubscriptionsPage() {
     useConsumers,
     useHosts,
   } = useProductPorts();
-  const accountID = useAuth().accountID ?? '';
+  const accountID = useAuth().accountID ?? "";
   const subscriptions = useAskSubscriptions(accountID);
   const consumers = useConsumers(accountID);
   const hosts = useHosts(accountID);
   const { board } = useAskBoard();
   const change = useChangeAskSubscription(accountID);
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
 
   const agents = subscriptions.data === undefined ? null : subscribedAgents(subscriptions.data);
   const catalogue = agentCatalogue({
@@ -46,8 +46,7 @@ export default function AskSubscriptionsPage() {
   const typed = subscribableAgentName(name);
   const refusal = agentNameRefusal(name);
 
-
-  const alreadyOffered = typed !== null && catalogue.some(agent => agent.name === typed);
+  const alreadyOffered = typed !== null && catalogue.some((agent) => agent.name === typed);
 
   const set = (agentName: string, subscribed: boolean) =>
     change.mutate({ agent_name: agentName, subscribed });
@@ -77,7 +76,8 @@ export default function AskSubscriptionsPage() {
                 label="Every agent on this team"
                 checked={agents.all}
                 disabled={change.isPending}
-                onChange={checked => set(ALL_AGENTS, checked)}>
+                onChange={(checked) => set(ALL_AGENTS, checked)}
+              >
                 Including asks whose machine named no agent at all — nothing else covers those.
               </CheckboxField>
             </Card>
@@ -97,18 +97,17 @@ export default function AskSubscriptionsPage() {
                   description="This app learns an agent's name from an ask it raised or a webhook set to fire it. Until one of those exists, name it below exactly as it is declared on your machine."
                 />
               ) : (
-                catalogue.map(agent => (
+                catalogue.map((agent) => (
                   <AgentSubscription
                     key={agent.name}
                     agent={agent}
                     wildcard={agents.all}
                     instances={hosts.data}
                     pending={change.isPending}
-                    onChange={subscribed => set(agent.name, subscribed)}
+                    onChange={(subscribed) => set(agent.name, subscribed)}
                   />
                 ))
               )}
-
 
               <InlineNotice variant="info">
                 A subscription names an agent, not a machine — it covers that name on every machine
@@ -120,7 +119,7 @@ export default function AskSubscriptionsPage() {
               <TextField
                 label="Agent name"
                 value={name}
-                onChange={event => setName(event.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 disabled={change.isPending}
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -139,9 +138,10 @@ export default function AskSubscriptionsPage() {
                   typed !== null &&
                   change.mutate(
                     { agent_name: typed, subscribed: true },
-                    { onSuccess: () => setName('') },
+                    { onSuccess: () => setName("") },
                   )
-                }>
+                }
+              >
                 Subscribe to this agent
               </Button>
             </Card>
@@ -151,7 +151,6 @@ export default function AskSubscriptionsPage() {
     </Page>
   );
 }
-
 
 function AgentSubscription({
   agent,
@@ -177,7 +176,8 @@ function AgentSubscription({
             label={agent.name}
             checked={wildcard || agent.subscribed}
             disabled={pending || wildcard}
-            onChange={onChange}>
+            onChange={onChange}
+          >
             {whereItRuns(machines, agent)}
           </CheckboxField>
         </div>
@@ -191,7 +191,8 @@ function AgentSubscription({
         <Link
           to={routes.askAgent(agent.name)}
           aria-label={`Everything from ${agent.name}`}
-          className="text-primary-700 dark:text-dark-primary-500 inline underline underline-offset-4">
+          className="text-primary-700 dark:text-dark-primary-500 inline underline underline-offset-4"
+        >
           What it is waiting on
         </Link>
       </P>
@@ -199,12 +200,11 @@ function AgentSubscription({
   );
 }
 
-
 function whereItRuns(machines: { known: Instance[]; unknown: number }, agent: AgentReach): string {
-  const named = machines.known.slice(0, 2).map(instance => instance.name);
+  const named = machines.known.slice(0, 2).map((instance) => instance.name);
   const rest = machines.known.length - named.length + machines.unknown;
   const parts = [...named, ...(rest > 0 ? [`${rest} more`] : [])];
-  const where = parts.length === 0 ? 'No machine seen yet' : `On ${parts.join(', ')}`;
+  const where = parts.length === 0 ? "No machine seen yet" : `On ${parts.join(", ")}`;
   if (agent.triggers === 0) return where;
-  return `${where} · fired by ${agent.triggers} ${agent.triggers === 1 ? 'webhook' : 'webhooks'}`;
+  return `${where} · fired by ${agent.triggers} ${agent.triggers === 1 ? "webhook" : "webhooks"}`;
 }

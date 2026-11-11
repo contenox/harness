@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { loadFrecency, recordUsage, saveFrecency, type FrecencyStore } from '../../lib/palette/frecency';
+import {
+  loadFrecency,
+  recordUsage,
+  saveFrecency,
+  type FrecencyStore,
+} from '../../lib/palette/frecency';
 import {
   computeResults,
   createPaletteSearcher,

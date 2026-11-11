@@ -25,49 +25,44 @@ const indentClass: Record<NonNullable<TerminalLineProps["indent"]>, string> = {
   3: "pl-7",
 };
 
-
-export const TerminalLine = forwardRef<HTMLDivElement, TerminalLineProps>(
-  function TerminalLine(
-    { glyph, glyphTone = "accent", tone = "default", indent = 0, className, children, ...props },
-    ref,
-  ) {
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          "flex items-start gap-1.5 font-mono",
-          indentClass[indent],
-          toneClass[tone],
-          className,
-        )}
-        {...props}
-      >
-        {glyph != null && (
-          <span className={cn("select-none", toneClass[glyphTone])}>{glyph}</span>
-        )}
-        <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">{children}</span>
-      </div>
-    );
-  },
-);
+export const TerminalLine = forwardRef<HTMLDivElement, TerminalLineProps>(function TerminalLine(
+  { glyph, glyphTone = "accent", tone = "default", indent = 0, className, children, ...props },
+  ref,
+) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex items-start gap-1.5 font-mono",
+        indentClass[indent],
+        toneClass[tone],
+        className,
+      )}
+      {...props}
+    >
+      {glyph != null && <span className={cn("select-none", toneClass[glyphTone])}>{glyph}</span>}
+      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">{children}</span>
+    </div>
+  );
+});
 
 export interface TerminalMetaProps extends React.HTMLAttributes<HTMLDivElement> {
   indent?: 0 | 1 | 2 | 3;
 }
 
-
-export const TerminalMeta = forwardRef<HTMLDivElement, TerminalMetaProps>(
-  function TerminalMeta({ indent = 2, className, ...props }, ref) {
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          "font-mono text-[11px] text-text-muted dark:text-dark-text-muted",
-          indentClass[indent],
-          className,
-        )}
-        {...props}
-      />
-    );
-  },
-);
+export const TerminalMeta = forwardRef<HTMLDivElement, TerminalMetaProps>(function TerminalMeta(
+  { indent = 2, className, ...props },
+  ref,
+) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "font-mono text-[11px] text-text-muted dark:text-dark-text-muted",
+        indentClass[indent],
+        className,
+      )}
+      {...props}
+    />
+  );
+});

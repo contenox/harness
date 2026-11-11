@@ -1,7 +1,7 @@
 import type { StatusDotStatus } from '@contenox/ui';
 import { connectionStatus } from './connectionStatus';
-import { initialValues, type ProviderSetupValues } from './providerSetupValues';
 import type { CloudProviderSetup } from './providerCatalog';
+import { initialValues, type ProviderSetupValues } from './providerSetupValues';
 import type { Connection } from './types';
 
 /** UI state of the provider list: one open row, and an unsaved draft per provider. */

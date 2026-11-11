@@ -17,10 +17,7 @@ export function Container({
   ...rest
 }: ContainerProps) {
   return (
-    <div
-      className={cn(`container mx-auto space-y-6`, padding, className)}
-      {...rest}
-    >
+    <div className={cn(`container mx-auto space-y-6`, padding, className)} {...rest}>
       {title && <H1>{title}</H1>}
       <div className={cn("bg-inherit", innerPadding)}>{children}</div>
     </div>

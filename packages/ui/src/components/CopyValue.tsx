@@ -1,8 +1,8 @@
-import { Button } from './Button';
-import { CodeBlock } from './CodeBlock';
-import { copyTextToClipboard } from './chat/clipboard';
-import { Small } from './Typography';
-import { useEffect, useState, type ComponentProps } from 'react';
+import { Button } from "./Button";
+import { CodeBlock } from "./CodeBlock";
+import { copyTextToClipboard } from "./chat/clipboard";
+import { Small } from "./Typography";
+import { useEffect, useState, type ComponentProps } from "react";
 
 export function CopyRow({
   label,
@@ -30,15 +30,15 @@ export function CopyRow({
 export function CopyValueButton({
   value,
   label,
-  copiedLabel = 'Copied',
-  size = 'sm',
-  className = 'self-start',
+  copiedLabel = "Copied",
+  size = "sm",
+  className = "self-start",
 }: {
   value: string;
   label: string;
   /** Shown for two seconds after a successful copy. Defaults to "Copied". */
   copiedLabel?: string;
-  size?: ComponentProps<typeof Button>['size'];
+  size?: ComponentProps<typeof Button>["size"];
   className?: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -56,7 +56,8 @@ export function CopyValueButton({
       className={className}
       onClick={() => {
         void copyTextToClipboard(value).then(setCopied);
-      }}>
+      }}
+    >
       {copied ? copiedLabel : label}
     </Button>
   );
@@ -64,8 +65,6 @@ export function CopyValueButton({
 
 export function InlineCode({ children }: { children: React.ReactNode }) {
   return (
-    <code className="rounded-md bg-selected px-1.5 py-0.5 font-mono text-[0.9em]">
-      {children}
-    </code>
+    <code className="rounded-md bg-selected px-1.5 py-0.5 font-mono text-[0.9em]">{children}</code>
   );
 }

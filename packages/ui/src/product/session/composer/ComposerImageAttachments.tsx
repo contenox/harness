@@ -1,7 +1,7 @@
-import { Button } from '../../../components/Button';
-import { InlineNotice } from '../../../components/InlineNotice';
-import { Span } from '../../../components/Typography';
-import { Camera, ImagePlus, X } from 'lucide-react';
+import { Button } from "../../../components/Button";
+import { InlineNotice } from "../../../components/InlineNotice";
+import { Span } from "../../../components/Typography";
+import { Camera, ImagePlus, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -10,7 +10,7 @@ import {
   type ClipboardEvent,
   type DragEvent,
   type ReactNode,
-} from 'react';
+} from "react";
 import {
   fitsPromptWireLimit,
   ImageAttachmentError,
@@ -20,16 +20,16 @@ import {
   remainingImageBudget,
   type ImageAttachmentErrorReason,
   type PendingImageAttachment,
-} from '../lib/imageAttachments';
+} from "../lib/imageAttachments";
 
-
-export type ImageAttachmentNotice = 'not_supported' | 'message_too_large' | ImageAttachmentErrorReason;
-
+export type ImageAttachmentNotice =
+  | "not_supported"
+  | "message_too_large"
+  | ImageAttachmentErrorReason;
 
 const NOTICE_TIMEOUT_MS = 8000;
 
-
-const UNNAMED_IMAGE = 'Photo';
+const UNNAMED_IMAGE = "Photo";
 
 export interface UseImageAttachmentsResult {
   images: PendingImageAttachment[];
@@ -64,9 +64,6 @@ export function useImageAttachments(supported: boolean): UseImageAttachmentsResu
     }, NOTICE_TIMEOUT_MS);
   }, []);
 
-
-
-
   const imagesRef = useRef(images);
   imagesRef.current = images;
 
@@ -74,22 +71,18 @@ export function useImageAttachments(supported: boolean): UseImageAttachmentsResu
     async (files: File[]) => {
       if (files.length === 0) return;
       if (!supported) {
-        showNotice('not_supported');
+        showNotice("not_supported");
         return;
       }
       for (const file of files) {
         try {
-
-
-
-
           const attachment = await prepareImageAttachment(file, {
             budgetBytes: remainingImageBudget(imagesRef.current),
           });
           imagesRef.current = [...imagesRef.current, attachment];
           setImages(imagesRef.current);
         } catch (err) {
-          showNotice(err instanceof ImageAttachmentError ? err.reason : 'process_failed');
+          showNotice(err instanceof ImageAttachmentError ? err.reason : "process_failed");
         }
       }
     },
@@ -97,8 +90,8 @@ export function useImageAttachments(supported: boolean): UseImageAttachmentsResu
   );
 
   const removeImage = useCallback((id: string) => {
-    setImages(prev => {
-      const next = prev.filter(img => img.id !== id);
+    setImages((prev) => {
+      const next = prev.filter((img) => img.id !== id);
       imagesRef.current = next;
       return next;
     });
@@ -108,13 +101,10 @@ export function useImageAttachments(supported: boolean): UseImageAttachmentsResu
     (text: string): boolean => {
       const staged = imagesRef.current;
 
-
-
       if (staged.length === 0) return true;
 
-
       if (!fitsPromptWireLimit(text, staged)) {
-        showNotice('message_too_large');
+        showNotice("message_too_large");
         return false;
       }
       return true;
@@ -152,9 +142,6 @@ export function useImageAttachments(supported: boolean): UseImageAttachmentsResu
   );
 
   const handleDragOver = useCallback((e: DragEvent<HTMLElement>) => {
-
-
-
     if (dataTransferHasImages(e.dataTransfer)) e.preventDefault();
   }, []);
 
@@ -182,13 +169,15 @@ export function ComposerImageAttachments({
   return (
     <ul
       aria-label="Attached images"
-      className="flex list-none gap-2 overflow-x-auto overscroll-x-contain p-0">
-      {images.map(img => {
+      className="flex list-none gap-2 overflow-x-auto overscroll-x-contain p-0"
+    >
+      {images.map((img) => {
         const name = img.name || UNNAMED_IMAGE;
         return (
           <li
             key={img.id}
-            className="border-surface-300 dark:border-dark-surface-400 bg-surface-50 dark:bg-dark-surface-200 flex shrink-0 items-center overflow-hidden rounded border">
+            className="border-surface-300 dark:border-dark-surface-400 bg-surface-50 dark:bg-dark-surface-200 flex shrink-0 items-center overflow-hidden rounded border"
+          >
             <img
               src={`data:${img.mimeType};base64,${img.data}`}
               alt={name}
@@ -201,7 +190,8 @@ export function ComposerImageAttachments({
               onClick={() => onRemove(img.id)}
               aria-label={`Remove ${name}`}
               title={`Remove ${name}`}
-              className="text-text-muted hover:bg-surface-100 hover:text-text dark:text-dark-text-muted dark:hover:bg-dark-surface-400 dark:hover:text-dark-text flex h-14 items-center justify-center self-stretch px-2">
+              className="text-text-muted hover:bg-surface-100 hover:text-text dark:text-dark-text-muted dark:hover:bg-dark-surface-400 dark:hover:text-dark-text flex h-14 items-center justify-center self-stretch px-2"
+            >
               <X className="h-4 w-4" aria-hidden />
             </button>
           </li>
@@ -210,7 +200,6 @@ export function ComposerImageAttachments({
     </ul>
   );
 }
-
 
 function ImagePicker({
   label,
@@ -222,7 +211,7 @@ function ImagePicker({
   label: string;
   icon: ReactNode;
 
-  capture?: 'environment';
+  capture?: "environment";
   disabled?: boolean;
   onFiles: (files: File[]) => void;
 }) {
@@ -238,11 +227,11 @@ function ImagePicker({
         tabIndex={-1}
         aria-hidden
         className="sr-only"
-        data-testid={capture === undefined ? 'composer-image-input' : 'composer-camera-input'}
-        onChange={e => {
+        data-testid={capture === undefined ? "composer-image-input" : "composer-camera-input"}
+        onChange={(e) => {
           const files = Array.from(e.currentTarget.files ?? []);
 
-          e.currentTarget.value = '';
+          e.currentTarget.value = "";
           if (files.length > 0) onFiles(files);
         }}
       />
@@ -254,7 +243,8 @@ function ImagePicker({
         disabled={disabled}
         aria-label={label}
         title={label}
-        onClick={() => inputRef.current?.click()}>
+        onClick={() => inputRef.current?.click()}
+      >
         {icon}
       </Button>
     </>
@@ -287,15 +277,14 @@ export function AttachImageButtons({
   );
 }
 
-
 const NOTICE_TEXT: Record<ImageAttachmentNotice, string> = {
-  not_supported: 'This machine’s agent does not accept images.',
-  unsupported: 'That file is not an image this app can send.',
+  not_supported: "This machine’s agent does not accept images.",
+  unsupported: "That file is not an image this app can send.",
   too_large:
-    'That picture is too large to send, even shrunk as far as it goes. Try a screenshot or a smaller photo.',
-  process_failed: 'That image could not be read.',
+    "That picture is too large to send, even shrunk as far as it goes. Try a screenshot or a smaller photo.",
+  process_failed: "That image could not be read.",
   message_too_large:
-    'That message is too long to send with a picture attached. Shorten it, or remove the picture.',
+    "That message is too long to send with a picture attached. Shorten it, or remove the picture.",
 };
 
 export function ImageAttachmentNoticeView({ notice }: { notice: ImageAttachmentNotice | null }) {

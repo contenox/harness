@@ -12,13 +12,10 @@ export interface WorkflowEdgeProps {
   isError?: boolean;
   className?: string;
 
-
   addButtonPositions?: Array<{ x: number; y: number }>;
-
 
   hasCompose?: boolean;
   composeStrategy?: string | undefined;
-
 
   onComposeClick?: () => void;
 }
@@ -30,16 +27,11 @@ const LABEL_MIN_W = 44;
 const LABEL_MAX_W = 200;
 const BUTTON_RADIUS = 12;
 
-
 const COLLISION_MARGIN = 10;
 const NODE_PADDING = 8;
 
-
 const measureTextWidth = (text: string, approxCharPx = 7) =>
-  Math.max(
-    LABEL_MIN_W,
-    Math.min(LABEL_MAX_W, text.length * approxCharPx + LABEL_PAD_X * 2),
-  );
+  Math.max(LABEL_MIN_W, Math.min(LABEL_MAX_W, text.length * approxCharPx + LABEL_PAD_X * 2));
 
 const circleIntersectsRect = (
   cx: number,
@@ -68,8 +60,6 @@ const rectsOverlap = (
     a.top > b.bottom + pad
   );
 };
-
-
 
 const STRATEGY_STYLE: Record<string, { chipClass: string; short: string }> = {
   override: { chipClass: "fill-primary-500 stroke-primary-900", short: "OVR" },
@@ -121,12 +111,8 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
 
   const strokeWidth = isHighlighted ? 2.5 : 1.5;
 
-
-  const centerX =
-    (source.x + source.width / 2 + target.x + target.width / 2) / 2;
-  const centerY =
-    (source.y + source.height / 2 + target.y + target.height / 2) / 2;
-
+  const centerX = (source.x + source.width / 2 + target.x + target.width / 2) / 2;
+  const centerY = (source.y + source.height / 2 + target.y + target.height / 2) / 2;
 
   const sx = source.x + source.width / 2;
   const sy = source.y + source.height / 2;
@@ -135,7 +121,6 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
   const dx = tx - sx;
   const dy = ty - sy;
   const horizontalDominant = Math.abs(dx) >= Math.abs(dy);
-
 
   const srcRect = useMemo(
     () => ({
@@ -157,20 +142,13 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
     [target.x, target.y, target.width, target.height],
   );
 
-
   const { chipClass, short: shortStrat } = getStyleForStrategy(composeStrategy);
-
 
   const line1 = (label || "default").trim();
   const line2 = hasCompose ? shortStrat : "";
 
-
   const chipWidth = useMemo(
-    () =>
-      Math.max(
-        measureTextWidth(line1),
-        hasCompose ? measureTextWidth(line2, 6.5) : 0,
-      ),
+    () => Math.max(measureTextWidth(line1), hasCompose ? measureTextWidth(line2, 6.5) : 0),
     [line1, line2, hasCompose],
   );
   const chipHeight = hasCompose ? TWO_LINE_HEIGHT : ONE_LINE_HEIGHT;
@@ -178,12 +156,10 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
   const halfW = chipWidth / 2;
   const halfH = chipHeight / 2;
 
-
   const normalOffset = BUTTON_RADIUS + halfH + 10;
   const alongOffset = BUTTON_RADIUS + halfW + 10;
   const diagOffsetX = halfW + BUTTON_RADIUS + 12;
   const diagOffsetY = halfH + BUTTON_RADIUS + 12;
-
 
   const candidates = useMemo(() => {
     if (horizontalDominant) {
@@ -261,21 +237,17 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
       bottom: cy + halfH,
     };
 
-
     const hitsButton = addButtonPositions.some((btn) =>
       circleIntersectsRect(btn.x, btn.y, BUTTON_RADIUS, rect, COLLISION_MARGIN),
     );
     if (hitsButton) return false;
 
-
     const hitsNodes =
-      rectsOverlap(rect, srcRect, NODE_PADDING) ||
-      rectsOverlap(rect, tgtRect, NODE_PADDING);
+      rectsOverlap(rect, srcRect, NODE_PADDING) || rectsOverlap(rect, tgtRect, NODE_PADDING);
     if (hitsNodes) return false;
 
     return true;
   };
-
 
   const labelCenter = useMemo(() => {
     for (const c of candidates) {
@@ -315,10 +287,7 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
           markerHeight="6"
           orient="auto-start-reverse"
         >
-          <path
-            d="M 0 0 L 10 5 L 0 10 z"
-            className={`${strokeClass} ${fillClass}`}
-          />
+          <path d="M 0 0 L 10 5 L 0 10 z" className={`${strokeClass} ${fillClass}`} />
         </marker>
       </defs>
 
@@ -329,7 +298,6 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
         strokeWidth={strokeWidth}
         markerEnd="url(#arrowhead)"
       />
-
 
       <g
         transform={`translate(${labelCenter.x}, ${labelCenter.y})`}
@@ -348,7 +316,6 @@ export const WorkflowEdge: React.FC<WorkflowEdgeProps> = ({
           strokeWidth={1.25}
           className={cn(chipClass)}
         />
-
 
         {hasCompose ? (
           <>

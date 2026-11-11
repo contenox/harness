@@ -150,7 +150,8 @@ describe('SessionConnectorsPanel', () => {
 
 describe('ConnectorToolsPanel', () => {
   it('shows a switch per tool, off for a hidden one, with a scope choice', async () => {
-    const { ConnectorToolsPanel } = await import('../../../components/connectors/ConnectorToolsPanel');
+    const { ConnectorToolsPanel } =
+      await import('../../../components/connectors/ConnectorToolsPanel');
     const html = render(
       <ConnectorToolsPanel
         connector={{ ...ready, hidden: { '': ['search_code'] } }}

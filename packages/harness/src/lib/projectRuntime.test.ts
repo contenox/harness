@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./api', () => ({
   api: {
-    getWorkspaceRoots: vi.fn(async () => ({ roots: [{ path: '/proj/a', default: false }, { path: '/home/u/Contenox', default: true }] })),
+    getWorkspaceRoots: vi.fn(async () => ({
+      roots: [
+        { path: '/proj/a', default: false },
+        { path: '/home/u/Contenox', default: true },
+      ],
+    })),
   },
 }));
 
@@ -16,7 +21,9 @@ import {
   withPrefix,
 } from './projectRuntime';
 
-type Ensure = (p: string) => Promise<{ ok: true; key: string; prefix: string } | { ok: false; error: string }>;
+type Ensure = (
+  p: string,
+) => Promise<{ ok: true; key: string; prefix: string } | { ok: false; error: string }>;
 
 function installBridge(ensure: Ensure) {
   (globalThis as { window?: unknown }).window = {
@@ -88,7 +95,10 @@ describe('projectRuntime', () => {
     vi.stubGlobal('fetch', fetchMock);
     const res = await cwdRawFetch('/proj/a', '/api/files?x=1');
     expect(res.status).toBe(200);
-    expect(fetchMock.mock.calls.map(c => c[0])).toEqual(['/rt/k/api/files?x=1', '/rt/k/api/files?x=1']);
+    expect(fetchMock.mock.calls.map(c => c[0])).toEqual([
+      '/rt/k/api/files?x=1',
+      '/rt/k/api/files?x=1',
+    ]);
     expect(ensure).toHaveBeenCalledTimes(2);
   });
 

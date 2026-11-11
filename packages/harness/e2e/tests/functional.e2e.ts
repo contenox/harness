@@ -11,6 +11,7 @@ import {
   connection,
   echoServer,
   ensureMockBackend,
+  env,
   expectPermissionCard,
   listConnectors,
   mockPort,
@@ -21,9 +22,9 @@ import {
   removeBackend,
   removeConnector,
   restoreDefaults,
-  seen,
   runtimePort,
   runtimeUrl,
+  seen,
   send,
   setDialog,
   shellDialog,
@@ -36,7 +37,6 @@ import {
   waitForHealth,
   workDir,
   writeFileDialog,
-  env,
 } from './support';
 
 test.describe.configure({ timeout: 120_000 });
@@ -85,7 +85,9 @@ async function openAddConnector(page: Page) {
   await expect(page.getByRole('textbox', { name: 'Name *' })).toBeVisible();
 }
 
-test('R01 first start: an empty home shows the setup wizard and no runtime error', async ({ page }) => {
+test('R01 first start: an empty home shows the setup wizard and no runtime error', async ({
+  page,
+}) => {
   test.setTimeout(180_000);
   const runtimeP = runtimePort() + 10;
   const uiP = runtimePort() + 11;
@@ -115,14 +117,19 @@ test('R01 first start: an empty home shows the setup wizard and no runtime error
   }
 });
 
-test('R02 providers: an OpenAI-compatible backend connects and lists its models', async ({ page, request }) => {
+test('R02 providers: an OpenAI-compatible backend connects and lists its models', async ({
+  page,
+  request,
+}) => {
   await removeBackend(request, 'vllm');
   try {
     await page.goto('/#/backends', { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: /^vLLM/ }).click();
     await page.getByPlaceholder('http://localhost:8000/v1').fill(mockUrl());
     await page.getByRole('button', { name: 'Connect' }).click();
-    await expect(page.getByText('Available', { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Available', { exact: true }).first()).toBeVisible({
+      timeout: 30_000,
+    });
 
     await expect
       .poll(async () => {
@@ -131,7 +138,9 @@ test('R02 providers: an OpenAI-compatible backend connects and lists its models'
       })
       .toBe('vllm:available:5');
     const state = await api(request, 'GET', '/api/state');
-    const entry = (state.body as Array<{ name: string; [key: string]: unknown }>).find(item => item.name === 'vllm');
+    const entry = (state.body as Array<{ name: string; [key: string]: unknown }>).find(
+      item => item.name === 'vllm',
+    );
     expect(entry?.models).toContain('mock-model');
 
     await page.getByRole('tab', { name: 'Backends' }).click();
@@ -142,8 +151,13 @@ test('R02 providers: an OpenAI-compatible backend connects and lists its models'
   }
 });
 
-test('R03 providers: empty base URL or unknown type is refused and nothing is saved', async ({ page, request }) => {
-  const before = ((await api(request, 'GET', '/api/backends')).body as Array<{ name: string }>).map(item => item.name).sort();
+test('R03 providers: empty base URL or unknown type is refused and nothing is saved', async ({
+  page,
+  request,
+}) => {
+  const before = ((await api(request, 'GET', '/api/backends')).body as Array<{ name: string }>)
+    .map(item => item.name)
+    .sort();
   await page.goto('/#/backends?tab=backends', { waitUntil: 'networkidle' });
   const create = page.getByRole('button', { name: 'Create Backend' });
   await expect(create).toBeVisible();
@@ -152,7 +166,10 @@ test('R03 providers: empty base URL or unknown type is refused and nothing is sa
   await page.getByPlaceholder('my-backend').fill('e2e-nourl');
   await expect(create).toBeDisabled();
   await expect
-    .soft(page.getByText(/required|enter|must|invalid/i).first(), 'a message that says what is missing')
+    .soft(
+      page.getByText(/required|enter|must|invalid/i).first(),
+      'a message that says what is missing',
+    )
     .toBeVisible({ timeout: 2_000 });
 
   await page.getByPlaceholder('http://localhost:11434').fill('not a url');
@@ -166,11 +183,15 @@ test('R03 providers: empty base URL or unknown type is refused and nothing is sa
   expect(unknown.status).toBe(422);
   expect(JSON.stringify(unknown.body)).toMatch(/Type must be/);
 
-  const after = ((await api(request, 'GET', '/api/backends')).body as Array<{ name: string }>).map(item => item.name).sort();
+  const after = ((await api(request, 'GET', '/api/backends')).body as Array<{ name: string }>)
+    .map(item => item.name)
+    .sort();
   expect(after).toEqual(before);
 });
 
-test('R06 chat: the answer renders and thinking stays collapsed, never as a raw tag', async ({ page }) => {
+test('R06 chat: the answer renders and thinking stays collapsed, never as a raw tag', async ({
+  page,
+}) => {
   setDialog(
     answer(
       '<thinking> I need to read the README.md file </thinking>\n\nThe project is a runtime for agents.',
@@ -198,9 +219,13 @@ test('R08 chat: /think auto and /model are sent, confirmed in the transcript, an
   await startLiveChat(page);
 
   await send(page, '/think auto');
-  await expect(page.getByText('Think set to auto for this session.')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText('Think set to auto for this session.')).toBeVisible({
+    timeout: 20_000,
+  });
   await page.getByRole('button', { name: 'More options' }).click();
-  const think = page.locator('select').filter({ has: page.locator('option', { hasText: 'XHigh' }) });
+  const think = page
+    .locator('select')
+    .filter({ has: page.locator('option', { hasText: 'XHigh' }) });
   await expect(think).toHaveValue('auto');
   await page.keyboard.press('Escape');
 
@@ -214,7 +239,10 @@ test('R09 chat: a failed request shows a dismissible error card and does not com
   request,
 }) => {
   await ensureMockBackend(request);
-  await api(request, 'PUT', '/api/cli-config', { 'default-model': 'mock-alpha', 'default-provider': 'vllm' });
+  await api(request, 'PUT', '/api/cli-config', {
+    'default-model': 'mock-alpha',
+    'default-provider': 'vllm',
+  });
   await newChat(page);
   await expect(page.getByRole('button', { name: 'Model: mockvllm · mock-alpha' })).toBeVisible();
 
@@ -232,15 +260,20 @@ test('R09 chat: a failed request shows a dismissible error card and does not com
   await page.goto(url, { waitUntil: 'networkidle' });
   await expect(composer(page)).toBeVisible();
   await page.waitForTimeout(4_000);
-  const alertsInTranscript = page.locator('xpath=//*[contains(text(),"please answer")]/following::*[@role="alert"]');
-  expect(await page.getByRole('alert').count(), 'every alert sits in the transcript after the message, none pinned above it').toBe(
-    await alertsInTranscript.count(),
+  const alertsInTranscript = page.locator(
+    'xpath=//*[contains(text(),"please answer")]/following::*[@role="alert"]',
   );
+  expect(
+    await page.getByRole('alert').count(),
+    'every alert sits in the transcript after the message, none pinned above it',
+  ).toBe(await alertsInTranscript.count());
 
   await page.reload({ waitUntil: 'networkidle' });
   await expect(composer(page)).toBeVisible();
   await page.waitForTimeout(1_500);
-  expect.soft(await page.getByRole('alert').count(), 'after a reload too').toBe(await alertsInTranscript.count());
+  expect
+    .soft(await page.getByRole('alert').count(), 'after a reload too')
+    .toBe(await alertsInTranscript.count());
   await expect
     .soft(page.getByText('[step "').first(), 'raw step failure text stays behind Technical details')
     .not.toBeVisible();
@@ -274,7 +307,9 @@ test('R10 permissions: the Default set asks before a write; Allow writes, Deny l
   expect(fs.existsSync(denied)).toBe(false);
 });
 
-test('R11 permissions: the set can be switched per chat and a denied command never runs', async ({ page }) => {
+test('R11 permissions: the set can be switched per chat and a denied command never runs', async ({
+  page,
+}) => {
   const denied = path.join(workDir(), 'e2e-shell-denied.txt');
   const allowed = path.join(workDir(), 'e2e-shell-allowed.txt');
   fs.rmSync(denied, { force: true });
@@ -312,7 +347,8 @@ test('R12 permissions: a rule edited on the Permissions page is saved and surviv
 }) => {
   const rule = async () => {
     const res = await api(request, 'GET', '/api/agents-config/envelopes/dev?scope=home');
-    return (res.body as { layer?: { tools?: Record<string, unknown> } } | undefined)?.layer?.tools?.echo;
+    return (res.body as { layer?: { tools?: Record<string, unknown> } } | undefined)?.layer?.tools
+      ?.echo;
   };
   const echoRow = () =>
     page
@@ -336,7 +372,10 @@ test('R12 permissions: a rule edited on the Permissions page is saved and surviv
   }
 });
 
-test('R13 connectors: a stdio MCP server is added and checked, Ready with its tool', async ({ page, request }) => {
+test('R13 connectors: a stdio MCP server is added and checked, Ready with its tool', async ({
+  page,
+  request,
+}) => {
   const name = 'e2e-stdio';
   await removeConnector(request, name);
   try {
@@ -345,10 +384,14 @@ test('R13 connectors: a stdio MCP server is added and checked, Ready with its to
     await page.getByRole('textbox', { name: 'Name *' }).fill(name);
     await page.getByRole('textbox', { name: 'Command *' }).fill(pythonCommand());
     await page.getByRole('textbox', { name: 'Arguments' }).first().fill(echoServer());
-    await page.getByRole('textbox', { name: /Environment variables/ }).fill('ECHO_TOOL_NAME=e2e_shout');
+    await page
+      .getByRole('textbox', { name: /Environment variables/ })
+      .fill('ECHO_TOOL_NAME=e2e_shout');
     await page.getByRole('button', { name: 'Add and check' }).click();
 
-    await expect(page.getByRole('button', { name: new RegExp(`^${name}.*Ready · 1 tool`, 's') })).toBeVisible({
+    await expect(
+      page.getByRole('button', { name: new RegExp(`^${name}.*Ready · 1 tool`, 's') }),
+    ).toBeVisible({
       timeout: 60_000,
     });
     const found = (await listConnectors(request)).find(item => item.name === name);
@@ -375,7 +418,9 @@ test('R14 connectors: a remote MCP server with a wrong URL is Not available with
 
     await expect(page.getByText('Not available', { exact: true })).toBeVisible({ timeout: 60_000 });
     await page.getByRole('button', { name: 'Details' }).first().click();
-    await expect(page.getByText(/initialize|dial tcp|connect failed|rejected by transport/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/initialize|dial tcp|connect failed|rejected by transport/i).first(),
+    ).toBeVisible();
 
     const found = (await listConnectors(request)).find(item => item.name === name);
     expect(found?.status).toBe('unavailable');
@@ -385,7 +430,10 @@ test('R14 connectors: a remote MCP server with a wrong URL is Not available with
   }
 });
 
-test('R15 connectors: an OpenAPI service is Ready and lists its operations', async ({ page, request }) => {
+test('R15 connectors: an OpenAPI service is Ready and lists its operations', async ({
+  page,
+  request,
+}) => {
   const name = 'e2e-openapi';
   await removeConnector(request, name);
   try {
@@ -395,7 +443,9 @@ test('R15 connectors: an OpenAPI service is Ready and lists its operations', asy
     await page.getByRole('textbox', { name: /Service URL/ }).fill(`http://127.0.0.1:${mockPort()}`);
     await page.getByRole('button', { name: 'Add and check' }).click();
 
-    await expect(page.getByRole('button', { name: new RegExp(`^${name}.*Ready · 2 tools`, 's') })).toBeVisible({
+    await expect(
+      page.getByRole('button', { name: new RegExp(`^${name}.*Ready · 2 tools`, 's') }),
+    ).toBeVisible({
       timeout: 60_000,
     });
     await expect(page.getByText('listItems', { exact: true })).toBeVisible();
@@ -425,7 +475,14 @@ test('R16 connectors: a hidden tool is hidden in chat; the per-chat switch stays
     await expect(toolSwitch).toBeChecked();
     await toolSwitch.click({ force: true });
     await expect
-      .poll(async () => ((await api(request, 'GET', '/api/connectors/hidden-tools')).body as { everywhere?: string[] }).everywhere)
+      .poll(
+        async () =>
+          (
+            (await api(request, 'GET', '/api/connectors/hidden-tools')).body as {
+              everywhere?: string[];
+            }
+          ).everywhere,
+      )
       .toContain(`${name}.${tool}`);
 
     await startLiveChat(page);
@@ -435,7 +492,8 @@ test('R16 connectors: a hidden tool is hidden in chat; the per-chat switch stays
       await panel.getByRole('button', { name: new RegExp(`^${name}`) }).click();
     }
     await expect(hiddenSwitch).not.toBeChecked();
-    const chatSwitch = () => page.getByRole('dialog').getByRole('switch', { name: `Use ${name} in this chat` });
+    const chatSwitch = () =>
+      page.getByRole('dialog').getByRole('switch', { name: `Use ${name} in this chat` });
     await expect(chatSwitch()).toBeChecked();
     await chatSwitch().click({ force: true });
     await expect(chatSwitch()).not.toBeChecked();
@@ -455,7 +513,9 @@ test('R16 connectors: a hidden tool is hidden in chat; the per-chat switch stays
   }
 });
 
-test('R17 connectors in this chat: the panel of a live session lists the connectors', async ({ page }) => {
+test('R17 connectors in this chat: the panel of a live session lists the connectors', async ({
+  page,
+}) => {
   await startLiveChat(page);
   const panel = await openConnectorsPanel(page);
   await expect(panel).not.toContainText(/is not open/i);
@@ -473,7 +533,8 @@ test('R18 model picker: one row per provider and model, and the chip names the p
   await newChat(page);
   await page.getByRole('button', { name: /^Model:/ }).click();
   const search = page.getByPlaceholder('Search');
-  if (await search.isVisible({ timeout: 1_000 }).catch(() => false)) await search.fill('mock-alpha');
+  if (await search.isVisible({ timeout: 1_000 }).catch(() => false))
+    await search.fill('mock-alpha');
   const rows = page.getByRole('option').filter({ hasText: 'mock-alpha' });
   await expect.soft(rows, 'one row for mockvllm / mock-alpha').toHaveCount(1);
   await rows.first().click();
@@ -494,7 +555,9 @@ test('R19 settings: language de switches the UI without a restart and sets the a
     await input.fill('de');
     await input.locator('xpath=ancestor::form').getByRole('button', { name: 'Save' }).click();
 
-    await expect(page.getByRole('button', { name: 'Neue Sitzung', exact: true }).first()).toBeVisible({
+    await expect(
+      page.getByRole('button', { name: 'Neue Sitzung', exact: true }).first(),
+    ).toBeVisible({
       timeout: 15_000,
     });
     await expect(page.getByText('Sitzung').first()).toBeVisible();
@@ -507,7 +570,10 @@ test('R19 settings: language de switches the UI without a restart and sets the a
   }
 });
 
-test('R20 settings: unofficial sign-ins off hides Copilot, on lists it as Unofficial', async ({ page, request }) => {
+test('R20 settings: unofficial sign-ins off hides Copilot, on lists it as Unofficial', async ({
+  page,
+  request,
+}) => {
   const copilot = () => page.getByText('GitHub Copilot');
   await api(request, 'PUT', '/api/cli-config', { 'unofficial-sign-ins': 'false' });
   try {
@@ -544,7 +610,9 @@ test('R20 settings: unofficial sign-ins off hides Copilot, on lists it as Unoffi
   }
 });
 
-test('R21 settings: the runtime defaults wording does not mention contenox serve or VS Code', async ({ page }) => {
+test('R21 settings: the runtime defaults wording does not mention contenox serve or VS Code', async ({
+  page,
+}) => {
   await page.goto('/#/settings', { waitUntil: 'networkidle' });
   await expect(page.getByRole('heading', { name: 'Runtime defaults' })).toBeVisible();
   const panel = page
@@ -560,7 +628,9 @@ test('R21 settings: the runtime defaults wording does not mention contenox serve
   expect(pageText).not.toMatch(/VS ?Code/i);
 });
 
-test('R22 new project: a folder is added to the sidebar and its chat is scoped to it', async ({ page }) => {
+test('R22 new project: a folder is added to the sidebar and its chat is scoped to it', async ({
+  page,
+}) => {
   const folder = tempDir('e2e-project-');
   const name = 'e2e-project';
   try {
@@ -622,9 +692,12 @@ test('R23 persistence: after a restart of serve chats, providers, connectors and
       .poll(async () => (await listConnectors(request)).find(item => item.name === name)?.kind)
       .toBe('mcp');
     await expect
-      .poll(async () => (await api(request, 'POST', `/api/connectors/${name}/check`)).body?.status, {
-        timeout: 60_000,
-      })
+      .poll(
+        async () => (await api(request, 'POST', `/api/connectors/${name}/check`)).body?.status,
+        {
+          timeout: 60_000,
+        },
+      )
       .toBe('ready');
 
     const config = (await api(request, 'GET', '/api/cli-config')).body;

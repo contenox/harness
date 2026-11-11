@@ -1,4 +1,3 @@
-
 import type { ErrorResponse } from '@agentclientprotocol/sdk';
 import type { AcpCapabilityProvider } from './clientFactory';
 import type { Transport } from './transport';
@@ -43,12 +42,6 @@ import {
   type ReportRow,
 } from './types';
 import type { AssetAction, AssetActionRunParams, AssetActionResult } from './types';
-
-
-
-
-
-
 
 type JsonRpcId = number | string | null;
 
@@ -157,16 +150,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-
-
-
 function normalizeListedPath(path: string | undefined): string {
   if (path === undefined || path === '') return '';
   const cleaned = path.replace(/^\.\/+/, '').replace(/^\/+|\/+$/g, '');
   return cleaned === '.' ? '' : cleaned;
 }
-
-
 
 function decodeBase64Utf8(b64: string): string {
   const binary = atob(b64);
@@ -174,7 +162,6 @@ function decodeBase64Utf8(b64: string): string {
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new TextDecoder('utf-8').decode(bytes);
 }
-
 
 function encodeBase64Utf8(text: string): string {
   const bytes = new TextEncoder().encode(text);
@@ -266,10 +253,6 @@ export class AcpClient {
     this.transport.onClose(err => this.handleClose(err));
   }
 
-
-
-
-
   private handleClose(err?: Error): void {
     this.closed = true;
     const failure = err ?? new Error('acp: transport closed');
@@ -348,10 +331,6 @@ export class AcpClient {
     this.transport.send(JSON.stringify(frame));
   }
 
-
-
-
-
   private async handleIncomingRequest(req: JsonRpcRequestFrame): Promise<void> {
     if (req.method === 'session/request_permission') {
       await this.handlePermissionRequest(req);
@@ -363,12 +342,8 @@ export class AcpClient {
           const result = await this.capabilityProvider.handleRequest(req.method, req.params);
           this.respondResult(req.id, result);
           return;
-        } catch {
-        }
+        } catch {}
       }
-
-
-
 
       this.respondError(
         req.id,
@@ -411,10 +386,6 @@ export class AcpClient {
     }
   }
 
-
-
-
-
   private handleNotification(n: JsonRpcNotificationFrame): void {
     if (n.method === AGENT_DECLARATIONS_CHANGED) {
       for (const listener of this.agentDeclarationsListeners) listener();
@@ -440,13 +411,11 @@ export class AcpClient {
     this.routeSessionUpdate(params.update, handlers);
   }
 
-
   private readonly permissionCancels = new Map<string, () => void>();
 
   private handlersFor(sessionId: SessionId): SessionEventHandlers | undefined {
     return this.subscriptions.get(sessionId) ?? this.activePrompts.get(sessionId);
   }
-
 
   private routeSessionUpdate(update: SessionUpdate, handlers: SessionEventHandlers): void {
     switch (update.sessionUpdate) {
@@ -459,9 +428,6 @@ export class AcpClient {
         );
         return;
       case 'agent_message_chunk':
-
-
-
         handlers.onMessageChunk?.(
           update.content.text ?? '',
           update.messageId,
@@ -512,10 +478,6 @@ export class AcpClient {
         return;
     }
   }
-
-
-
-
 
   async initialize(
     clientCapabilities: ClientCapabilities = {},
@@ -606,7 +568,9 @@ export class AcpClient {
   }
 
   async sessionConnectors<T>(sessionId: SessionId): Promise<T[]> {
-    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors', { sessionId });
+    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors', {
+      sessionId,
+    });
     return result?.connectors ?? [];
   }
 
@@ -619,7 +583,12 @@ export class AcpClient {
     return result?.connectors ?? [];
   }
 
-  async setSessionConnectorTool<T>(sessionId: SessionId, name: string, tool: string, enabled: boolean): Promise<T[]> {
+  async setSessionConnectorTool<T>(
+    sessionId: SessionId,
+    name: string,
+    tool: string,
+    enabled: boolean,
+  ): Promise<T[]> {
     const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors/tools/set', {
       sessionId,
       name,
@@ -630,12 +599,18 @@ export class AcpClient {
   }
 
   async addSessionConnector<T>(sessionId: SessionId, server: unknown): Promise<T[]> {
-    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors/add', { sessionId, server });
+    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors/add', {
+      sessionId,
+      server,
+    });
     return result?.connectors ?? [];
   }
 
   async removeSessionConnector<T>(sessionId: SessionId, name: string): Promise<T[]> {
-    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors/remove', { sessionId, name });
+    const result = await this.call<{ connectors?: T[] }>('_contenox/session/connectors/remove', {
+      sessionId,
+      name,
+    });
     return result?.connectors ?? [];
   }
 
@@ -646,7 +621,10 @@ export class AcpClient {
   }
 
   async agentConfigOptions(agent: string, cwd?: string): Promise<SessionConfigOption[] | null> {
-    const result = await this.call<unknown>('_contenox/agents/configOptions', cwd ? { agent, cwd } : { agent });
+    const result = await this.call<unknown>(
+      '_contenox/agents/configOptions',
+      cwd ? { agent, cwd } : { agent },
+    );
     return configOptionsOf(result);
   }
 
@@ -688,9 +666,6 @@ export class AcpClient {
   }
 
   async listWorkspace(path?: string): Promise<WorkspaceListing> {
-
-
-
     const result = await this.call<{ entries: Array<{ name: string; isDir: boolean }> }>(
       '_contenox/fs/read_dir',
       { path: path ?? '' },

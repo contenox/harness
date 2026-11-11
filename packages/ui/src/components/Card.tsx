@@ -44,12 +44,9 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         className={cn(
           "rounded-xl border p-4 text-text transition-colors",
-          variant === "error"
-            ? "border-error/25 bg-error/10"
-            : "border-line bg-raised",
+          variant === "error" ? "border-error/25 bg-error/10" : "border-line bg-raised",
           variant === "bordered" && "border-line-strong",
-          variant === "dotted" &&
-            "bg-sidebar bg-dot-pattern [--dot-gap:18px]",
+          variant === "dotted" && "bg-sidebar bg-dot-pattern [--dot-gap:18px]",
           interactive && "cursor-pointer hover:border-line-strong hover:bg-hover",
           layout === "space-between" && "flex items-center justify-between",
           statusBorder && statusBorderStyles[statusBorder],

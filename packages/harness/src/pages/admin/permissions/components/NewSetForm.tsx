@@ -57,7 +57,9 @@ export function NewSetForm({ names, onCreate }: Props) {
         }}>
         <FormField
           label={t('permissions.new_set_title_label')}
-          description={title.trim() ? t('permissions.new_set_name_hint', { name: slug }) : undefined}
+          description={
+            title.trim() ? t('permissions.new_set_name_hint', { name: slug }) : undefined
+          }
           error={missingTitle ? t('permissions.new_set_name_required') : undefined}>
           <Input
             value={title}

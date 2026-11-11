@@ -18,7 +18,10 @@ describe('paneReducer', () => {
   });
 
   it('opening a file switches to the files pane and focuses it without duplicates', () => {
-    let s = paneReducer({ ...initialPaneState, pane: 'terminal' }, { type: 'openFile', path: 'a.ts' });
+    let s = paneReducer(
+      { ...initialPaneState, pane: 'terminal' },
+      { type: 'openFile', path: 'a.ts' },
+    );
     expect(s).toEqual({ pane: 'files', files: ['a.ts'], activeFile: 'a.ts' });
     s = paneReducer(s, { type: 'openFile', path: 'b.ts' });
     s = paneReducer(s, { type: 'openFile', path: 'a.ts' });
@@ -57,5 +60,26 @@ describe('reduceStore', () => {
   it('returns the same store when nothing changes', () => {
     const store = { activeKey: 'x', byKey: {} };
     expect(reduceStore(store, 'x', { type: 'close' })).toBe(store);
+  });
+});
+
+describe('paneReducer path changes', () => {
+  const open = {
+    pane: 'files' as const,
+    files: ['src/a.go', 'src/b.go', 'README.md'],
+    activeFile: 'src/b.go',
+  };
+
+  it('renames open tabs under a moved folder and keeps the active one', () => {
+    const next = paneReducer(open, { type: 'movePath', from: 'src', to: 'lib' });
+    expect(next.files).toEqual(['lib/a.go', 'lib/b.go', 'README.md']);
+    expect(next.activeFile).toBe('lib/b.go');
+    expect(paneReducer(open, { type: 'movePath', from: 'srcx', to: 'x' })).toBe(open);
+  });
+
+  it('closes tabs under a deleted path and picks another active tab', () => {
+    const next = paneReducer(open, { type: 'closeUnder', path: 'src' });
+    expect(next.files).toEqual(['README.md']);
+    expect(next.activeFile).toBe('README.md');
   });
 });

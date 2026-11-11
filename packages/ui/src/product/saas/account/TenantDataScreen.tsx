@@ -1,10 +1,10 @@
-import { Button, Card, KeyValue, Page, P, ScreenBody, Small } from '@contenox/ui';
-import { useState } from 'react';
-import type { ProductMutation, ProductQuery } from '../../ports';
-import { ConfirmDialog, Consequence } from '../ConfirmDialog';
-import { ScreenError, ScreenLoading } from '../ScreenState';
-import { ScreenHeader } from '../../shell/ScreenHeader';
-import { BackTo } from '../../shell/BackTo';
+import { Button, Card, KeyValue, Page, P, ScreenBody, Small } from "@contenox/ui";
+import { useState } from "react";
+import type { ProductMutation, ProductQuery } from "../../ports";
+import { ConfirmDialog, Consequence } from "../ConfirmDialog";
+import { ScreenError, ScreenLoading } from "../ScreenState";
+import { ScreenHeader } from "../../shell/ScreenHeader";
+import { BackTo } from "../../shell/BackTo";
 
 export interface AcceptanceRecord {
   document: string;
@@ -18,11 +18,10 @@ export interface DataSubjectAccount {
   name: string;
 }
 
-
 const DOCUMENT_LABELS: Record<string, string> = {
-  terms: 'Terms of service',
-  privacy: 'Privacy policy',
-  withdrawal_waiver: 'Withdrawal waiver',
+  terms: "Terms of service",
+  privacy: "Privacy policy",
+  withdrawal_waiver: "Withdrawal waiver",
 };
 
 export function TenantDataScreen({
@@ -35,7 +34,7 @@ export function TenantDataScreen({
   deleteAccount,
   deleteMe,
   backTo,
-  backLabel = 'Account',
+  backLabel = "Account",
 }: {
   account: DataSubjectAccount;
   email: string;
@@ -55,7 +54,11 @@ export function TenantDataScreen({
       <ScreenBody width="band">
         <BackTo to={backTo} label={backLabel} />
         <ExportCard exportData={exportData} />
-        <AcceptanceCard title="What you accepted" records={myConsents} empty="Nothing is recorded against your identity." />
+        <AcceptanceCard
+          title="What you accepted"
+          records={myConsents}
+          empty="Nothing is recorded against your identity."
+        />
         <AcceptanceCard
           title={`What ${account.name} accepted`}
           records={accountConsents}
@@ -68,7 +71,6 @@ export function TenantDataScreen({
   );
 }
 
-
 function ExportCard({ exportData }: { exportData: ProductMutation<void> }) {
   return (
     <Card variant="filled" className="flex flex-col gap-3">
@@ -78,7 +80,11 @@ function ExportCard({ exportData }: { exportData: ProductMutation<void> }) {
         you belong to with its invitations and acceptance records, and every acceptance you have
         given. Credential material is not included. It arrives as one JSON file.
       </P>
-      <Button variant="outline" onClick={() => exportData.mutate()} isLoading={exportData.isPending}>
+      <Button
+        variant="outline"
+        onClick={() => exportData.mutate()}
+        isLoading={exportData.isPending}
+      >
         Download
       </Button>
       {exportData.error && <ScreenError error={exportData.error} />}
@@ -86,7 +92,6 @@ function ExportCard({ exportData }: { exportData: ProductMutation<void> }) {
     </Card>
   );
 }
-
 
 function AcceptanceCard({
   title,
@@ -98,7 +103,14 @@ function AcceptanceCard({
   empty: string;
 }) {
   if (records.isPending) return <ScreenLoading label="Loading acceptance records" />;
-  if (records.error) return <ScreenError error={records.error} onRetry={() => void records.refetch()} retrying={records.isFetching} />;
+  if (records.error)
+    return (
+      <ScreenError
+        error={records.error}
+        onRetry={() => void records.refetch()}
+        retrying={records.isFetching}
+      />
+    );
   const list = records.data ?? [];
   return (
     <Card variant="filled" className="flex flex-col gap-3">
@@ -106,7 +118,7 @@ function AcceptanceCard({
       {list.length === 0 ? (
         <Small>{empty}</Small>
       ) : (
-        list.map(record => (
+        list.map((record) => (
           <div key={`${record.document}:${record.version}`} className="flex flex-col">
             <KeyValue
               label={DOCUMENT_LABELS[record.document] ?? record.document}
@@ -119,7 +131,6 @@ function AcceptanceCard({
     </Card>
   );
 }
-
 
 function DeleteAccountCard({
   account,
@@ -142,7 +153,6 @@ function DeleteAccountCard({
         Delete this account
       </Button>
 
-
       <ConfirmDialog
         open={confirming}
         onClose={() => setConfirming(false)}
@@ -152,7 +162,8 @@ function DeleteAccountCard({
         confirmPhraseLabel={`Type ${account.slug} to confirm`}
         pending={remove.isPending}
         error={remove.error}
-        onConfirm={() => remove.mutate(undefined, { onSuccess: () => setConfirming(false) })}>
+        onConfirm={() => remove.mutate(undefined, { onSuccess: () => setConfirming(false) })}
+      >
         <P className="text-sm">This cannot be undone. It deletes:</P>
         <Consequence count={memberCount} one="membership" many="memberships" />
         <P className="text-sm">
@@ -168,7 +179,6 @@ function DeleteAccountCard({
     </Card>
   );
 }
-
 
 function DeleteMeCard({ email, remove }: { email: string; remove: ProductMutation<void> }) {
   const [confirming, setConfirming] = useState(false);
@@ -192,13 +202,14 @@ function DeleteMeCard({ email, remove }: { email: string; remove: ProductMutatio
         confirmPhraseLabel="Type your email address to confirm"
         pending={remove.isPending}
         error={remove.error}
-        onConfirm={() => remove.mutate()}>
+        onConfirm={() => remove.mutate()}
+      >
         <P className="text-sm">This cannot be undone.</P>
         <P className="text-sm">
           Your identity, your sign-in credentials, every browser session you hold, and every
-          membership you have go. Each account left with nobody else on it is deleted with you, along
-          with its files, its invitations and its acceptance records. One that has other members is
-          kept and you are simply removed from it.
+          membership you have go. Each account left with nobody else on it is deleted with you,
+          along with its files, its invitations and its acceptance records. One that has other
+          members is kept and you are simply removed from it.
         </P>
         <P className="text-sm">
           Two things stop this. An account whose subscription is still being billed is refused,

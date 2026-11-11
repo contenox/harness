@@ -12,7 +12,13 @@ export function useStartAgentChat() {
   const { setStagedRoot } = useStagedRoot();
   return useCallback(
     (agent: string) =>
-      startNewChat(agent, { setStagedAgent, setStagedRoot, focusEmptyTab, navigate, closeSidebar: () => {} }),
+      startNewChat(agent, {
+        setStagedAgent,
+        setStagedRoot,
+        focusEmptyTab,
+        navigate,
+        closeSidebar: () => {},
+      }),
     [setStagedAgent, setStagedRoot, focusEmptyTab, navigate],
   );
 }

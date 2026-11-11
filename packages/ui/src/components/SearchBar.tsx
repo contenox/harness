@@ -15,10 +15,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
         <Inbox
           ref={ref}
           value={value}
-          className={cn(
-            "block w-full pr-8 pl-8 focus-visible:border-accent/60",
-            className,
-          )}
+          className={cn("block w-full pr-8 pl-8 focus-visible:border-accent/60", className)}
           {...props}
         />
         {value && (

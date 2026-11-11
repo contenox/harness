@@ -1,13 +1,13 @@
-import { EmptyState } from '../../components/EmptyState';
-import { InlineNotice } from '../../components/InlineNotice';
-import { Small } from '../../components/Typography';
-import { Inbox } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { ScreenBody } from '../../components/ScreenBody';
-import { ListSkeleton, ScreenError } from '../saas/ScreenState';
-import { useProductPorts } from '../ports';
-import { subscribedAgents, subscribesToNothing } from '../lib/asks';
-import { AskList } from './AskList';
+import { EmptyState } from "../../components/EmptyState";
+import { InlineNotice } from "../../components/InlineNotice";
+import { Small } from "../../components/Typography";
+import { Inbox } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ScreenBody } from "../../components/ScreenBody";
+import { ListSkeleton, ScreenError } from "../saas/ScreenState";
+import { useProductPorts } from "../ports";
+import { subscribedAgents, subscribesToNothing } from "../lib/asks";
+import { AskList } from "./AskList";
 
 export function AskInbox({ accountID }: { accountID: string }) {
   const { routes, useAskBoard, useAskSubscriptions } = useProductPorts();
@@ -17,10 +17,8 @@ export function AskInbox({ accountID }: { accountID: string }) {
   const agents = subscriptions.data === undefined ? null : subscribedAgents(subscriptions.data);
 
   return (
-
     <ScreenBody width="narrow" padded={false}>
-
-      {stream === 'reconnecting' && (
+      {stream === "reconnecting" && (
         <Small className="text-text-muted dark:text-dark-text-muted">
           Reconnecting for live updates. This list is what the relay last answered.
         </Small>
@@ -41,10 +39,12 @@ export function AskInbox({ accountID }: { accountID: string }) {
           <EmptyState
             icon={<Inbox aria-hidden />}
             title="No agent asks you yet"
-            description="An ask reaches the people who subscribed to that agent. Until you subscribe to one, nothing arrives here.">
+            description="An ask reaches the people who subscribed to that agent. Until you subscribe to one, nothing arrives here."
+          >
             <Link
               to={routes.askSubscriptions}
-              className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline">
+              className="text-primary-700 dark:text-dark-primary-500 underline-offset-4 hover:underline"
+            >
               Choose which agents ask you
             </Link>
           </EmptyState>

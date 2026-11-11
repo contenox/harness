@@ -47,7 +47,6 @@ export const Bordered: Story = { args: { variant: "bordered" } };
 
 export const Dotted: Story = { args: { variant: "dotted" } };
 
-
 export const Interactive: Story = {
   args: { variant: "filled", interactive: true },
 };

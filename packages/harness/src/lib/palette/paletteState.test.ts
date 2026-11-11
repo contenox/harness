@@ -27,23 +27,36 @@ describe('paletteReducer', () => {
 
   it('toggle flips open/closed', () => {
     expect(paletteReducer(INITIAL_PALETTE_STATE, { type: 'toggle' }).open).toBe(true);
-    expect(paletteReducer({ open: true, query: '', selected: 0 }, { type: 'toggle' }).open).toBe(false);
+    expect(paletteReducer({ open: true, query: '', selected: 0 }, { type: 'toggle' }).open).toBe(
+      false,
+    );
   });
 
   it('typing re-ranks from the top', () => {
-    const s = paletteReducer({ open: true, query: '', selected: 5 }, { type: 'setQuery', query: 'de' });
+    const s = paletteReducer(
+      { open: true, query: '', selected: 5 },
+      { type: 'setQuery', query: 'de' },
+    );
     expect(s).toEqual({ open: true, query: 'de', selected: 0 });
   });
 
   it('move wraps around the result list', () => {
-    const up = paletteReducer({ open: true, query: '', selected: 0 }, { type: 'move', delta: -1, count: 3 });
+    const up = paletteReducer(
+      { open: true, query: '', selected: 0 },
+      { type: 'move', delta: -1, count: 3 },
+    );
     expect(up.selected).toBe(2);
-    const down = paletteReducer({ open: true, query: '', selected: 2 }, { type: 'move', delta: 1, count: 3 });
+    const down = paletteReducer(
+      { open: true, query: '', selected: 2 },
+      { type: 'move', delta: 1, count: 3 },
+    );
     expect(down.selected).toBe(0);
   });
 
   it('setSelected clamps into range', () => {
-    expect(paletteReducer(INITIAL_PALETTE_STATE, { type: 'setSelected', index: 9, count: 3 }).selected).toBe(2);
+    expect(
+      paletteReducer(INITIAL_PALETTE_STATE, { type: 'setSelected', index: 9, count: 3 }).selected,
+    ).toBe(2);
   });
 });
 
@@ -59,7 +72,9 @@ describe('wrapIndex', () => {
 
 describe('paletteItemFields', () => {
   it('weights the title as the sole highlight field and always includes the id', () => {
-    const fields = paletteItemFields(item({ id: 'x1', type: 'mission', title: 'Deploy', keywords: ['k'] }));
+    const fields = paletteItemFields(
+      item({ id: 'x1', type: 'mission', title: 'Deploy', keywords: ['k'] }),
+    );
     expect(fields[0]).toMatchObject({ text: 'Deploy', highlight: true });
     expect(fields.some(f => f.text === 'x1')).toBe(true);
     expect(fields.some(f => f.text === 'k')).toBe(true);

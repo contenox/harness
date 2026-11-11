@@ -28,7 +28,12 @@ describe('MissionRevisionFeed', () => {
       createElement(MissionRevisionFeed, {
         revisions: [
           rev({ revision: 1, added: 3, removed: 0, explanation: 'Initial plan' }),
-          rev({ revision: 2, added: 1, removed: 2, explanation: 'Reordered after the runner came back' }),
+          rev({
+            revision: 2,
+            added: 1,
+            removed: 2,
+            explanation: 'Reordered after the runner came back',
+          }),
         ],
       }),
     );
@@ -59,7 +64,10 @@ describe('PlanRevisionLine', () => {
   it('shows only the newest revision as a compact one-liner', () => {
     const html = renderToStaticMarkup(
       createElement(PlanRevisionLine, {
-        revisions: [rev({ revision: 1, added: 2 }), rev({ revision: 2, added: 0, removed: 1, explanation: 'Trimmed a step' })],
+        revisions: [
+          rev({ revision: 1, added: 2 }),
+          rev({ revision: 2, added: 0, removed: 1, explanation: 'Trimmed a step' }),
+        ],
       }),
     );
     expect(html).toContain('−1');

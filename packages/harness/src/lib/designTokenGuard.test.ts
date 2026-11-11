@@ -2,11 +2,14 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-
 const BEAM_SRC = join(__dirname, '..');
 const UI_SRC = join(__dirname, '..', '..', '..', 'ui', 'src');
 
-const ALLOWLIST = ['lib/monacoAppTheme.ts', 'lib/xtermTheme.ts', 'components/visualization/WorkflowVisualizer.tsx'];
+const ALLOWLIST = [
+  'lib/monacoAppTheme.ts',
+  'lib/xtermTheme.ts',
+  'components/visualization/WorkflowVisualizer.tsx',
+];
 
 const RAW_PALETTE =
   /\b(?:text|bg|border|ring|outline|fill|stroke|divide|decoration|caret|accent|shadow|from|via|to)-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone)-\d{2,3}\b/;

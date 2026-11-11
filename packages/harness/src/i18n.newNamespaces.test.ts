@@ -22,9 +22,7 @@ describe('i18n Tier-1 namespaces — en/de parity', () => {
     for (const ns of NEW_NAMESPACES) {
       expect(en[ns], `en.${ns} present`).toBeDefined();
       expect(de[ns], `de.${ns} present`).toBeDefined();
-      expect(Object.keys(de[ns]).sort(), `${ns} key parity`).toEqual(
-        Object.keys(en[ns]).sort(),
-      );
+      expect(Object.keys(de[ns]).sort(), `${ns} key parity`).toEqual(Object.keys(en[ns]).sort());
     }
   });
 

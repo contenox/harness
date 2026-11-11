@@ -23,9 +23,9 @@ export function SettingsGroup({ title, children, className }: SettingsGroupProps
     const target = e.target as HTMLElement;
     if (!target.hasAttribute(HEADER_ATTR)) return;
     const root = e.currentTarget;
-    const headers = Array.from(
-      root.querySelectorAll<HTMLButtonElement>(`[${HEADER_ATTR}]`),
-    ).filter((h) => !h.disabled && h.closest("[data-settings-group]") === root);
+    const headers = Array.from(root.querySelectorAll<HTMLButtonElement>(`[${HEADER_ATTR}]`)).filter(
+      (h) => !h.disabled && h.closest("[data-settings-group]") === root,
+    );
     const index = headers.indexOf(target as HTMLButtonElement);
     if (index < 0) return;
     const next = rovingTarget(e.key, index, headers.length, { orientation: "vertical" });
@@ -35,7 +35,10 @@ export function SettingsGroup({ title, children, className }: SettingsGroupProps
   }
 
   return (
-    <section aria-labelledby={title ? titleId : undefined} className={cn("flex flex-col", className)}>
+    <section
+      aria-labelledby={title ? titleId : undefined}
+      className={cn("flex flex-col", className)}
+    >
       {title && (
         <h3
           id={titleId}
@@ -101,7 +104,10 @@ export function SettingsRow({
   const content = (
     <>
       {icon && (
-        <span aria-hidden className="flex size-5 shrink-0 items-center justify-center text-text-muted [&>svg]:size-5">
+        <span
+          aria-hidden
+          className="flex size-5 shrink-0 items-center justify-center text-text-muted [&>svg]:size-5"
+        >
           {icon}
         </span>
       )}
@@ -109,7 +115,9 @@ export function SettingsRow({
         <span className="truncate text-[13px] font-medium text-text">{title}</span>
         {description && <span className="truncate text-xs text-text-muted">{description}</span>}
       </span>
-      {trailing && <span className="flex shrink-0 items-center gap-2 text-xs text-text-muted">{trailing}</span>}
+      {trailing && (
+        <span className="flex shrink-0 items-center gap-2 text-xs text-text-muted">{trailing}</span>
+      )}
       {hasBody && (
         <ChevronRight
           aria-hidden

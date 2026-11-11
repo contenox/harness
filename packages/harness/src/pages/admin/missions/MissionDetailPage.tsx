@@ -26,6 +26,7 @@ import { useFleet } from '../../../hooks/useFleet';
 import { useMissionChanges } from '../../../hooks/useMissionChanges';
 import { useMission, useMissionReports } from '../../../hooks/useMissions';
 import { startAdoptSession, useAdoptIntent } from '../../../lib/adoptIntent';
+import { envelopeDisplayName } from '../../../lib/envelopeName';
 import { relativeTime } from '../../../lib/relativeTime';
 import type { InstanceStatus } from '../../../lib/types';
 import { needsYouMissionIds } from '../../../lib/unitStatus';
@@ -36,7 +37,6 @@ import {
   REPORT_KIND_BADGE_VARIANT,
   REPORT_KIND_LABEL_KEY,
 } from './missionPresentation';
-import { envelopeDisplayName } from '../../../lib/envelopeName';
 
 const MissionTerminalTab = lazy(() => import('./MissionTerminalTab'));
 const MissionChangesTab = lazy(() => import('./MissionChangesTab'));
@@ -266,9 +266,7 @@ export default function MissionDetailPage() {
               </div>
             </Section>
 
-
             <MissionPlanPanel plan={m.plan} />
-
 
             <MissionRevisionFeed revisions={m.planRevisions} />
 

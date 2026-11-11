@@ -1,15 +1,13 @@
-import '../../../test/fakeDomGlobals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createElement, Profiler, type ProfilerOnRenderCallback } from 'react';
-import { act } from 'react';
+import { act, createElement, Profiler, type ProfilerOnRenderCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initialAcpSessionState, type AcpSessionState } from '../../../hooks/acpSessionState';
+import { resetChatPaneStore } from '../../../hooks/chatPaneStore';
 import i18n from '../../../i18n';
 import { SlashCommandRegistryProvider } from '../../../lib/slashCommands';
 import { findAll, installFakeDom, typeInto, type FakeDomHandle } from '../../../test/fakeDom';
-import { resetChatPaneStore } from '../../../hooks/chatPaneStore';
 
 const mock = vi.hoisted(() => ({
   chatMessageRenders: 0,
@@ -76,11 +74,22 @@ vi.mock('../../../hooks/useWorkspaceFiles', () => {
     setAgentView: () => {},
   };
   return {
-    useWorkspaceFiles: () => ({ ...stable, rootLoading: false, error: null, agentView: false, hitlPolicyName: null }),
+    useWorkspaceFiles: () => ({
+      ...stable,
+      rootLoading: false,
+      error: null,
+      agentView: false,
+      hitlPolicyName: null,
+    }),
   };
 });
-vi.mock('../../../lib/ThemeProvider', () => ({ useTheme: () => ({ theme: 'light' }) }));
-vi.mock('../../../hooks/useAgentTitles', () => ({ useAgentTitles: () => (name: string | null | undefined) => name ?? null }));
+vi.mock('../../../lib/themeContext', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../../lib/themeContext')>()),
+  useTheme: () => ({ theme: 'light', toggleTheme: () => {} }),
+}));
+vi.mock('../../../hooks/useAgentTitles', () => ({
+  useAgentTitles: () => (name: string | null | undefined) => name ?? null,
+}));
 vi.mock('../../../components/workspace/NewProjectDialog', () => ({ NewProjectDialog: () => null }));
 vi.mock('./TerminalPane', () => ({ TerminalPane: () => null }));
 vi.mock('./FilesPane', () => ({ FilesPane: () => null }));
@@ -96,7 +105,10 @@ function longSession(): AcpSessionState {
   for (let i = 0; i < TURNS; i++) {
     const u = `u${i}`;
     const a = `a${i}`;
-    items.push({ kind: 'message', id: u, turnId: `t${i}` }, { kind: 'message', id: a, turnId: `t${i}` });
+    items.push(
+      { kind: 'message', id: u, turnId: `t${i}` },
+      { kind: 'message', id: a, turnId: `t${i}` },
+    );
     messages[u] = { id: u, role: 'user', text: `question ${i}` };
     messages[a] = {
       id: a,
