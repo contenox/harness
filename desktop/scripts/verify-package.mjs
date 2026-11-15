@@ -32,8 +32,12 @@ try {
   };
   const project = path.join(profile, 'project');
   fs.mkdirSync(project);
-  const child = spawn(runtime, ['--db', path.join(profile, 'local.db'), 'serve', project], {
-    cwd: project, env, windowsHide: true, stdio: 'ignore',
+  const data = path.join(profile, 'data');
+  fs.mkdirSync(data);
+  const flags = ['--data-dir', data, '--db', path.join(profile, 'local.db')];
+  execFileSync(runtime, [...flags, 'init'], { cwd: project, env, windowsHide: true });
+  const child = spawn(runtime, [...flags, 'serve', project], {
+    cwd: project, env, windowsHide: true, stdio: ['ignore', 'ignore', 'inherit'],
   });
   const closed = once(child, 'close');
   closed.catch(() => {});
