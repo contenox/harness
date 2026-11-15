@@ -8,6 +8,13 @@ Your edits, your build and your tests just run, no prompts. The agent only stops
 
 Docs, downloads and guides: **[contenox.com](https://contenox.com)**. Made by Alexander Ertli.
 
+<a href="https://apps.microsoft.com/detail/9N6NVBHR71XD?referrer=appbadge&mode=full">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://get.microsoft.com/images/en-us%20light.svg">
+    <img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200" alt="Download Contenox from the Microsoft Store">
+  </picture>
+</a>
+
 ---
 
 ## Why you won't switch it off
@@ -41,9 +48,9 @@ Other sets ship beside it: **Ask always**, **Read only**, **Strict** (refuse wha
 
 ## Install
 
-Download the installer for your system from **[contenox.com](https://contenox.com)**: Windows (`.exe`), macOS (`.dmg`), Linux (`.deb`, `.rpm`). Every release ships a `SHA256SUMS` file and a detached GPG signature.
+On Windows, install Contenox from the **[Microsoft Store](https://apps.microsoft.com/detail/9N6NVBHR71XD)**; the Store keeps it up to date. Installers for every system are on **[contenox.com](https://contenox.com/#download)**: Windows (`.exe`), macOS (`.dmg`), Linux (`.deb`, `.rpm`). Every release ships a `SHA256SUMS` file and a detached GPG signature.
 
-The app bundles the runtime. To use the command line as well, choose **File → Install ‘contenox-runtime’ Command in PATH** in the app, or install the runtime on its own from [contenox/runtime](https://github.com/contenox/runtime). The [install guide](https://contenox.com/docs/cli/install/) covers both.
+The app bundles the runtime. The Store build and the Linux packages put `contenox-runtime` on your PATH. On macOS and with the Windows `.exe`, choose **File → Install ‘contenox-runtime’ Command in PATH** in the app. You can also install the runtime on its own from [contenox/runtime](https://github.com/contenox/runtime). The [install guide](https://contenox.com/docs/cli/install/) covers every way.
 
 ---
 
