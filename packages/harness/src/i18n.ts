@@ -928,6 +928,7 @@ const resources = {
           title: 'ChatGPT subscription (Codex)',
           account: 'ChatGPT',
         },
+        contenox: { title: 'Contenox subscription', account: 'Contenox' },
         copilot: {
           title: 'GitHub Copilot',
           account: 'GitHub',
@@ -1662,8 +1663,14 @@ const resources = {
         adopted_mission_link: 'Back to the mission',
       },
       signin: {
-        title: 'Sign in with ChatGPT',
-        subtitle: 'Use your ChatGPT subscription to start chatting.',
+        title: 'Welcome to Contenox',
+        subtitle: 'Connect your subscription or choose a model provider.',
+        allowance: '{{plan}} · {{used}}% of model allowance used · Period ends {{end}}',
+        allowance_error: 'Could not load subscription details.',
+        manage: 'Manage subscription',
+        contenox: 'Sign in with Contenox',
+        chatgpt: 'Sign in with ChatGPT',
+        compare: 'Check that the code matches, then approve access in your browser.',
         continue: 'Continue to sign in',
         other_providers: 'Use another provider',
         back: 'Back',
@@ -2550,6 +2557,7 @@ const resources = {
         codex: {
           short: 'With your ChatGPT subscription',
         },
+        contenox: { short: 'Contenox' },
         copilot: {
           short: 'Unofficial · your Copilot plan',
         },
@@ -3606,6 +3614,7 @@ const resources = {
           title: 'ChatGPT-Abo (Codex)',
           account: 'ChatGPT',
         },
+        contenox: { title: 'Contenox-Abo', account: 'Contenox' },
         copilot: {
           title: 'GitHub Copilot',
           account: 'GitHub',
@@ -4332,8 +4341,14 @@ const resources = {
         adopted_mission_link: 'Zurück zur Mission',
       },
       signin: {
-        title: 'Bei ChatGPT anmelden',
-        subtitle: 'Nutze dein ChatGPT-Abo, um mit dem Chatten zu beginnen.',
+        title: 'Willkommen bei Contenox',
+        subtitle: 'Verbinde dein Abo oder wähle einen Modellanbieter.',
+        allowance: '{{plan}} · {{used}} % des Modellkontingents verbraucht · Zeitraum endet am {{end}}',
+        allowance_error: 'Abodetails konnten nicht geladen werden.',
+        manage: 'Abo verwalten',
+        contenox: 'Mit Contenox anmelden',
+        chatgpt: 'Mit ChatGPT anmelden',
+        compare: 'Vergleiche den Code und bestätige den Zugriff im Browser.',
         continue: 'Weiter zur Anmeldung',
         other_providers: 'Andere Anbieter verwenden',
         back: 'Zurück',
@@ -5243,6 +5258,7 @@ const resources = {
         codex: {
           short: 'Mit deinem ChatGPT-Abo',
         },
+        contenox: { short: 'Contenox' },
         copilot: {
           short: 'Inoffiziell · dein Copilot-Plan',
         },

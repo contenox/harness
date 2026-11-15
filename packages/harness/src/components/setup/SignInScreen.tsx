@@ -1,20 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import type { SetupStatus } from '../../lib/types';
-import { ChatGptLoginPanel } from './ChatGptLoginPanel';
 import { FinishingPanel } from './FinishingPanel';
 import { OtherProvidersPanel } from './OtherProvidersPanel';
 import { SignInHero } from './SignInHero';
+import { SubscriptionLoginPanel } from './SubscriptionLoginPanel';
 import { useSignInFlow } from './useSignInFlow';
 
 type Props = {
   data: SetupStatus | undefined;
 };
 
-/**
- * First-run screen shown while setup is incomplete. Leads with the ChatGPT (Codex) device-code
- * login; other providers are a secondary path. Once a provider is ready, the default
- * provider + model are picked automatically and Layout swaps this screen for the app.
- */
 export function SignInScreen({ data }: Props) {
   const { t } = useTranslation();
   const flow = useSignInFlow(data);
@@ -48,8 +43,8 @@ export function SignInScreen({ data }: Props) {
                 onCheckAgain={flow.checkAgain}
               />
             ) : (
-              <ChatGptLoginPanel
-                onSignedIn={flow.onCodexSignedIn}
+              <SubscriptionLoginPanel
+                onSignedIn={flow.onSignedIn}
                 onUseOtherProviders={() => flow.setView('others')}
               />
             )}

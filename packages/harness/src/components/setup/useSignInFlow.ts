@@ -49,13 +49,15 @@ export function useSignInFlow(data: SetupStatus | undefined) {
     [markReady],
   );
 
-  /** ChatGPT signed in: run the discovery check first, then continue to the model step. */
-  const onCodexSignedIn = useCallback(() => {
-    void verifyProviderSignIn(
-      { list: api.listConnections, check: api.checkConnection },
-      CODEX,
-    ).then(connection => markReady(CODEX, connection?.id));
-  }, [markReady]);
+  const onSignedIn = useCallback(
+    (provider: CloudProviderType) => {
+      void verifyProviderSignIn(
+        { list: api.listConnections, check: api.checkConnection },
+        provider,
+      ).then(connection => markReady(provider, connection?.id));
+    },
+    [markReady],
+  );
 
   // Verification (the connection check) already refreshed the runtime, so one refresh on
   // markReady is enough. Polling remains only as a fallback while the default model step waits
@@ -101,7 +103,7 @@ export function useSignInFlow(data: SetupStatus | undefined) {
     showManual,
     readyProvider,
     onConnected,
-    onCodexSignedIn,
+    onSignedIn,
     checkAgain,
     checking: refresh.isPending,
   };

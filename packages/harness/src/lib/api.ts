@@ -290,6 +290,14 @@ export const api = {
   cancelProviderLogin: (provider: CloudProviderType) =>
     apiFetch<ProviderLoginStatus>(`/api/providers/${provider}/login/cancel`, options('POST')),
 
+  getContenoxSubscription: (id: string) =>
+    apiFetch<{
+      plan: string;
+      renews_at: string;
+      used_percent: number;
+      reserved_percent: number;
+      account_url: string;
+    }>(`/api/providers/connections/${encodeURIComponent(id)}/subscription`),
   listConnections: () => apiFetch<Connection[]>('/api/providers/connections'),
   createConnection: (providerType: string, data: CreateConnectionInput) =>
     apiFetch<Connection>(
