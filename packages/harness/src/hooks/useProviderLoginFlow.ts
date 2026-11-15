@@ -9,6 +9,7 @@ import type {
 } from '../lib/types';
 import {
   useCancelConnectionLogin,
+  useCheckConnection,
   useConnectionLoginStatus,
   useConnectionLogout,
   useStartConnectionLogin,
@@ -113,11 +114,28 @@ export function useProviderLoginFlow(provider: CloudProviderType, onSignedIn?: (
 
 /** Device-code login scoped to one connection (rows in lists, several ChatGPT accounts). */
 export function useConnectionLoginFlow(
-  connection: Pick<Connection, 'id' | 'authState'>,
+  connection: Pick<Connection, 'id' | 'authState' | 'errorCode'>,
   onSignedIn?: () => void,
 ) {
   const loginQuery = useConnectionLoginStatus(connection.id);
-  const startMutation = useStartConnectionLogin(connection.id);
+  const needsLogin =
+    connection.authState === 'login_required' ||
+    connection.authState === 'refresh_required' ||
+    connection.errorCode === 'login_required';
+  const startMutation = useStartConnectionLogin(connection.id, true);
+  const { mutate: check } = useCheckConnection();
+  const pending = useRef(false);
+  useEffect(() => {
+    const status = loginQuery.data;
+    if (status?.state === 'login_pending') {
+      pending.current = true;
+      return;
+    }
+    if (pending.current && status?.state === 'authenticated' && !status.error) {
+      pending.current = false;
+      check(connection.id);
+    }
+  }, [loginQuery.data, connection.id, check]);
   const cancelMutation = useCancelConnectionLogin(connection.id);
   const logoutMutation = useConnectionLogout(connection.id);
 
@@ -126,9 +144,12 @@ export function useConnectionLoginFlow(
   const { mutate: logoutMutate } = logoutMutation;
 
   return useLoginFlowView({
-    login: loginQuery.data,
+    login:
+      needsLogin && loginQuery.data?.state === 'authenticated'
+        ? { ...loginQuery.data, state: 'login_required' }
+        : loginQuery.data,
     started: startMutation.data,
-    fallbackState: connection.authState,
+    fallbackState: needsLogin ? 'login_required' : connection.authState,
     errors: [
       startMutation.error?.message,
       cancelMutation.error?.message,

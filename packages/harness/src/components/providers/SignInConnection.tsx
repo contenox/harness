@@ -60,6 +60,16 @@ export function SignInConnection({ connection, autoStart, onSignedIn }: SignInCo
               {flow.signedIn && (
                 <Button
                   type="button"
+                  size="sm"
+                  variant="ghost"
+                  isLoading={flow.starting}
+                  onClick={flow.start}>
+                  {t('connections.sign_in.renew')}
+                </Button>
+              )}
+              {flow.signedIn && (
+                <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
                   isLoading={flow.loggingOut}

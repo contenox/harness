@@ -80,7 +80,7 @@ async function closeConnectorsPanel(page: Page) {
 }
 
 async function openAddConnector(page: Page) {
-  await page.goto('/#/connectors', { waitUntil: 'networkidle' });
+  await page.goto('/#/connectors', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: /^Add connector/ }).click();
   await expect(page.getByRole('textbox', { name: 'Name *' })).toBeVisible();
 }
@@ -98,7 +98,7 @@ test('R01 first start: an empty home shows the setup wizard and no runtime error
   try {
     await waitForHealth(`http://127.0.0.1:${runtimeP}`);
     await waitForHealth(`http://127.0.0.1:${uiP}`);
-    await page.goto(`http://127.0.0.1:${uiP}/`, { waitUntil: 'networkidle' });
+    await page.goto(`http://127.0.0.1:${uiP}/`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText('Sign in with ChatGPT')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('button', { name: 'Use another provider' })).toBeVisible();
@@ -123,7 +123,7 @@ test('R02 providers: an OpenAI-compatible backend connects and lists its models'
 }) => {
   await removeBackend(request, 'vllm');
   try {
-    await page.goto('/#/backends', { waitUntil: 'networkidle' });
+    await page.goto('/#/backends', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: /^vLLM/ }).click();
     await page.getByPlaceholder('http://localhost:8000/v1').fill(mockUrl());
     await page.getByRole('button', { name: 'Connect' }).click();
@@ -158,7 +158,7 @@ test('R03 providers: empty base URL or unknown type is refused and nothing is sa
   const before = ((await api(request, 'GET', '/api/backends')).body as Array<{ name: string }>)
     .map(item => item.name)
     .sort();
-  await page.goto('/#/backends?tab=backends', { waitUntil: 'networkidle' });
+  await page.goto('/#/backends?tab=backends', { waitUntil: 'domcontentloaded' });
   const create = page.getByRole('button', { name: 'Create Backend' });
   await expect(create).toBeVisible();
   await expect(create).toBeDisabled();
@@ -256,8 +256,8 @@ test('R09 chat: a failed request shows a dismissible error card and does not com
   await page.getByRole('button', { name: 'Dismiss' }).first().click();
   await expect(card).toHaveCount(0);
 
-  await page.goto('/#/permissions', { waitUntil: 'networkidle' });
-  await page.goto(url, { waitUntil: 'networkidle' });
+  await page.goto('/#/permissions', { waitUntil: 'domcontentloaded' });
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
   await expect(composer(page)).toBeVisible();
   await page.waitForTimeout(4_000);
   const alertsInTranscript = page.locator(
@@ -268,7 +268,7 @@ test('R09 chat: a failed request shows a dismissible error card and does not com
     'every alert sits in the transcript after the message, none pinned above it',
   ).toBe(await alertsInTranscript.count());
 
-  await page.reload({ waitUntil: 'networkidle' });
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(composer(page)).toBeVisible();
   await page.waitForTimeout(1_500);
   expect
@@ -279,7 +279,7 @@ test('R09 chat: a failed request shows a dismissible error card and does not com
     .not.toBeVisible();
 });
 
-test('R10 permissions: the Default set asks before a write; Allow writes, Deny leaves the tree untouched', async ({
+test('R10 permissions: Ask always asks before a write; Allow writes, Deny leaves the tree untouched', async ({
   page,
 }) => {
   const allowed = path.join(workDir(), 'e2e-allow.txt');
@@ -289,7 +289,7 @@ test('R10 permissions: the Default set asks before a write; Allow writes, Deny l
 
   setDialog(writeFileDialog('e2e-allow.txt', 'allowed content'));
   await newChat(page);
-  await expect(page.getByRole('button', { name: 'HITL Policy: Default' })).toBeVisible();
+  await pickPolicy(page, 'ask_always');
   await send(page, 'write the allowed file');
   await expectPermissionCard(page, 'local_fs.write_file: e2e-allow.txt');
   expect(fs.existsSync(allowed)).toBe(false);
@@ -298,6 +298,7 @@ test('R10 permissions: the Default set asks before a write; Allow writes, Deny l
 
   setDialog(writeFileDialog('e2e-deny.txt', 'denied content'));
   await newChat(page);
+  await pickPolicy(page, 'ask_always');
   await send(page, 'write the denied file');
   await expectPermissionCard(page, 'local_fs.write_file: e2e-deny.txt');
   await page.getByRole('button', { name: 'Deny', exact: true }).click();
@@ -350,24 +351,19 @@ test('R12 permissions: a rule edited on the Permissions page is saved and surviv
     return (res.body as { layer?: { tools?: Record<string, unknown> } } | undefined)?.layer?.tools
       ?.echo;
   };
-  const echoRow = () =>
-    page
-      .locator('div')
-      .filter({ has: page.getByText('echo', { exact: true }) })
-      .filter({ has: page.locator('select') })
-      .last();
+  const echoRule = page.getByRole('combobox', { name: 'echo', exact: true });
   try {
-    await page.goto('/#/permissions/dev', { waitUntil: 'networkidle' });
+    await page.goto('/#/permissions/dev', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Dev' }).first()).toBeVisible();
-    await echoRow().locator('select').selectOption({ label: 'Block' });
+    await echoRule.selectOption({ label: 'Block' });
     await expect.poll(rule).toBe('deny');
 
-    await page.reload({ waitUntil: 'networkidle' });
-    await expect(echoRow().locator('select')).toHaveValue('deny');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(echoRule).toHaveValue('deny');
     expect(await rule()).toBe('deny');
   } finally {
-    await page.goto('/#/permissions/dev', { waitUntil: 'networkidle' });
-    await echoRow().locator('select').selectOption({ label: 'Follow the rules above' });
+    await page.goto('/#/permissions/dev', { waitUntil: 'domcontentloaded' });
+    await echoRule.selectOption('');
     await expect.poll(rule).toBeFalsy();
   }
 });
@@ -467,7 +463,7 @@ test('R16 connectors: a hidden tool is hidden in chat; the per-chat switch stays
   await removeConnector(request, name);
   await addEchoConnector(request, name, tool);
   try {
-    await page.goto('/#/connectors', { waitUntil: 'networkidle' });
+    await page.goto('/#/connectors', { waitUntil: 'domcontentloaded' });
     const toolSwitch = page.getByRole('switch', { name: `Agents can use ${tool}` });
     if (!(await toolSwitch.isVisible().catch(() => false))) {
       await page.getByRole('button', { name: new RegExp(`^${name}`) }).click();
@@ -515,12 +511,15 @@ test('R16 connectors: a hidden tool is hidden in chat; the per-chat switch stays
 
 test('R17 connectors in this chat: the panel of a live session lists the connectors', async ({
   page,
+  request,
 }) => {
   await startLiveChat(page);
   const panel = await openConnectorsPanel(page);
   await expect(panel).not.toContainText(/is not open/i);
   await expect(panel).not.toContainText(/Could not load/i);
-  await expect(panel.getByRole('button', { name: /^local_fs.*Ready · 9 tools/s })).toBeVisible();
+  const tools = (await listConnectors(request)).find(item => item.name === 'local_fs')?.tools ?? [];
+  expect(tools.length).toBeGreaterThan(0);
+  await expect(panel.getByRole('button', { name: new RegExp(`^local_fs.*Ready · ${tools.length} tools`, 's') })).toBeVisible();
   await expect(panel.getByRole('switch', { name: 'Use local_fs in this chat' })).toBeChecked();
   await expect(panel.getByRole('button', { name: 'Manage connectors' })).toBeVisible();
 });
@@ -549,7 +548,7 @@ test('R19 settings: language de switches the UI without a restart and sets the a
   request,
 }) => {
   try {
-    await page.goto('/#/settings', { waitUntil: 'networkidle' });
+    await page.goto('/#/settings', { waitUntil: 'domcontentloaded' });
     const input = page.locator('input[name="locale"]');
     await expect(input).toBeVisible();
     await input.fill('de');
@@ -577,12 +576,12 @@ test('R20 settings: unofficial sign-ins off hides Copilot, on lists it as Unoffi
   const copilot = () => page.getByText('GitHub Copilot');
   await api(request, 'PUT', '/api/cli-config', { 'unofficial-sign-ins': 'false' });
   try {
-    await page.goto('/#/backends', { waitUntil: 'networkidle' });
+    await page.goto('/#/backends', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('tab', { name: 'Providers' })).toBeVisible();
     await expect(page.getByText('Anthropic', { exact: true }).first()).toBeVisible();
     await expect(copilot()).toHaveCount(0);
 
-    await page.goto('/#/settings', { waitUntil: 'networkidle' });
+    await page.goto('/#/settings', { waitUntil: 'domcontentloaded' });
     const toggle = page.getByRole('checkbox', { name: 'Allow unofficial sign-ins' });
     await expect(toggle).not.toBeChecked();
     await toggle.click();
@@ -593,16 +592,16 @@ test('R20 settings: unofficial sign-ins off hides Copilot, on lists it as Unoffi
       .poll(async () => (await api(request, 'GET', '/api/cli-config')).body.unofficialSignIns)
       .toBe('true');
 
-    await page.goto('/#/backends', { waitUntil: 'networkidle' });
+    await page.goto('/#/backends', { waitUntil: 'domcontentloaded' });
     await expect(copilot()).toBeVisible();
     await expect(page.getByText(/Unofficial/).first()).toBeVisible();
 
-    await page.goto('/#/settings', { waitUntil: 'networkidle' });
+    await page.goto('/#/settings', { waitUntil: 'domcontentloaded' });
     await page.getByRole('checkbox', { name: 'Allow unofficial sign-ins' }).click();
     await expect
       .poll(async () => (await api(request, 'GET', '/api/cli-config')).body.unofficialSignIns)
       .toBe('false');
-    await page.goto('/#/backends', { waitUntil: 'networkidle' });
+    await page.goto('/#/backends', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Anthropic', { exact: true }).first()).toBeVisible();
     await expect(copilot()).toHaveCount(0);
   } finally {
@@ -613,7 +612,7 @@ test('R20 settings: unofficial sign-ins off hides Copilot, on lists it as Unoffi
 test('R21 settings: the runtime defaults wording does not mention contenox serve or VS Code', async ({
   page,
 }) => {
-  await page.goto('/#/settings', { waitUntil: 'networkidle' });
+  await page.goto('/#/settings', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Runtime defaults' })).toBeVisible();
   const panel = page
     .locator('section, div')
@@ -634,7 +633,7 @@ test('R22 new project: a folder is added to the sidebar and its chat is scoped t
   const folder = tempDir('e2e-project-');
   const name = 'e2e-project';
   try {
-    await page.goto('/#/chat', { waitUntil: 'networkidle' });
+    await page.goto('/#/chat', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'New project' }).click();
     await page.getByPlaceholder('Optional — defaults to the folder name').fill(name);
     await page.getByPlaceholder('/home/you/code/my-project').fill(folder);
@@ -646,8 +645,7 @@ test('R22 new project: a folder is added to the sidebar and its chat is scoped t
 
     setDialog(writeFileDialog('e2e-scoped.txt', 'scoped'));
     await send(page, 'write into the project');
-    await expectPermissionCard(page, 'local_fs.write_file: e2e-scoped.txt');
-    await page.getByRole('button', { name: 'Allow', exact: true }).click();
+
     expect(await waitForFile(path.join(folder, 'e2e-scoped.txt'))).toBe('scoped');
     expect(fs.existsSync(path.join(workDir(), 'e2e-scoped.txt'))).toBe(false);
   } finally {
@@ -678,7 +676,7 @@ test('R23 persistence: after a restart of serve chats, providers, connectors and
     });
     await waitForHealth(runtimeUrl());
 
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
     await expect(seen(page, 'persist me')).toBeVisible({ timeout: 30_000 });
     await expect(seen(page, 'Hello from the scripted backend.')).toBeVisible();
     await expect(page.getByRole('link', { name: /persist me/ }).first()).toBeVisible();
@@ -705,7 +703,7 @@ test('R23 persistence: after a restart of serve chats, providers, connectors and
     expect(config.defaultModel).toBe('scripted-ui');
     expect(config.defaultProvider).toBe('scripted-test');
 
-    await page.goto('/#/connectors', { waitUntil: 'networkidle' });
+    await page.goto('/#/connectors', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('button', { name: new RegExp(`^${name}`) })).toBeVisible();
   } finally {
     await removeConnector(request, name);

@@ -1,3 +1,4 @@
+import { Radio } from 'lucide-react';
 import {
   Bot,
   Database,
@@ -24,6 +25,7 @@ export const SIDEBAR_NAV: SidebarNavDefinition[] = [
   { path: '/missions', labelKey: 'navbar.missions', Icon: Rocket },
   { path: '/fleet', labelKey: 'navbar.fleet', Icon: Radar },
   { path: '/agents', labelKey: 'navbar.agents', Icon: Bot },
+  { path: '/subscribe', labelKey: 'navbar.subscribe', Icon: Radio },
   { path: '/connectors', labelKey: 'navbar.connectors', Icon: Plug },
   { path: '/backends', labelKey: 'navbar.backends', Icon: Database },
   { path: '/permissions', labelKey: 'navbar.permissions', Icon: ShieldCheck },

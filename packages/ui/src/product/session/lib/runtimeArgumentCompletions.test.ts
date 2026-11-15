@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AvailableCommand } from "@contenox/acp-client";
 import {
   mergeRuntimeValueDomains,
+  positionalCompletion,
   runtimeArgumentCompletions,
   runtimeArgumentHint,
   runtimeFlagValues,
@@ -98,4 +99,14 @@ describe("deriveSlashFlagArgument", () => {
       "/mission fix it --policy strict ",
     );
   });
+});
+
+it("picks the branch for the preceding token and recomputes it after back-editing", () => {
+ const runtime=runtimeArgumentCompletions([{name:"subscribe",description:"",_meta:{[COMPLETIONS_KEY]:{
+ "arg:0":{values:["topic","watch"]},"arg:0=topic":{values:["review.ready"]},"arg:0=watch":{hint:"File pattern"},"arg:2":{values:["inbox"]}
+ }}}]);
+ expect(positionalCompletion(runtime,"/subscribe topic rev")?.entry.values).toEqual(["review.ready"]);
+ expect(positionalCompletion(runtime,"/subscribe watch ")?.entry.hint).toBe("File pattern");
+ expect(positionalCompletion(runtime,"/subscribe topic review.ready i")?.prefix).toBe("/subscribe topic review.ready ");
+ expect(positionalCompletion(runtime,"/other x")).toBeNull();
 });

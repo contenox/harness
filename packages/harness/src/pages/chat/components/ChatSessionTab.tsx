@@ -51,12 +51,13 @@ export const ChatSessionTab = memo(function ChatSessionTab({
     () => (
       <ComposerFooterEnd
         usage={session.usage}
+        userMessages={session.userMessages}
         options={chat.chipOptions}
         onChange={chat.changeConfig}
         onModelOpen={chat.refreshCatalog}
       />
     ),
-    [session.usage, chat.chipOptions, chat.changeConfig, chat.refreshCatalog],
+    [session.usage, session.userMessages, chat.chipOptions, chat.changeConfig, chat.refreshCatalog],
   );
 
   const paneTabs = paneState.pane ? (

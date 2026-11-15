@@ -1,4 +1,13 @@
-import { Button, CodeBlock, Disclosure, InlineNotice, KeyValue, P, StatusDot } from '@contenox/ui';
+import {
+  Button,
+  CodeBlock,
+  Disclosure,
+  ExternalLink,
+  InlineNotice,
+  KeyValue,
+  P,
+  StatusDot,
+} from '@contenox/ui';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { connectorDot, connectorSummaryKey } from '../../lib/connectorStatus';
@@ -10,6 +19,7 @@ type Props = {
   checkError?: string;
   signingIn?: boolean;
   signInError?: string;
+  signInUrl?: string;
   onCheck: () => void;
   onSignIn?: () => void;
   extra?: ReactNode;
@@ -21,6 +31,7 @@ export function ConnectorDetails({
   checkError,
   signingIn,
   signInError,
+  signInUrl,
   onCheck,
   onSignIn,
   extra,
@@ -42,11 +53,13 @@ export function ConnectorDetails({
           }
         />
         <div className="flex gap-2">
-          {connector.status === 'needs_sign_in' && onSignIn && (
-            <Button type="button" size="sm" isLoading={signingIn} onClick={onSignIn}>
-              {t('connectors.sign_in')}
-            </Button>
-          )}
+          {(connector.status === 'needs_sign_in' ||
+            (connector.status === 'unavailable' && connector.authType === 'oauth')) &&
+            onSignIn && (
+              <Button type="button" size="sm" isLoading={signingIn} onClick={onSignIn}>
+                {t('connectors.sign_in')}
+              </Button>
+            )}
           <Button type="button" variant="outline" size="sm" isLoading={checking} onClick={onCheck}>
             {t('connectors.check_again')}
           </Button>
@@ -77,6 +90,9 @@ export function ConnectorDetails({
         <InlineNotice variant="error" role="alert">
           {checkError || signInError}
         </InlineNotice>
+      )}
+      {connector.status !== 'ready' && signInUrl && (
+        <ExternalLink href={signInUrl}>{t('connectors.catalog.open_sign_in')}</ExternalLink>
       )}
 
       {extra}

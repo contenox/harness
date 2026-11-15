@@ -10,6 +10,7 @@ import { ConnectionRecovery } from './ConnectionRecovery';
 import { ConnectionRow } from './ConnectionRow';
 import { HiddenModelsNotice } from './HiddenModelsNotice';
 import { ProviderSetupForm } from './ProviderSetupForm';
+import { SignInConnection } from './SignInConnection';
 
 vi.mock('../../lib/api', () => ({ api: {} }));
 
@@ -245,5 +246,36 @@ describe('Vertex connections never print the project', () => {
       />,
     );
     expect(html).not.toContain('secret-project-123');
+  });
+});
+
+describe('SignInConnection', () => {
+  it('offers sign-in when the backend rejects a stored credential', () => {
+    const html = render(
+      <SignInConnection
+        connection={{
+          ...connection,
+          providerType: 'openai-codex',
+          authState: 'authenticated',
+          errorCode: 'login_required',
+        }}
+      />,
+    );
+    expect(html).toContain('Sign in with ChatGPT');
+    expect(html).not.toContain('Signed in with ChatGPT');
+  });
+  it('offers renewal for a signed-in account', () => {
+    const html = render(
+      <SignInConnection
+        connection={{
+          ...connection,
+          providerType: 'openai-codex',
+          authState: 'authenticated',
+          health: 'available',
+          errorCode: undefined,
+        }}
+      />,
+    );
+    expect(html).toContain('Sign in again');
   });
 });

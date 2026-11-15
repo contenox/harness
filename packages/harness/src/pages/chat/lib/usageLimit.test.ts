@@ -11,8 +11,9 @@ const opt = (currentValue: string): SessionConfigOption => ({
 });
 
 describe('usage limit selection', () => {
-  it('follows the selected token limit', () => {
-    expect(effectiveUsageMax(131072, [opt('272000')])).toBe(272000);
+  it('shows the effective runtime window even if the selected limit is higher', () => {
+    expect(effectiveUsageMax(131072, [opt('1000000')])).toBe(131072);
+    expect(effectiveUsageMax(0, [opt('1000000')])).toBe(1000000);
   });
   it('falls back to the reported window for chain default / 0 / garbage / missing', () => {
     expect(effectiveUsageMax(131072, [opt('0')])).toBe(131072);

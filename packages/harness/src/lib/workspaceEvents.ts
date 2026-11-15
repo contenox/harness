@@ -4,6 +4,7 @@ import { parseSSEFrames } from './workspaceSearch';
 
 export interface WorkspaceEvent {
   nid: number;
+  replayedFrom?: number;
   type: string;
   source: string;
   subject: string;

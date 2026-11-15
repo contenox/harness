@@ -14,7 +14,7 @@ const surfaces: Array<[name: string, path: string]> = [
 ];
 
 async function openSeededSession(page: Page): Promise<string | null> {
-  await page.goto('/#/chat', { waitUntil: 'networkidle' });
+  await page.goto('/#/chat', { waitUntil: 'domcontentloaded' });
   const link = page.getByRole('link', { name: /Show me what a seeded session looks like/ }).first();
   await link.waitFor({ state: 'attached', timeout: 8_000 }).catch(() => {});
   let href = await link.getAttribute('href').catch(() => null);
@@ -30,7 +30,7 @@ async function openSeededSession(page: Page): Promise<string | null> {
 
 for (const [name, path] of surfaces) {
   test(`${name} renders`, async ({ page }) => {
-    await page.goto(path, { waitUntil: 'networkidle' });
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
     if (name === 'chat') {
       const seeded = page.getByText('Show me what a seeded session looks like.').first();
       await seeded.waitFor({ state: 'visible', timeout: 8_000 }).catch(() => {});
@@ -48,7 +48,7 @@ test('workbench shows the tree and the conversation', async ({ page }) => {
   const sessionId = await openSeededSession(page);
   expect(sessionId, 'the seeded ACP session').not.toBeNull();
 
-  await page.goto(`/#/workbench/${sessionId}`, { waitUntil: 'networkidle' });
+  await page.goto(`/#/workbench/${sessionId}`, { waitUntil: 'domcontentloaded' });
   await page.getByText('README.md').first().waitFor({ state: 'visible', timeout: 10_000 });
   await page.waitForTimeout(1_000);
   await expect(page).toHaveScreenshot('workbench.png', { fullPage: true });
@@ -58,7 +58,7 @@ test('workbench previews a file', async ({ page }) => {
   const sessionId = await openSeededSession(page);
   expect(sessionId, 'the seeded ACP session').not.toBeNull();
 
-  await page.goto(`/#/workbench/${sessionId}`, { waitUntil: 'networkidle' });
+  await page.goto(`/#/workbench/${sessionId}`, { waitUntil: 'domcontentloaded' });
   const readme = page.getByText('README.md').first();
   await readme.waitFor({ state: 'visible', timeout: 10_000 });
   await readme.click();
@@ -79,7 +79,7 @@ test.describe('workbench on a phone', () => {
     expect(sessionId, 'the seeded ACP session').not.toBeNull();
     await page.setViewportSize({ width: 412, height: 900 });
 
-    await page.goto(`/#/workbench/${sessionId}`, { waitUntil: 'networkidle' });
+    await page.goto(`/#/workbench/${sessionId}`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1_500);
     await expect(page).toHaveScreenshot('workbench-phone.png', { fullPage: true });
   });

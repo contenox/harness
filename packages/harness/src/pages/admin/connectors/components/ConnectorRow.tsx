@@ -155,6 +155,7 @@ export function ConnectorRow({ connector, workspaces, expanded, onExpandedChange
             checkError={check.error?.message}
             signingIn={signIn.isPending}
             signInError={signIn.error?.message}
+            signInUrl={signIn.data}
             onCheck={() => check.mutate(connector.name)}
             onSignIn={
               connector.kind === 'mcp' && connector.id

@@ -2,13 +2,12 @@ import { app, BrowserWindow, Menu, clipboard, dialog, ipcMain, session, shell } 
 import { execFileSync, spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { contextMenuTemplate } from './contextMenu.mjs';
 import { isAllowedExternalUrl } from './externalUrl.mjs';
-import { startUiServer } from './server.mjs';
+import { freePort, startUiServer } from './server.mjs';
 import { existingDir, validateWorkspace, workspaceFromArgv } from './workspaces.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -79,17 +78,6 @@ function appendLog(text) {
 function runtimeBinary() {
   const suffix = process.platform === 'win32' ? '.exe' : '';
   return process.env.CONTENOX_RUNTIME_BIN || path.join(process.resourcesPath, 'runtime', `contenox-runtime${suffix}`);
-}
-
-function freePort() {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const { port } = server.address();
-      server.close(() => resolve(port));
-    });
-  });
 }
 
 async function waitForHealth(url, timeoutMs = READY_TIMEOUT_MS) {

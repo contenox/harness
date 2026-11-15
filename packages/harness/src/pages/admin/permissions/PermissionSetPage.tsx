@@ -113,6 +113,10 @@ export default function PermissionSetPage() {
                 <AxisRow axis="missions.fire" icon={<Rocket />} {...common} />
                 <AxisRow axis="missions.answer" icon={<MessageCircleQuestion />} {...common} />
               </SettingsGroup>
+              <SettingsGroup title={t('subscriptions.log')}>
+                <AxisRow axis="events.fire" icon={<Rocket />} {...common} />
+                <AxisRow axis="events.subscribe" icon={<MessageCircleQuestion />} {...common} />
+              </SettingsGroup>
               <ToolsGroup
                 scope={permission.scope}
                 name={name}

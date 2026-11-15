@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { approvalKeys, fleetKeys, missionKeys } from '../lib/queryKeys';
-import { HITLApproval, Mission, MissionReport } from '../lib/types';
+import { HITLApproval, Mission, MissionReport, OperatorInboxItem } from '../lib/types';
 import {
   joinInboxReports,
   mergeOperatorInboxReports,
@@ -59,6 +59,7 @@ export function useReplyToAsk(): UseMutationResult<string, Error, { id: string; 
 
 export function useInboxReports(limit?: number): {
   items: InboxReportItem[];
+  events: OperatorInboxItem[];
   isLoading: boolean;
   error: Error | null;
 } {
@@ -88,5 +89,10 @@ export function useInboxReports(limit?: number): {
     missionsQuery.isLoading || (missions.length > 0 && reportQueries.some(q => q.isLoading));
   const error = missionsQuery.error ?? null;
 
-  return { items, isLoading, error };
+  return {
+    items,
+    events: (operatorInboxQuery.data ?? []).filter(item => item.reason === 'workspace_event'),
+    isLoading,
+    error,
+  };
 }

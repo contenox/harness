@@ -78,6 +78,7 @@ export type AcpSessionConnectionBanner = "disconnected" | "resumed" | null;
 export interface AcpSessionState {
   sessionId: string | null;
   lastSeq: number;
+  userMessages: number;
   items: AcpTimelineItem[];
   messages: Record<string, AcpChatMessage>;
   toolCalls: Record<string, AcpToolCallState>;
@@ -102,6 +103,7 @@ export interface AcpSessionState {
 export const initialAcpSessionState: AcpSessionState = {
   sessionId: null,
   lastSeq: 0,
+  userMessages: 0,
   items: [],
   messages: {},
   toolCalls: {},
@@ -243,6 +245,7 @@ export function acpSessionReducer(
     case "user_message_chunk":
       return {
         ...state,
+        userMessages: state.userMessages + (state.messages[action.id] ? 0 : 1),
         items: ensureItem(state.items, "message", action.id),
         messages: upsertMessage(
           state.messages,

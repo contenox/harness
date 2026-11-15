@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 async function openSeededSession(page: Page): Promise<string | null> {
-  await page.goto('/#/chats', { waitUntil: 'networkidle' });
+  await page.goto('/#/chats', { waitUntil: 'domcontentloaded' });
   const link = page.getByRole('link', { name: /Show me what a seeded session looks like/ }).first();
   await link.waitFor({ state: 'attached', timeout: 8_000 }).catch(() => {});
   let href = await link.getAttribute('href').catch(() => null);
@@ -16,7 +16,7 @@ async function openSeededSession(page: Page): Promise<string | null> {
 }
 
 test('mission start offers the envelope catalog', async ({ page }) => {
-  await page.goto('/#/missions/new', { waitUntil: 'networkidle' });
+  await page.goto('/#/missions/new', { waitUntil: 'domcontentloaded' });
   await page.getByText('Intent').first().waitFor({ state: 'visible', timeout: 10_000 });
 
   const selects = page.locator('select');
@@ -43,7 +43,7 @@ test('chat slash picker lists commands and model values', async ({ page }) => {
   const sessionId = await openSeededSession(page);
   expect(sessionId, 'the seeded ACP session').not.toBeNull();
 
-  await page.goto(`/#/chat/${sessionId}`, { waitUntil: 'networkidle' });
+  await page.goto(`/#/chat/${sessionId}`, { waitUntil: 'domcontentloaded' });
   const box = page.locator('textarea').first();
   await box.waitFor({ state: 'visible', timeout: 10_000 });
 
@@ -64,7 +64,7 @@ test('files pane has the resizable editor split', async ({ page }) => {
   const sessionId = await openSeededSession(page);
   expect(sessionId, 'the seeded ACP session').not.toBeNull();
 
-  await page.goto(`/#/chat/${sessionId}`, { waitUntil: 'networkidle' });
+  await page.goto(`/#/chat/${sessionId}`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Files' }).click();
   await page.waitForTimeout(1_000);
   await expect(page).toHaveScreenshot('files-pane.png', { fullPage: true });

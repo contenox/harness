@@ -14,6 +14,7 @@ export function useConnectors() {
   return useQuery<Connector[], Error>({
     queryKey: connectorKeys.list(),
     queryFn: api.listConnectors,
+    refetchOnWindowFocus: 'always',
     staleTime: 60_000,
   });
 }

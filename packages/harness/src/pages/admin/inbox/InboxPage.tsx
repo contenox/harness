@@ -166,6 +166,17 @@ export default function InboxPage() {
           </div>
         </div>
 
+        {!!reports.events?.length && (
+          <Section title={t('subscriptions.log')}>
+            {reports.events.map(event => (
+              <Card key={event.id}>
+                <H3>{event.report.summary}</H3>
+                <P>{event.intent}</P>
+                <Span>{absoluteTime(event.createdAt)}</Span>
+              </Card>
+            ))}
+          </Section>
+        )}
         {approvals.length > 0 && (
           <Section
             variant="empty"

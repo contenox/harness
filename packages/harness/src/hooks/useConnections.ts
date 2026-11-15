@@ -81,11 +81,12 @@ export function useConnectionLoginStatus(id: string) {
   });
 }
 
-export function useStartConnectionLogin(id: string) {
+export function useStartConnectionLogin(id: string, renew = false) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => api.startConnectionLogin(id),
-    onSuccess: () => {
+    mutationFn: () => api.startConnectionLogin(id, renew),
+    onSuccess: result => {
+      queryClient.setQueryData(connectionKeys.login(id), result);
       queryClient.invalidateQueries({ queryKey: connectionKeys.login(id) });
       refreshConnections(queryClient);
     },

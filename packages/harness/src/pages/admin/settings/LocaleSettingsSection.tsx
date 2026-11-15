@@ -1,5 +1,5 @@
 import { Button, FormField, H2, Input, P, Panel } from '@contenox/ui';
-import { FormEvent, useContext, useEffect, useId, useState } from 'react';
+import { FormEvent, useContext, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCLIConfig } from '../../../hooks/useCLIConfig';
 import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
@@ -16,13 +16,9 @@ export function LocaleSettingsSection() {
   const putConfig = usePutCLIConfig();
   const formId = useId();
 
-  const [locale, setLocale] = useState('');
+  const [draft, setDraft] = useState<string | null>(null);
+  const locale = draft ?? resolveLocaleOverride(data?.locale, data?.resolvedFrom?.locale);
   const [localeError, setLocaleError] = useState('');
-
-  useEffect(() => {
-    if (!data) return;
-    setLocale(resolveLocaleOverride(data.locale, data.resolvedFrom?.locale));
-  }, [data]);
 
   useResetAfterSuccess(putConfig.isSuccess, putConfig.reset);
 
@@ -38,6 +34,7 @@ export function LocaleSettingsSection() {
     const body: CLIConfigUpdateRequest = { locale: trimmed };
     putConfig.mutate(body, {
       onSuccess: () => {
+        setDraft(current => (current === draft ? null : current));
         void applyUiLanguage(
           i18n,
           trimmed,
@@ -70,7 +67,7 @@ export function LocaleSettingsSection() {
               className="w-full"
               placeholder={detected ? t('settings.locale_placeholder', { value: detected }) : ''}
               value={locale}
-              onChange={e => setLocale(e.target.value)}
+              onChange={e => setDraft(e.target.value)}
             />
           </FormField>
           <P variant="muted" className="text-xs">

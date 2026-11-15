@@ -26,6 +26,7 @@ export type WorkspaceChoice = { path: string; name: string };
 type Props = {
   initial?: ConnectorFormValues;
   editing?: boolean;
+  preset?: boolean;
   forChat?: boolean;
   takenNames: string[];
   workspaces?: WorkspaceChoice[];
@@ -38,6 +39,7 @@ type Props = {
 export function ConnectorForm({
   initial,
   editing = false,
+  preset = false,
   forChat = false,
   takenNames,
   workspaces = [],
@@ -106,7 +108,7 @@ export function ConnectorForm({
 
   return (
     <form className="flex flex-col gap-4" onSubmit={submit} noValidate>
-      {!editing && (
+      {!editing && !preset && (
         <FormField label={t('connectors.form.kind')}>
           <RadioCardGroup
             aria-label={t('connectors.form.kind')}
@@ -196,7 +198,7 @@ export function ConnectorForm({
         </>
       )}
 
-      {values.kind !== 'command' && (
+      {values.kind !== 'command' && !preset && (
         <FormField
           label={t(values.kind === 'openapi' ? 'connectors.form.endpoint' : 'connectors.form.url')}
           required
@@ -222,29 +224,33 @@ export function ConnectorForm({
 
       {values.kind === 'remote' && (
         <>
-          <FormField
-            label={t('connectors.form.transport')}
-            description={t('connectors.form.transport_hint')}>
-            <Select
-              value={values.transport}
-              onChange={e => set('transport', e.target.value as ConnectorFormValues['transport'])}
-              options={[
-                { value: 'http', label: t('connectors.form.transport_http') },
-                { value: 'sse', label: t('connectors.form.transport_sse') },
-              ]}
-            />
-          </FormField>
-          <FormField label={t('connectors.form.auth')}>
-            <Select
-              value={values.auth}
-              onChange={e => set('auth', e.target.value as ConnectorFormValues['auth'])}
-              options={[
-                { value: 'none', label: t('connectors.form.auth_none') },
-                { value: 'bearer', label: t('connectors.form.auth_bearer') },
-                ...(forChat ? [] : [{ value: 'oauth', label: t('connectors.form.auth_oauth') }]),
-              ]}
-            />
-          </FormField>
+          {!preset && (
+            <FormField
+              label={t('connectors.form.transport')}
+              description={t('connectors.form.transport_hint')}>
+              <Select
+                value={values.transport}
+                onChange={e => set('transport', e.target.value as ConnectorFormValues['transport'])}
+                options={[
+                  { value: 'http', label: t('connectors.form.transport_http') },
+                  { value: 'sse', label: t('connectors.form.transport_sse') },
+                ]}
+              />
+            </FormField>
+          )}
+          {!preset && (
+            <FormField label={t('connectors.form.auth')}>
+              <Select
+                value={values.auth}
+                onChange={e => set('auth', e.target.value as ConnectorFormValues['auth'])}
+                options={[
+                  { value: 'none', label: t('connectors.form.auth_none') },
+                  { value: 'bearer', label: t('connectors.form.auth_bearer') },
+                  ...(forChat ? [] : [{ value: 'oauth', label: t('connectors.form.auth_oauth') }]),
+                ]}
+              />
+            </FormField>
+          )}
           {values.auth === 'bearer' && (
             <>
               <FormField
@@ -276,7 +282,7 @@ export function ConnectorForm({
               )}
             </>
           )}
-          {values.auth === 'oauth' && (
+          {values.auth === 'oauth' && !preset && (
             <FormField
               label={t('connectors.form.oauth_client')}
               description={t('connectors.form.oauth_client_hint')}>
@@ -335,7 +341,7 @@ export function ConnectorForm({
         </FormField>
       )}
 
-      {!forChat && (
+      {!forChat && !preset && (
         <Disclosure label={t('connectors.form.advanced')}>
           <div className="flex flex-col gap-4 pt-2">
             <FormField

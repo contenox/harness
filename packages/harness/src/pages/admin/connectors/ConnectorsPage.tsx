@@ -1,6 +1,5 @@
 import {
   Container,
-  EmptyState,
   InlineNotice,
   P,
   Page,
@@ -8,10 +7,11 @@ import {
   SettingsRow,
   Spinner,
 } from '@contenox/ui';
-import { Plug, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { ConnectorCatalog } from '../../../components/connectors/ConnectorCatalog';
 import { ConnectorForm, type WorkspaceChoice } from '../../../components/connectors/ConnectorForm';
 import { folderBasename } from '../../../components/workspace/folderTree';
 import { useConnectors, useSaveConnector } from '../../../hooks/useConnectors';
@@ -33,11 +33,13 @@ export default function ConnectorsPage() {
   const [adding, setAdding] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const open = searchParams.get('connector');
+  const oauth = searchParams.get('mcp_oauth');
 
   const setOpen = (name: string, expanded: boolean) =>
     setSearchParams(
       prev => {
         const next = new URLSearchParams(prev);
+        next.delete('mcp_oauth');
         if (expanded) next.set('connector', name);
         else if (next.get('connector') === name) next.delete('connector');
         return next;
@@ -76,6 +78,15 @@ export default function ConnectorsPage() {
           <P variant="muted" className="px-1 text-[13px]">
             {t('connectors.intro')}
           </P>
+          {(oauth === 'error' || oauth === 'success') && (
+            <InlineNotice variant={oauth === 'error' ? 'error' : 'info'} role="status">
+              {t(
+                oauth === 'error'
+                  ? 'connectors.catalog.sign_in_failed'
+                  : 'connectors.catalog.signed_in',
+              )}
+            </InlineNotice>
+          )}
           {connectors.isLoading && (
             <div className="flex justify-center py-6" role="status">
               <Spinner />
@@ -88,13 +99,11 @@ export default function ConnectorsPage() {
           )}
           {!connectors.isLoading && !connectors.error && (
             <>
-              {everywhere.length === 0 && scoped.length === 0 && !adding && (
-                <EmptyState
-                  icon={<Plug />}
-                  title={t('connectors.empty_title')}
-                  description={t('connectors.empty_description')}
-                />
-              )}
+              <ConnectorCatalog
+                connectors={all}
+                workspaces={workspaces}
+                onOpen={name => setOpen(name, true)}
+              />
               <SettingsGroup title={t('connectors.group_everywhere')}>
                 {everywhere.map(row)}
                 <SettingsRow

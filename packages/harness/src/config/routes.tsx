@@ -1,6 +1,7 @@
 import {
   Bot,
   Database,
+  Radio,
   Inbox,
   Plug,
   Radar,
@@ -24,6 +25,7 @@ const AcpChatPage = lazy(() => import('../pages/chat/AcpChatPage.tsx'));
 const BackendsPage = lazy(() => import('../pages/admin/backends/BackendPage.tsx'));
 const AgentsPage = lazy(() => import('../pages/admin/agents/AgentsPage.tsx'));
 const ConnectorsPage = lazy(() => import('../pages/admin/connectors/ConnectorsPage.tsx'));
+const SubscribePage = lazy(() => import('../pages/admin/events/SubscribePage.tsx'));
 const FleetPage = lazy(() => import('../pages/admin/fleet/FleetPage.tsx'));
 const MissionListPage = lazy(() => import('../pages/admin/missions/MissionListPage.tsx'));
 const MissionDetailPage = lazy(() => import('../pages/admin/missions/MissionDetailPage.tsx'));
@@ -65,6 +67,7 @@ const adminRouteDefinitions: AdminRouteDefinition[] = [
   { path: '/missions', element: MissionListPage, labelKey: 'navbar.missions', Icon: Rocket },
   { path: '/inbox', element: InboxPage, labelKey: 'navbar.inbox', Icon: Inbox },
   { path: '/agents', element: AgentsPage, labelKey: 'navbar.agents', Icon: Bot },
+  { path: '/subscribe', element: SubscribePage, labelKey: 'navbar.subscribe', Icon: Radio },
   { path: '/connectors', element: ConnectorsPage, labelKey: 'navbar.connectors', Icon: Plug },
   { path: '/backends', element: BackendsPage, labelKey: 'navbar.backends', Icon: Database },
   {

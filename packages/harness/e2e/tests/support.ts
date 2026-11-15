@@ -61,7 +61,7 @@ export function composer(page: Page): Locator {
 }
 
 export async function newChat(page: Page): Promise<void> {
-  await page.goto('/#/chat', { waitUntil: 'networkidle' });
+  await page.goto('/#/chat', { waitUntil: 'domcontentloaded' });
   await composer(page).waitFor({ state: 'visible', timeout: 15_000 });
 }
 
@@ -164,7 +164,14 @@ export async function ensureMockBackend(request: APIRequestContext): Promise<voi
 export async function removeBackend(request: APIRequestContext, name: string): Promise<void> {
   const { body } = await api(request, 'GET', '/api/backends');
   for (const backend of body as Array<{ id: string; name: string }>) {
-    if (backend.name === name) await api(request, 'DELETE', `/api/backends/${backend.id}`);
+    if (backend.name === name) {
+      const removed = await api(request, 'DELETE', `/api/backends/${backend.id}`);
+      expect(removed.status).toBe(200);
+      await expect.poll(async () => {
+        const state = await api(request, 'GET', '/api/state');
+        return state.body.some((item: { id: string }) => item.id === backend.id);
+      }).toBe(false);
+    }
   }
 }
 

@@ -12,6 +12,7 @@ import { FIRST_ARGUMENT_KEY } from "@contenox/acp-client";
 import { commandValueDomains } from "../lib/commandValueDomains";
 import {
   mergeRuntimeValueDomains,
+  positionalCompletion,
   runtimeArgumentCompletions,
   runtimeArgumentHint,
   runtimeFlagValues,
@@ -80,18 +81,19 @@ export function useSlashCommandMenu(
     () => mergeRuntimeValueDomains(commandValueDomains(configOptions), runtime),
     [configOptions, runtime],
   );
+  const positional = useMemo(()=>positionalCompletion(runtime,draft),[runtime,draft]);
   const argument = deriveSlashArgument(draft);
   const flagArgument = argument === null ? deriveSlashFlagArgument(draft) : null;
-  const argCommand = argument?.command ?? flagArgument?.command ?? null;
+  const argCommand = positional?.command ?? argument?.command ?? flagArgument?.command ?? null;
   const argKey = flagArgument?.flag ?? FIRST_ARGUMENT_KEY;
-  const argText = argument?.arg ?? flagArgument?.arg ?? "";
-  const domain =
+  const argText = positional?.arg ?? argument?.arg ?? flagArgument?.arg ?? "";
+  const domain = positional ? positional.entry.values :
     argCommand === null
       ? null
       : flagArgument !== null
         ? runtimeFlagValues(runtime, argCommand, argKey)
         : valueDomainFor(domains, argCommand);
-  const argumentHint =
+  const argumentHint = positional ? positional.entry.hint || null :
     argCommand === null || domain !== null
       ? null
       : runtimeArgumentHint(runtime, argCommand, argKey);
@@ -102,7 +104,7 @@ export function useSlashCommandMenu(
 
   const mode: SlashMenuMode = domain === null && argumentHint === null ? "commands" : "values";
   const valueCommand = mode === "values" ? argCommand : null;
-  const valuePrefix = flagArgument?.prefix ?? null;
+  const valuePrefix = positional?.prefix ?? flagArgument?.prefix ?? null;
 
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
   const length = mode === "values" ? values.length : entries.length;
@@ -163,13 +165,13 @@ export function useSlashCommandMenu(
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (!open) return;
+      if (!open || event.ctrlKey || event.metaKey) return;
       const action = slashMenuKeyFromEvent(event.key);
       if (action === null) return;
       if (length === 0 && action.type !== "close") return;
       if (
         action.type === "accept" &&
-        mode === "values" &&
+        mode === "values" && !positional &&
         values[activeIndex]?.toLowerCase() === argText.trim().toLowerCase()
       ) {
         return;
@@ -183,7 +185,7 @@ export function useSlashCommandMenu(
         setDismissedFor(draft);
       }
     },
-    [open, activeIndex, length, highlightAt, accept, draft, mode, values, argText],
+    [open, activeIndex, length, highlightAt, accept, draft, mode, values, argText,positional],
   );
 
   const valueCount = useCallback((name: string) => domains.get(name)?.length ?? 0, [domains]);

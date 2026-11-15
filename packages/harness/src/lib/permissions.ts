@@ -5,7 +5,14 @@ export type Substitution = 'approve' | 'deny' | 'off';
 
 export const GRANTS: Grant[] = ['allow', 'approve', 'deny'];
 
-export type AxisId = 'files.read' | 'files.write' | 'shell' | 'missions.fire' | 'missions.answer';
+export type AxisId =
+  | 'files.read'
+  | 'files.write'
+  | 'shell'
+  | 'missions.fire'
+  | 'missions.answer'
+  | 'events.fire'
+  | 'events.subscribe';
 
 export type ListKey =
   | 'approve_paths'
@@ -20,6 +27,8 @@ export const AXIS_PATH: Record<AxisId, string[]> = {
   shell: ['shell'],
   'missions.fire': ['missions', 'fire'],
   'missions.answer': ['missions', 'answer'],
+  'events.fire': ['events', 'fire'],
+  'events.subscribe': ['events', 'subscribe'],
 };
 
 export const AXIS_LISTS: Record<AxisId, ListKey[]> = {
@@ -28,6 +37,8 @@ export const AXIS_LISTS: Record<AxisId, ListKey[]> = {
   shell: ['prefix_allowlist', 'ask_always', 'blacklist'],
   'missions.fire': [],
   'missions.answer': [],
+  'events.fire': [],
+  'events.subscribe': [],
 };
 
 export const CHAT_ENVELOPE = 'default';

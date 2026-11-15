@@ -209,6 +209,7 @@ function AttachMenu({
 
 export interface ComposerFooterEndProps {
   usage: AcpUsageState | null;
+  userMessages?: number;
   options: ComposerChipOptions;
   onChange: (configId: string, value: SessionConfigOptionValue) => void;
   /** Re-reads the provider/model catalog when the model picker opens. */
@@ -218,6 +219,7 @@ export interface ComposerFooterEndProps {
 /** Right side of the composer footer: context usage, mode / model chips, overflow. */
 export const ComposerFooterEnd = memo(function ComposerFooterEnd({
   usage,
+  userMessages,
   options,
   onChange,
   onModelOpen,
@@ -235,6 +237,7 @@ export const ComposerFooterEnd = memo(function ComposerFooterEnd({
       <span className="ml-auto flex min-w-0 shrink items-center gap-1">
         <UsageMeter
           usage={usage}
+          userMessages={userMessages}
           max={usage ? effectiveUsageMax(usage.size, options.rest) : undefined}
           compact={compact}
         />

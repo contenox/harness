@@ -318,7 +318,9 @@ export default function FleetPage() {
   live.sort((a, b) => Date.parse(b.inst.startedAt) - Date.parse(a.inst.startedAt));
   finished.sort((a, b) => Date.parse(b.inst.startedAt) - Date.parse(a.inst.startedAt));
 
-  const idleEntries = fleet.filter(entry => (entry.instances ?? []).length === 0);
+  const idleEntries = fleet
+    .filter(entry => (entry.instances ?? []).length === 0)
+    .sort((a, b) => a.agentName.localeCompare(b.agentName));
   const runningCount = live.filter(x => LIVE_STATES.includes(x.inst.state)).length;
 
   const isBlocked = (mission?: Mission) => (mission ? blocked.has(mission.id) : false);

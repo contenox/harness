@@ -40,6 +40,8 @@ const AXIS_TITLE = {
   shell: 'permissions.axis_shell',
   'missions.fire': 'permissions.axis_missions_fire',
   'missions.answer': 'permissions.axis_missions_answer',
+  'events.fire': 'permissions.axis_events_fire',
+  'events.subscribe': 'permissions.axis_events_subscribe',
 } as const;
 
 const AXIS_WHEN = {
@@ -48,6 +50,8 @@ const AXIS_WHEN = {
   shell: 'permissions.when_shell',
   'missions.fire': 'permissions.when_missions_fire',
   'missions.answer': 'permissions.when_missions_answer',
+  'events.fire': 'permissions.when_events_fire',
+  'events.subscribe': 'permissions.when_events_subscribe',
 } as const;
 
 export const CHOICE_LABEL = {

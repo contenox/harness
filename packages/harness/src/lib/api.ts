@@ -316,9 +316,9 @@ export const api = {
       }`,
       { ...options('DELETE'), timeoutMs: 45_000 },
     ),
-  startConnectionLogin: (id: string) =>
+  startConnectionLogin: (id: string, renew = false) =>
     apiFetch<ProviderLoginStart>(
-      `/api/providers/connections/${encodeURIComponent(id)}/login`,
+      `/api/providers/connections/${encodeURIComponent(id)}/login${renew ? '?renew=true' : ''}`,
       options('POST'),
     ),
   getConnectionLogin: (id: string) =>

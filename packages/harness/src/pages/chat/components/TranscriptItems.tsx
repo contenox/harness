@@ -47,6 +47,53 @@ import { ChatErrorCard } from './ChatErrorCard';
 import { MissionAskCard } from './MissionAskCard';
 import { PermissionCard } from './PermissionCard';
 
+interface ContextShift {
+  step?: string;
+  model?: string;
+  removed: number;
+  kept: number;
+  window: number;
+  requested?: number;
+  before: number;
+  after: number;
+  reserve: number;
+}
+
+function contextShift(call?: AcpToolCallState): ContextShift | null {
+  const value = call?.meta?.['contenox.contextShift'];
+  if (!value || typeof value !== 'object') return null;
+  for (const key of ['removed', 'kept', 'window', 'before', 'after', 'reserve']) {
+    if (!Number.isSafeInteger(Reflect.get(value, key)) || Reflect.get(value, key) < 0) return null;
+  }
+  return value as ContextShift;
+}
+
+function ContextShiftLine({ shift }: { shift: ContextShift }) {
+  const { t, i18n } = useTranslation();
+  const number = (n: number) => n.toLocaleString(i18n.language);
+  return (
+    <details className="border-line text-text-muted my-2 border-y py-2 text-xs">
+      <summary className="cursor-pointer">
+        {t('acp_chat.context_shift_line', { count: shift.removed, window: number(shift.window) })}
+      </summary>
+      <p className="mt-2">
+        {t('acp_chat.context_shift_detail', {
+          before: number(shift.before),
+          after: number(shift.after),
+          reserve: number(shift.reserve),
+          kept: number(shift.kept),
+        })}
+      </p>
+      {typeof shift.step === 'string' && typeof shift.model === 'string' && (
+        <p>{t('acp_chat.context_shift_step', { step: shift.step, model: shift.model })}</p>
+      )}
+      {shift.requested && shift.requested !== shift.window ? (
+        <p>{t('acp_chat.context_shift_selected', { requested: number(shift.requested) })}</p>
+      ) : null}
+    </details>
+  );
+}
+
 function toolCallCardStatus(
   status?: AcpToolCallState['status'],
 ): NonNullable<ToolCallCardProps['status']> {
@@ -517,7 +564,10 @@ function renderItem(
       ) : null;
   } else {
     const toolCall = session.toolCalls[item.id];
-    rendered = toolCall ? (
+    const shift = contextShift(toolCall);
+    rendered = shift ? (
+      <ContextShiftLine shift={shift} />
+    ) : toolCall ? (
       <TranscriptToolCall
         key={`t-${item.id}`}
         toolCall={toolCall}
@@ -596,6 +646,13 @@ export const TranscriptItems = memo(function TranscriptItems({
   return (
     <>
       {groups.map(group => {
+        if (
+          group.entries.some(
+            ({ item }) => item.kind === 'tool_call' && contextShift(session.toolCalls[item.id]),
+          )
+        ) {
+          return group.entries.map(render);
+        }
         const steps = group.entries.filter(
           ({ item }) => item.kind === 'tool_call' || item.kind === 'terminal',
         );

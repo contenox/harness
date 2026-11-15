@@ -54,3 +54,17 @@ export function runtimeArgumentHint(
   const hint = runtime.get(command)?.get(key)?.hint ?? "";
   return hint === "" ? null : hint;
 }
+
+export function positionalCompletion(runtime: RuntimeArgumentCompletions, draft: string) {
+  const match = /^\/(\S+)\s+(.*)$/s.exec(draft);
+  if (!match) return null;
+  const [, command, args] = match;
+  const parts = args.split(/\s+/);
+  const index = parts.length - 1;
+  const entries = runtime.get(command);
+  const branch = index > 0 ? entries?.get(`arg:${index-1}=${parts[index-1]}`) : undefined;
+  const entry = branch ?? entries?.get(`arg:${index}`);
+  if (!entry) return null;
+  const arg = parts[index];
+  return { command, arg, entry, prefix: draft.slice(0, draft.length - arg.length) };
+}

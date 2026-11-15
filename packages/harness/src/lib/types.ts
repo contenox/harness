@@ -513,7 +513,7 @@ export type HITLApproval = {
   resolvedAt?: string;
 };
 
-export type OperatorInboxReason = 'operator_fired' | 'parent_gone';
+export type OperatorInboxReason = 'operator_fired' | 'parent_gone' | 'workspace_event';
 
 export type OperatorInboxItem = {
   id: string;
