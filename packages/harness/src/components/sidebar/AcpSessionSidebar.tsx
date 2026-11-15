@@ -65,6 +65,10 @@ export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) =>
         onDeleteSession={actions.confirmDeleteSession}
         onNewProject={() => setNewProjectOpen(true)}
         onNewSessionIn={openSessionIn}
+        onRepository={root => {
+          navigate('/github?' + new URLSearchParams({ root }));
+          closeSidebar();
+        }}
         onOpenPermissions={path => {
           navigate(permissionsPath(undefined, path));
           closeSidebar();

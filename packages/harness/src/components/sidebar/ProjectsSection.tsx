@@ -23,6 +23,7 @@ type Props = {
   onDeleteSession: (session: SessionInfo) => void;
   onNewProject: () => void;
   onNewSessionIn: (path: string) => void;
+  onRepository: (path: string) => void;
   onOpenPermissions: (path: string) => void;
   onRenameProject: (root: WorkspaceRoot) => void;
   onRemoveProject: (root: WorkspaceRoot, sessionCount: number) => void;
@@ -82,6 +83,10 @@ export function ProjectsSection(props: Props) {
                     onPermissions={() => {
                       setMenuFor(null);
                       props.onOpenPermissions(root.path);
+                    }}
+                    onRepository={() => {
+                      setMenuFor(null);
+                      props.onRepository(root.path);
                     }}
                     onRename={() => {
                       setMenuFor(null);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "../Button";
 import { ButtonGroup } from "../ButtonGroup";
-import { DiffView, type DiffLine } from "../DiffView";
+import { DiffView, parsePatch } from "../DiffView";
 import { KeyValue } from "../KeyValue";
 import { Panel } from "../Panel";
 import { Span } from "../Typography";
@@ -28,45 +28,6 @@ type Props = {
   onRespond: (approved: boolean) => void;
   labels?: ApprovalCardLabels;
 };
-
-function parsePatch(raw: string): { filePath: string; lines: DiffLine[] } {
-  const rawLines = raw.split("\n");
-  let filePath = "diff";
-  const lines: DiffLine[] = [];
-  let oldLine = 0;
-  let newLine = 0;
-
-  for (const text of rawLines) {
-    if (text.startsWith("+++ ")) {
-      filePath = text.slice(4).replace(/^b\//, "");
-      continue;
-    }
-    if (text.startsWith("--- ")) continue;
-    if (text.startsWith("@@ ")) {
-      const m = text.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
-      if (m) {
-        oldLine = parseInt(m[1], 10);
-        newLine = parseInt(m[2], 10);
-      }
-      lines.push({ type: "context", content: text });
-      continue;
-    }
-    if (text.startsWith("+")) {
-      lines.push({ type: "add", content: text.slice(1), newLineNumber: newLine++ });
-    } else if (text.startsWith("-")) {
-      lines.push({ type: "remove", content: text.slice(1), oldLineNumber: oldLine++ });
-    } else {
-      lines.push({
-        type: "context",
-        content: text.startsWith(" ") ? text.slice(1) : text,
-        oldLineNumber: oldLine++,
-        newLineNumber: newLine++,
-      });
-    }
-  }
-
-  return { filePath, lines };
-}
 
 export function ApprovalCard({ approval, onRespond, labels }: Props) {
   const [inflight, setInflight] = useState(false);

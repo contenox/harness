@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../i18n';
 
 const PAGE_TITLES: Array<[prefix: string, key: TranslationKey]> = [
+  ['/github', 'repoReview.menu'],
   ['/inbox', 'navbar.inbox'],
   ['/missions', 'navbar.missions'],
   ['/fleet', 'navbar.fleet'],

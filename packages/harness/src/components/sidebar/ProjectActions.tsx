@@ -1,5 +1,5 @@
 import { Dropdown, DropdownItem, IconButton } from '@contenox/ui';
-import { MoreHorizontal, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { GitPullRequest, MoreHorizontal, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 type Props = {
@@ -8,6 +8,7 @@ type Props = {
   onMenuOpenChange?: (open: boolean) => void;
   onNewSession: () => void;
   onPermissions: () => void;
+  onRepository: () => void;
   onRename: () => void;
   onRemove: () => void;
 };
@@ -19,6 +20,7 @@ export function ProjectActions({
   onMenuOpenChange,
   onNewSession,
   onPermissions,
+  onRepository,
   onRename,
   onRemove,
 }: Props) {
@@ -44,6 +46,9 @@ export function ProjectActions({
         }>
         <DropdownItem icon={<ShieldCheck className="size-3.5" />} onClick={onPermissions}>
           {t('acp_sidebar.project_permissions')}
+        </DropdownItem>
+        <DropdownItem icon={<GitPullRequest className="size-3.5" />} onClick={onRepository}>
+          {t('repoReview.menu')}
         </DropdownItem>
         <DropdownItem icon={<Pencil className="size-3.5" />} onClick={onRename}>
           {t('acp_sidebar.rename_project')}

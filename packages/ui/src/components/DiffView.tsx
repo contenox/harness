@@ -8,6 +8,50 @@ export interface DiffLine {
   newLineNumber?: number;
 }
 
+export function parsePatch(
+  raw: string,
+  defaultPath = "diff",
+): { filePath: string; lines: DiffLine[] } {
+  const rawLines = raw.split("\n");
+  let filePath = defaultPath;
+  let inHunk = false;
+  const lines: DiffLine[] = [];
+  let oldLine = 0;
+  let newLine = 0;
+
+  for (const text of rawLines) {
+    if (!inHunk && text.startsWith("+++ ")) {
+      filePath = text.slice(4).replace(/^b\//, "");
+      continue;
+    }
+    if (!inHunk && text.startsWith("--- ")) continue;
+    if (text.startsWith("@@ ")) {
+      inHunk = true;
+      const m = text.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+      if (m) {
+        oldLine = parseInt(m[1], 10);
+        newLine = parseInt(m[2], 10);
+      }
+      lines.push({ type: "context", content: text });
+      continue;
+    }
+    if (text.startsWith("+")) {
+      lines.push({ type: "add", content: text.slice(1), newLineNumber: newLine++ });
+    } else if (text.startsWith("-")) {
+      lines.push({ type: "remove", content: text.slice(1), oldLineNumber: oldLine++ });
+    } else {
+      lines.push({
+        type: "context",
+        content: text.startsWith(" ") ? text.slice(1) : text,
+        oldLineNumber: oldLine++,
+        newLineNumber: newLine++,
+      });
+    }
+  }
+
+  return { filePath, lines };
+}
+
 export function diffLinesFromTexts(oldText: string, newText: string): DiffLine[] {
   const oldLines = oldText ? oldText.split("\n") : [];
   const newLines = newText.split("\n");

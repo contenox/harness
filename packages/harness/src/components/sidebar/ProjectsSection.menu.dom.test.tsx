@@ -56,6 +56,7 @@ async function renderSection(onOpenPermissions: (path: string) => void) {
           onDeleteSession: () => undefined,
           onNewProject: () => undefined,
           onNewSessionIn: () => undefined,
+          onRepository: () => undefined,
           onOpenPermissions,
           onRenameProject: () => undefined,
           onRemoveProject: () => undefined,
