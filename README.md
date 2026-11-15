@@ -14,7 +14,7 @@ Docs, downloads and guides: **[contenox.com](https://contenox.com)**. Made by Al
 
 Most AI coding tools ask before every edit and every command, so the first thing people do is turn the asking off — and then one bad run leaks a key or wipes a folder. Contenox asks only when it matters. There's nothing worth switching off, and the moves that could hurt you stay blocked even when you're racing.
 
-![A Contenox chat: the agent ran git status and read package.json on its own, then stopped to ask before npm install](docs/screenshots/chat-permission.png)
+![Contenox reads go.mod and waits for approval before running git fetch --dry-run origin. The chat shows the command with Allow and Deny buttons.](docs/screenshots/chat-permission.png)
 
 The shipped **Default** set:
 
