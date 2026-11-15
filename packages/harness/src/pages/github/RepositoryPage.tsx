@@ -22,6 +22,7 @@ import { folderBasename } from '../../components/workspace/folderTree';
 import { CursorPager } from '../admin/events/CursorPager';
 import { useCursorPages } from '../admin/events/useCursorPages';
 import { PullReview } from './PullReview';
+import { HostedReceiver } from './HostedReceiver';
 import {
   jsonRequest,
   repositoryApi,
@@ -202,6 +203,7 @@ function WorkspaceRepository({ root }: { root: string }) {
                   branch={query.data?.branch}
                   open={n => setParams({ root, pr: String(n) })}
                 />
+                <HostedReceiver root={root} />
               </>
             ))}
         </ScreenBody>
