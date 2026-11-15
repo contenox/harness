@@ -203,9 +203,9 @@ function WorkspaceRepository({ root }: { root: string }) {
                   branch={query.data?.branch}
                   open={n => setParams({ root, pr: String(n) })}
                 />
-                <HostedReceiver root={root} />
               </>
             ))}
+          {root && !number && <HostedReceiver root={root} />}
         </ScreenBody>
       </Container>
     </Page>
