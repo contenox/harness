@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { startAdoptSession, type AdoptIntent, type StartAdoptDeps } from './adoptIntent';
 
-function mockDeps(): StartAdoptDeps & {
-  setAdoptIntent: ReturnType<typeof vi.fn>;
-  navigate: ReturnType<typeof vi.fn>;
-} {
-  return { setAdoptIntent: vi.fn(), navigate: vi.fn() };
+function mockDeps() {
+  return {
+    setAdoptIntent: vi.fn<StartAdoptDeps['setAdoptIntent']>(),
+    navigate: vi.fn<StartAdoptDeps['navigate']>(),
+  } satisfies StartAdoptDeps;
 }
 
 const intent: AdoptIntent = { instanceId: 'inst-1', sessionId: 'down-1' };

@@ -1,20 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { startNewChat, type NewChatDeps } from './newChatIntent';
 
-function mockDeps(): NewChatDeps & {
-  setStagedAgent: ReturnType<typeof vi.fn>;
-  setStagedRoot: ReturnType<typeof vi.fn>;
-  focusEmptyTab: ReturnType<typeof vi.fn>;
-  navigate: ReturnType<typeof vi.fn>;
-  closeSidebar: ReturnType<typeof vi.fn>;
-} {
+function mockDeps() {
   return {
-    setStagedAgent: vi.fn(),
-    setStagedRoot: vi.fn(),
-    focusEmptyTab: vi.fn(),
-    navigate: vi.fn(),
-    closeSidebar: vi.fn(),
-  };
+    setStagedAgent: vi.fn<NewChatDeps['setStagedAgent']>(),
+    setStagedRoot: vi.fn<NonNullable<NewChatDeps['setStagedRoot']>>(),
+    focusEmptyTab: vi.fn<NewChatDeps['focusEmptyTab']>(),
+    navigate: vi.fn<NewChatDeps['navigate']>(),
+    closeSidebar: vi.fn<NewChatDeps['closeSidebar']>(),
+  } satisfies NewChatDeps;
 }
 
 describe('startNewChat', () => {

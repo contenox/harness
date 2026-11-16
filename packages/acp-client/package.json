@@ -17,7 +17,7 @@
     "@agentclientprotocol/sdk": "1.2.1",
     "prettier": "^3.8.3",
     "typescript": "^5.7.3",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.12"
   },
   "exports": {
     ".": "./src/index.ts"

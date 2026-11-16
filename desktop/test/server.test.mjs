@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import net from 'node:net';
-import { routeRuntimePath, startUiServer } from '../src/server.mjs';
+import { freePort, routeRuntimePath, startUiServer } from '../src/server.mjs';
 
 function listen(handler) {
   return new Promise(resolve => {
@@ -217,6 +217,40 @@ test('the same port can be requested and reported back', async () => {
   } finally {
     await second.close();
     a.server.close();
+  }
+});
+
+test('a saved browser-blocked port is replaced with a usable port', async () => {
+  const ui = await startUiServer({ uiDir: uiFixture(), resolveTarget: () => null, port: 6000 });
+  try {
+    assert.notEqual(ui.port, 6000);
+    assert.equal((await fetch(`http://127.0.0.1:${ui.port}/`)).status, 200);
+  } finally {
+    await ui.close();
+  }
+});
+
+test('runtime port allocation retries a browser-blocked ephemeral port', async t => {
+  const address = net.Server.prototype.address;
+  let blocked = true;
+  t.mock.method(net.Server.prototype, 'address', function () {
+    const value = address.call(this);
+    if (blocked && value && typeof value === 'object') {
+      blocked = false;
+      return { ...value, port: 6000 };
+    }
+    return value;
+  });
+  const port = await freePort();
+  const server = http.createServer((_request, response) => response.end('ok'));
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, '127.0.0.1', resolve);
+  });
+  try {
+    assert.equal(await (await fetch(`http://127.0.0.1:${port}/`)).text(), 'ok');
+  } finally {
+    await new Promise(resolve => server.close(resolve));
   }
 });
 

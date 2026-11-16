@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
+import { playwright } from "@vitest/browser-playwright";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
@@ -15,7 +16,7 @@ export default defineConfig({
           name: "storybook",
           browser: {
             enabled: true,
-            provider: "playwright",
+            provider: playwright(),
             headless: true,
             instances: [
               { browser: "chromium", name: "small", viewport: { width: 412, height: 900 } },

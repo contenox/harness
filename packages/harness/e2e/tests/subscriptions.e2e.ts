@@ -72,6 +72,8 @@ test('ACP topic and subscription pickers publish through the live runtime', asyn
   await expect(page.getByText(new RegExp('Published ' + topic)).last()).toBeVisible({
     timeout: 30000,
   });
+  // The runtime sends refreshed completions after the output chunk.
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeVisible();
   const input = composer(page);
   await input.fill('/subscribe ');
   await page

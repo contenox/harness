@@ -38,7 +38,6 @@
     "fuzzysort": "^3.1.0",
     "i18next": "^24.2.2",
     "i18next-browser-languagedetector": "^8.0.4",
-    "i18next-http-backend": "^3.0.2",
     "lucide-react": "^0.477.0",
     "monaco-editor": "^0.57.0",
     "react": "^19.1.0",
@@ -68,7 +67,10 @@
     "typescript": "~5.7.3",
     "typescript-eslint": "^8.61.0",
     "vite": "^6.2.6",
-    "vitest": "^3.2.4",
+    "vitest": "^4.1.12",
     "zod": "^4.4.3"
+  },
+  "overrides": {
+    "dompurify": "3.4.18"
   }
 }

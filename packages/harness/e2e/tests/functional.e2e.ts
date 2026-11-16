@@ -295,6 +295,9 @@ test('R10 permissions: Ask always asks before a write; Allow writes, Deny leaves
   expect(fs.existsSync(allowed)).toBe(false);
   await page.getByRole('button', { name: 'Allow', exact: true }).click();
   expect(await waitForFile(allowed)).toBe('allowed content');
+  // The shared scripted dialog is still in use until the turn finishes.
+  await expect(seen(page, 'The file was written.')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeVisible();
 
   setDialog(writeFileDialog('e2e-deny.txt', 'denied content'));
   await newChat(page);
