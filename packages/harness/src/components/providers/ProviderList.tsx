@@ -45,8 +45,8 @@ export function ProviderList({ includeSignIns = false, onConnected }: ProviderLi
   const { data: config } = useCLIConfig(includeSignIns && !!user);
   const signInProviders: CloudProviderType[] = includeSignIns
     ? config?.unofficialSignIns === 'true'
-      ? ['contenox', 'openai-codex', 'github-copilot']
-      : ['contenox', 'openai-codex']
+      ? ['openai-codex', 'github-copilot']
+      : ['openai-codex']
     : [];
   const [state, dispatch] = useReducer(providerListReducer, initialProviderListState);
   const { data, isLoading, error } = useConnections();

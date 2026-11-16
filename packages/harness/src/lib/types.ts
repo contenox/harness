@@ -178,7 +178,6 @@ export type StatusResponse = {
 export type CloudProviderType =
   | 'ollama'
   | 'openai'
-  | 'contenox'
   | 'openai-codex'
   | 'github-copilot'
   | 'openrouter'

@@ -1,12 +1,9 @@
 import { Button, InlineNotice, SettingsGroup, SettingsRow, StatusDot } from '@contenox/ui';
-import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConnectionLoginFlow } from '../../hooks/useProviderLoginFlow';
-import { api } from '../../lib/api';
 import { connectionStatus } from '../../lib/connectionStatus';
 import { signInAccountName } from '../../lib/providerCatalog';
-import { connectionKeys } from '../../lib/queryKeys';
 import type { Connection } from '../../lib/types';
 import { DeviceCodeSteps } from '../setup/DeviceCodeSteps';
 import { useBrowserHandoff } from '../setup/useBrowserHandoff';
@@ -26,16 +23,9 @@ export type SignInConnectionProps = {
  * only the pending attempt; sign out is the explicit action that removes the session.
  */
 export function SignInConnection({ connection, autoStart, onSignedIn }: SignInConnectionProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const name = signInAccountName(t, connection.providerType);
   const flow = useConnectionLoginFlow(connection, onSignedIn);
-  const subscription = useQuery({
-    queryKey: connectionKeys.subscription(connection.id),
-    queryFn: () => api.getContenoxSubscription(connection.id),
-    enabled: connection.providerType === 'contenox' && flow.signedIn,
-    staleTime: 30_000,
-  });
-  const allowance = subscription.data;
   const codeCopied = useBrowserHandoff(flow.deviceUrl, flow.deviceCode);
   const waiting = flow.pending && flow.deviceUrl && flow.deviceCode;
   const status = connectionStatus(connection);
@@ -54,17 +44,7 @@ export function SignInConnection({ connection, autoStart, onSignedIn }: SignInCo
       <SettingsGroup>
         <SettingsRow
           title={connection.name}
-          description={
-            allowance && flow.signedIn
-              ? t('signin.allowance', {
-                  plan: allowance.plan,
-                  used: allowance.used_percent,
-                  end: new Date(allowance.renews_at).toLocaleDateString(i18n.language),
-                })
-              : flow.signedIn
-                ? t('connections.sign_in.signed_in', { name })
-                : undefined
-          }
+          description={flow.signedIn ? t('connections.sign_in.signed_in', { name }) : undefined}
           trailing={
             <>
               <StatusDot
@@ -77,21 +57,6 @@ export function SignInConnection({ connection, autoStart, onSignedIn }: SignInCo
                       : 'connections.status.login_required',
                 )}
               />
-              {connection.providerType === 'contenox' && flow.signedIn && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="text"
-                  onClick={() =>
-                    window.open(
-                      allowance?.account_url ?? 'https://events.contenox.com/',
-                      '_blank',
-                      'noopener,noreferrer',
-                    )
-                  }>
-                  {t('signin.manage')}
-                </Button>
-              )}
               {flow.signedIn && (
                 <Button
                   type="button"
@@ -129,9 +94,6 @@ export function SignInConnection({ connection, autoStart, onSignedIn }: SignInCo
         <ConnectionDeleteConfirm connection={connection} onDone={() => setMode(null)} />
       )}
 
-      {connection.providerType === 'contenox' && flow.signedIn && subscription.error && (
-        <InlineNotice variant="error">{t('signin.allowance_error')}</InlineNotice>
-      )}
       {flow.error && (
         <InlineNotice variant="error" role="alert">
           {flow.error}
@@ -141,7 +103,6 @@ export function SignInConnection({ connection, autoStart, onSignedIn }: SignInCo
       {!flow.signedIn &&
         (waiting ? (
           <DeviceCodeSteps
-            compare={connection.providerType === 'contenox'}
             url={flow.deviceUrl!}
             code={flow.deviceCode!}
             codeCopied={codeCopied}

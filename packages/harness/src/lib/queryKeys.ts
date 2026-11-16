@@ -28,7 +28,6 @@ export const providerKeys = {
 export const connectionKeys = {
   all: ['connections'] as const,
   list: () => [...connectionKeys.all, 'list'] as const,
-  subscription: (id: string) => [...connectionKeys.all, id, 'subscription'] as const,
   login: (id: string) => [...connectionKeys.all, id, 'login'] as const,
 };
 

@@ -2,7 +2,6 @@ import { Button, OneTimeCode, P, Span, Spinner, Step, Steps } from '@contenox/ui
 import { useTranslation } from 'react-i18next';
 
 type Props = {
-  compare?: boolean;
   url: string;
   code: string;
   codeCopied: boolean;
@@ -20,14 +19,14 @@ function displayUrl(url: string): string {
 }
 
 /** What to do after the browser opened: sign in, enter the code, confirm; with a quiet cancel. */
-export function DeviceCodeSteps({ url, code, codeCopied, cancelling, onCancel, compare }: Props) {
+export function DeviceCodeSteps({ url, code, codeCopied, cancelling, onCancel }: Props) {
   const { t } = useTranslation();
 
   return (
     <div className="flex w-full flex-col gap-5">
       <Steps>
         <Step number={1} title={t('signin.step_open_title')}>
-          {!compare && t('signin.step_open_desc')}{' '}
+          {t('signin.step_open_desc')}{' '}
           <Button
             type="button"
             variant="text"
@@ -37,7 +36,7 @@ export function DeviceCodeSteps({ url, code, codeCopied, cancelling, onCancel, c
             {displayUrl(url)}
           </Button>
         </Step>
-        <Step number={2} title={t(compare ? 'signin.compare' : 'signin.step_code_title')}>
+        <Step number={2} title={t('signin.step_code_title')}>
           <OneTimeCode
             value={code}
             copied={codeCopied}
@@ -45,11 +44,9 @@ export function DeviceCodeSteps({ url, code, codeCopied, cancelling, onCancel, c
             copiedLabel={t('signin.code_copied')}
           />
         </Step>
-        {!compare && (
-          <Step number={3} title={t('signin.step_confirm_title')}>
-            {t('signin.step_confirm_desc')}
-          </Step>
-        )}
+        <Step number={3} title={t('signin.step_confirm_title')}>
+          {t('signin.step_confirm_desc')}
+        </Step>
       </Steps>
 
       <div className="flex items-center justify-between gap-3">
@@ -62,11 +59,9 @@ export function DeviceCodeSteps({ url, code, codeCopied, cancelling, onCancel, c
         </Button>
       </div>
 
-      {!compare && (
-        <P variant="muted" className="text-xs">
-          {t('signin.device_hint')}
-        </P>
-      )}
+      <P variant="muted" className="text-xs">
+        {t('signin.device_hint')}
+      </P>
     </div>
   );
 }

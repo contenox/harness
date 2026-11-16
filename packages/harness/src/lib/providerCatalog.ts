@@ -89,17 +89,6 @@ export const CLOUD_PROVIDER_SETUPS: CloudProviderSetup[] = [
     defaultBaseUrl: 'https://api.openai.com/v1',
   },
   {
-    provider: 'contenox',
-    group: 'recommended',
-    icon: Cloud,
-    titleKey: 'cloud_providers.contenox.title',
-    shortKey: 'providers.contenox.short',
-    accountKey: 'cloud_providers.contenox.account',
-    secretKind: 'none',
-    secretRequired: false,
-    loginRequired: true,
-  },
-  {
     provider: 'openai-codex',
     group: 'recommended',
     icon: MessageCircle,
