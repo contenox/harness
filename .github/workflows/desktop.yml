@@ -63,6 +63,8 @@ jobs:
 
       - name: Build Microsoft Store package
         if: runner.os == 'Windows'
+        env:
+          CONTENOX_MODELD_BASE_URL: ${{ vars.CONTENOX_MODELD_BASE_URL }}
         run: npm --prefix desktop run package:store
 
       - name: Keep the Microsoft Store package

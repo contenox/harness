@@ -12,12 +12,16 @@ import { existingDir, validateWorkspace, workspaceFromArgv } from './workspaces.
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-app.setPath('userData', path.join(app.getPath('appData'), 'ContenoxHarness'));
+app.setPath('userData', app.commandLine.getSwitchValue('user-data-dir') || path.join(app.getPath('appData'), 'ContenoxHarness'));
 
 const storeBuild = process.platform === 'win32' && process.windowsStore === true;
 
 function runtimeEnv(extra = {}) {
   const store = storeBuild ? { CONTENOX_UPDATE_CHECK: 'false' } : {};
+  if (process.platform === 'win32' && app.isPackaged) {
+    const launcher = path.join(process.resourcesPath, 'modeld', 'modeld.cmd');
+    if (storeBuild || fs.existsSync(launcher)) store.CONTENOX_MODELD_BIN = launcher;
+  }
   return { ...process.env, HOME: os.homedir(), ...store, ...extra };
 }
 
@@ -379,6 +383,7 @@ async function openUi() {
 }
 
 function uiDir() {
+  if (!app.isPackaged) return path.resolve(here, '../../packages/harness/dist');
   return path.join(process.resourcesPath, 'ui');
 }
 
@@ -725,7 +730,8 @@ if (hasLock) {
       return;
     }
 
-    const args = process.argv.slice(app.isPackaged ? 1 : 2);
+    const args = process.argv.slice(app.isPackaged ? 1 : 2)
+      .filter(arg => app.isPackaged || path.resolve(arg) !== app.getAppPath());
     const fromArgv = workspaceFromArgv(args, process.cwd());
     const fromEnv = process.env.CONTENOX_WORKSPACE ? path.resolve(process.env.CONTENOX_WORKSPACE) : null;
     const wanted = fromArgv ?? fromEnv;

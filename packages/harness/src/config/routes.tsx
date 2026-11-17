@@ -23,6 +23,7 @@ import { LOGIN_ROUTE } from './routeConstants.ts';
 
 const AcpChatPage = lazy(() => import('../pages/chat/AcpChatPage.tsx'));
 const BackendsPage = lazy(() => import('../pages/admin/backends/BackendPage.tsx'));
+const LocalModelsPage = lazy(() => import('../pages/admin/backends/LocalModelsPage.tsx'));
 const AgentsPage = lazy(() => import('../pages/admin/agents/AgentsPage.tsx'));
 const ConnectorsPage = lazy(() => import('../pages/admin/connectors/ConnectorsPage.tsx'));
 const SubscribePage = lazy(() => import('../pages/admin/events/SubscribePage.tsx'));
@@ -98,6 +99,12 @@ const adminRoutes: RouteConfig[] = adminRouteDefinitions.map(def => ({
 }));
 
 export const routes: RouteConfig[] = [
+  {
+    path: '/local-models',
+    element: LocalModelsPage,
+    label: i18n.t('localAI.inventory'),
+    protected: true,
+  },
   {
     path: '/',
     element: HomeRedirect,

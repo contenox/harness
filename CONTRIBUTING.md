@@ -84,6 +84,18 @@ install a development build with the runtime project's own `make dev-install`
 (it installs `contenox-runtime` into your per-user bin directory). The two
 projects only share that binary name; neither refers to the other's files.
 
+On Windows, `npm run package` and `npm run package-store` include the native Modeld worker,
+inference DLLs and licenses in the installers, ZIP and APPX. The staged runtime's `modeld install` command verifies the
+worker from its release index during packaging. Set `CONTENOX_MODELD_BASE_URL` to the
+directory URL serving `index.json` when using a separate index. The Windows CI job
+accepts the same repository variable. Model weights are downloaded into the user's
+model library when requested in the app.
+
+For an unreleased runtime, use `npm run package-store -- --runtime-bin=<path>`.
+To exercise an unpacked APPX with a real model, set `CONTENOX_QA_PACKAGED_APP` to its
+`app/Contenox.exe` and run `node desktop/scripts/verify-local-ai.mjs` with
+`CONTENOX_DATA_ROOT` pointing at a disposable model library.
+
 Other packaging tasks: `npm run package-dir` (unpacked, pinned runtime),
 `npm run package` (host installers, verified, with checksums). CI uses `npm run stage`,
 `npm run verify`, `npm run checksums` and `npm run sign-rpm`; the last signs Linux `.rpm` files and only

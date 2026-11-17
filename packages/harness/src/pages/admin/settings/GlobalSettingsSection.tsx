@@ -6,7 +6,28 @@ import { usePutCLIConfig } from '../../../hooks/usePutCLIConfig';
 import { useResetAfterSuccess } from '../../../hooks/useResetAfterSuccess';
 import { useSetupStatus } from '../../../hooks/useSetupStatus';
 import { AuthContext } from '../../../lib/authContext';
-import type { CLIConfigUpdateRequest } from '../../../lib/types';
+import type { CLIConfigUpdateRequest, SetupBackendCheck } from '../../../lib/types';
+
+function providerValue(backend: SetupBackendCheck) {
+  return backend.baseUrl === 'local' && (backend.type === 'modeld' || backend.type === 'local')
+    ? `connection:${backend.id}`
+    : backend.type;
+}
+
+function providerChoices(checks: SetupBackendCheck[], current: string, localLabel: string) {
+  const choices = new Map<string, string>();
+  for (const check of checks) {
+    const value = providerValue(check);
+    const local = value !== check.type;
+    choices.set(value, local ? localLabel : check.type);
+    if (current === check.type && local) choices.set(current, localLabel);
+    if (current === `connection:${check.id}`) choices.set(current, local ? localLabel : check.name);
+  }
+  if (current && !choices.has(current)) choices.set(current, current);
+  return [...choices]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
 
 const uniqueSorted = (values: string[]) =>
   Array.from(new Set(values.map(value => value.trim()).filter(Boolean))).sort((a, b) =>
@@ -50,11 +71,8 @@ export function GlobalSettingsSection() {
   }, [data?.backendChecks, model]);
 
   const providerOptions = useMemo(() => {
-    const values = uniqueSorted((data?.backendChecks ?? []).map(backend => backend.type));
-    const current = provider.trim();
-    if (current && !values.includes(current)) values.unshift(current);
-    return values.map(value => ({ value, label: value }));
-  }, [data?.backendChecks, provider]);
+    return providerChoices(data?.backendChecks ?? [], provider.trim(), t('localAI.name'));
+  }, [data?.backendChecks, provider, t]);
 
   const altModelOptions = useMemo(() => {
     const values = uniqueSorted(
@@ -69,17 +87,17 @@ export function GlobalSettingsSection() {
   }, [altModel, data?.backendChecks, t]);
 
   const altProviderOptions = useMemo(() => {
-    const values = uniqueSorted((data?.backendChecks ?? []).map(backend => backend.type));
-    const current = altProvider.trim();
-    if (current && !values.includes(current)) values.unshift(current);
     return [
       { value: '', label: t('settingsAdvanced.not_set') },
-      ...values.map(value => ({ value, label: value })),
+      ...providerChoices(data?.backendChecks ?? [], altProvider.trim(), t('localAI.name')),
     ];
   }, [altProvider, data?.backendChecks, t]);
 
   const selectedProviderChecks = useMemo(
-    () => (data?.backendChecks ?? []).filter(backend => backend.type === provider),
+    () =>
+      (data?.backendChecks ?? []).filter(
+        backend => backend.type === provider || `connection:${backend.id}` === provider,
+      ),
     [data?.backendChecks, provider],
   );
   const selectedProviderHasModel = useMemo(() => {

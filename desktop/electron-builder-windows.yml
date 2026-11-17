@@ -1,0 +1,8 @@
+extends: ./electron-builder.yml
+afterAllArtifactBuild: ./scripts/verify-modeld-package.cjs
+win:
+  extraResources:
+    - from: ${env.CONTENOX_PACKAGE_WORKER_DIR}
+      to: modeld
+      filter:
+        - '**/*'

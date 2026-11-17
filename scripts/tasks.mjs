@@ -61,7 +61,7 @@ CI-internal
   build-ui, build-harness, test-ui, test-harness, test-acp-client   single parts of build and test
 
 Flags (after -- when run through npm)
-  --runtime-bin=<path>  runtime binary for dev, stage-local, package-local and qa (env RUNTIME_BIN also works)
+  --runtime-bin=<path>  development runtime for dev, local staging, Store packaging and qa (env RUNTIME_BIN also works)
   --yes                 reset-local-state: actually delete
   --dry-run             stop, clean, reset-local-state: only list
   --plan                print the steps that would run, run nothing
@@ -313,11 +313,11 @@ const tasks = {
     await desktopRun('checksums');
   },
   'package-store': async () => {
-    await need('stage');
+    await need(opts.runtimeBin ? 'stage-local' : 'stage');
     await desktopRun('package:store');
   },
   'package-store-local': async () => {
-    await need('stage');
+    await need(opts.runtimeBin ? 'stage-local' : 'stage');
     await desktopRun('package:store:local');
   },
 

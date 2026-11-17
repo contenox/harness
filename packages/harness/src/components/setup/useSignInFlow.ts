@@ -10,7 +10,7 @@ export const CODEX: CloudProviderType = 'openai-codex';
 const POLL_MS = 3000;
 const MODEL_WAIT_MS = 30_000;
 
-export type SignInView = 'codex' | 'others';
+export type SignInView = 'codex' | 'others' | 'local';
 
 /**
  * State machine behind the sign-in screen: which panel is shown and, once a provider is
@@ -26,7 +26,11 @@ export function useSignInFlow(data: SetupStatus | undefined) {
   const attempted = useRef<string | null>(null);
   const { mutate: refreshStatus } = refresh;
 
-  const finishing = readyProvider !== undefined || onlyDefaultsMissing(data);
+  const localSetup = data?.backendChecks.some(
+    b => b.baseUrl === 'local' && (b.type === 'modeld' || b.type === 'local'),
+  );
+  const finishing =
+    view !== 'local' && (readyProvider !== undefined || (!localSetup && onlyDefaultsMissing(data)));
   const plan = useMemo(
     () => (finishing ? planDefaultSelection(data, readyProvider, readyConnectionId) : null),
     [finishing, data, readyProvider, readyConnectionId],

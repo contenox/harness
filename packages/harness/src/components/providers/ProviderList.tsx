@@ -1,6 +1,8 @@
 import { Disclosure, InlineNotice, SettingsGroup, SettingsRow, Spinner } from '@contenox/ui';
+import { Cpu } from 'lucide-react';
 import { useContext, useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useCLIConfig } from '../../hooks/useCLIConfig';
 import { useConnections } from '../../hooks/useConnections';
 import { AuthContext } from '../../lib/authContext';
@@ -98,6 +100,20 @@ export function ProviderList({ includeSignIns = false, onConnected }: ProviderLi
 
   const group = (id: Exclude<ProviderGroup, 'more'>) => {
     const rows = providersInGroup(id).map(row);
+    if (id === 'local' && includeSignIns)
+      rows.unshift(
+        <SettingsRow
+          key="native"
+          icon={<Cpu />}
+          title={t('localAI.name')}
+          description={t('localAI.short')}
+          trailing={
+            <Link className="text-link hover:underline" to="/local-models">
+              {t('localAI.manage')}
+            </Link>
+          }
+        />,
+      );
     if (id === 'recommended') rows.unshift(...signInProviders.map(signInRow));
     return <SettingsGroup title={t(GROUP_TITLE[id])}>{rows}</SettingsGroup>;
   };

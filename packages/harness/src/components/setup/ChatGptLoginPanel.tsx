@@ -1,4 +1,5 @@
 import { Button, InlineNotice, P } from '@contenox/ui';
+import { Cpu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useProviderLoginFlow } from '../../hooks/useProviderLoginFlow';
 import { DeviceCodeSteps } from './DeviceCodeSteps';
@@ -7,6 +8,7 @@ import { CODEX } from './useSignInFlow';
 
 type Props = {
   onSignedIn: () => void;
+  onUseLocal: () => void;
   onUseOtherProviders: () => void;
 };
 
@@ -14,7 +16,7 @@ type Props = {
  * Sign-in with ChatGPT. One click starts the device-code flow; the sign-in page opens in the
  * browser and the code lands on the clipboard, then numbered steps say what to do next.
  */
-export function ChatGptLoginPanel({ onSignedIn, onUseOtherProviders }: Props) {
+export function ChatGptLoginPanel({ onSignedIn, onUseLocal, onUseOtherProviders }: Props) {
   const { t } = useTranslation();
   const flow = useProviderLoginFlow(CODEX, onSignedIn);
   const codeCopied = useBrowserHandoff(flow.deviceUrl, flow.deviceCode);
@@ -39,12 +41,16 @@ export function ChatGptLoginPanel({ onSignedIn, onUseOtherProviders }: Props) {
       ) : (
         <>
           <Button size="lg" className="w-full" isLoading={flow.starting} onClick={flow.start}>
-            {t('signin.continue')}
+            {t('signin.title')}
           </Button>
           <P variant="muted" className="text-center text-xs">
             {t('signin.start_desc')}
           </P>
-          <Button variant="outline" size="lg" className="w-full" onClick={onUseOtherProviders}>
+          <Button variant="outline" size="lg" className="w-full" onClick={onUseLocal}>
+            <Cpu size={16} />
+            {t('localAI.use')}
+          </Button>
+          <Button variant="ghost" className="w-full" onClick={onUseOtherProviders}>
             {t('signin.other_providers')}
           </Button>
         </>

@@ -1,12 +1,13 @@
 import { Container, Page, TabbedPage } from '@contenox/ui';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { LocalAIStatus } from '../../../components/localAI/LocalAIStatus';
 import { ProviderList } from '../../../components/providers/ProviderList';
 import { useRuntimeBackendState } from '../../../hooks/useRuntimeBackendState';
 import BackendsSection from './components/BackendsSection';
 import RuntimeStateSection from './components/RuntimeStateSection';
 
-const BACKEND_TAB_IDS = ['providers', 'backends', 'state'] as const;
+const BACKEND_TAB_IDS = ['providers', 'backends', 'state', 'local-ai'] as const;
 const DEFAULT_TAB = 'providers';
 /** Old links used "cloud-providers" for what is now the provider list. */
 const TAB_ALIASES: Record<string, string> = { 'cloud-providers': 'providers' };
@@ -42,6 +43,7 @@ export default function BackendsPage() {
         />
       ),
     },
+    { id: 'local-ai', label: t('localAI.status'), content: <LocalAIStatus /> },
   ];
 
   return (
