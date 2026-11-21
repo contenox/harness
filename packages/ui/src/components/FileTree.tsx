@@ -52,6 +52,7 @@ export interface FileTreeProps extends React.HTMLAttributes<HTMLDivElement> {
   nodes: FileTreeNode[];
   selectedId?: string | null;
   onNodeSelect?: (node: FileTreeNode) => void;
+  onNodeContextMenu?: (node: FileTreeNode) => void;
   directoryClickMode?: "expand" | "navigate";
   defaultExpanded?: Set<string>;
   expandedIds?: ReadonlySet<string>;
@@ -68,6 +69,7 @@ export const FileTree = forwardRef<HTMLDivElement, FileTreeProps>(function FileT
     nodes,
     selectedId,
     onNodeSelect,
+    onNodeContextMenu,
     directoryClickMode = "expand",
     defaultExpanded,
     expandedIds,
@@ -92,6 +94,7 @@ export const FileTree = forwardRef<HTMLDivElement, FileTreeProps>(function FileT
           indent={indent}
           selectedId={selectedId}
           onNodeSelect={onNodeSelect}
+          onNodeContextMenu={onNodeContextMenu}
           directoryClickMode={directoryClickMode}
           defaultExpanded={defaultExpanded}
           expandedIds={expandedIds}
@@ -110,6 +113,7 @@ interface FileTreeItemProps {
   indent: number;
   selectedId?: string | null;
   onNodeSelect?: (node: FileTreeNode) => void;
+  onNodeContextMenu?: (node: FileTreeNode) => void;
   directoryClickMode: "expand" | "navigate";
   defaultExpanded?: Set<string>;
   expandedIds?: ReadonlySet<string>;
@@ -124,6 +128,7 @@ function FileTreeItem({
   indent,
   selectedId,
   onNodeSelect,
+  onNodeContextMenu,
   directoryClickMode,
   defaultExpanded,
   expandedIds,
@@ -204,7 +209,7 @@ function FileTreeItem({
 
   return (
     <div role="treeitem" aria-expanded={node.isDirectory ? expanded : undefined}>
-      <div className="group relative">
+      <div className="group relative" onContextMenu={onNodeContextMenu ? e => { e.preventDefault(); e.stopPropagation(); onNodeContextMenu(node); } : undefined}>
         {node.isDirectory && directoryClickMode === "navigate" ? (
           <div
             className={rowShellClass}
@@ -285,6 +290,7 @@ function FileTreeItem({
                   indent={indent}
                   selectedId={selectedId}
                   onNodeSelect={onNodeSelect}
+                  onNodeContextMenu={onNodeContextMenu}
                   directoryClickMode={directoryClickMode}
                   defaultExpanded={defaultExpanded}
                   expandedIds={expandedIds}

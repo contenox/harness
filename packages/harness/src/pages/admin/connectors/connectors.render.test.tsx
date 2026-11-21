@@ -6,6 +6,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ConnectorDetails } from '../../../components/connectors/ConnectorDetails';
 import { ConnectorForm } from '../../../components/connectors/ConnectorForm';
 import i18n from '../../../i18n';
+import { emptyConnectorForm } from '../../../lib/connectorForm';
 import type { Connector } from '../../../lib/connectorTypes';
 import { connectorKeys } from '../../../lib/queryKeys';
 import { SessionConnectorsPanel } from '../../chat/components/SessionConnectorsDialog';
@@ -169,7 +170,13 @@ describe('advanced connector fields', () => {
   it('offers injected values, login handshake and certificate options for OpenAPI', () => {
     const html = render(
       <ConnectorForm
-        initial={{ ...emptyFormForTest(), kind: 'openapi', login: true, insecureSkipVerify: true }}
+        initial={{
+          ...emptyConnectorForm,
+          name: 'x',
+          kind: 'openapi',
+          login: true,
+          insecureSkipVerify: true,
+        }}
         editing
         takenNames={[]}
         pending={false}
@@ -179,38 +186,3 @@ describe('advanced connector fields', () => {
     expect(html).toContain('Advanced');
   });
 });
-
-function emptyFormForTest() {
-  return {
-    kind: 'command' as const,
-    name: 'x',
-    workspace: '',
-    command: '',
-    args: '',
-    env: '',
-    url: '',
-    transport: 'http' as const,
-    headers: '',
-    auth: 'none' as const,
-    token: '',
-    tokenEnv: '',
-    oauthClientId: '',
-    specUrl: '',
-    timeoutMs: '10000',
-    inject: '',
-    connectTimeout: '30',
-    oauthSecretEnv: '',
-    propName: '',
-    propValue: '',
-    propIn: 'body' as const,
-    login: false,
-    loginMethod: 'POST',
-    loginUrl: '',
-    loginBody: '',
-    extractCookie: '',
-    extractJsonPath: '',
-    injectHeader: '',
-    injectFormat: '',
-    insecureSkipVerify: false,
-  };
-}

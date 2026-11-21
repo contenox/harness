@@ -9,7 +9,7 @@ import type {
 import { parseEnv } from './externalAgentForm';
 
 export type ConnectorFormKind = 'command' | 'remote' | 'openapi';
-export type ConnectorAuth = 'none' | 'bearer' | 'oauth';
+export type ConnectorAuth = 'none' | 'bearer' | 'oauth' | 'basic' | 'apiKey' | 'client_credentials';
 
 export type ConnectorFormValues = {
   kind: ConnectorFormKind;
@@ -23,6 +23,8 @@ export type ConnectorFormValues = {
   headers: string;
   auth: ConnectorAuth;
   token: string;
+  username: string;
+  credential: string;
   tokenEnv: string;
   oauthClientId: string;
   specUrl: string;
@@ -30,6 +32,7 @@ export type ConnectorFormValues = {
   inject: string;
   connectTimeout: string;
   oauthSecretEnv: string;
+  oauthTokenUrl: string;
   propName: string;
   propValue: string;
   propIn: InjectionArgIn;
@@ -52,6 +55,11 @@ export type ConnectorFormErrors = Partial<
     | 'url'
     | 'headers'
     | 'token'
+    | 'username'
+    | 'credential'
+    | 'oauthTokenUrl'
+    | 'oauthClientId'
+    | 'oauthSecretEnv'
     | 'specUrl'
     | 'timeoutMs'
     | 'inject'
@@ -77,6 +85,8 @@ export const emptyConnectorForm: ConnectorFormValues = {
   headers: '',
   auth: 'none',
   token: '',
+  username: '',
+  credential: '',
   tokenEnv: '',
   oauthClientId: '',
   specUrl: '',
@@ -84,6 +94,7 @@ export const emptyConnectorForm: ConnectorFormValues = {
   inject: '',
   connectTimeout: '30',
   oauthSecretEnv: '',
+  oauthTokenUrl: '',
   propName: '',
   propValue: '',
   propIn: 'body',
@@ -140,9 +151,48 @@ const isHttpUrl = (value: string) => {
   }
 };
 
+function remoteHeaders(values: ConnectorFormValues) {
+  const headers = parseHeaders(values.headers).headers;
+  if (values.auth === 'apiKey') headers['X-API-Key'] = values.credential;
+  if (values.auth === 'basic') {
+    const bytes = new TextEncoder().encode(values.username + ':' + values.credential);
+    headers.Authorization =
+      'Basic ' + btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(''));
+  }
+  return headers;
+}
+
+function storedHeaderAuth(input: Record<string, string> = {}) {
+  const headers = { ...input };
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === 'x-api-key') {
+      delete headers[key];
+      return { auth: 'apiKey' as const, credential: value, headers: headerText(headers) };
+    }
+    if (key.toLowerCase() === 'authorization' && /^Basic /i.test(value)) {
+      try {
+        const text = new TextDecoder('utf-8', { fatal: true }).decode(
+          Uint8Array.from(atob(value.slice(6)), c => c.charCodeAt(0)),
+        );
+        const split = text.indexOf(':');
+        if (split < 0) continue;
+        delete headers[key];
+        return {
+          auth: 'basic' as const,
+          username: text.slice(0, split),
+          credential: text.slice(split + 1),
+          headers: headerText(headers),
+        };
+      } catch {
+        /* Keep opaque legacy header values editable verbatim. */
+      }
+    }
+  }
+  return {};
+}
+
 export function formFromMcpServer(srv: McpServer): ConnectorFormValues {
-  const auth: ConnectorAuth =
-    srv.authType === 'oauth' ? 'oauth' : srv.authType === 'bearer' ? 'bearer' : 'none';
+  const auth: ConnectorAuth = srv.authType || 'none';
   return {
     ...emptyConnectorForm,
     kind: srv.transport === 'stdio' ? 'command' : 'remote',
@@ -155,9 +205,11 @@ export function formFromMcpServer(srv: McpServer): ConnectorFormValues {
     transport: srv.transport === 'sse' ? 'sse' : 'http',
     headers: headerText(srv.headers),
     auth,
+    ...(auth === 'none' ? storedHeaderAuth(srv.headers) : {}),
     token: srv.authToken ?? '',
     tokenEnv: srv.authEnvKey ?? '',
     oauthClientId: srv.oauthClientId ?? '',
+    oauthTokenUrl: srv.oauthTokenUrl ?? '',
     oauthSecretEnv: srv.oauthClientSecretEnv ?? '',
     inject: envText(srv.injectParams),
     connectTimeout: String(srv.connectTimeoutSeconds || 30),
@@ -223,6 +275,23 @@ export function validateConnectorForm(
   ) {
     errors.token = 'connectors.form.token_required';
   }
+  if (values.kind === 'remote' && (values.auth === 'basic' || values.auth === 'apiKey')) {
+    if (!values.credential.trim()) errors.credential = 'connectors.form.credential_required';
+    if (values.auth === 'basic' && (!values.username.trim() || values.username.includes(':')))
+      errors.username = 'connectors.form.username_required';
+    const reserved = values.auth === 'basic' ? 'authorization' : 'x-api-key';
+    if (
+      Object.keys(parseHeaders(values.headers).headers).some(key => key.toLowerCase() === reserved)
+    )
+      errors.headers = 'connectors.form.duplicate_auth';
+  }
+  if (values.kind === 'remote' && values.auth === 'client_credentials') {
+    if (!isHttpUrl(values.oauthTokenUrl) || !values.oauthTokenUrl.startsWith('https://'))
+      errors.oauthTokenUrl = 'connectors.form.token_url_hint';
+    if (!values.oauthClientId.trim()) errors.oauthClientId = 'connectors.form.client_id_required';
+    if (!values.oauthSecretEnv.trim())
+      errors.oauthSecretEnv = 'connectors.form.secret_env_required';
+  }
   if (values.kind === 'openapi') {
     const spec = values.specUrl.trim();
     if (spec && !isHttpUrl(spec) && !spec.startsWith('file://'))
@@ -256,17 +325,19 @@ export function mcpInputFromForm(values: ConnectorFormValues): McpServerInput {
       env: parseEnv(values.env).env,
     };
   }
+  const { auth } = values;
+  const oauth = auth === 'oauth' || auth === 'client_credentials';
   return {
     ...base,
     transport: values.transport,
     url: values.url.trim(),
-    headers: parseHeaders(values.headers).headers,
-    authType: values.auth === 'none' ? '' : values.auth,
+    headers: remoteHeaders(values),
+    authType: auth === 'bearer' || oauth ? auth : '',
     authToken: values.auth === 'bearer' ? values.token.trim() || undefined : undefined,
     authEnvKey: values.auth === 'bearer' ? values.tokenEnv.trim() || undefined : undefined,
-    oauthClientId: values.auth === 'oauth' ? values.oauthClientId.trim() || undefined : undefined,
-    oauthClientSecretEnv:
-      values.auth === 'oauth' ? values.oauthSecretEnv.trim() || undefined : undefined,
+    oauthTokenUrl: values.auth === 'client_credentials' ? values.oauthTokenUrl.trim() : undefined,
+    oauthClientId: oauth ? values.oauthClientId.trim() || undefined : undefined,
+    oauthClientSecretEnv: oauth ? values.oauthSecretEnv.trim() || undefined : undefined,
   };
 }
 
@@ -307,7 +378,7 @@ export function sessionServerFromForm(values: ConnectorFormValues): SessionMcpSe
       env: Object.entries(parseEnv(values.env).env).map(([name, value]) => ({ name, value })),
     };
   }
-  const headers = parseHeaders(values.headers).headers;
+  const headers = remoteHeaders(values);
   if (values.auth === 'bearer' && values.token.trim())
     headers.Authorization = 'Bearer ' + values.token.trim();
   return {

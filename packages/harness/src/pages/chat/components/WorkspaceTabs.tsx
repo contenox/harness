@@ -1,8 +1,6 @@
 import { TabPanel, TabPanels } from '@contenox/ui';
 import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { EMPTY_SESSION_KEY } from '../../../hooks/acpWorkspaceState';
-import { setActiveChatPaneKey } from '../../../hooks/chatPaneStore';
 import { useAcpWorkspace } from '../../../hooks/useAcpWorkspace';
 import { useWorkspaceTabs } from '../../../hooks/useWorkspaceTabs';
 import { useAdoptIntent } from '../../../lib/adoptIntent';
@@ -37,10 +35,6 @@ export function WorkspaceTabs() {
         adoptingRef.current = false;
       });
   }, [adoptIntent, workspace.status, adoptSession, open, setAdoptIntent]);
-
-  useEffect(() => {
-    setActiveChatPaneKey(activeId ?? EMPTY_SESSION_KEY);
-  }, [activeId]);
 
   const emptyKeyRef = useRef(0);
 

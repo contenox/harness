@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Cpu, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { localAI } from '../../lib/localAI';
+import { useLocalAI } from '../../lib/localAI';
 
 const states = {
   running: 'localAI.running',
@@ -14,8 +14,9 @@ const states = {
 } as const;
 export function LocalAIStatus({ showInventoryLink = true }: { showInventoryLink?: boolean }) {
   const { t } = useTranslation();
+  const localAI = useLocalAI();
   const q = useQuery({
-    queryKey: ['local-ai', 'status'],
+    queryKey: localAI.keys.status,
     queryFn: localAI.status,
     refetchInterval: 5000,
   });

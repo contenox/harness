@@ -2,6 +2,7 @@ import type { ParseKeys } from 'i18next';
 import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
+import { mediaGenerationEnglish, mediaGenerationGerman } from './pages/media/copy';
 import { localAIEnglish, localAIGerman } from './lib/localAICopy';
 
 declare module 'i18next' {
@@ -18,7 +19,23 @@ export type TranslationKey = ParseKeys;
 const resources = {
   en: {
     translation: {
+      mediaGeneration: mediaGenerationEnglish,
       localAI: localAIEnglish,
+      browser: {
+        title: 'Browser',
+        description: 'Browse pages, capture screenshots and record tab audio.',
+        install: 'Install',
+        open: 'Open',
+        install_title: 'Install Browser',
+        to_chat: 'Back to chat',
+        close: 'Close browser',
+        scope: 'Available in',
+        conflict: 'A connector already uses the name browser.',
+        back: 'Back',
+        forward: 'Forward',
+        reload: 'Reload',
+        address: 'Web address',
+      },
       app: {
         name: 'Contenox',
       },
@@ -1702,6 +1719,7 @@ const resources = {
         all_workspaces: 'All workspaces',
         scope_filter: 'Find a workspace',
         scope_no_match: 'No workspace matches.',
+        edit_file: 'Edit agents.toml',
         open_file: 'Open agents.toml',
         open_file_error: 'Couldn’t open the file. {{message}}',
         intro_home: 'Your configuration. New chats use {{chat}}. Missions use {{mission}}.',
@@ -1897,6 +1915,18 @@ const resources = {
         discard: 'Close without saving',
         save_and_close: 'Save and close',
       },
+      preview: {
+        section: 'Sheet or slide',
+        empty: 'This document has no sections to preview.',
+        ask: 'Ask about selection',
+        open: 'Open file',
+        copy_path: 'Copy relative path',
+        previous: 'Previous page',
+        next: 'Next page',
+        source: 'Edit source',
+        rendered: 'Preview',
+        unsupported: 'Preview unavailable for .{{ext}} files',
+      },
       workspace: {
         panel_title: 'Project',
         refresh: 'Refresh',
@@ -2070,7 +2100,43 @@ const resources = {
         type_workspace: 'Workspace',
         type_inbox: 'Ask',
       },
+      wf: {
+        unavailable: 'Workflows are unavailable in this workspace.',
+        name: 'Workflow name',
+        source: 'JavaScript source',
+        edit: 'Edit source',
+        api: 'run(event) receives the event payload. Use workflow.read(path), workflow.ask(prompt) and workflow.propose(path, text). Proposed files wait for approval.',
+        save: 'Save revision',
+        manual: 'Test a manual run',
+        event: 'Event JSON',
+        run: 'Run workflow',
+        running: 'Running',
+        review: 'Workflow review',
+        before: 'Before',
+        after: 'After',
+        diff: 'Full comparison',
+        pdf: 'Preview PDF',
+        approve: 'Approve and apply files',
+        resume: 'Resume applying files',
+        reject: 'Reject proposal',
+        approved: 'Approved',
+        applying: 'Applying',
+        failed: 'Failed',
+        rejected: 'Rejected',
+        pending: 'Awaiting approval',
+        completed: 'Completed',
+        select: 'Select workflow',
+        new: 'New workflow',
+        history: 'Run history',
+        latest: 'Latest run',
+        triggers: 'Event triggers',
+        rebind: 'Use current revision',
+        bind: 'Connect event',
+        reload: 'Discard draft and reload',
+      },
       subscriptions: {
+        workflows: 'Workflows',
+        workflow: 'Run workflow',
         previousPage: 'Previous page',
         nextPage: 'Next page',
         listen: 'Listen for',
@@ -2131,6 +2197,11 @@ const resources = {
       connectors: {
         catalog: {
           title: 'Connector catalog',
+          atlassian:
+            'Read Confluence pages and create or update Jira issues with your Atlassian account.',
+          asana: 'Find assigned work and update tasks and projects in Asana.',
+          asana_setup:
+            'Register an MCP app in Asana with {{callback}} as its redirect URL. Enter its client ID and set the client-secret environment variable under Advanced. Then add the connector and sign in.',
           open_sign_in: 'Open sign-in page',
           signed_in: 'Sign-in complete. You can return to Contenox.',
           sign_in_failed:
@@ -2142,7 +2213,8 @@ const resources = {
           notion: 'Find a spec, read a page or write up a decision.',
           github: 'Read code, inspect pull requests and work on issues.',
           'microsoft-learn': 'Search Microsoft documentation and code samples.',
-          auth_oauth: 'After adding the connector, sign in to choose the account it can access.',
+          auth_oauth:
+            'Leave the headers empty. Add {{name}}, then select Sign in and choose the account to connect in your browser. You can use this connection without an API key.',
           auth_bearer:
             'Use a GitHub personal access token with access to the repositories you need.',
           auth_none: 'Public documentation. No account required.',
@@ -2178,7 +2250,8 @@ const resources = {
         tools_count_one: '{{count}} tool',
         tools_count_other: '{{count}} tools',
         no_tools: 'Connected, but it offers no tools.',
-        needs_sign_in_hint: 'Sign in to this server in your browser, then check again.',
+        needs_sign_in_hint:
+          'Select Sign in to authorize the connection in your browser. Return here and check the connection to see its tools.',
         unavailable_hint: 'Contenox could not reach this connector or list its tools.',
         details: 'Details',
         check_again: 'Check again',
@@ -2226,6 +2299,21 @@ const resources = {
           transport_sse: 'Server-sent events (SSE)',
           auth: 'Sign-in',
           auth_none: 'None',
+          auth_service: 'OAuth service account',
+          token_url: 'Token endpoint',
+          token_url_hint: 'Use the HTTPS token endpoint from your identity provider.',
+          client_id_required: 'Enter the registered client ID.',
+          secret_env_required:
+            'Enter the name of the environment variable holding the client secret.',
+          chat_auth_hint:
+            'For browser sign-in or a service account, configure the connector in Settings and enable it for this chat.',
+          auth_key: 'API key (X-API-Key)',
+          auth_basic: 'HTTP Basic',
+          username: 'Username',
+          password: 'Password',
+          credential_required: 'Enter the credential.',
+          username_required: 'Enter a username without a colon.',
+          duplicate_auth: 'Remove the duplicate authentication header.',
           auth_bearer: 'Access token',
           auth_oauth: 'Sign in with the browser (OAuth)',
           token: 'Access token',
@@ -2235,6 +2323,8 @@ const resources = {
           token_required: 'Enter a token or the name of the variable that holds it.',
           oauth_client: 'OAuth client ID',
           oauth_client_hint: 'Leave empty if the server registers clients itself.',
+          registered_client_hint:
+            'Enter the client ID issued by the provider for your application.',
           spec: 'OpenAPI document',
           spec_hint:
             'Optional. A URL or file:// path to the spec, if the service does not serve it itself.',
@@ -2242,6 +2332,8 @@ const resources = {
           timeout: 'Timeout (milliseconds)',
           timeout_invalid: 'Enter a whole number above zero.',
           headers: 'Headers',
+          oauth_headers_hint:
+            'Optional for browser sign-in. Leave empty unless your server requires an additional header.',
           headers_hint: 'One Name: value per line, sent with every request.',
           headers_invalid: 'Write each line as Name: value.',
           advanced: 'Advanced',
@@ -2424,7 +2516,8 @@ const resources = {
           node_missing: 'This agent runs on Node.js {{min}} or later, which was not found.',
           node_too_old: 'This agent needs Node.js {{min}} or later; this computer has {{found}}.',
           get_node: 'Download Node.js',
-          running: 'Installing {{name}}. This can take a minute.',
+          running:
+            'Installing {{name}} in the background. You can leave this page and return to check progress.',
           retry: 'Try again',
           update: 'Update to {{version}}',
           action: 'Install {{name}}',
@@ -2667,7 +2760,23 @@ const resources = {
   },
   de: {
     translation: {
+      mediaGeneration: mediaGenerationGerman,
       localAI: localAIGerman,
+      browser: {
+        title: 'Browser',
+        description: 'Webseiten öffnen, Screenshots machen und Tab-Audio aufnehmen.',
+        install: 'Installieren',
+        open: 'Öffnen',
+        install_title: 'Browser installieren',
+        to_chat: 'Zum Chat',
+        close: 'Browser schließen',
+        scope: 'Verfügbar in',
+        conflict: 'Ein Konnektor verwendet bereits den Namen browser.',
+        back: 'Zurück',
+        forward: 'Vorwärts',
+        reload: 'Neu laden',
+        address: 'Webadresse',
+      },
       app: {
         name: 'Contenox',
       },
@@ -4360,6 +4469,7 @@ const resources = {
         all_workspaces: 'Alle Arbeitsbereiche',
         scope_filter: 'Arbeitsbereich suchen',
         scope_no_match: 'Kein Arbeitsbereich passt.',
+        edit_file: 'agents.toml bearbeiten',
         open_file: 'agents.toml öffnen',
         open_file_error: 'Die Datei konnte nicht geöffnet werden. {{message}}',
         intro_home:
@@ -4558,6 +4668,18 @@ const resources = {
         discard: 'Ohne Speichern schließen',
         save_and_close: 'Speichern und schließen',
       },
+      preview: {
+        section: 'Tabellenblatt oder Folie',
+        empty: 'Dieses Dokument hat keine Abschnitte für die Vorschau.',
+        ask: 'Auswahl im Chat besprechen',
+        open: 'Datei öffnen',
+        copy_path: 'Relativen Pfad kopieren',
+        previous: 'Vorherige Seite',
+        next: 'Nächste Seite',
+        source: 'Quelltext bearbeiten',
+        rendered: 'Vorschau',
+        unsupported: 'Keine Vorschau für .{{ext}}-Dateien',
+      },
       workspace: {
         panel_title: 'Projekt',
         refresh: 'Aktualisieren',
@@ -4733,7 +4855,43 @@ const resources = {
         type_workspace: 'Arbeitsbereich',
         type_inbox: 'Freigabe',
       },
+      wf: {
+        unavailable: 'In diesem Arbeitsbereich sind Workflows nicht verfügbar.',
+        name: 'Workflow-Name',
+        source: 'JavaScript-Quelltext',
+        edit: 'Quelltext bearbeiten',
+        api: 'run(event) erhält die Ereignisdaten. Verwende workflow.read(path), workflow.ask(prompt) und workflow.propose(path, text). Vorgeschlagene Dateien benötigen eine Freigabe.',
+        save: 'Revision speichern',
+        manual: 'Manueller Testlauf',
+        event: 'Ereignis als JSON',
+        run: 'Workflow ausführen',
+        running: 'Läuft',
+        review: 'Workflow-Prüfung',
+        before: 'Vorher',
+        after: 'Nachher',
+        diff: 'Vollständiger Vergleich',
+        pdf: 'PDF-Vorschau',
+        approve: 'Freigeben und Dateien anwenden',
+        resume: 'Anwendung fortsetzen',
+        reject: 'Vorschlag ablehnen',
+        approved: 'Freigegeben',
+        applying: 'Wird angewendet',
+        failed: 'Fehlgeschlagen',
+        rejected: 'Abgelehnt',
+        pending: 'Wartet auf Freigabe',
+        completed: 'Abgeschlossen',
+        select: 'Workflow auswählen',
+        new: 'Neuer Workflow',
+        history: 'Ausführungen',
+        latest: 'Letzte Ausführung',
+        triggers: 'Ereignisauslöser',
+        rebind: 'Aktuelle Revision verwenden',
+        bind: 'Ereignis verbinden',
+        reload: 'Entwurf verwerfen und neu laden',
+      },
       subscriptions: {
+        workflows: 'Workflows',
+        workflow: 'Workflow ausführen',
         previousPage: 'Vorherige Seite',
         nextPage: 'Nächste Seite',
         listen: 'Auslöser',
@@ -4796,6 +4954,11 @@ const resources = {
       connectors: {
         catalog: {
           title: 'Konnektorkatalog',
+          atlassian:
+            'Confluence-Seiten lesen und Jira-Vorgänge mit deinem Atlassian-Konto erstellen oder aktualisieren.',
+          asana: 'Aufgaben finden und Aufgaben und Projekte in Asana aktualisieren.',
+          asana_setup:
+            'Registriere in Asana eine MCP-App mit {{callback}} als Weiterleitungs-URL. Gib die Client-ID und unter Erweitert die Umgebungsvariable für das Client-Secret an. Füge den Konnektor hinzu und melde dich an.',
           open_sign_in: 'Anmeldeseite öffnen',
           signed_in: 'Anmeldung abgeschlossen. Du kannst zu Contenox zurückkehren.',
           sign_in_failed:
@@ -4807,7 +4970,8 @@ const resources = {
           notion: 'Spezifikationen finden, Seiten lesen und Entscheidungen festhalten.',
           github: 'Code lesen, Pull Requests prüfen und Issues bearbeiten.',
           'microsoft-learn': 'Microsoft-Dokumentation und Codebeispiele durchsuchen.',
-          auth_oauth: 'Nach dem Hinzufügen meldest du dich mit dem gewünschten Konto an.',
+          auth_oauth:
+            'Lass die Header leer. Füge {{name}} hinzu, klicke auf Anmelden und wähle das Konto im Browser. Dafür brauchst du keinen API-Schlüssel.',
           auth_bearer:
             'Verwende ein persönliches GitHub-Zugriffstoken für die gewünschten Repositorys.',
           auth_none: 'Öffentliche Dokumentation. Kein Konto erforderlich.',
@@ -4894,6 +5058,20 @@ const resources = {
           transport_sse: 'Server-Sent Events (SSE)',
           auth: 'Anmeldung',
           auth_none: 'Keine',
+          auth_service: 'OAuth-Dienstkonto',
+          token_url: 'Token-Endpunkt',
+          token_url_hint: 'Verwende den HTTPS-Token-Endpunkt deines Identitätsanbieters.',
+          client_id_required: 'Gib die registrierte Client-ID ein.',
+          secret_env_required: 'Gib den Namen der Umgebungsvariable für das Client-Secret ein.',
+          chat_auth_hint:
+            'Für eine Browseranmeldung oder ein Dienstkonto richte den Konnektor in den Einstellungen ein und aktiviere ihn für diesen Chat.',
+          auth_key: 'API-Schlüssel (X-API-Key)',
+          auth_basic: 'HTTP Basic',
+          username: 'Benutzername',
+          password: 'Passwort',
+          credential_required: 'Gib die Zugangsdaten ein.',
+          username_required: 'Gib einen Benutzernamen ohne Doppelpunkt ein.',
+          duplicate_auth: 'Entferne den doppelten Authentifizierungsheader.',
           auth_bearer: 'Zugriffstoken',
           auth_oauth: 'Im Browser anmelden (OAuth)',
           token: 'Zugriffstoken',
@@ -4903,6 +5081,8 @@ const resources = {
           token_required: 'Gib ein Token oder den Namen der Variable ein, die es enthält.',
           oauth_client: 'OAuth-Client-ID',
           oauth_client_hint: 'Leer lassen, wenn der Server Clients selbst registriert.',
+          registered_client_hint:
+            'Trage die Client-ID ein, die der Anbieter deiner Anwendung zugewiesen hat.',
           spec: 'OpenAPI-Dokument',
           spec_hint:
             'Optional. Eine URL oder ein file://-Pfad zur Spezifikation, falls der Dienst sie nicht selbst ausliefert.',
@@ -4910,6 +5090,8 @@ const resources = {
           timeout: 'Zeitlimit (Millisekunden)',
           timeout_invalid: 'Gib eine ganze Zahl größer als null ein.',
           headers: 'Header',
+          oauth_headers_hint:
+            'Bei der Browser-Anmeldung optional. Nur ausfüllen, wenn dein Server einen zusätzlichen Header verlangt.',
           headers_hint: 'Ein Name: Wert pro Zeile, wird bei jeder Anfrage mitgeschickt.',
           headers_invalid: 'Schreibe jede Zeile als Name: Wert.',
           advanced: 'Erweitert',
@@ -5103,7 +5285,8 @@ const resources = {
           node_too_old:
             'Dieser Agent braucht Node.js {{min}} oder neuer; auf diesem Computer ist {{found}} installiert.',
           get_node: 'Node.js herunterladen',
-          running: '{{name}} wird installiert. Das kann eine Minute dauern.',
+          running:
+            '{{name}} wird im Hintergrund installiert. Du kannst diese Seite verlassen und später den Status prüfen.',
           retry: 'Erneut versuchen',
           update: 'Auf {{version}} aktualisieren',
           action: '{{name}} installieren',

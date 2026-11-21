@@ -1,12 +1,5 @@
-import { Dialog, ExternalLink } from '@contenox/ui';
-import {
-  BookOpen,
-  Check,
-  ChevronRight,
-  CircleDot,
-  GitPullRequest,
-  NotebookPen,
-} from 'lucide-react';
+import { Dialog, ExternalLink, InlineNotice } from '@contenox/ui';
+import { Check, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSaveConnector } from '../../hooks/useConnectors';
@@ -14,46 +7,8 @@ import { emptyConnectorForm } from '../../lib/connectorForm';
 import type { Connector } from '../../lib/connectorTypes';
 import { ConnectorForm, type WorkspaceChoice } from './ConnectorForm';
 
-const catalog = [
-  {
-    id: 'linear',
-    name: 'Linear',
-    url: 'https://mcp.linear.app/mcp',
-    auth: 'oauth',
-    docs: 'https://linear.app/docs/mcp',
-    icon: CircleDot,
-    color: 'text-accent',
-  },
-  {
-    id: 'notion',
-    name: 'Notion',
-    url: 'https://mcp.notion.com/mcp',
-    auth: 'oauth',
-    docs: 'https://developers.notion.com/guides/mcp/get-started-with-mcp',
-    icon: NotebookPen,
-    color: 'text-text',
-  },
-  {
-    id: 'github',
-    name: 'GitHub',
-    url: 'https://api.githubcopilot.com/mcp/',
-    auth: 'bearer',
-    docs: 'https://github.com/github/github-mcp-server',
-    icon: GitPullRequest,
-    color: 'text-text',
-  },
-  {
-    id: 'microsoft-learn',
-    name: 'Microsoft Learn',
-    url: 'https://learn.microsoft.com/api/mcp',
-    auth: 'none',
-    docs: 'https://learn.microsoft.com/en-us/training/support/mcp',
-    icon: BookOpen,
-    color: 'text-link',
-  },
-] as const;
-
-type Entry = (typeof catalog)[number];
+import { BrowserCatalog } from './BrowserCatalog';
+import { catalog, type Entry } from './catalog';
 
 export function ConnectorCatalog({
   connectors,
@@ -77,6 +32,9 @@ export function ConnectorCatalog({
         {t('connectors.catalog.title')}
       </h3>
       <div className="grid gap-2 sm:grid-cols-2">
+        {typeof window !== 'undefined' && window.contenoxDesktop?.browser && (
+          <BrowserCatalog connectors={connectors} workspaces={workspaces} />
+        )}
         {catalog.map(entry => {
           const configured = connectors.find(
             c => c.kind === 'mcp' && c.url?.replace(/\/$/, '') === entry.url.replace(/\/$/, ''),
@@ -119,7 +77,13 @@ export function ConnectorCatalog({
           onClose={close}
           closeLabel={t('common.close')}>
           <div className="mb-4 space-y-1">
-            <p className="text-text-muted">{t(`connectors.catalog.auth_${selected.auth}`)}</p>
+            <InlineNotice variant="info">
+              {selected.id === 'asana'
+                ? t('connectors.catalog.asana_setup', {
+                    callback: window.location.origin + '/api/mcp/oauth/callback',
+                  })
+                : t(`connectors.catalog.auth_${selected.auth}`, { name: selected.name })}
+            </InlineNotice>
             <div className="text-text-muted font-mono text-xs break-all">{selected.url}</div>
             <ExternalLink href={selected.docs}>
               {t('connectors.catalog.guide', { name: selected.name })}
@@ -128,6 +92,7 @@ export function ConnectorCatalog({
           <ConnectorForm
             key={selected.id}
             preset
+            registeredClient={selected.id === 'asana'}
             initial={{
               ...emptyConnectorForm,
               kind: 'remote',

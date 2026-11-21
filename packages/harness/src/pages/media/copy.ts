@@ -1,0 +1,46 @@
+export const mediaGenerationEnglish = {
+  videoModelNeeded:
+    'Video generation needs a compatible OpenVINO LTX model. Import one in Local AI and verify it on your device.',
+  title: 'Images & video',
+  close: 'Close',
+  outputType: 'Create',
+  image: 'Image (PNG)',
+  nativeVideo: 'Video (MP4)',
+  model: 'Local model',
+  modelNeeded: 'In Local AI, download a model for this format and select “Verify and use model”.',
+  automatic: 'Automatic',
+  device: 'Generation device',
+  verifyRole: 'Verify and use model',
+  checkRole: 'Rendering a sample to verify this model and device…',
+  roleActive: 'Generation model in use',
+  loadingModels: 'Checking installed models…',
+  scene: 'Describe the scene',
+  duration: 'Clip duration (optional · default 2 s)',
+  rendering: 'Rendering on this computer…',
+  makeImage: 'Generate image',
+  videoAction: 'Generate clip',
+};
+
+export const mediaGenerationGerman: typeof mediaGenerationEnglish = {
+  videoModelNeeded:
+    'Für Videos ist ein kompatibles OpenVINO-LTX-Modell erforderlich. Importiere es unter Lokale KI und prüfe es auf deinem Gerät.',
+  title: 'Bilder & Video',
+  close: 'Schließen',
+  outputType: 'Erstellen',
+  image: 'Bild (PNG)',
+  nativeVideo: 'Video (MP4)',
+  model: 'Lokales Modell',
+  modelNeeded:
+    'Lade unter Lokale KI ein Modell für dieses Format und wähle „Modell prüfen und verwenden“.',
+  automatic: 'Automatisch',
+  device: 'Gerät für die Generierung',
+  verifyRole: 'Modell prüfen und verwenden',
+  checkRole: 'Modell und Gerät werden anhand einer Beispielgenerierung geprüft…',
+  roleActive: 'Modell zum Generieren ausgewählt',
+  loadingModels: 'Installierte Modelle werden geprüft…',
+  scene: 'Beschreibe die Szene',
+  duration: 'Cliplänge (optional · Standard 2 s)',
+  rendering: 'Wird auf diesem Computer gerendert…',
+  makeImage: 'Bild generieren',
+  videoAction: 'Clip generieren',
+};

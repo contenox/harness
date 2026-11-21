@@ -9,7 +9,13 @@ function isDesktopViewport(): boolean {
 
 /** Sidebar open state: starts open on desktop, and folds away whenever the viewport becomes narrow. */
 export function useShellSidebar(defaultOpen = true) {
-  const [isOpen, setIsOpen] = useState(() => defaultOpen && isDesktopViewport());
+  const [isOpen, setIsOpen] = useState(
+    () =>
+      defaultOpen &&
+      isDesktopViewport() &&
+      (typeof window === 'undefined' ||
+        window.localStorage?.getItem('contenox.sidebar.open') !== 'false'),
+  );
 
   useEffect(() => {
     const media = window.matchMedia(DESKTOP_QUERY);
@@ -21,5 +27,13 @@ export function useShellSidebar(defaultOpen = true) {
     return () => media.removeEventListener('change', fold);
   }, []);
 
-  return { isOpen, setIsOpen, toggle: () => setIsOpen(open => !open) };
+  return {
+    isOpen,
+    setIsOpen,
+    toggle: () => {
+      if (isDesktopViewport())
+        window.localStorage?.setItem('contenox.sidebar.open', String(!isOpen));
+      setIsOpen(!isOpen);
+    },
+  };
 }

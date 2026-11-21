@@ -3,6 +3,7 @@ import {
   getConfigDocument,
   getEnvelopes,
   listLocalToolsets,
+  putConfigDocument,
   removeEnvelope,
   saveWorkspaceAware,
   scopeKey,
@@ -45,6 +46,15 @@ function useInvalidatePermissions() {
     void queryClient.invalidateQueries({ queryKey: envelopeKeys.all });
     void queryClient.invalidateQueries({ queryKey: workspaceAccessKeys.all });
   };
+}
+
+export function useSaveConfigDocument(scope: ConfigScope) {
+  const invalidate = useInvalidatePermissions();
+  return useMutation({
+    mutationFn: ({ raw, revision }: { raw: string; revision: string }) =>
+      putConfigDocument(scope, raw, revision),
+    onSettled: invalidate,
+  });
 }
 
 type SaveInput = { name: string; patch: Record<string, unknown> };

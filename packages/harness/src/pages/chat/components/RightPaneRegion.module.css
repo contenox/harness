@@ -1,0 +1,53 @@
+.region {
+  container: chat-region / inline-size;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.split {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.conversation,
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.conversation {
+  flex: 1 1 0;
+}
+
+.pane {
+  flex: 0 0 480px;
+  min-width: 320px;
+  /* Keep the conversation usable even after dragging the divider and shrinking the window. */
+  max-width: min(960px, calc(100% - 361px));
+  overflow: hidden;
+}
+
+/* The workspace tree and sidebar both change the space left for these two panes. */
+@container chat-region (max-width: 700px) {
+  .split[data-pane] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .split[data-pane] > .conversation,
+  .handle {
+    display: none;
+  }
+
+  .pane {
+    min-width: 0;
+    max-width: 100%;
+  }
+}

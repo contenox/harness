@@ -1,9 +1,11 @@
 import '@contenox/ui/monaco';
 import { Editor, type OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useContext, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { languageForPath } from '../../lib/missionChanges';
 import { defineBeamMonacoThemes, useMonacoAppTheme } from '../../lib/monacoAppTheme';
+import { SelectionQuote } from '../../lib/selectionQuote';
 import { MONACO_READONLY_OPTIONS } from './monacoOptions';
 
 export interface MonacoViewProps {
@@ -29,11 +31,35 @@ export default function MonacoView({
   scrollResetKey,
 }: MonacoViewProps) {
   const theme = useMonacoAppTheme();
+  const { t } = useTranslation();
+  const quote = useContext(SelectionQuote);
+  const quoteRef = useRef({ path, quote, label: t('preview.ask') });
+  quoteRef.current = { path, quote, label: t('preview.ask') };
   const saveRef = useRef(onSave);
   saveRef.current = onSave;
   const instanceRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const handleMount = useCallback<OnMount>((instance, monaco) => {
     instanceRef.current = instance;
+    if (quoteRef.current.quote && quoteRef.current.path)
+      instance.addAction({
+        id: 'contenox.askSelection',
+        label: quoteRef.current.label,
+        precondition: 'editorHasSelection',
+        contextMenuGroupId: '9_cutcopypaste',
+        contextMenuOrder: 1.5,
+        run: editor => {
+          const selection = editor.getSelection();
+          const model = editor.getModel();
+          const { path, quote } = quoteRef.current;
+          if (selection && model && path && !selection.isEmpty())
+            quote?.(
+              path,
+              selection.startLineNumber,
+              selection.endLineNumber,
+              model.getValueInRange(selection),
+            );
+        },
+      });
     instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveRef.current?.());
   }, []);
   useEffect(() => {

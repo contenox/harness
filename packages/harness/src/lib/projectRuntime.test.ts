@@ -17,6 +17,7 @@ import {
   ensureProjectPrefix,
   isRuntimeNotRunning,
   prefixForCwd,
+  projectApiFetch,
   resetProjectRuntimeCaches,
   withPrefix,
 } from './projectRuntime';
@@ -70,6 +71,16 @@ describe('projectRuntime', () => {
     installBridge(async () => ({ ok: true, key: 'k', prefix: '/rt/k' }));
     expect(await prefixForCwd('/proj/a/sub')).toBe('/rt/k');
     expect(await prefixForCwd('/other')).toBe('');
+  });
+
+  it('keeps an explicit project mutation off the default instance if the project is unavailable', async () => {
+    installBridge(async () => ({ ok: false, error: 'unavailable' }));
+    const request = vi.fn();
+    vi.stubGlobal('fetch', request);
+    await expect(
+      projectApiFetch('/proj/a', '/api/local-ai/operations', { method: 'POST' }),
+    ).rejects.toThrow('workspace is unavailable');
+    expect(request).not.toHaveBeenCalled();
   });
 
   it('maps the default root to the default runtime without ensuring a project runtime', async () => {

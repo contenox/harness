@@ -121,7 +121,9 @@ export function useChatSession(
     : configOptionCurrentValue(session.configOptions, HITL_POLICY_CONFIG_ID);
   const files = useWorkspaceFiles(workspaceRoot, currentHitlPolicy);
 
-  const { state: paneState, dispatch: dispatchPane } = useChatPane(sessionKey);
+  const paneKey =
+    sessionId ?? (workspaceRoot ? EMPTY_SESSION_KEY + ':' + workspaceRoot : EMPTY_SESSION_KEY);
+  const { state: paneState, dispatch: dispatchPane } = useChatPane(paneKey);
   const openFile = useCallback(
     (path: string) => {
       const relative = relativeWorkspacePath(path, workspaceRoot, window.contenoxDesktop?.platform);
@@ -235,6 +237,7 @@ export function useChatSession(
     stagedExternalAgent,
     workspaceRoot,
     files,
+    paneKey,
     paneState,
     dispatchPane,
     openFile,

@@ -8,7 +8,7 @@ import {
   type DirCache,
   type WorkspaceEntry,
 } from '../pages/chat/lib/workspaceTree';
-import { useEditorBuffers, type EditorApi, type FileVersion } from './useEditorBuffers';
+import { useEditorBuffers, type EditorApi } from './useEditorBuffers';
 import { useTreeExpansion, type TreeExpansionApi } from './useTreeExpansion';
 
 export { HITL_POLICY_DEFAULT_VALUE } from '../lib/workspaceAccess';
@@ -32,6 +32,7 @@ export interface WorkspaceFilePeek {
   path: string;
   text: string;
   isBinary: boolean;
+  base64?: string;
   etag: string;
 }
 
@@ -57,7 +58,7 @@ export function filesUrl(path: string, root: string): string {
   return `/api/files?${params.toString()}`;
 }
 
-function contentUrl(path: string, root: string): string {
+export function contentUrl(path: string, root: string): string {
   const params = new URLSearchParams({ path, root });
   return `/api/files/content?${params.toString()}`;
 }
@@ -81,20 +82,19 @@ export function useWorkspaceFiles(
       if (!root) return { path, text: '', isBinary: false, etag: '' };
       const resp = await cwdApiFetch<FileContentResponse>(root, contentUrl(path, root));
       if (resp.encoding === 'base64') {
-        return { path: resp.path, text: '', isBinary: true, etag: resp.etag ?? '' };
+        return {
+          path: resp.path,
+          text: '',
+          isBinary: true,
+          base64: resp.contentBase64 ?? '',
+          etag: resp.etag ?? '',
+        };
       }
       return { path: resp.path, text: resp.content ?? '', isBinary: false, etag: resp.etag ?? '' };
     },
     [root],
   );
-  const readVersion = useCallback(
-    async (path: string): Promise<FileVersion> => {
-      const peek = await readFile(path);
-      return { text: peek.text, etag: peek.etag, isBinary: peek.isBinary };
-    },
-    [readFile],
-  );
-  const editor = useEditorBuffers(root, readVersion);
+  const editor = useEditorBuffers(root, readFile);
   const editorRef = useRef(editor);
   editorRef.current = editor;
 

@@ -145,13 +145,34 @@ export async function cwdApiFetch<T>(
   url: string,
   options?: ApiFetchOptions,
 ): Promise<T> {
-  const prefix = await prefixForCwd(cwd);
+  return fetchWithProjectPrefix<T>(force => prefixForCwd(cwd, { force }), url, options);
+}
+
+/** An explicitly selected non-default inventory must never fall back to the default instance. */
+export function projectApiFetch<T>(project: string, url: string, options?: ApiFetchOptions) {
+  return fetchWithProjectPrefix<T>(
+    async force => {
+      const prefix = await ensureProjectPrefix(project, { force });
+      if (!prefix) throw new Error('The selected workspace is unavailable.');
+      return prefix;
+    },
+    url,
+    options,
+  );
+}
+
+async function fetchWithProjectPrefix<T>(
+  resolve: (force?: boolean) => Promise<string>,
+  url: string,
+  options?: ApiFetchOptions,
+): Promise<T> {
+  const prefix = await resolve();
   if (prefix === '') return apiFetch<T>(url, options);
   try {
     return await apiFetch<T>(withPrefix(prefix, url), options);
   } catch (err) {
     if (!apiErrorIsNotRunning(err)) throw err;
-    const fresh = await prefixForCwd(cwd, { force: true });
+    const fresh = await resolve(true);
     return apiFetch<T>(withPrefix(fresh, url), options);
   }
 }

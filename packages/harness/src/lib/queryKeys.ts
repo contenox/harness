@@ -230,6 +230,7 @@ export const agentsConfigKeys = {
 export const connectorKeys = {
   all: ['connectors'] as const,
   list: () => [...connectorKeys.all, 'list'] as const,
+  browser: () => [...connectorKeys.all, 'browser'] as const,
   mcp: (id: string) => [...connectorKeys.all, 'mcp', id] as const,
   remote: (id: string) => [...connectorKeys.all, 'remote', id] as const,
   session: (sessionId: string) => [...connectorKeys.all, 'session', sessionId] as const,

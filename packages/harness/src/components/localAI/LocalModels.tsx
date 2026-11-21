@@ -27,16 +27,18 @@ import { useTranslation } from 'react-i18next';
 import { useRefreshSetupStatus } from '../../hooks/useRefreshSetupStatus';
 import {
   isWorking,
-  localAI,
   modelSize,
+  useLocalAI,
   type LocalAction,
   type LocalModel,
+  type MediaTarget,
   type ModelOperation,
 } from '../../lib/localAI';
 import { LocalAIStatus } from './LocalAIStatus';
 
-const modelKey = ['local-ai', 'models'];
-const operationKey = ['local-ai', 'operation'];
+import { MediaRoleControl } from './MediaRoleControl';
+import { ModelImportDialog } from './ModelImportDialog';
+import { ModelProgress } from './ModelProgress';
 
 export function LocalModels({
   onboarding = false,
@@ -46,8 +48,11 @@ export function LocalModels({
   onBack: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const localAI = useLocalAI();
+  const { models: modelKey, operation: operationKey } = localAI.keys;
   const cache = useQueryClient();
   const { mutate: refreshSetup } = useRefreshSetupStatus();
+  const [importOpen, setImportOpen] = useState(false);
   const [inventory, setInventory] = useState(!onboarding);
   const [filter, setFilter] = useState('');
   const [removing, setRemoving] = useState<LocalModel>();
@@ -56,7 +61,7 @@ export function LocalModels({
   const activity = useRef<HTMLDivElement>(null);
   const models = useQuery({ queryKey: modelKey, queryFn: localAI.models });
   const hardware = useQuery({
-    queryKey: ['local-ai', 'hardware'],
+    queryKey: localAI.keys.hardware,
     queryFn: localAI.hardware,
     enabled: false,
     retry: false,
@@ -69,8 +74,13 @@ export function LocalModels({
   const op = progress.data;
   const busy = isWorking(op?.phase);
   const start = useMutation({
-    mutationFn: (input: { model: string; action: LocalAction; token?: string }) =>
-      localAI.start(input.model, input.action, input.token),
+    mutationFn: (input: {
+      model: string;
+      action: LocalAction;
+      token?: string;
+      tokenOrigin?: string;
+      target?: MediaTarget;
+    }) => localAI.start(input.model, input.action, input.token, input.tokenOrigin, input.target),
     onSuccess: next => {
       setToken('');
       cache.setQueryData(operationKey, next);
@@ -96,7 +106,7 @@ export function LocalModels({
     handled.current = finished.id;
     void cache.invalidateQueries({ queryKey: modelKey });
     if (finished.phase === 'done') refreshSetup();
-  }, [finished, cache, refreshSetup]);
+  }, [finished, cache, refreshSetup, modelKey]);
   const installed = (models.data ?? []).filter(m => m.installed);
   const size = (bytes: number) => modelSize(bytes, i18n.language);
   const matches = (m: LocalModel) =>
@@ -109,6 +119,7 @@ export function LocalModels({
       icon={m.installed ? <HardDrive /> : <Download />}
       title={m.label}
       description={[
+        m.lora && 'LoRA',
         m.engine === 'llama' ? 'llama.cpp' : m.engine === 'openvino' ? 'OpenVINO' : m.engine,
         size(m.bytes),
         m.label !== m.name ? m.name : '',
@@ -117,6 +128,14 @@ export function LocalModels({
         .join(' · ')}
       trailing={m.primary ? t('localAI.primary') : m.assigned ? t('localAI.assigned') : undefined}>
       <div className="flex flex-wrap items-center gap-2">
+        {m.mediaError && <InlineNotice variant="error">{m.mediaError}</InlineNotice>}
+        {m.installed && m.pipeline && !m.mediaError && (
+          <MediaRoleControl
+            model={m}
+            disabled={locked}
+            onAssign={target => start.mutate({ model: m.name, action: 'use-media', target })}
+          />
+        )}
         {m.chat && !m.primary && (
           <Button
             size="sm"
@@ -166,10 +185,13 @@ export function LocalModels({
       case 'prepare':
         return t('localAI.prepare');
       case 'download':
-        return t('localAI.downloading');
+        return t(value.action === 'import' ? 'localAI.importing' : 'localAI.downloading');
       case 'verify':
+        if (value.action === 'use-media') return t('mediaGeneration.checkRole');
         return t('localAI.verify');
       case 'done':
+        if (value.action === 'import') return t('localAI.imported');
+        if (value.action === 'use-media') return t('mediaGeneration.roleActive');
         return t(value.action === 'use' ? 'localAI.doneUse' : 'localAI.doneDownload');
       case 'cancelled':
         return t('localAI.cancelled');
@@ -224,21 +246,7 @@ export function LocalModels({
                 </Button>
               )}
             </div>
-            {busy && (
-              <>
-                <progress
-                  aria-label={opTitle(op)}
-                  className="block h-1.5 w-full accent-current"
-                  max={op.total || 1}
-                  value={op.phase === 'download' && op.total > 0 ? op.current : undefined}
-                />
-                {op.phase === 'download' && op.total > 0 && (
-                  <p className="text-text-muted text-xs tabular-nums">
-                    {size(op.current)} / {size(op.total)}
-                  </p>
-                )}
-              </>
-            )}
+            {busy && <ModelProgress operation={op} label={opTitle(op)} />}
             {op.phase === 'failed' &&
               (op.accessUrl ? (
                 <div className="space-y-2">
@@ -276,11 +284,15 @@ export function LocalModels({
                 size="sm"
                 disabled={locked || (!!op.accessUrl && !token.trim())}
                 onClick={() =>
-                  start.mutate({
-                    model: op.model,
-                    action: op.action,
-                    token: token.trim() || undefined,
-                  })
+                  op.action === 'import'
+                    ? setImportOpen(true)
+                    : start.mutate({
+                        model: op.model,
+                        action: op.action,
+                        token: token.trim() || undefined,
+                        tokenOrigin: op.tokenOrigin,
+                        target: op.target,
+                      })
                 }>
                 {t('localAI.retry')}
               </Button>
@@ -342,6 +354,18 @@ export function LocalModels({
       )}
       {inventory && (
         <>
+          <Button className="self-start" disabled={locked} onClick={() => setImportOpen(true)}>
+            {t('localAI.importModel')}
+          </Button>
+          {importOpen && (
+            <ModelImportDialog
+              operation={op}
+              names={(models.data ?? []).map(m => m.name)}
+              onClose={() => setImportOpen(false)}
+              onRegistered={() => void models.refetch()}
+              onOperation={next => cache.setQueryData(operationKey, next)}
+            />
+          )}
           {!onboarding && (
             <Button className="self-start" variant="outline" onClick={() => setInventory(false)}>
               <Cpu size={15} />

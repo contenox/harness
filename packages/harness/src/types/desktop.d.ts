@@ -5,6 +5,23 @@ declare global {
     contenoxDesktop?: {
       /** Node `process.platform` of the desktop shell ('win32', 'darwin', ...). */
       platform: string;
+      browser?: {
+        connector(
+          id: string,
+        ): Promise<import('../lib/connectorTypes').McpServerInput | { ok: false; error: string }>;
+        mount(id: string): Promise<{ url?: string; error?: string }>;
+        layout(
+          id: string,
+          bounds: { x: number; y: number; width: number; height: number } | null,
+        ): Promise<void>;
+        action(
+          id: string,
+          action: string,
+          args?: { url: string },
+        ): Promise<{ url?: string; error?: string }>;
+        close(id: string): Promise<void | { error: string }>;
+        subscribe(fn: (state: { url: string; title: string }) => void): () => void;
+      };
       distribution?: 'store' | 'direct';
       /** Recolor the native caption-button overlay (Windows) to the renderer theme. */
       setTitleBarTheme(theme: 'dark' | 'light'): void;

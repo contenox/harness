@@ -1,7 +1,7 @@
 import type { SessionConfigOptionValue } from '@contenox/acp-client';
 import { Dropdown, DropdownItem, DropdownSeparator, IconButton } from '@contenox/ui';
 import { AttachAudioButtons } from '@contenox/ui/session-ui';
-import { ImagePlus, Mic, Music, Plug, Plus } from 'lucide-react';
+import { Clapperboard, ImagePlus, Mic, Music, Plug, Plus } from 'lucide-react';
 import { memo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AcpUsageState } from '../../../hooks/acpSessionState';
@@ -27,6 +27,7 @@ export interface ComposerFooterStartProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   onCancelRecording: () => void;
+  onOpenMedia?: () => void;
   onOpenConnectors?: () => void;
 }
 
@@ -42,6 +43,7 @@ export const ComposerFooterStart = memo(function ComposerFooterStart({
   onStartRecording,
   onStopRecording,
   onCancelRecording,
+  onOpenMedia,
   onOpenConnectors,
 }: ComposerFooterStartProps) {
   const { t } = useTranslation();
@@ -55,7 +57,7 @@ export const ComposerFooterStart = memo(function ComposerFooterStart({
   const narrow = width !== null && width > 0 && width < FOOTER_ATTACH_MENU_BELOW;
   const menuOnly =
     !recording &&
-    (narrow ? imagesSupported || audioSupported || !!onOpenConnectors : !!onOpenConnectors);
+    (!!onOpenMedia || !!onOpenConnectors || (narrow && (imagesSupported || audioSupported)));
   return (
     <>
       <span ref={probe} hidden aria-hidden />
@@ -68,6 +70,7 @@ export const ComposerFooterStart = memo(function ComposerFooterStart({
           onImageFiles={onImageFiles}
           onAudioFiles={onAudioFiles}
           onStartRecording={onStartRecording}
+          onOpenMedia={onOpenMedia}
           onOpenConnectors={onOpenConnectors}
         />
       )}
@@ -96,6 +99,7 @@ interface AttachMenuProps {
   onImageFiles: (files: File[]) => void;
   onAudioFiles: AudioButtonProps['onFiles'];
   onStartRecording: () => void;
+  onOpenMedia?: () => void;
   onOpenConnectors?: () => void;
 }
 
@@ -107,6 +111,7 @@ function AttachMenu({
   onImageFiles,
   onAudioFiles,
   onStartRecording,
+  onOpenMedia,
   onOpenConnectors,
 }: AttachMenuProps) {
   const { t } = useTranslation();
@@ -188,6 +193,16 @@ function AttachMenu({
               onStartRecording();
             }}>
             {t('acp_chat.record_audio_label')}
+          </DropdownItem>
+        )}
+        {onOpenMedia && (
+          <DropdownItem
+            icon={<Clapperboard />}
+            onClick={() => {
+              setOpen(false);
+              onOpenMedia();
+            }}>
+            {t('mediaGeneration.title')}
           </DropdownItem>
         )}
         {onOpenConnectors && (imagesSupported || audioSupported) && <DropdownSeparator />}

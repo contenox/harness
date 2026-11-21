@@ -2,7 +2,7 @@ export type ConnectorKind = 'builtin' | 'mcp' | 'openapi';
 export type ConnectorScope = 'everywhere' | 'workspace' | 'session' | 'agent';
 export type ConnectorStatus = 'ready' | 'needs_sign_in' | 'unavailable';
 export type McpTransport = 'stdio' | 'sse' | 'http';
-export type McpAuthType = '' | 'bearer' | 'oauth';
+export type McpAuthType = '' | 'bearer' | 'oauth' | 'client_credentials';
 
 export type ConnectorTool = {
   name: string;
@@ -44,6 +44,7 @@ export type McpServer = {
   authEnvKey?: string;
   oauthClientId?: string;
   oauthClientSecretEnv?: string;
+  oauthTokenUrl?: string;
   connectTimeoutSeconds: number;
   injectParams?: Record<string, string>;
   workspace?: string;

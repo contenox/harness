@@ -24,6 +24,7 @@ export type EnvelopeSection = {
 };
 
 export type ConfigDocument = {
+  raw?: string;
   scope: 'home' | 'workspace';
   workspace?: string;
   path: string;
@@ -67,6 +68,18 @@ function itemPath(name: string): string {
 
 export function getConfigDocument(scope: ConfigScope): Promise<ConfigDocument> {
   return call<ConfigDocument>(scope, configUrl('', scope));
+}
+
+export function putConfigDocument(
+  scope: ConfigScope,
+  raw: string,
+  revision: string,
+): Promise<ConfigDocument> {
+  return call<ConfigDocument>(scope, configUrl('', scope), {
+    method: 'PUT',
+    headers: { 'If-Match': '"' + revision + '"' },
+    body: JSON.stringify({ raw }),
+  });
 }
 
 export function getEnvelopes(scope: ConfigScope): Promise<EnvelopeSection> {

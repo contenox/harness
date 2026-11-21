@@ -6,7 +6,6 @@ import {
   InlineNotice,
   Input,
   RadioCardGroup,
-  SecretInput,
   Select,
   Textarea,
 } from '@contenox/ui';
@@ -21,12 +20,15 @@ import {
   type ConnectorFormValues,
 } from '../../lib/connectorForm';
 
+import { RemoteAuthFields } from './RemoteAuthFields';
+
 export type WorkspaceChoice = { path: string; name: string };
 
 type Props = {
   initial?: ConnectorFormValues;
   editing?: boolean;
   preset?: boolean;
+  registeredClient?: boolean;
   forChat?: boolean;
   takenNames: string[];
   workspaces?: WorkspaceChoice[];
@@ -40,6 +42,7 @@ export function ConnectorForm({
   initial,
   editing = false,
   preset = false,
+  registeredClient = false,
   forChat = false,
   takenNames,
   workspaces = [],
@@ -238,63 +241,15 @@ export function ConnectorForm({
               />
             </FormField>
           )}
-          {!preset && (
-            <FormField label={t('connectors.form.auth')}>
-              <Select
-                value={values.auth}
-                onChange={e => set('auth', e.target.value as ConnectorFormValues['auth'])}
-                options={[
-                  { value: 'none', label: t('connectors.form.auth_none') },
-                  { value: 'bearer', label: t('connectors.form.auth_bearer') },
-                  ...(forChat ? [] : [{ value: 'oauth', label: t('connectors.form.auth_oauth') }]),
-                ]}
-              />
-            </FormField>
-          )}
-          {values.auth === 'bearer' && (
-            <>
-              <FormField
-                label={t('connectors.form.token')}
-                error={err('token')}
-                description={t('connectors.form.token_hint')}>
-                <SecretInput
-                  value={values.token}
-                  onChange={e => set('token', e.target.value)}
-                  showLabel={t('connectors.form.show')}
-                  hideLabel={t('connectors.form.hide')}
-                  autoComplete="off"
-                  error={!!errors.token}
-                />
-              </FormField>
-              {!forChat && (
-                <FormField
-                  label={t('connectors.form.token_env')}
-                  description={t('connectors.form.token_env_hint')}>
-                  <Input
-                    value={values.tokenEnv}
-                    onChange={e => set('tokenEnv', e.target.value)}
-                    placeholder="MCP_TOKEN"
-                    autoComplete="off"
-                    spellCheck={false}
-                    mono
-                  />
-                </FormField>
-              )}
-            </>
-          )}
-          {values.auth === 'oauth' && !preset && (
-            <FormField
-              label={t('connectors.form.oauth_client')}
-              description={t('connectors.form.oauth_client_hint')}>
-              <Input
-                value={values.oauthClientId}
-                onChange={e => set('oauthClientId', e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                mono
-              />
-            </FormField>
-          )}
+          <RemoteAuthFields
+            values={values}
+            errors={errors}
+            set={set}
+            err={err}
+            preset={preset}
+            forChat={forChat}
+            showClientSettings={!preset || registeredClient}
+          />
         </>
       )}
 
@@ -329,19 +284,23 @@ export function ConnectorForm({
         <FormField
           label={t('connectors.form.headers')}
           error={err('headers')}
-          description={t('connectors.form.headers_hint')}>
+          description={t(
+            values.auth === 'oauth'
+              ? 'connectors.form.oauth_headers_hint'
+              : 'connectors.form.headers_hint',
+          )}>
           <Textarea
             value={values.headers}
             onChange={e => set('headers', e.target.value)}
             rows={2}
-            placeholder="X-Api-Key: ..."
+            placeholder={values.auth === 'oauth' ? undefined : 'X-Api-Key: ...'}
             spellCheck={false}
             className="font-mono"
           />
         </FormField>
       )}
 
-      {!forChat && !preset && (
+      {!forChat && (!preset || registeredClient) && (
         <Disclosure label={t('connectors.form.advanced')}>
           <div className="flex flex-col gap-4 pt-2">
             <FormField

@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { previewEntryFromPeek, selectPreview, type FilePreviewCache } from './filePreview';
 
+import { previewFormat } from './previewFormat';
+
+describe('previewFormat', () => {
+  it('detects the extension of the file on either platform', () => {
+    expect(previewFormat('reports/2026.11/Letter.PDF')?.type).toBe('pdf');
+    expect(previewFormat('reports\\\\name.csv\\\\README')).toBeUndefined();
+    expect(previewFormat('report.constructor')).toBeUndefined();
+    expect(previewFormat('pdf')).toBeUndefined();
+  });
+});
+
 describe('previewEntryFromPeek', () => {
   it('maps a text peek to a text entry', () => {
     expect(previewEntryFromPeek({ text: 'hello', isBinary: false })).toEqual({

@@ -8,6 +8,7 @@ export interface FileVersion {
   text: string;
   etag: string;
   isBinary: boolean;
+  base64?: string;
 }
 
 export type PutResult =
@@ -113,7 +114,14 @@ export function useEditorBuffers(
     async (path: string) => {
       try {
         const v = await readVersion(path);
-        dispatch({ type: 'loaded', path, text: v.text, etag: v.etag, binary: v.isBinary });
+        dispatch({
+          type: 'loaded',
+          path,
+          text: v.text,
+          etag: v.etag,
+          binary: v.isBinary,
+          base64: v.base64,
+        });
       } catch {
         dispatch({ type: 'loadFailed', path });
       }
@@ -149,7 +157,12 @@ export function useEditorBuffers(
         dispatch({
           type: 'conflicted',
           path,
-          conflict: { reason, currentEtag: v.etag, diskText: v.text, deleted: false },
+          conflict: {
+            reason,
+            currentEtag: v.etag,
+            diskText: v.isBinary ? null : v.text,
+            deleted: false,
+          },
         });
       } catch (err) {
         const deleted = err instanceof ApiError && err.status === 404;
@@ -199,7 +212,14 @@ export function useEditorBuffers(
     async (path: string) => {
       try {
         const v = await readVersion(path);
-        dispatch({ type: 'reloaded', path, text: v.text, etag: v.etag });
+        dispatch({
+          type: 'loaded',
+          path,
+          text: v.text,
+          etag: v.etag,
+          binary: v.isBinary,
+          base64: v.base64,
+        });
         report(path, false);
       } catch {
         dispatch({ type: 'loadFailed', path });
@@ -238,9 +258,18 @@ export function useEditorBuffers(
           setTimeout(() => {
             checks.current.delete(path);
             const b = ref.current[path];
-            if (!b || b.status !== 'ready' || b.saving) return;
+            if (!b || b.status === 'loading' || b.saving) return;
             void readVersion(path)
-              .then(v => dispatch({ type: 'diskChanged', path, text: v.text, etag: v.etag }))
+              .then(v =>
+                dispatch({
+                  type: 'diskChanged',
+                  path,
+                  text: v.text,
+                  etag: v.etag,
+                  binary: v.isBinary,
+                  base64: v.base64,
+                }),
+              )
               .catch(err => {
                 if (err instanceof ApiError && err.status === 404) {
                   dispatch({ type: 'diskChanged', path, text: null, etag: '' });

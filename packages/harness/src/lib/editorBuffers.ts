@@ -8,6 +8,7 @@ export interface EditorConflict {
 export interface EditorBuffer {
   path: string;
   status: 'loading' | 'ready' | 'binary' | 'error';
+  base64?: string;
   base: string;
   etag: string;
   text: string;
@@ -21,14 +22,21 @@ export type EditorBuffers = Record<string, EditorBuffer>;
 
 export type BufferAction =
   | { type: 'opened'; path: string }
-  | { type: 'loaded'; path: string; text: string; etag: string; binary: boolean }
+  | { type: 'loaded'; path: string; text: string; etag: string; binary: boolean; base64?: string }
   | { type: 'loadFailed'; path: string }
   | { type: 'edited'; path: string; text: string }
   | { type: 'saveStarted'; path: string }
   | { type: 'saved'; path: string; text: string; etag: string }
   | { type: 'saveFailed'; path: string; message: string }
   | { type: 'conflicted'; path: string; conflict: EditorConflict }
-  | { type: 'diskChanged'; path: string; text: string | null; etag: string }
+  | {
+      type: 'diskChanged';
+      path: string;
+      text: string | null;
+      etag: string;
+      binary?: boolean;
+      base64?: string;
+    }
   | { type: 'reloaded'; path: string; text: string; etag: string }
   | { type: 'closed'; path: string }
   | { type: 'moved'; from: string; to: string }
@@ -73,6 +81,9 @@ export function buffersReducer(state: EditorBuffers, action: BufferAction): Edit
       return update(state, action.path, b => ({
         ...b,
         status: action.binary ? 'binary' : 'ready',
+        base64: action.base64,
+        saveError: null,
+        reloads: b.reloads + 1,
         base: action.text,
         text: action.text,
         etag: action.etag,
@@ -100,7 +111,32 @@ export function buffersReducer(state: EditorBuffers, action: BufferAction): Edit
       return update(state, action.path, b => ({ ...b, saving: false, conflict: action.conflict }));
     case 'diskChanged':
       return update(state, action.path, b => {
-        if (b.status !== 'ready' || action.etag === b.etag) return b;
+        if (b.saving || b.status === 'loading' || (b.status !== 'error' && action.etag === b.etag))
+          return b;
+        if (b.status !== 'ready' || action.binary) {
+          if (isDirty(b))
+            return {
+              ...b,
+              conflict: {
+                reason: 'disk',
+                currentEtag: action.etag,
+                diskText: null,
+                deleted: false,
+              },
+            };
+          if (action.text === null) return { ...b, status: 'error', base64: undefined };
+          return {
+            ...b,
+            status: action.binary ? 'binary' : 'ready',
+            base64: action.base64,
+            text: action.text,
+            base: action.text,
+            etag: action.etag,
+            conflict: null,
+            saveError: null,
+            reloads: b.reloads + 1,
+          };
+        }
         if (action.text === null) {
           return {
             ...b,

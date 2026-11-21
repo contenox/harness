@@ -4,15 +4,27 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProjectActions } from '../../hooks/useProjectActions';
 import { ApiError } from '../../lib/fetch';
+import type { WorkspaceRoot } from '../../lib/types';
+import { projectName } from '../../lib/workspaceRoots';
 import { folderBasename } from './folderTree';
 
 export interface NewProjectDialogProps {
   open: boolean;
   onClose: () => void;
   closeSidebar?: () => void;
+  agent?: string | null;
+  existingRoots?: WorkspaceRoot[];
+  onSelectRoot?: (path: string) => void;
 }
 
-export function NewProjectDialog({ open, onClose, closeSidebar }: NewProjectDialogProps) {
+export function NewProjectDialog({
+  open,
+  onClose,
+  closeSidebar,
+  agent,
+  existingRoots,
+  onSelectRoot,
+}: NewProjectDialogProps) {
   const { t } = useTranslation();
   return (
     <Dialog
@@ -21,7 +33,16 @@ export function NewProjectDialog({ open, onClose, closeSidebar }: NewProjectDial
       title={t('projects.dialog_title')}
       closeLabel={t('common.close')}
       className="w-[30rem] max-w-[92vw]">
-      <NewProjectForm onClose={onClose} closeSidebar={closeSidebar} />
+      {existingRoots?.length && onSelectRoot ? (
+        <div className="mb-3 flex flex-wrap gap-1">
+          {existingRoots.map(root => (
+            <Button key={root.path} variant="outline" onClick={() => onSelectRoot(root.path)}>
+              {projectName(root)}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+      <NewProjectForm onClose={onClose} closeSidebar={closeSidebar} agent={agent} />
     </Dialog>
   );
 }
@@ -29,9 +50,11 @@ export function NewProjectDialog({ open, onClose, closeSidebar }: NewProjectDial
 function NewProjectForm({
   onClose,
   closeSidebar,
+  agent,
 }: {
   onClose: () => void;
   closeSidebar?: () => void;
+  agent?: string | null;
 }) {
   const { t } = useTranslation();
   const { createProject, creating } = useProjectActions(closeSidebar);
@@ -57,7 +80,7 @@ function NewProjectForm({
     if (!canSubmit) return;
     setError(null);
     try {
-      await createProject(trimmedPath, name.trim() || folderBasename(trimmedPath));
+      await createProject(trimmedPath, name.trim() || folderBasename(trimmedPath), agent);
       onClose();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('projects.create_error_fallback'));

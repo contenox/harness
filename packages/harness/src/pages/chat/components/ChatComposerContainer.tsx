@@ -5,7 +5,7 @@ import {
   SlashCommandMenu,
 } from '@contenox/ui/session-ui';
 import { Square } from 'lucide-react';
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
 import { useComposerController, type ComposerFiles } from '../hooks/useComposerController';
@@ -15,6 +15,7 @@ import { ComposerImageAttachments, ImageAttachmentNoticeView } from './ComposerI
 import { MentionMenu } from './MentionMenu';
 
 export interface ChatComposerContainerProps {
+  appendQuote?: RefObject<((value: string) => void) | null>;
   files: ComposerFiles;
   availableCommands: AvailableCommand[];
   configOptions: readonly SessionConfigOption[];
@@ -29,6 +30,7 @@ export interface ChatComposerContainerProps {
   /** The only thing that leaves the composer: a finished turn. Rejects if it could not be sent. */
   onSubmit: (payload: SubmitPayload) => Promise<void>;
   onCancel: () => void;
+  onOpenMedia?: () => void;
   onOpenConnectors?: () => void;
 }
 
@@ -37,6 +39,7 @@ export interface ChatComposerContainerProps {
  * this component only; the transcript and panes above it are untouched.
  */
 export function ChatComposerContainer({
+  appendQuote,
   files,
   availableCommands,
   configOptions,
@@ -49,6 +52,7 @@ export function ChatComposerContainer({
   footerEnd,
   onSubmit,
   onCancel,
+  onOpenMedia,
   onOpenConnectors,
 }: ChatComposerContainerProps) {
   const { t } = useTranslation();
@@ -61,6 +65,18 @@ export function ChatComposerContainer({
     audioSupported,
     onSubmit,
   });
+  const composerRef = useRef<HTMLDivElement>(null);
+  const { setDraft } = c;
+  useEffect(() => {
+    if (!appendQuote) return;
+    appendQuote.current = value => {
+      setDraft(old => (old ? old + '\n\n' + value : value));
+      composerRef.current?.querySelector('textarea')?.focus();
+    };
+    return () => {
+      appendQuote.current = null;
+    };
+  }, [appendQuote, setDraft]);
   const { imageAttachments, audioAttachments, slashMenu, mentionMenu } = c;
   const { addFiles: addImages } = imageAttachments;
   const { addFiles: addAudio, startRecording } = audioAttachments;
@@ -84,6 +100,7 @@ export function ChatComposerContainer({
 
   return (
     <div
+      ref={composerRef}
       className="relative px-3 pb-3 sm:px-4"
       onDrop={imageAttachments.handleDrop}
       onDragOver={imageAttachments.handleDragOver}>
@@ -137,6 +154,7 @@ export function ChatComposerContainer({
             onStartRecording={onStartRecording}
             onStopRecording={audioAttachments.stopRecording}
             onCancelRecording={audioAttachments.cancelRecording}
+            onOpenMedia={onOpenMedia}
             onOpenConnectors={onOpenConnectors}
           />
         }

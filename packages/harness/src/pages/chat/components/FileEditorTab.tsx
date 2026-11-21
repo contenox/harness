@@ -3,9 +3,14 @@ import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { EditorApi } from '../../../hooks/useEditorBuffers';
 import { isDirty } from '../../../lib/editorBuffers';
+import { previewFormat } from '../lib/previewFormat';
 
 const MonacoView = lazy(() => import('../../../components/editors/MonacoView'));
 const MonacoCompare = lazy(() => import('../../../components/editors/MonacoCompare'));
+
+const WorkspacePreview = lazy(() =>
+  import('./WorkspacePreview').then(m => ({ default: m.WorkspacePreview })),
+);
 
 export interface FileEditorTabProps {
   path: string;
@@ -24,6 +29,7 @@ function Loading() {
 export function FileEditorTab({ path, editor }: FileEditorTabProps) {
   const { t } = useTranslation();
   const [comparing, setComparing] = useState(false);
+  const [showSource, setShowSource] = useState(false);
   const buffer = editor.buffers[path];
 
   if (!buffer || buffer.status === 'loading') return <Loading />;
@@ -31,9 +37,14 @@ export function FileEditorTab({ path, editor }: FileEditorTabProps) {
     return <InlineNotice variant="error">{t('workspace.peek_error')}</InlineNotice>;
   }
   if (buffer.status === 'binary') {
-    return <InlineNotice variant="info">{t('workspace.binary_file')}</InlineNotice>;
+    return (
+      <Suspense fallback={<Loading />}>
+        <WorkspacePreview path={path} base64={buffer.base64} />
+      </Suspense>
+    );
   }
 
+  const hasPreview = !!previewFormat(path);
   const dirty = isDirty(buffer);
   const conflict = buffer.conflict;
   const lineCount = buffer.text.split('\n').length;
@@ -48,6 +59,11 @@ export function FileEditorTab({ path, editor }: FileEditorTabProps) {
         <Span variant="muted" className="text-[11px]">
           {buffer.saving ? t('editor.saving') : dirty ? t('editor.unsaved') : t('editor.saved')}
         </Span>
+        {hasPreview && (
+          <Button size="xs" variant="ghost" onClick={() => setShowSource(old => !old)}>
+            {t(showSource ? 'preview.rendered' : 'preview.source')}
+          </Button>
+        )}
         <div className="ml-auto">
           <Button
             type="button"
@@ -111,6 +127,8 @@ export function FileEditorTab({ path, editor }: FileEditorTabProps) {
       <Suspense fallback={<Loading />}>
         {showCompare ? (
           <MonacoCompare path={path} original={conflict.diskText ?? ''} modified={buffer.text} />
+        ) : hasPreview && !showSource ? (
+          <WorkspacePreview path={path} text={buffer.text} />
         ) : (
           <MonacoView
             path={path}

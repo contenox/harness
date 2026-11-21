@@ -1,4 +1,13 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { Button } from '@contenox/ui';
+import { Globe } from 'lucide-react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { setActiveChatPaneKey } from '../../../hooks/chatPaneStore';
+import { useBrowserRegistration } from '../../../hooks/useConnectors';
+import { browserWorkspaceCovers } from '../../../lib/browserWorkspace';
+import { SelectionQuote } from '../../../lib/selectionQuote';
+import { BrowserPane } from '../../BrowserPage';
+import { WorkspaceMediaDialog } from '../../media/WorkspaceMediaDialog';
 import { useChatSession } from '../hooks/useChatSession';
 import { ChatComposerContainer } from './ChatComposerContainer';
 import { ChatSessionView } from './ChatSessionView';
@@ -30,11 +39,44 @@ export const ChatSessionTab = memo(function ChatSessionTab({
   onSessionCreated,
 }: ChatSessionTabProps) {
   const chat = useChatSession(sessionId, onSessionCreated);
+  const appendQuote = useRef<((value: string) => void) | null>(null);
+  const quote = useCallback((path: string, first: number, last: number, text: string) => {
+    appendQuote.current?.(
+      path +
+        ' (' +
+        first +
+        '–' +
+        last +
+        ')\n' +
+        text
+          .split('\n')
+          .map(line => '> ' + line)
+          .join('\n') +
+        '\n\n',
+    );
+  }, []);
+  useEffect(() => {
+    if (active) setActiveChatPaneKey(chat.paneKey);
+  }, [active, chat.paneKey]);
   const { session, workspaceRoot, paneState, closePane } = chat;
+  const [search, setSearch] = useSearchParams();
+  const { data: browser } = useBrowserRegistration(active);
+  const browserId = browserWorkspaceCovers(
+    browser?.workspace,
+    workspaceRoot,
+    globalThis.window?.contenoxDesktop?.platform,
+  )
+    ? browser?.id
+    : undefined;
+  const showingBrowser = active && !!browserId && search.get('browser') === browserId;
   const ready = chat.workspaceStatus === 'ready';
+  const [mediaRoot, setMediaRoot] = useState<string | null>(null);
   const [connectorsOpen, setConnectorsOpen] = useState(false);
   useEffect(() => {
-    if (!active) setConnectorsOpen(false);
+    if (!active) {
+      setConnectorsOpen(false);
+      setMediaRoot(null);
+    }
   }, [active]);
 
   const projectChip = useMemo(
@@ -47,6 +89,15 @@ export const ChatSessionTab = memo(function ChatSessionTab({
     ),
     [workspaceRoot, chat.onEmptyChat, chat.stagedExternalAgent, chat.selectProject],
   );
+  function showChat() {
+    setSearch(
+      params => {
+        params.delete('browser');
+        return params;
+      },
+      { replace: true },
+    );
+  }
   const footerEnd = useMemo(
     () => (
       <ComposerFooterEnd
@@ -77,15 +128,17 @@ export const ChatSessionTab = memo(function ChatSessionTab({
         paneTabs={paneTabs}
       />
     ) : paneState.pane === 'files' ? (
-      <FilesPane
-        root={workspaceRoot}
-        files={chat.files}
-        state={paneState}
-        dispatch={chat.dispatchPane}
-        onOpenFile={chat.openFile}
-        onClose={closePane}
-        paneTabs={paneTabs}
-      />
+      <SelectionQuote.Provider value={quote}>
+        <FilesPane
+          root={workspaceRoot}
+          files={chat.files}
+          state={paneState}
+          dispatch={chat.dispatchPane}
+          onOpenFile={chat.openFile}
+          onClose={closePane}
+          paneTabs={paneTabs}
+        />
+      </SelectionQuote.Provider>
     ) : paneState.pane === 'search' ? (
       <SearchPane
         root={workspaceRoot}
@@ -106,7 +159,9 @@ export const ChatSessionTab = memo(function ChatSessionTab({
 
   return (
     <>
+      {showingBrowser && <BrowserPane id={browserId} onChat={showChat} onClosed={showChat} />}
       <ChatSessionView
+        hidden={showingBrowser}
         pane={paneState.pane}
         paneContent={paneContent}
         workspaceTree={
@@ -141,6 +196,7 @@ export const ChatSessionTab = memo(function ChatSessionTab({
         }
         composer={
           <ChatComposerContainer
+            appendQuote={appendQuote}
             files={chat.files}
             availableCommands={chat.availableCommands}
             configOptions={chat.configOptions}
@@ -149,16 +205,49 @@ export const ChatSessionTab = memo(function ChatSessionTab({
             ready={ready}
             imagesSupported={chat.imagesSupported}
             audioSupported={chat.audioSupported}
-            projectChip={projectChip}
+            projectChip={
+              <>
+                {projectChip}
+                {browserId && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    onClick={() => {
+                      setSearch(
+                        params => {
+                          params.set('browser', browserId);
+                          return params;
+                        },
+                        { replace: true },
+                      );
+                    }}>
+                    <Globe size={14} aria-hidden /> Browser
+                  </Button>
+                )}
+              </>
+            }
             footerEnd={footerEnd}
             onSubmit={chat.submit}
             onCancel={chat.cancel}
+            onOpenMedia={workspaceRoot ? () => setMediaRoot(workspaceRoot) : undefined}
             onOpenConnectors={
               chat.sessionAgentName == null ? () => setConnectorsOpen(true) : undefined
             }
           />
         }
       />
+      {active && mediaRoot && mediaRoot === workspaceRoot && (
+        <WorkspaceMediaDialog
+          key={mediaRoot}
+          root={mediaRoot}
+          onClose={() => setMediaRoot(null)}
+          onOpen={file => {
+            chat.files.refresh();
+            chat.openFile(file);
+          }}
+        />
+      )}
       <SessionConnectorsDialog
         open={connectorsOpen && active}
         sessionId={sessionId}

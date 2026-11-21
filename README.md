@@ -40,6 +40,8 @@ Other sets ship beside it: **Ask always**, **Read only**, **Strict** (refuse wha
 * **Approval cards, not pop-ups.** When something needs you, a card shows the exact path or command, with **Allow** and **Deny**. The agent waits.
 * **Any provider.** Ollama (local or cloud), OpenAI, a ChatGPT subscription, Anthropic, Google Gemini and Vertex AI, DeepSeek, Alibaba Cloud Model Studio, Mistral, OpenRouter, AWS Bedrock and any vLLM or OpenAI-compatible endpoint. API keys live in your local database; the model named in a chat is the model that answers.
 * **Connectors.** Add MCP servers (local or remote) and OpenAPI services, switch single tools on or off, and choose which chats see them.
+* **Browser.** Choose **Connectors → Browser → Install** to open a browser inside Contenox. Select a workspace or make it available everywhere. Its MCP tools share the tab you see and can return screenshots and clips of the tab’s own audio (1–10 seconds). Chromium and the MCP server ship with the desktop app.
+* **Local images and video.** In **Local AI**, choose an installed Stable Diffusion image model or LTX video model and select **Verify and use model**. In a workspace chat, choose **Add → Images & video**. Generated PNGs and MP4s are saved in the workspace’s `Media/` folder.
 * **Other agents, same rules.** Claude Code can run inside Contenox; its edits go through the same approval cards.
 * **Your editor, same runtime.** The bundled `contenox-runtime` speaks the [Agent Client Protocol](https://agentclientprotocol.com) over stdio for Zed, JetBrains and AionUi.
 * **Everything local.** Sessions, settings, approvals and provider connections are SQLite files in your user profile. Nothing is proxied through a Contenox server.

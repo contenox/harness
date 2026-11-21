@@ -68,6 +68,21 @@ const beamDark: editor.IStandaloneThemeData = {
 type MonacoNS = typeof import('monaco-editor');
 
 export function defineBeamMonacoThemes(monaco: MonacoNS): void {
+  if (!monaco.languages.getLanguages().some(language => language.id === 'toml')) {
+    monaco.languages.register({ id: 'toml', extensions: ['.toml'] });
+    monaco.languages.setMonarchTokensProvider('toml', {
+      tokenizer: {
+        root: [
+          [/^\s*\[.*?\]/, 'type.identifier'],
+          [/#.*$/, 'comment'],
+          [/"(?:\\.|[^"\\])*"|'[^']*'/, 'string'],
+          [/\b(?:true|false)\b/, 'keyword'],
+          [/[+-]?\b\d[\d_.:-]*\b/, 'number'],
+          [/[\w.-]+(?=\s*=)/, 'key'],
+        ],
+      },
+    });
+  }
   monaco.editor.defineTheme(BEAM_MONACO_THEME_LIGHT, beamLight);
   monaco.editor.defineTheme(BEAM_MONACO_THEME_DARK, beamDark);
 }

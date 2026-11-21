@@ -6,6 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { contextMenuTemplate } from './contextMenu.mjs';
+import { browserConnector, refreshBrowserCommand } from './browserConnector.mjs';
+import { createBrowserHost } from './browser.mjs';
 import { isAllowedExternalUrl } from './externalUrl.mjs';
 import { freePort, startUiServer } from './server.mjs';
 import { existingDir, validateWorkspace, workspaceFromArgv } from './workspaces.mjs';
@@ -46,6 +48,18 @@ let pendingLaunchFolder = null;
 
 let ui = null;
 let mainWindow = null;
+let browserPort;
+const browserEndpoint = path.join(app.getPath('userData'), process.env.CONTENOX_DEV_URL ? 'browser-dev' : 'browser', 'endpoint.json');
+const browser = createBrowserHost({
+  window: () => mainWindow,
+  runtimeOrigin: () => defaultInstance?.origin || process.env.CONTENOX_DEV_URL,
+  endpointFile: browserEndpoint,
+  protectedPorts: () => [
+    ui?.port, browserPort, defaultInstance?.origin && Number(new URL(defaultInstance.origin).port),
+    ...Array.from(instances.values(), i => i.origin && Number(new URL(i.origin).port)),
+    ...(process.env.CONTENOX_DEV_URL ? [Number(new URL(process.env.CONTENOX_DEV_URL).port), 32123] : []),
+  ],
+});
 let quitState = 0; // 0 running, 1 cleaning up, 2 ready to exit
 const isQuitting = () => quitState !== 0;
 
@@ -467,6 +481,10 @@ function hardenWindow(window) {
 function createMainWindow(url) {
   mainWindow = new BrowserWindow(windowOptions());
   hardenWindow(mainWindow);
+  mainWindow.webContents.on('did-start-navigation', details => {
+    if (details.isMainFrame && !details.isSameDocument) browser.hide();
+  });
+  mainWindow.on('close', () => browser.close());
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -609,10 +627,16 @@ function showInfo(detail) {
 // ---- IPC ------------------------------------------------------------------------------------
 
 function trusted(event) {
-  const url = event.senderFrame?.url || '';
-  if (ui && url.startsWith(`http://127.0.0.1:${ui.port}`)) return true;
-  if (process.env.CONTENOX_DEV_URL && url.startsWith(process.env.CONTENOX_DEV_URL)) return true;
-  return false;
+  if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== event.sender.mainFrame) return false;
+  try {
+    const origin = new URL(event.senderFrame.url).origin;
+    return Boolean(
+      (ui && origin === `http://127.0.0.1:${ui.port}`) ||
+      (process.env.CONTENOX_DEV_URL && origin === new URL(process.env.CONTENOX_DEV_URL).origin)
+    );
+  } catch {
+    return false;
+  }
 }
 
 function allowOwnUiPermissions() {
@@ -650,6 +674,11 @@ function handle(channel, fn) {
 }
 
 handle('contenox:select-directory', () => chooseFolder());
+handle('contenox:browser-connector', id => browserConnector(id, browserEndpoint));
+handle('contenox:browser-mount', id => browser.mount(id));
+handle('contenox:browser-layout', (id, bounds) => browser.layout(id, bounds));
+handle('contenox:browser-action', (id, action, args) => browser.action(id, action, args));
+handle('contenox:browser-close', id => browser.close(id));
 handle('contenox:ensure-project-runtime', target => ensureProjectRuntime(target));
 handle('contenox:stop-project-runtime', target => stopProjectRuntime(target));
 // Opens an existing project folder in the OS file manager. Only existing directories are
@@ -685,6 +714,7 @@ process.on('uncaughtException', error => {
 });
 
 async function shutdown() {
+  browser.stop();
   if (idleTimer) clearInterval(idleTimer);
   idleTimer = null;
   // 1. windows (and with them their live websockets), 2. UI server, 3. runtimes.
@@ -717,6 +747,7 @@ if (hasLock) {
   });
 
   app.whenReady().then(async () => {
+    browserPort = await browser.start();
     buildMenu();
     allowOwnUiPermissions();
 
@@ -726,6 +757,7 @@ if (hasLock) {
     });
 
     if (process.env.CONTENOX_DEV_URL) {
+      await refreshBrowserCommand(process.env.CONTENOX_DEV_URL, browserEndpoint).catch(error => appendLog(error.message));
       createMainWindow(process.env.CONTENOX_DEV_URL);
       return;
     }
@@ -739,6 +771,7 @@ if (hasLock) {
 
     try {
       await startDefaultInstance();
+      await refreshBrowserCommand(defaultInstance.origin, browserEndpoint).catch(error => appendLog(error.message));
       ui = await openUi();
     } catch (error) {
       dialog.showErrorBox(

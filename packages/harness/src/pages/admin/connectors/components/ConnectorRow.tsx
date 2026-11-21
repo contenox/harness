@@ -29,6 +29,7 @@ import {
 } from '../../../../hooks/useConnectors';
 import { formFromMcpServer, formFromRemoteTools } from '../../../../lib/connectorForm';
 import {
+  browserInstallation,
   connectorDot,
   connectorSummaryKey,
   connectorWhere,
@@ -73,8 +74,12 @@ export function ConnectorRow({ connector, workspaces, expanded, onExpandedChange
   return (
     <SettingsRow
       icon={<ConnectorIcon connector={connector} />}
-      title={connector.label}
-      description={connector.kind === 'builtin' ? summary : connectorWhere(connector)}
+      title={browserInstallation(connector) ? 'Browser' : connector.label}
+      description={
+        connector.kind === 'builtin' || browserInstallation(connector)
+          ? summary
+          : connectorWhere(connector)
+      }
       expanded={expanded}
       onExpandedChange={onExpandedChange}
       trailing={
@@ -92,9 +97,11 @@ export function ConnectorRow({ connector, workspaces, expanded, onExpandedChange
                   <MoreHorizontal className="size-3.5" aria-hidden />
                 </IconButton>
               }>
-              <DropdownItem icon={<Pencil className="size-3.5" />} onClick={() => open('edit')}>
-                {t('connectors.edit')}
-              </DropdownItem>
+              {!browserInstallation(connector) && (
+                <DropdownItem icon={<Pencil className="size-3.5" />} onClick={() => open('edit')}>
+                  {t('connectors.edit')}
+                </DropdownItem>
+              )}
               <DropdownItem
                 danger
                 icon={<Trash2 className="size-3.5" />}
@@ -119,7 +126,15 @@ export function ConnectorRow({ connector, workspaces, expanded, onExpandedChange
                 variant="danger"
                 size="sm"
                 isLoading={remove.isPending}
-                onClick={() => remove.mutate(connector, { onSuccess: () => setMode(null) })}>
+                onClick={() =>
+                  remove.mutate(connector, {
+                    onSuccess: () => {
+                      const id = browserInstallation(connector);
+                      if (id) void window.contenoxDesktop?.browser?.close(id);
+                      setMode(null);
+                    },
+                  })
+                }>
                 {t('connectors.remove_confirm_action')}
               </Button>
             </div>

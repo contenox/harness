@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { once } from 'node:events';
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -111,6 +112,30 @@ test('resolver changes are followed', async () => {
   });
 });
 
+test('cancelling a submitted media render closes the project runtime request', { timeout: 5000 }, async () => {
+  const runtime = await listen(() => {});
+  const ui = await startUiServer({ uiDir: os.tmpdir(), resolveTarget: () => runtime.origin });
+  try {
+    const received = once(runtime.server, 'request');
+    const controller = new AbortController();
+    const result = fetch(`http://127.0.0.1:${ui.port}/rt/project/api/workspace/media/render?root=project`, {
+      method: 'POST', body: '{}', signal: controller.signal,
+    });
+    const [request, response] = await received;
+    const submitted = once(request, 'end');
+    request.resume();
+    await submitted;
+    const closed = once(response, 'close');
+    controller.abort();
+    await assert.rejects(result, { name: 'AbortError' });
+    await closed;
+  } finally {
+    runtime.server.closeAllConnections();
+    runtime.server.close();
+    await ui.close();
+  }
+});
+
 test('an unknown project key answers 503 runtime_not_running', async () => {
   await withServer(async ({ ui }) => {
     const response = await fetch(`http://127.0.0.1:${ui.port}/rt/nope/api/whoami`);
@@ -123,6 +148,15 @@ test('/rt/<key>/ without a runtime path is not served as a static file', async (
   await withServer(async ({ ui }) => {
     const response = await fetch(`http://127.0.0.1:${ui.port}/rt/abc123/other`);
     assert.equal(response.status, 503);
+  });
+});
+
+test('serves PDF module workers with a JavaScript MIME type', async () => {
+  await withServer(async ({ ui, uiDir }) => {
+    fs.writeFileSync(path.join(uiDir, 'pdf.worker.mjs'), 'export default 1;');
+    const response = await fetch(`http://127.0.0.1:${ui.port}/pdf.worker.mjs`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /javascript/);
   });
 });
 

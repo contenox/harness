@@ -1,7 +1,11 @@
-import { CodeBlock, InlineNotice, Span } from '@contenox/ui';
+import { InlineNotice, Span } from '@contenox/ui';
 import { FileText } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FilePreviewState } from '../lib/filePreview';
+const WorkspacePreview = lazy(() =>
+  import('./WorkspacePreview').then(m => ({ default: m.WorkspacePreview })),
+);
 
 export interface MentionFilePreviewProps {
   state: FilePreviewState;
@@ -35,7 +39,9 @@ export function MentionFilePreview({ state }: MentionFilePreviewProps) {
         </Span>
       ) : state.status === 'binary' ? (
         <div className="p-2">
-          <InlineNotice variant="info">{t('workspace.binary_file')}</InlineNotice>
+          <Suspense fallback={t('workspace.loading')}>
+            <WorkspacePreview path={path} base64={state.base64} />
+          </Suspense>
         </div>
       ) : state.status === 'error' ? (
         <div className="p-2">
@@ -43,7 +49,9 @@ export function MentionFilePreview({ state }: MentionFilePreviewProps) {
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto">
-          <CodeBlock className="px-3 py-2">{state.text}</CodeBlock>
+          <Suspense fallback={t('workspace.loading')}>
+            <WorkspacePreview path={path} text={state.text} />
+          </Suspense>
         </div>
       )}
     </div>

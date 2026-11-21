@@ -100,6 +100,14 @@ const adminRoutes: RouteConfig[] = adminRouteDefinitions.map(def => ({
 
 export const routes: RouteConfig[] = [
   {
+    path: '/browser/:id',
+    element: lazy(() => import('../pages/BrowserPage')),
+    label: 'Browser',
+    protected: true,
+    showInNav: false,
+    showInShelf: false,
+  },
+  {
     path: '/local-models',
     element: LocalModelsPage,
     label: i18n.t('localAI.inventory'),

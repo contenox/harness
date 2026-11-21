@@ -4,6 +4,7 @@ import type { PaneKind } from '../lib/panes';
 import { RightPaneRegion } from './RightPaneRegion';
 
 export interface ChatSessionViewProps {
+  hidden?: boolean;
   header: ReactNode;
   workspaceTree?: ReactNode;
   transcript: ReactNode;
@@ -14,6 +15,7 @@ export interface ChatSessionViewProps {
 
 /** Layout only: banners on top, the workspace column on the left, transcript + composer in the middle, the optional pane on the right. */
 export function ChatSessionView({
+  hidden = false,
   header,
   workspaceTree,
   transcript,
@@ -24,7 +26,7 @@ export function ChatSessionView({
   const showWorkspace = useMediaQuery('(min-width: 1280px)');
 
   return (
-    <div className="bg-app flex h-full min-h-0 flex-col">
+    <div className={hidden ? 'hidden' : 'bg-app flex h-full min-h-0 flex-col'}>
       {header}
       <div className="flex min-h-0 flex-1">
         {showWorkspace && workspaceTree}

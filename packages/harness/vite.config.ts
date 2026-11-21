@@ -51,6 +51,7 @@ function harnessSpaFallback(): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, harnessPackageRoot, '');
   const devApiProxy =
+    mode === 'proxy' ||
     env.VITE_DEV_API_PROXY === '1' ||
     env.VITE_DEV_API_PROXY === 'true' ||
     process.env.VITE_DEV_API_PROXY === '1';

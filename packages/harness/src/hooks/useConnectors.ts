@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import { api } from '../lib/api';
 import type { ConnectorFormValues } from '../lib/connectorForm';
 import { mcpInputFromForm, remoteToolsInputFromForm } from '../lib/connectorForm';
+import { browserInstallation } from '../lib/connectorStatus';
 import type { Connector, McpServer, RemoteToolsEntry } from '../lib/connectorTypes';
 import { ApiError } from '../lib/fetch';
 import { connectorKeys } from '../lib/queryKeys';
@@ -10,12 +11,31 @@ export function refreshConnectors(queryClient: QueryClient) {
   void queryClient.invalidateQueries({ queryKey: connectorKeys.all });
 }
 
-export function useConnectors() {
+export function useConnectors(enabled = true) {
   return useQuery<Connector[], Error>({
     queryKey: connectorKeys.list(),
     queryFn: api.listConnectors,
+    enabled,
     refetchOnWindowFocus: 'always',
     staleTime: 60_000,
+  });
+}
+
+export function useBrowserRegistration(active = true) {
+  return useQuery({
+    queryKey: connectorKeys.browser(),
+    enabled: active && !!globalThis.window?.contenoxDesktop?.browser,
+    staleTime: 60_000,
+    queryFn: async ({ signal }) => {
+      try {
+        const server = await api.getMcpServerByName('browser', signal);
+        const id = browserInstallation(server);
+        return id ? { id, workspace: server.workspace } : null;
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) return null;
+        throw error;
+      }
+    },
   });
 }
 

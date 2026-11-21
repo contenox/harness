@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 export interface TreeEntryMenuProps {
   name: string;
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  onOpen: () => void;
+  onCopyPath: () => void;
   isDirectory: boolean;
   onNewFile: () => void;
   onNewFolder: () => void;
@@ -13,6 +17,10 @@ export interface TreeEntryMenuProps {
 
 export function TreeEntryMenu({
   name,
+  open,
+  onToggle,
+  onOpen,
+  onCopyPath,
   isDirectory,
   onNewFile,
   onNewFolder,
@@ -23,12 +31,16 @@ export function TreeEntryMenu({
   return (
     <Dropdown
       align="end"
+      isOpen={open}
+      onToggle={onToggle}
       contentClassName="min-w-[10rem]"
       trigger={
         <IconButton label={t('tree.menu', { name })} size="xs" noTooltip>
           <MoreHorizontal className="size-3.5" aria-hidden />
         </IconButton>
       }>
+      {!isDirectory && <DropdownItem onClick={onOpen}>{t('preview.open')}</DropdownItem>}
+      <DropdownItem onClick={onCopyPath}>{t('preview.copy_path')}</DropdownItem>
       {isDirectory && (
         <>
           <DropdownItem icon={<FilePlus className="size-3.5" />} onClick={onNewFile}>

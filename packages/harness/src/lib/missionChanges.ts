@@ -67,11 +67,48 @@ const EXT_LANGUAGE: Record<string, string> = {
   sql: 'sql',
   xml: 'xml',
   dockerfile: 'dockerfile',
+  ps1: 'powershell',
+  psm1: 'powershell',
+  psd1: 'powershell',
+  bat: 'bat',
+  cmd: 'bat',
+  r: 'r',
+  lua: 'lua',
+  dart: 'dart',
+  scala: 'scala',
+  graphql: 'graphql',
+  gql: 'graphql',
+  proto: 'protobuf',
+  tf: 'hcl',
+  hcl: 'hcl',
+  properties: 'ini',
+  conf: 'ini',
+  env: 'ini',
+  svg: 'xml',
+  xsl: 'xml',
+  xsd: 'xml',
+  jsonc: 'json',
+  jsonl: 'json',
+  mts: 'typescript',
+  cts: 'typescript',
+  ipynb: 'json',
+  ps: 'postscript',
+  cxx: 'cpp',
+  hxx: 'cpp',
+  fs: 'fsharp',
+  fsx: 'fsharp',
 };
 
 export function languageForPath(path: string): string {
   const name = basename(path).toLowerCase();
-  if (name === 'dockerfile') return 'dockerfile';
+  if (
+    name === '.env' ||
+    name.startsWith('.env.') ||
+    name === '.editorconfig' ||
+    name === '.gitconfig'
+  )
+    return 'ini';
+  if (name === 'dockerfile' || name.startsWith('dockerfile.')) return 'dockerfile';
   const dot = name.lastIndexOf('.');
   if (dot <= 0) return 'plaintext';
   return EXT_LANGUAGE[name.slice(dot + 1)] ?? 'plaintext';

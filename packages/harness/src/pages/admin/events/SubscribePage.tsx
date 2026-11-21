@@ -21,9 +21,10 @@ import type { WorkspaceEvent } from '../../../lib/workspaceEvents';
 import { projectName } from '../../../lib/workspaceRoots';
 
 import { CursorPager } from './CursorPager';
-import { useCursorPages } from './useCursorPages';
 import { Schedules } from './Schedules';
 import { TriggerForm, type Subscription } from './TriggerForm';
+import { useCursorPages } from './useCursorPages';
+import { Workflows } from './Workflows';
 
 function ProjectEvents({ root }: { root: string }) {
   const { t } = useTranslation();
@@ -34,7 +35,7 @@ function ProjectEvents({ root }: { root: string }) {
   const [replay, setReplay] = useState<number | null>(null);
   const [creating, setCreating] = useState<number | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
-  const sections = ['log', 'rules', 'schedules', 'waiting'] as const;
+  const sections = ['log', 'rules', 'schedules', 'workflows', 'waiting'] as const;
   const [section, setSection] = useState<(typeof sections)[number]>('log');
   const [sessionForm, setSessionForm] = useState(false);
   const [before, setBefore] = useState(0);
@@ -507,6 +508,7 @@ function ProjectEvents({ root }: { root: string }) {
             )}
           </SettingsGroup>
         )}
+        {section === 'workflows' && <Workflows root={root} />}
         {section === 'schedules' && <Schedules root={root} />}
       </div>
     </>

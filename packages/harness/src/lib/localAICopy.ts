@@ -1,4 +1,35 @@
 export const localAIEnglish = {
+  defaultInventory: 'Default inventory',
+  missingWorkspace: 'This workspace is unavailable.',
+  importLoRA: 'Add a LoRA adapter (optional)',
+  adapterFile: 'GGUF LoRA adapter',
+  adapterHelp:
+    'Choose an adapter for the exact base model above. The name you enter identifies this variant in the model picker.',
+  adapterStrength: 'Adapter strength (1 uses the trained strength)',
+  importModel: 'Import model',
+  importName: 'Model name',
+  importSource: 'Source',
+  importKinds: {
+    file: 'GGUF file',
+    folder: 'Model folder',
+    hub: 'Hugging Face repository',
+    url: 'Download URL',
+  },
+  importFormats:
+    'Choose one GGUF file, a GGUF folder with an optional projector, or an OpenVINO model folder (IR or media pipeline).',
+  importRepo: 'Repository',
+  importFile: 'GGUF filename in the repository',
+  importRevision: 'Revision',
+  importEndpoint: 'Hub endpoint',
+  importUrl: 'HTTPS URL of the GGUF file',
+  importTokenHint:
+    'Optional for public models. A read token goes to the selected HTTPS origin for this download only.',
+  importBundleError: 'Choose one GGUF model or an OpenVINO folder containing an XML/BIN pair or a media pipeline with model_index.json.',
+  importSourceError:
+    'Check the repository, revision and GGUF filename. Use an HTTPS address without embedded credentials or query parameters.',
+  importNameUsed: 'Choose a name that is available in the inventory.',
+  importing: 'Importing model files…',
+  imported: 'Import complete',
   name: 'Local AI',
   welcome: 'How would you like to chat?',
   intro: 'Connect a provider or run a model on this computer.',
@@ -74,6 +105,38 @@ export const localAIEnglish = {
 };
 
 export const localAIGerman: typeof localAIEnglish = {
+  defaultInventory: 'Standardbestand',
+  missingWorkspace: 'Dieser Arbeitsbereich ist nicht verfügbar.',
+  importLoRA: 'LoRA-Adapter hinzufügen (optional)',
+  adapterFile: 'GGUF-LoRA-Adapter',
+  adapterHelp:
+    'Wähle einen Adapter für genau das oben gewählte Basismodell. Der eingegebene Name bezeichnet diese Variante in der Modellauswahl.',
+  adapterStrength: 'Adapterstärke (1 entspricht der trainierten Stärke)',
+  importModel: 'Modell importieren',
+  importName: 'Modellname',
+  importSource: 'Quelle',
+  importKinds: {
+    file: 'GGUF-Datei',
+    folder: 'Modellordner',
+    hub: 'Hugging-Face-Repository',
+    url: 'Download-URL',
+  },
+  importFormats:
+    'Wähle eine GGUF-Datei, einen GGUF-Ordner mit optionalem Projektor oder einen OpenVINO-Modellordner (IR oder Medienpipeline).',
+  importRepo: 'Repository',
+  importFile: 'GGUF-Dateiname im Repository',
+  importRevision: 'Revision',
+  importEndpoint: 'Hub-Endpunkt',
+  importUrl: 'HTTPS-URL der GGUF-Datei',
+  importTokenHint:
+    'Bei öffentlichen Modellen optional. Das Lesetoken wird nur für diesen Download an den ausgewählten HTTPS-Ursprung gesendet.',
+  importBundleError:
+    'Wähle ein GGUF-Modell oder einen OpenVINO-Ordner mit XML/BIN-Dateipaar oder einer Medienpipeline mit model_index.json.',
+  importSourceError:
+    'Prüfe Repository, Revision und GGUF-Dateiname. Verwende eine HTTPS-Adresse ohne eingebettete Zugangsdaten oder Abfrageparameter.',
+  importNameUsed: 'Wähle einen verfügbaren Namen für das Modell.',
+  importing: 'Modelldateien werden importiert…',
+  imported: 'Import abgeschlossen',
   name: 'Lokale KI',
   welcome: 'Wie möchtest du chatten?',
   intro: 'Verbinde einen Anbieter oder nutze ein Modell auf diesem Computer.',

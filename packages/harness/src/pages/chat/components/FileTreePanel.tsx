@@ -145,20 +145,29 @@ export function FileTreePanel({
     }
   };
 
-  const renderActions = useCallback((node: FileTreeNode) => {
-    const path = node.path ?? node.id;
-    const isDirectory = node.isDirectory === true;
-    return (
-      <TreeEntryMenu
-        name={node.name}
-        isDirectory={isDirectory}
-        onNewFile={() => startOp({ kind: 'newFile', dir: path })}
-        onNewFolder={() => startOp({ kind: 'newFolder', dir: path })}
-        onRename={() => startOp({ kind: 'rename', path, isDirectory })}
-        onDelete={() => startOp({ kind: 'delete', path, isDirectory })}
-      />
-    );
-  }, []);
+  const [menuPath, setMenuPath] = useState<string | null>(null);
+  const showMenu = useCallback((node: FileTreeNode) => setMenuPath(node.path ?? node.id), []);
+  const renderActions = useCallback(
+    (node: FileTreeNode) => {
+      const path = node.path ?? node.id;
+      const isDirectory = node.isDirectory === true;
+      return (
+        <TreeEntryMenu
+          name={node.name}
+          open={menuPath === path}
+          onToggle={open => setMenuPath(open ? path : null)}
+          onOpen={() => onOpenFile(path)}
+          onCopyPath={() => void navigator.clipboard.writeText(path)}
+          isDirectory={isDirectory}
+          onNewFile={() => startOp({ kind: 'newFile', dir: path })}
+          onNewFolder={() => startOp({ kind: 'newFolder', dir: path })}
+          onRename={() => startOp({ kind: 'rename', path, isDirectory })}
+          onDelete={() => startOp({ kind: 'delete', path, isDirectory })}
+        />
+      );
+    },
+    [menuPath, onOpenFile],
+  );
   const model = useFileTreeModel(root, files);
   const { find, access, nodes, baseNodes, filterActive } = model;
 
@@ -209,6 +218,7 @@ export function FileTreePanel({
           onExpandedChange={expansion.setExpanded}
           selectedId={selectedFilePath ?? undefined}
           onNodeSelect={handleNodeSelect}
+          onNodeContextMenu={showMenu}
           renderActions={renderActions}
         />
       );

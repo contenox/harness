@@ -3,6 +3,18 @@ const { contextBridge, ipcRenderer } = require('electron');
 const distributionArg = process.argv.find(arg => arg.startsWith('--contenox-distribution='));
 
 contextBridge.exposeInMainWorld('contenoxDesktop', {
+  browser: {
+    connector: id => ipcRenderer.invoke('contenox:browser-connector', id),
+    mount: id => ipcRenderer.invoke('contenox:browser-mount', id),
+    layout: (id, bounds) => ipcRenderer.invoke('contenox:browser-layout', id, bounds),
+    action: (id, action, args) => ipcRenderer.invoke('contenox:browser-action', id, action, args),
+    close: id => ipcRenderer.invoke('contenox:browser-close', id),
+    subscribe: callback => {
+      const listener = (_event, state) => callback(state);
+      ipcRenderer.on('contenox:browser-state', listener);
+      return () => ipcRenderer.removeListener('contenox:browser-state', listener);
+    },
+  },
   platform: process.platform,
   distribution: distributionArg ? distributionArg.slice('--contenox-distribution='.length) : 'direct',
   // Recolors the Windows caption-button overlay to match the renderer theme ('dark' | 'light').

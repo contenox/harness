@@ -3,14 +3,13 @@ import { useMatch, useNavigate } from 'react-router-dom';
 import { useAcpWorkspace } from '../../hooks/useAcpWorkspace';
 import { useProjectActions } from '../../hooks/useProjectActions';
 import { useWorkspaceRoots } from '../../hooks/useWorkspaceRoots';
-import { useStagedAgent } from '../../lib/stagedAgent';
-import { useStagedRoot } from '../../lib/stagedRoot';
+
 import type { WorkspaceRoot } from '../../lib/types';
 import { permissionsPath } from '../../pages/admin/permissions/usePermissionScope';
+import { mostRecentProjectRoot } from '../../pages/chat/lib/workspaceRoot';
 import { NewProjectDialog } from '../workspace/NewProjectDialog';
 import { RenameProjectDialog } from '../workspace/RenameProjectDialog';
 import { useCollapsedGroups } from './collapsedGroups';
-import { startNewChat } from './newChatIntent';
 import { NewSessionButton } from './NewSessionButton';
 import { ProjectsSection } from './ProjectsSection';
 import { groupSessionsByProject } from './sessionGroups';
@@ -27,10 +26,9 @@ function closeOnMobile(setIsOpen: (open: boolean) => void): void {
 export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) => void }) {
   const navigate = useNavigate();
   const activeSessionId = useMatch('/chat/:sessionId')?.params.sessionId;
-  const { workspace, sessions, focusEmptyTab } = useAcpWorkspace();
+  const { workspace, sessions } = useAcpWorkspace();
   const { roots } = useWorkspaceRoots();
-  const { setStagedAgent } = useStagedAgent();
-  const { setStagedRoot } = useStagedRoot();
+  const [pendingAgent, setPendingAgent] = useState<string | null>(null);
   const groupsState = useCollapsedGroups();
   const actions = useSessionSidebarActions(activeSessionId);
 
@@ -41,9 +39,20 @@ export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) =>
   const [renaming, setRenaming] = useState<WorkspaceRoot | null>(null);
 
   const startNew = useCallback(
-    (agent: string | null) =>
-      startNewChat(agent, { setStagedAgent, setStagedRoot, focusEmptyTab, navigate, closeSidebar }),
-    [setStagedAgent, setStagedRoot, focusEmptyTab, navigate, closeSidebar],
+    (agent: string | null) => {
+      const recent = mostRecentProjectRoot(workspace.sessions, roots);
+      const configured = workspace.workspaceConfigOptions.find(
+        o => o.id === 'workspace-root',
+      )?.currentValue;
+      const root =
+        recent ?? roots.find(r => r.default)?.path ?? roots.find(r => r.path === configured)?.path;
+      if (root) openSessionIn(root, agent);
+      else {
+        setPendingAgent(agent);
+        setNewProjectOpen(true);
+      }
+    },
+    [workspace.sessions, workspace.workspaceConfigOptions, roots, openSessionIn],
   );
 
   const groups = useMemo(
@@ -63,7 +72,10 @@ export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) =>
         onToggleGroup={groupsState.toggle}
         onNavigate={closeSidebar}
         onDeleteSession={actions.confirmDeleteSession}
-        onNewProject={() => setNewProjectOpen(true)}
+        onNewProject={() => {
+          setPendingAgent(null);
+          setNewProjectOpen(true);
+        }}
         onNewSessionIn={openSessionIn}
         onRepository={root => {
           navigate('/github?' + new URLSearchParams({ root }));
@@ -81,6 +93,12 @@ export function AcpSessionSidebar({ setIsOpen }: { setIsOpen: (open: boolean) =>
 
       <NewProjectDialog
         open={newProjectOpen}
+        agent={pendingAgent}
+        existingRoots={roots}
+        onSelectRoot={path => {
+          openSessionIn(path, pendingAgent);
+          setNewProjectOpen(false);
+        }}
         onClose={() => setNewProjectOpen(false)}
         closeSidebar={closeSidebar}
       />

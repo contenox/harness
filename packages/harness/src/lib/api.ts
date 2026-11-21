@@ -107,6 +107,8 @@ export const api = {
       options('PUT', { tools, workspace }),
     ),
   getMcpServer: (id: string) => apiFetch<McpServer>(`/api/mcp-servers/${encodeURIComponent(id)}`),
+  getMcpServerByName: (name: string, signal?: AbortSignal) =>
+    apiFetch<McpServer>(`/api/mcp-servers/by-name/${encodeURIComponent(name)}`, { signal }),
   createMcpServer: (input: McpServerInput) =>
     apiFetch<McpServer>('/api/mcp-servers', options('POST', input)),
   updateMcpServer: (id: string, input: McpServerInput) =>

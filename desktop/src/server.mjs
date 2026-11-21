@@ -44,6 +44,7 @@ const types = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
@@ -79,10 +80,16 @@ export async function startUiServer({ uiDir, resolveTarget, onActivity = () => {
   const sockets = new Set();
   const wsCounts = new Map();
 
-  proxy.on("proxyReq", (proxyReq, _req, _res, options) => {
+  proxy.on("proxyReq", (proxyReq, request, response, options) => {
     const target = options?.target;
     const origin = typeof target === "string" ? target : target?.href;
     if (origin) proxyReq.setHeader("origin", new URL(origin).origin);
+    // A render can run long after its request body has been sent.
+    if (request.method === 'POST' && request.url.split('?')[0] === '/api/workspace/media/render') {
+      response.once('close', () => {
+        if (!response.writableFinished) proxyReq.destroy();
+      });
+    }
   });
   proxy.on("proxyReqWs", (proxyReq, _req, _socket, options) => {
     const target = options?.target;

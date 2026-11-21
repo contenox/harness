@@ -11,13 +11,16 @@ import { FileText, Folder, Globe } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfigDocument } from '../../../../hooks/usePermissions';
+import type { ConfigDocument } from '../../../../lib/agentsConfig';
 import { projectName } from '../../../../lib/workspaceRoots';
 import type { PermissionScope } from '../usePermissionScope';
+import { ConfigFileEditor } from './ConfigFileEditor';
 
 const FILTER_FROM = 8;
 
 export function ScopeBar({ permission }: { permission: PermissionScope }) {
   const { t } = useTranslation();
+  const [editing, setEditing] = useState<(ConfigDocument & { raw: string }) | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState('');
@@ -38,6 +41,7 @@ export function ScopeBar({ permission }: { permission: PermissionScope }) {
 
   const choose = (path: string | undefined) => {
     permission.setWorkspace(path);
+    setEditing(null);
     setOpenError(null);
     setOpen(false);
     setFilter('');
@@ -103,6 +107,17 @@ export function ScopeBar({ permission }: { permission: PermissionScope }) {
             </div>
           )}
         </Dropdown>
+        {filePath && typeof configFile.data?.raw === 'string' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const document = configFile.data;
+              if (typeof document?.raw === 'string') setEditing({ ...document, raw: document.raw });
+            }}>
+            {t('permissions.edit_file')}
+          </Button>
+        )}
         {reveal && filePath && (
           <Button
             variant="ghost"
@@ -114,6 +129,13 @@ export function ScopeBar({ permission }: { permission: PermissionScope }) {
           </Button>
         )}
       </div>
+      {editing && (
+        <ConfigFileEditor
+          document={editing}
+          scope={permission.scope}
+          onClose={() => setEditing(null)}
+        />
+      )}
       {openError !== null && (
         <InlineNotice variant="error" role="alert">
           {t('permissions.open_file_error', { message: openError })}

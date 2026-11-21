@@ -1,5 +1,5 @@
 import { Button, InlineNotice, Input, Select, Textarea } from '@contenox/ui';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAcpWorkspace } from '../../../hooks/useAcpWorkspace';
@@ -8,6 +8,8 @@ import { useEnvelopes } from '../../../hooks/useEnvelopes';
 import { missionAgentNames } from '../../../lib/missionAgents';
 import { cwdApiFetch } from '../../../lib/projectRuntime';
 import type { WorkspaceEvent } from '../../../lib/workspaceEvents';
+
+import { definitionRoute, workflowRequest, type Definition } from './workflowApi';
 
 export interface Subscription {
   id: string;
@@ -49,16 +51,28 @@ export function TriggerForm({
   const [kind, setKind] = useState(event?.type ?? 'event.fired');
   const isTopic = kind === 'event.fired';
   const [target, setTarget] = useState(initialTarget);
+  const [workflow, setWorkflow] = useState('');
+  const definitions = useQuery({
+    queryKey: ['workflows', root],
+    queryFn: () => workflowRequest<string[]>(root, 'workflows'),
+    enabled: target === 'workflow',
+    retry: false,
+  });
   const [session, setSession] = useState('');
   const [completion, setCompletion] = useState('');
   const { workspace } = useAcpWorkspace();
   const isSession = target === 'continue' || target === 'new';
   const save = useMutation({
-    mutationFn: () =>
+    mutationFn: async () =>
       cwdApiFetch(root, '/api/workspace/triggers?root=' + encodeURIComponent(root), {
         method: 'POST',
         body: JSON.stringify({
           name,
+          workflow: target === 'workflow' ? workflow : undefined,
+          workflowRevision:
+            target === 'workflow'
+              ? (await workflowRequest<Definition>(root, definitionRoute(workflow))).revision
+              : undefined,
           target: isSession ? 'session' : target,
           sessionMode: isSession ? target : undefined,
           sessionId: isSession ? session : undefined,
@@ -105,12 +119,27 @@ export function TriggerForm({
       <Select
         aria-label={t('subscriptions.target')}
         value={target}
-        options={(['mission', 'continue', 'new', 'notify'] as const).map(value => ({
+        options={(['mission', 'continue', 'new', 'notify', 'workflow'] as const).map(value => ({
           value,
           label: t(`subscriptions.${value}`),
         }))}
         onChange={e => setTarget(e.target.value)}
       />
+      {target === 'workflow' && (
+        <label>
+          {t('wf.select')}
+          <Select
+            required
+            value={workflow}
+            placeholder={t('wf.select')}
+            options={(definitions.data ?? []).map(value => ({ value, label: value }))}
+            onChange={e => setWorkflow(e.target.value)}
+          />
+        </label>
+      )}
+      {target === 'workflow' && definitions.error && (
+        <InlineNotice variant="error">{definitions.error.message}</InlineNotice>
+      )}
       {isSession && (
         <Select
           required
@@ -136,7 +165,7 @@ export function TriggerForm({
           />
         </label>
       )}
-      {target !== 'notify' && (
+      {target !== 'workflow' && target !== 'notify' && (
         <label>
           {t('subscriptions.policy')}
           <Select
@@ -154,10 +183,12 @@ export function TriggerForm({
           <Input value={completion} onChange={e => setCompletion(e.target.value)} />
         </label>
       )}
-      <label>
-        {t('subscriptions.prompt')}
-        <Textarea required value={prompt} onChange={e => setPrompt(e.target.value)} />
-      </label>
+      {target !== 'workflow' && (
+        <label>
+          {t('subscriptions.prompt')}
+          <Textarea required value={prompt} onChange={e => setPrompt(e.target.value)} />
+        </label>
+      )}
       {(agents.error || policies.error || save.error) && (
         <InlineNotice variant="error">
           {(agents.error || policies.error || save.error)?.message}
@@ -168,7 +199,8 @@ export function TriggerForm({
         disabled={
           (target === 'mission' && !agent) ||
           (isSession && !session) ||
-          (target !== 'notify' && !policy) ||
+          (target === 'workflow' && !workflow) ||
+          (target !== 'workflow' && target !== 'notify' && !policy) ||
           save.isPending
         }>
         {t('subscriptions.create')}

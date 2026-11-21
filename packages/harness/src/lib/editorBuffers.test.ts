@@ -77,6 +77,30 @@ describe('buffersReducer', () => {
     expect(s['a.go'].etag).toBe('e5');
   });
 
+  it('preserves local edits when the file changes from text to binary', () => {
+    const dirty = buffersReducer(opened(), { type: 'edited', path: 'a.go', text: 'draft' });
+    const replacement = {
+      type: 'diskChanged' as const,
+      path: 'a.go',
+      text: '',
+      etag: 'e2',
+      binary: true,
+      base64: 'AQI=',
+    };
+    const conflicted = buffersReducer(dirty, replacement)['a.go'];
+    expect(conflicted.text).toBe('draft');
+    expect(conflicted.conflict).toEqual({
+      reason: 'disk',
+      currentEtag: 'e2',
+      diskText: null,
+      deleted: false,
+    });
+    expect(buffersReducer(opened(), replacement)['a.go']).toMatchObject({
+      status: 'binary',
+      base64: 'AQI=',
+    });
+  });
+
   it('marks a deleted file as a conflict', () => {
     const s = buffersReducer(opened(), { type: 'diskChanged', path: 'a.go', text: null, etag: '' });
     expect(s['a.go'].conflict?.deleted).toBe(true);

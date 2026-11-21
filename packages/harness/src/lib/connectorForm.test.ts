@@ -16,6 +16,41 @@ const form = (patch: Partial<ConnectorFormValues>): ConnectorFormValues => ({
 });
 
 describe('connector form', () => {
+  it.each(['basic', 'apiKey'] as const)(
+    'round-trips %s credentials through global and chat forms',
+    auth => {
+      const values = form({
+        name: 'reports',
+        kind: 'remote',
+        url: 'https://reports.example/mcp',
+        auth,
+        username: 'rédacteur',
+        credential: 'a:b!',
+        headers: 'X-Team: finance',
+      });
+      const saved = mcpInputFromForm(values);
+      const edited = formFromMcpServer({ ...saved, id: '1' });
+      expect(edited).toMatchObject({
+        auth,
+        credential: values.credential,
+        headers: 'X-Team: finance',
+      });
+      expect(mcpInputFromForm(edited)).toEqual(saved);
+      expect(sessionServerFromForm(values)).toMatchObject({
+        headers: Object.entries(saved.headers ?? {}).map(([name, value]) => ({ name, value })),
+      });
+      expect(
+        validateConnectorForm(
+          {
+            ...values,
+            headers: auth === 'basic' ? 'authorization: another' : 'x-api-key: another',
+          },
+          [],
+          false,
+        ),
+      ).toHaveProperty('headers');
+    },
+  );
   it('turns a local command into a stdio MCP server with env and one argument per line', () => {
     const input = mcpInputFromForm(
       form({

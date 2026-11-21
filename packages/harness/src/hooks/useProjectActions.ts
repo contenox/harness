@@ -46,11 +46,11 @@ export function useProjectActions(closeSidebar: () => void = () => {}) {
    * then opens a staged session in it. Rejects with the API error when the grant is refused.
    */
   const createProject = useCallback(
-    async (path: string, name: string) => {
+    async (path: string, name: string, agent: string | null = null) => {
       const trimmed = path.trim();
       await addRoot.mutateAsync({ path: trimmed, name: name.trim() });
       if (hasProjectBridge()) await ensureProjectPrefix(trimmed);
-      openSessionIn(trimmed);
+      openSessionIn(trimmed, agent);
     },
     [addRoot, openSessionIn],
   );
