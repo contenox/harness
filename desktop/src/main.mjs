@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { contextMenuTemplate } from './contextMenu.mjs';
-import { browserConnector, refreshBrowserCommand } from './browserConnector.mjs';
+import { browserConnector, browserLauncher, refreshBrowserCommand } from './browserConnector.mjs';
 import { createBrowserHost } from './browser.mjs';
 import { isAllowedExternalUrl } from './externalUrl.mjs';
 import { freePort, startUiServer } from './server.mjs';
@@ -24,7 +24,9 @@ function runtimeEnv(extra = {}) {
     const launcher = path.join(process.resourcesPath, 'modeld', 'modeld.cmd');
     if (storeBuild || fs.existsSync(launcher)) store.CONTENOX_MODELD_BIN = launcher;
   }
-  return { ...process.env, HOME: os.homedir(), ...store, ...extra };
+  return { ...process.env, HOME: os.homedir(), ...store, ...extra,
+    CONTENOX_DESKTOP_BROWSER: JSON.stringify(browserLauncher(process.execPath, browserEndpoint)),
+  };
 }
 
 const configPath = path.join(app.getPath('userData'), 'workspace.json');

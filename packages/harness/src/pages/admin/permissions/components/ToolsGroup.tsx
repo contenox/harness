@@ -2,14 +2,20 @@ import { Badge, InlineNotice, P, Select, SettingsGroup, SettingsRow, Spinner } f
 import { Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useBrowserRegistration } from '../../../../hooks/useConnectors';
 import { useLocalToolsets } from '../../../../hooks/usePermissions';
 import type { ConfigScope } from '../../../../lib/agentsConfig';
 import {
   AREA_TOOLSETS,
   GRANTS,
+  browserActions,
+  browserToolOverride,
+  desktopBrowserSelector,
   displayName,
   layerHas,
+  resolveDefaultAction,
   resolveTools,
+  strongestToolPattern,
   type Grant,
   type RawEnvelopes,
 } from '../../../../lib/permissions';
@@ -24,12 +30,26 @@ type Props = {
   onSave: SaveHandler;
 };
 
-type ToolRowModel = { pattern: string; description?: string; unavailable?: string };
+type ToolRowModel = {
+  pattern: string;
+  title?: string;
+  description?: string;
+  unavailable?: string;
+  fallback?: Grant;
+};
 
 export function ToolsGroup({ scope, name, envelopes, layer, workspaceName, onSave }: Props) {
   const { t } = useTranslation();
   const toolsets = useLocalToolsets(scope);
+  const registration = useBrowserRegistration();
   const resolved = resolveTools(envelopes, name);
+  const supportsBrowserRules = [...envelopes.values()].some(env =>
+    Object.keys(env.tools ?? {}).some(
+      key => key === desktopBrowserSelector || key.startsWith(desktopBrowserSelector + '.'),
+    ),
+  );
+  const showBrowser = supportsBrowserRules || !!registration.data;
+  const selector = supportsBrowserRules ? desktopBrowserSelector : 'browser';
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +57,7 @@ export function ToolsGroup({ scope, name, envelopes, layer, workspaceName, onSav
   for (const pattern of resolved.keys()) rows.set(pattern, { pattern });
   for (const set of toolsets.data ?? []) {
     if (AREA_TOOLSETS.has(set.name) && !rows.has(set.name)) continue;
+    if (set.name === 'browser' && registration.data && !rows.has(set.name)) continue;
     rows.set(set.name, {
       pattern: set.name,
       description: set.description,
@@ -59,7 +80,7 @@ export function ToolsGroup({ scope, name, envelopes, layer, workspaceName, onSav
     }
   };
 
-  const row = ({ pattern, description, unavailable }: ToolRowModel) => {
+  const row = ({ pattern, title, description, unavailable, fallback }: ToolRowModel) => {
     const current = resolved.get(pattern);
     const own = current && current.from === name ? current.value : '';
     const changedHere = workspaceName !== undefined && layerHas(layer, ['tools', pattern]);
@@ -68,15 +89,17 @@ export function ToolsGroup({ scope, name, envelopes, layer, workspaceName, onSav
       ? t('permissions.reset_here')
       : parent
         ? `${t('permissions.tools_same_as', { name: displayName(parent.from) })} (${t(GRANT_LABEL[parent.value])})`
-        : t('permissions.tools_follow');
+        : fallback
+          ? t('permissions.not_set', { grant: t(GRANT_LABEL[fallback]) })
+          : t('permissions.tools_follow');
     const detail = unavailable
       ? t('permissions.tools_unavailable', { reason: unavailable })
-      : description || (current ? undefined : t('permissions.tools_found'));
+      : description || (current || title ? undefined : t('permissions.tools_found'));
     return (
       <SettingsRow
         key={pattern}
         icon={<Wrench />}
-        title={pattern === '*' ? t('permissions.tools_all') : pattern}
+        title={title ?? (pattern === '*' ? t('permissions.tools_all') : pattern)}
         description={detail}
         trailing={
           <>
@@ -103,10 +126,48 @@ export function ToolsGroup({ scope, name, envelopes, layer, workspaceName, onSav
     );
   };
 
+  const browserDefault = strongestToolPattern(resolved, [selector, selector + '.*']);
+  const browserRows = browserActions.map(action => {
+    const pattern = selector + '.' + action;
+    const override = browserToolOverride(resolved, action);
+    const fallback =
+      (override && resolved.get(override)?.value) ||
+      (browserDefault && resolved.get(browserDefault)?.value) ||
+      resolveDefaultAction(envelopes, name);
+    const title = t(`browser.permissions.${action}`);
+    if (supportsBrowserRules && override) {
+      const grant = resolved.get(override)!.value;
+      return (
+        <SettingsRow
+          key={pattern}
+          icon={<Wrench />}
+          title={title}
+          description={t('browser.permission_override', { rule: override })}
+          trailing={t(GRANT_LABEL[grant])}
+        />
+      );
+    }
+    return row({ pattern, title, fallback });
+  });
+  const browserPatterns = new Set(browserActions.map(action => selector + '.' + action));
+
   return (
     <div className="flex flex-col gap-2">
+      {showBrowser && (
+        <SettingsGroup title={t('browser.title')}>
+          {browserDefault &&
+            row({ pattern: browserDefault, title: t('browser.default_permission') })}
+          {browserRows}
+        </SettingsGroup>
+      )}
       <SettingsGroup title={t('permissions.group_tools')}>
-        {ordered.map(row)}
+        {ordered
+          .filter(
+            item =>
+              !showBrowser ||
+              (!browserPatterns.has(item.pattern) && item.pattern !== browserDefault),
+          )
+          .map(row)}
         {toolsets.isLoading && (
           <div className="flex justify-center py-3">
             <Spinner />

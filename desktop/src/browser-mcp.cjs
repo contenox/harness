@@ -34,16 +34,16 @@ async function call(action, args, signal) {
   return { content: [{ type: 'text', text: bytes.toString('utf8') }] };
 }
 
-function tool(name, description, inputSchema) {
-  server.registerTool(name, { description, inputSchema },
+function tool(name, description, inputSchema, readOnlyHint) {
+  server.registerTool(name, { description, inputSchema, annotations: { readOnlyHint } },
     (input, { signal }) => call(name, input, signal));
 }
-tool('navigate', 'Open an HTTP or HTTPS URL in Browser.', { url: z.string() });
-tool('snapshot', 'Read the address, title and visible text of the Browser tab.', {});
-tool('screenshot', 'Capture the visible Browser tab as an image.', {});
-tool('tab_audio', 'Record audio playing in the Browser tab as a WAV clip.', { seconds: z.number().int().min(1).max(10) });
-tool('click', 'Click viewport CSS pixel coordinates.', { x: z.number().int().nonnegative(), y: z.number().int().nonnegative() });
-tool('type_text', 'Type into the focused field in the Browser tab.', { text: z.string() });
+tool('navigate', 'Open an HTTP or HTTPS URL in Browser.', { url: z.string() }, false);
+tool('snapshot', 'Read the address, title and visible text of the Browser tab.', {}, true);
+tool('screenshot', 'Capture the current Browser viewport as an image, including while chat is open.', {}, true);
+tool('tab_audio', 'Record audio playing in the Browser tab as a WAV clip.', { seconds: z.number().int().min(1).max(10) }, true);
+tool('click', 'Click viewport CSS pixel coordinates.', { x: z.number().int().nonnegative(), y: z.number().int().nonnegative() }, false);
+tool('type_text', 'Type into the focused field in the Browser tab.', { text: z.string() }, false);
 
 server.connect(new StdioServerTransport()).catch(error => {
   console.error(error.message);

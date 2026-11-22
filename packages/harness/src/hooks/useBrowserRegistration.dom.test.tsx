@@ -19,6 +19,7 @@ it('reads only the saved Browser registration and refreshes it after connector c
     name: 'browser',
     transport: 'stdio',
     command: '/opt/Contenox',
+    env: { ELECTRON_RUN_AS_NODE: '1' },
     args: [
       '/app/browser-mcp.cjs',
       '/profile/endpoint.json',
@@ -30,6 +31,7 @@ it('reads only the saved Browser registration and refreshes it after connector c
     .fn<typeof fetch>()
     .mockResolvedValueOnce(new Response(null, { status: 404 }))
     .mockResolvedValueOnce(Response.json(server))
+    .mockResolvedValueOnce(Response.json({ ...server, command: '/other/Browser' }))
     .mockResolvedValueOnce(new Response(null, { status: 404 }));
   vi.stubGlobal('fetch', request);
   const render = async (active: boolean) =>
@@ -43,7 +45,9 @@ it('reads only the saved Browser registration and refreshes it after connector c
   const data = () => client.getQueryData(connectorKeys.browser());
   try {
     await render(true);
-    Object.assign(window, { contenoxDesktop: { browser: {}, platform: 'linux' } });
+    Object.assign(window, {
+      contenoxDesktop: { browser: { connector: async () => server }, platform: 'linux' },
+    });
     await render(false);
     expect(request).not.toHaveBeenCalled();
 
@@ -55,7 +59,10 @@ it('reads only the saved Browser registration and refreshes it after connector c
     );
     refreshConnectors(client);
     await vi.waitFor(() => expect(data()).toBeNull());
+    refreshConnectors(client);
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(4));
     expect(request.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual([
+      '/api/mcp-servers/by-name/browser',
       '/api/mcp-servers/by-name/browser',
       '/api/mcp-servers/by-name/browser',
       '/api/mcp-servers/by-name/browser',

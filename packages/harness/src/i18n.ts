@@ -35,6 +35,16 @@ const resources = {
         forward: 'Forward',
         reload: 'Reload',
         address: 'Web address',
+        permission_override: 'Controlled by the {{rule}} tool rule',
+        default_permission: 'Default for Browser actions',
+        permissions: {
+          snapshot: 'Read visible page text',
+          screenshot: 'Take a screenshot',
+          navigate: 'Open a web address',
+          click: 'Click on the page',
+          type_text: 'Type into a field',
+          tab_audio: 'Record audio from the tab',
+        },
       },
       app: {
         name: 'Contenox',
@@ -2776,6 +2786,16 @@ const resources = {
         forward: 'Vorwärts',
         reload: 'Neu laden',
         address: 'Webadresse',
+        permission_override: 'Wird durch die Werkzeugregel {{rule}} gesteuert',
+        default_permission: 'Standard für Browseraktionen',
+        permissions: {
+          snapshot: 'Sichtbaren Seitentext lesen',
+          screenshot: 'Screenshot aufnehmen',
+          navigate: 'Webadresse öffnen',
+          click: 'Auf der Seite klicken',
+          type_text: 'Text in ein Feld eingeben',
+          tab_audio: 'Ton des Tabs aufnehmen',
+        },
       },
       app: {
         name: 'Contenox',

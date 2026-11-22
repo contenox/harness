@@ -65,8 +65,7 @@ export function createBrowserHost({ window, runtimeOrigin, protectedPorts, endpo
   const publish = () => window()?.webContents.send('contenox:browser-state', state());
   const hide = () => {
     if (!tab || !window() || window().isDestroyed()) return;
-    // An unattached WebContentsView loses its compositor. Park the live tab
-    // outside the client area so MCP can still capture it while chat is open.
+    // Keep the tab attached so it can render while chat is open.
     const { width, height } = tab.view.getBounds();
     if (tab.view.webContents.isFocused()) window().webContents.focus();
     tab.view.setBounds({ x: -width - 1, y: 0, width, height });
@@ -156,13 +155,10 @@ export function createBrowserHost({ window, runtimeOrigin, protectedPorts, endpo
     const size = window().getContentBounds();
     const zoom = window().webContents.getZoomFactor();
     const [x, y, w, h] = ['x', 'y', 'width', 'height'].map((k) => Math.round(bounds[k] * zoom));
-    if (![x, y, w, h].every(Number.isFinite) || x < 0 || y < 0 || w < 1 || h < 1) return hide();
-    tab.view.setBounds({
-      x,
-      y,
-      width: Math.max(0, Math.min(w, size.width - x)),
-      height: Math.max(0, Math.min(h, size.height - y)),
-    });
+    const width = Math.min(w, size.width - x);
+    const height = Math.min(h, size.height - y);
+    if (![x, y, width, height].every(Number.isFinite) || x < 0 || y < 0 || width < 1 || height < 1) return hide();
+    tab.view.setBounds({ x, y, width, height });
   }
   async function action(id, name, args = {}) {
     const entry = await getTab(id);
@@ -188,9 +184,13 @@ export function createBrowserHost({ window, runtimeOrigin, protectedPorts, endpo
           ]),
         };
       case 'screenshot': {
-        const image = await wc.capturePage();
-        if (image.isEmpty()) throw new Error('Open a page in Browser first.');
-        return { mime: 'image/jpeg', data: image.toJPEG(80) };
+        if (!wc.getURL() || wc.getURL() === 'about:blank') throw new Error('Open a page in Browser first.');
+        // Request a fresh compositor frame even if the tab has never been shown.
+        if (!wc.debugger.isAttached()) wc.debugger.attach();
+        const { data } = await wc.debugger.sendCommand('Page.captureScreenshot', {
+          format: 'jpeg', quality: 80, fromSurface: true,
+        });
+        return { mime: 'image/jpeg', data: Buffer.from(data, 'base64') };
       }
       case 'tab_audio':
         if (entry.recording) throw new Error('Tab audio capture is already running.');
@@ -202,9 +202,14 @@ export function createBrowserHost({ window, runtimeOrigin, protectedPorts, endpo
         }
       case 'click': {
         const { x, y } = args;
-        if (![x, y].every((n) => Number.isInteger(n) && n >= 0)) throw new Error('Invalid coordinates.');
-        wc.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, x, y });
-        wc.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, x, y });
+        const { width, height } = entry.view.getBounds();
+        const zoom = wc.getZoomFactor();
+        const point = { x: Math.round(x * zoom), y: Math.round(y * zoom) };
+        if (![x, y].every((n) => Number.isInteger(n) && n >= 0) || point.x >= width || point.y >= height) {
+          throw new Error('Click coordinates must be inside the Browser viewport.');
+        }
+        wc.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...point });
+        wc.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...point });
         return state();
       }
       case 'type_text':

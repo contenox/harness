@@ -45,6 +45,35 @@ export const CHAT_ENVELOPE = 'default';
 
 export const AREA_TOOLSETS = new Set(['local_fs', 'local_shell', 'mission']);
 
+export const browserActions = [
+  'snapshot',
+  'screenshot',
+  'navigate',
+  'click',
+  'type_text',
+  'tab_audio',
+] as const;
+export const desktopBrowserSelector = '@desktop-browser';
+
+export function strongestToolPattern(tools: Map<string, Resolved<Grant>>, patterns: string[]) {
+  for (const grant of ['deny', 'approve', 'allow'] as const) {
+    const pattern = patterns.find(key => tools.get(key)?.value === grant);
+    if (pattern) return pattern;
+  }
+}
+
+// Match the runtime compiler's order for explicit operator rules.
+export function browserToolOverride(tools: Map<string, Resolved<Grant>>, action: string) {
+  for (const tier of [
+    [`browser.${action}`],
+    ['browser', 'browser.*', `*.${action}`],
+    ['*', '*.*'],
+  ]) {
+    const pattern = strongestToolPattern(tools, tier);
+    if (pattern) return pattern;
+  }
+}
+
 export type AxisValue = {
   grant: Grant;
   lists: Partial<Record<ListKey, string[]>>;

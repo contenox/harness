@@ -30,7 +30,18 @@ export function useBrowserRegistration(active = true) {
       try {
         const server = await api.getMcpServerByName('browser', signal);
         const id = browserInstallation(server);
-        return id ? { id, workspace: server.workspace } : null;
+        if (!id) return null;
+        const expected = await window.contenoxDesktop!.browser!.connector(id);
+        if ('error' in expected) throw new Error(expected.error);
+        if (
+          server.command !== expected.command ||
+          JSON.stringify(server.args) !== JSON.stringify(expected.args) ||
+          server.env?.ELECTRON_RUN_AS_NODE !== '1' ||
+          Object.keys(server.env).length !== 1 ||
+          Object.keys(server.injectParams ?? {}).length
+        )
+          return null;
+        return { id, workspace: server.workspace };
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) return null;
         throw error;

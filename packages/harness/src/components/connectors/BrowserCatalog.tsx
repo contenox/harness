@@ -4,7 +4,7 @@ import { Globe } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { refreshConnectors } from '../../hooks/useConnectors';
+import { refreshConnectors, useBrowserRegistration } from '../../hooks/useConnectors';
 import { api } from '../../lib/api';
 import { browserInstallation } from '../../lib/connectorStatus';
 import type { Connector } from '../../lib/connectorTypes';
@@ -23,7 +23,9 @@ export function BrowserCatalog({
   const [open, setOpen] = useState(false);
   const [scope, setScope] = useState('');
   const existing = connectors.find(c => c.name === 'browser');
-  const installed = browserInstallation(existing);
+  const candidate = browserInstallation(existing);
+  const registration = useBrowserRegistration(!!candidate);
+  const installed = candidate && registration.data?.id === candidate ? candidate : undefined;
   const install = useMutation({
     mutationFn: async () => {
       const id = crypto.randomUUID();
@@ -42,6 +44,7 @@ export function BrowserCatalog({
     <>
       <button
         type="button"
+        disabled={!!candidate && registration.isLoading}
         className="border-line bg-raised hover:bg-hover flex items-center gap-3 rounded-xl border p-3.5 text-left"
         onClick={() => (installed ? navigate('/browser/' + installed) : setOpen(true))}>
         <Globe className="text-accent size-5 shrink-0" />

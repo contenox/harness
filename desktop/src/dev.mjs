@@ -1,8 +1,10 @@
 import { createRequire } from 'node:module';
 import { spawn, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { browserLauncher } from './browserConnector.mjs';
 
 const require = createRequire(import.meta.url);
 const electron = require('electron');
@@ -52,7 +54,13 @@ if (!fs.existsSync(binary)) throw new Error(`runtime not found: ${binary}`);
 const home = path.join(state, 'home');
 const data = path.join(state, 'workspace', '.contenox');
 const db = path.join(home, '.contenox', 'local.db');
-const env = { ...process.env, HOME: home, ADDR: '127.0.0.1', PORT: String(port) };
+const appData = process.platform === 'win32' ? process.env.APPDATA
+  : process.platform === 'darwin' ? path.join(os.homedir(), 'Library', 'Application Support')
+  : process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+const profile = path.join(appData, 'ContenoxHarness');
+const env = { ...process.env, HOME: home, ADDR: '127.0.0.1', PORT: String(port),
+  CONTENOX_DESKTOP_BROWSER: JSON.stringify(browserLauncher(electron, path.join(profile, 'browser-dev', 'endpoint.json'))),
+};
 
 execFileSync(binary, ['--data-dir', data, '--db', db, 'init', '--force'], { env, stdio: 'inherit' });
 console.error(`runtime: ${binary}`);
@@ -82,7 +90,7 @@ vite.on('exit', code => {
 await wait('http://127.0.0.1:5173', 'Vite');
 
 console.error('electron: starting');
-const window = run(electron, [desktop], {
+const window = run(electron, [desktop, '--user-data-dir=' + profile], {
   env: { ...process.env, CONTENOX_DEV_URL: 'http://127.0.0.1:5173' },
 });
 window.on('exit', code => {

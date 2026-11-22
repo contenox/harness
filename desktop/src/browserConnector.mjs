@@ -2,6 +2,10 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const helper = fileURLToPath(new URL('./browser-mcp.cjs', import.meta.url));
+// The runtime uses this launch tuple to recognize this app's Browser registration.
+export function browserLauncher(command, endpointFile) {
+  return [command, helper, endpointFile];
+}
 export const installationId = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 export function browserConnector(id, endpointFile) {
@@ -16,6 +20,7 @@ export function browserConnector(id, endpointFile) {
 export function matchesBrowser(server, expected) {
   return server.name === expected.name && server.transport === 'stdio' &&
     server.command === expected.command && server.env?.ELECTRON_RUN_AS_NODE === '1' &&
+    Object.keys(server.env).length === 1 && !Object.keys(server.injectParams ?? {}).length &&
     JSON.stringify(server.args) === JSON.stringify(expected.args);
 }
 
@@ -27,10 +32,11 @@ export async function refreshBrowserCommand(origin, endpointFile) {
   const saved = await response.json();
   const args = saved.args;
   if (saved.name !== 'browser' || saved.transport !== 'stdio' || args?.length !== 3 ||
-      !installationId.test(args[2])) return;
-  const legacy = saved.command === 'contenox-runtime' && args[0] === 'mcp' && args[1] === 'browser';
+      !installationId.test(args[2]) || Object.keys(saved.injectParams ?? {}).length) return;
+  const legacy = saved.command === 'contenox-runtime' && args[0] === 'mcp' && args[1] === 'browser' &&
+    !Object.keys(saved.env ?? {}).length;
   const previousApp = typeof args[0] === 'string' && path.basename(args[0]) === 'browser-mcp.cjs' &&
-    args[1] === endpointFile && saved.env?.ELECTRON_RUN_AS_NODE === '1';
+    args[1] === endpointFile && saved.env?.ELECTRON_RUN_AS_NODE === '1' && Object.keys(saved.env).length === 1;
   if (!legacy && !previousApp) return;
   const next = browserConnector(args[2], endpointFile);
   if (matchesBrowser(saved, next)) return;

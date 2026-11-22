@@ -20,6 +20,7 @@ import { ConnectorIcon } from '../../../../components/connectors/ConnectorIcon';
 import { ConnectorToolsPanel } from '../../../../components/connectors/ConnectorToolsPanel';
 import { ToolRulesPanel } from '../../../../components/connectors/ToolRulesPanel';
 import {
+  useBrowserRegistration,
   useCheckConnector,
   useMcpServer,
   useRemoteTools,
@@ -49,6 +50,9 @@ export function ConnectorRow({ connector, workspaces, expanded, onExpandedChange
   const { t } = useTranslation();
   const [mode, setMode] = useState<'edit' | 'remove' | null>(null);
   const check = useCheckConnector();
+  const candidate = browserInstallation(connector);
+  const registration = useBrowserRegistration(!!candidate);
+  const browserId = candidate && registration.data?.id === candidate ? candidate : undefined;
   const signIn = useStartMcpSignIn();
   const owned = isOwnedConnector(connector);
   const editing = mode === 'edit';
@@ -74,12 +78,8 @@ export function ConnectorRow({ connector, workspaces, expanded, onExpandedChange
   return (
     <SettingsRow
       icon={<ConnectorIcon connector={connector} />}
-      title={browserInstallation(connector) ? 'Browser' : connector.label}
-      description={
-        connector.kind === 'builtin' || browserInstallation(connector)
-          ? summary
-          : connectorWhere(connector)
-      }
+      title={browserId ? 'Browser' : connector.label}
+      description={connector.kind === 'builtin' || browserId ? summary : connectorWhere(connector)}
       expanded={expanded}
       onExpandedChange={onExpandedChange}
       trailing={
@@ -97,7 +97,7 @@ export function ConnectorRow({ connector, workspaces, expanded, onExpandedChange
                   <MoreHorizontal className="size-3.5" aria-hidden />
                 </IconButton>
               }>
-              {!browserInstallation(connector) && (
+              {!browserId && (
                 <DropdownItem icon={<Pencil className="size-3.5" />} onClick={() => open('edit')}>
                   {t('connectors.edit')}
                 </DropdownItem>
@@ -129,8 +129,7 @@ export function ConnectorRow({ connector, workspaces, expanded, onExpandedChange
                 onClick={() =>
                   remove.mutate(connector, {
                     onSuccess: () => {
-                      const id = browserInstallation(connector);
-                      if (id) void window.contenoxDesktop?.browser?.close(id);
+                      if (browserId) void window.contenoxDesktop?.browser?.close(browserId);
                       setMode(null);
                     },
                   })

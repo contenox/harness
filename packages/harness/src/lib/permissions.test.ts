@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   axisPatch,
+  browserToolOverride,
   displayName,
   nestAt,
   parseAxis,
@@ -43,6 +44,27 @@ const envelopes = rawEnvelopes([
 ]);
 
 describe('permission model', () => {
+  it('shows the operator rule that takes precedence over the Browser profile', () => {
+    const raw = new Map([
+      [
+        'default',
+        {
+          tools: {
+            '@desktop-browser.screenshot': 'allow',
+            '*': 'approve',
+            'browser.*': 'allow',
+            '*.screenshot': 'deny',
+            'browser.snapshot': 'deny',
+          },
+        },
+      ],
+    ]);
+    const tools = resolveTools(raw, 'default');
+    expect(browserToolOverride(tools, 'screenshot')).toBe('*.screenshot');
+    expect(browserToolOverride(tools, 'snapshot')).toBe('browser.snapshot');
+    expect(browserToolOverride(tools, 'click')).toBe('browser.*');
+    expect(browserToolOverride(new Map(), 'snapshot')).toBeUndefined();
+  });
   it('resolves an area from the set itself before its parent', () => {
     expect(resolveAxis(envelopes, 'default', 'files.read')).toEqual({
       value: { grant: 'allow', lists: { approve_paths: ['**/.env'] }, extra: {} },
