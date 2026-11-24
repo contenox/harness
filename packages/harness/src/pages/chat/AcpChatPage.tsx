@@ -164,7 +164,7 @@ function AcpChatWorkspace() {
 
   const handleNewSession = useCallback(() => navigate('/chat'), [navigate]);
 
-  if (blockingSetupIssue || workspace.status === 'setup_required') {
+  if ((!paramSessionId && blockingSetupIssue) || workspace.status === 'setup_required') {
     return (
       <SetupRequiredState
         issue={blockingSetupIssue}

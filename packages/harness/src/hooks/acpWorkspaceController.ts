@@ -819,6 +819,7 @@ export function createAcpWorkspaceController(
       return;
     }
 
+    const start = performance.now();
     workspaceDispatch({ type: 'session_load_start' });
     setFocus(id);
     sessionDispatch(id, { type: 'session_reset', sessionId: id });
@@ -856,6 +857,8 @@ export function createAcpWorkspaceController(
     }
 
     workspaceDispatch({ type: 'session_load_succeeded' });
+    performance.clearMeasures('contenox.session.load');
+    performance.measure('contenox.session.load', { start });
   }
 
   async function openSession(id: SessionId): Promise<void> {

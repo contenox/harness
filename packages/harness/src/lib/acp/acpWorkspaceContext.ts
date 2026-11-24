@@ -11,6 +11,8 @@ export interface AcpWorkspaceContextValue {
 }
 
 export const AcpWorkspaceContext = createContext<AcpWorkspaceContextValue | null>(null);
+// The shell only needs to know whether there is local history to browse.
+export const HasSavedSessionsContext = createContext(false);
 
 export function createDeferredDisposer(dispose: () => void): {
   armForCleanup: () => void;

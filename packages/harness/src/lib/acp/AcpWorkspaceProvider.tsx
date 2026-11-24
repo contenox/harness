@@ -22,6 +22,7 @@ import { agentsConfigKeys, envelopeKeys, workspaceAccessKeys } from '../queryKey
 import {
   AcpWorkspaceContext,
   createDeferredDisposer,
+  HasSavedSessionsContext,
   type AcpWorkspaceContextValue,
 } from './acpWorkspaceContext';
 
@@ -59,6 +60,8 @@ export function AcpWorkspaceProvider({ children }: AcpWorkspaceProviderProps) {
   useEffect(() => {
     const disposer = disposerRef.current;
     disposer.cancelPendingDispose();
+    // Load local sessions even while first-run setup is checking provider health.
+    void controllerRef.current!.connect();
     return () => disposer.armForCleanup();
   }, []);
 
@@ -69,5 +72,9 @@ export function AcpWorkspaceProvider({ children }: AcpWorkspaceProviderProps) {
     [workspace, session, sessions],
   );
 
-  return <AcpWorkspaceContext.Provider value={value}>{children}</AcpWorkspaceContext.Provider>;
+  return (
+    <HasSavedSessionsContext.Provider value={workspace.sessions.length > 0}>
+      <AcpWorkspaceContext.Provider value={value}>{children}</AcpWorkspaceContext.Provider>
+    </HasSavedSessionsContext.Provider>
+  );
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import type { SessionConfigOptionValue } from '../lib/acp';
 import { useAcpWorkspaceContext } from '../lib/acp/acpWorkspaceContext';
 import type { AdoptRef } from '../lib/adoptMeta';
@@ -48,10 +48,6 @@ export interface UseAcpWorkspaceResult {
 
 export function useAcpWorkspace(): UseAcpWorkspaceResult {
   const { workspace, session, sessions, controller } = useAcpWorkspaceContext();
-
-  useEffect(() => {
-    void controller.connect();
-  }, [controller]);
 
   const openSessionIds = selectOpenSessionIds(sessions);
 
