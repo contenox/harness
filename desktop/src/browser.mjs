@@ -17,6 +17,35 @@ function webURL(value) {
   return url.href;
 }
 
+function browserDebugger(contents) {
+  if (!contents.debugger.isAttached()) contents.debugger.attach();
+  return contents.debugger;
+}
+
+// Read the committed main document without waiting for images, ads or other
+// subresources. Electron's WebContents script helpers wait for the load event.
+async function readDocument(debug, { includeText = false, loaderId } = {}) {
+  const { frameTree } = await debug.sendCommand('Page.getFrameTree');
+  if (loaderId && frameTree.frame.loaderId !== loaderId) throw new Error('Browser navigation was superseded.');
+  const { executionContextId } = await debug.sendCommand('Page.createIsolatedWorld', {
+    frameId: frameTree.frame.id, worldName: 'contenox-browser-reader',
+  });
+  const { result, exceptionDetails } = await debug.sendCommand('Runtime.evaluate', {
+    contextId: executionContextId,
+    expression: `(async () => {
+      if (document.readyState === 'loading') {
+        await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, { once: true }));
+      }
+      const page = { url: location.href, title: document.title };
+      if (${includeText}) page.text = (document.body?.innerText || '').slice(0, 16000);
+      return page;
+    })()`,
+    awaitPromise: true, returnByValue: true,
+  });
+  if (exceptionDetails || !result.value) throw new Error('Browser document changed before it could be read.');
+  return result.value;
+}
+
 // Capture in a trusted, temporary renderer. Only that renderer is granted
 // the target tab's media stream. Closing either tab tears down the recorder.
 async function recordTab(contents, seconds) {
@@ -164,9 +193,14 @@ export function createBrowserHost({ window, runtimeOrigin, protectedPorts, endpo
     const entry = await getTab(id);
     const wc = entry.view.webContents;
     switch (name) {
-      case 'navigate':
-        await wc.loadURL(webURL(args.url));
-        return state();
+      case 'navigate': {
+        const url = webURL(args.url);
+        const debug = browserDebugger(wc);
+        const { errorText, isDownload, loaderId } = await debug.sendCommand('Page.navigate', { url });
+        if (errorText) throw new Error(errorText);
+        if (isDownload) throw new Error('The address returned a download instead of a page.');
+        return readDocument(debug, { loaderId });
+      }
       case 'back':
         if (wc.navigationHistory.canGoBack()) wc.navigationHistory.goBack();
         return state();
@@ -177,17 +211,11 @@ export function createBrowserHost({ window, runtimeOrigin, protectedPorts, endpo
         wc.reload();
         return state();
       case 'snapshot':
-        return {
-          ...state(),
-          text: await wc.executeJavaScriptInIsolatedWorld(1001, [
-            { code: '(document.body?.innerText || "").slice(0, 16000)' },
-          ]),
-        };
+        return readDocument(browserDebugger(wc), { includeText: true });
       case 'screenshot': {
         if (!wc.getURL() || wc.getURL() === 'about:blank') throw new Error('Open a page in Browser first.');
         // Request a fresh compositor frame even if the tab has never been shown.
-        if (!wc.debugger.isAttached()) wc.debugger.attach();
-        const { data } = await wc.debugger.sendCommand('Page.captureScreenshot', {
+        const { data } = await browserDebugger(wc).sendCommand('Page.captureScreenshot', {
           format: 'jpeg', quality: 80, fromSurface: true,
         });
         return { mime: 'image/jpeg', data: Buffer.from(data, 'base64') };

@@ -1,4 +1,4 @@
-// Launch with Electron to exercise the same stdio command registered with rc.12.
+// Launch with Electron to exercise the desktop's registered stdio connector.
 import { app, BrowserWindow, nativeImage } from 'electron';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -25,6 +25,7 @@ async function run() {
   const endpointFile = path.join(app.getPath('userData'), 'browser', 'endpoint.json');
   const config = browserConnector(id, endpointFile);
   let installed = true;
+  let pendingImage;
   const fixture = http.createServer((req, res) => {
     if (req.url === '/api/mcp-servers/by-name/browser') {
       res
@@ -32,6 +33,14 @@ async function run() {
         .end(
           JSON.stringify(config),
         );
+    } else if (req.url === '/redirect') {
+      res.writeHead(302, { Location: '/readable' }).end();
+    } else if (req.url === '/readable') {
+      res.writeHead(200, { 'Content-Type': 'text/html' }).end(
+        '<title>Readable page</title><body style="background:red">Price: 199 EUR<img src="/pending.png">',
+      );
+    } else if (req.url === '/pending.png') {
+      pendingImage = res; // Keep the window load event pending until the assertions finish.
     } else {
       res
         .writeHead(200, { 'Content-Type': 'text/html' })
@@ -122,6 +131,18 @@ async function run() {
     host.layout(id, null); // Return to chat; capture the same tab through MCP.
     assert.ok(!(await call('navigate', { url: origin + '/second' })).isError);
     await checkScreenshot('red');
+    const readableUrl = origin + '/readable';
+    const navigation = await call('navigate', { url: origin + '/redirect' });
+    assert.deepEqual(JSON.parse(navigation.content[0].text), { url: readableUrl, title: 'Readable page' });
+    const snapshot = JSON.parse((await call('snapshot')).content[0].text);
+    assert.deepEqual(snapshot, { url: readableUrl, title: 'Readable page', text: 'Price: 199 EUR' });
+    await checkScreenshot('red');
+    assert.ok(pendingImage && !pendingImage.writableEnded, 'the image must still be loading');
+    pendingImage.end();
+    const fragment = await call('navigate', { url: readableUrl + '#price' });
+    assert.equal(JSON.parse(fragment.content[0].text).url, readableUrl + '#price');
+    assert.ok((await call('navigate', { url: 'file:///invalid' })).isError);
+    assert.ok(!(await call('navigate', { url: origin + '/second' })).isError);
     async function checkAudio() {
       const clip = (await call('tab_audio', { seconds: 2 })).content[0];
       assert.equal(clip.mimeType, 'audio/wav', clip.text);
@@ -146,7 +167,7 @@ async function run() {
     await checkAudio(); // The new tab has never been displayed or captured.
     installed = false;
     assert.ok((await call('screenshot')).isError);
-    console.log('Browser MCP passed fresh and background screenshots, page text, input, layout, 440 Hz tab audio, close, reopen and uninstall.');
+    console.log('Browser MCP passed navigation, redirects, reading and capturing a still-loading page, input, layout, 440 Hz tab audio, close, reopen and uninstall.');
   } catch (error) {
     console.error(error);
     process.exitCode = 1;
@@ -154,6 +175,7 @@ async function run() {
     clearTimeout(timeout);
     child?.kill();
     host.stop();
+    fixture.closeAllConnections();
     fixture.close();
     win.destroy();
     app.exit(process.exitCode || 0);
