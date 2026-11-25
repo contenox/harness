@@ -34,6 +34,7 @@ vi.mock('@contenox/ui', async importOriginal => {
 vi.mock('../../../hooks/useAcpWorkspace', () => {
   // Everything stable, like the real context between unrelated renders.
   const fns = {
+    controller: { canSteer: () => false },
     newSession: vi.fn(),
     sendPrompt: vi.fn(),
     runTerminal: vi.fn(),

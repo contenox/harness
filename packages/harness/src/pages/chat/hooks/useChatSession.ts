@@ -26,7 +26,7 @@ import {
 } from '../lib/composerChips';
 import { canAttachImages } from '../lib/imageAttachments';
 import { selectAvailableCommands } from '../lib/slashMenuState';
-import { submitChatTurn, type SubmitPayload } from '../lib/submitTurn';
+import { submitChatTurn, type PromptPayload, type SubmitPayload } from '../lib/submitTurn';
 import {
   mostRecentProjectRoot,
   relativeWorkspacePath,
@@ -231,6 +231,17 @@ export function useChatSession(
     workspaceStatus: workspace.status,
     attributionAgentName,
     sessionAgentName,
+    steer:
+      sessionId && !sessionAgentName && controller.canSteer(sessionId)
+        ? (payload: PromptPayload) =>
+            controller.steer(
+              sessionId,
+              payload.text,
+              payload.mentions,
+              payload.images,
+              payload.takeAudio(),
+            )
+        : undefined,
     sessionAgentTitle,
     stagedAgentTitle,
     adopted,

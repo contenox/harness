@@ -2,8 +2,8 @@ import type { ParseKeys } from 'i18next';
 import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
-import { mediaGenerationEnglish, mediaGenerationGerman } from './pages/media/copy';
 import { localAIEnglish, localAIGerman } from './lib/localAICopy';
+import { mediaGenerationEnglish, mediaGenerationGerman } from './pages/media/copy';
 
 declare module 'i18next' {
   interface CustomTypeOptions {
@@ -1576,6 +1576,11 @@ const resources = {
         composer_send_failed:
           'Your message was not sent and is back in the box. Check the connection, then send it again.',
         composer_stop: 'Stop',
+        steer_queue: 'Queue message',
+        steer_hint: 'Send this message and its attachments at the next model call.',
+        steer_queued: 'Queued',
+        steer_delivered: 'Delivered',
+        steer_undelivered: 'Not delivered',
         attach_image_label: 'Attach image',
         attach_image_tooltip: 'Attach an image — paste or drag & drop works too',
         attach_menu_label: 'Add',
@@ -4333,6 +4338,11 @@ const resources = {
         composer_send_failed:
           'Deine Nachricht wurde nicht gesendet und steht wieder im Eingabefeld. Prüfe die Verbindung und sende sie erneut.',
         composer_stop: 'Stopp',
+        steer_queue: 'Nachricht einreihen',
+        steer_hint: 'Diese Nachricht mit ihren Anhängen beim nächsten Modellaufruf senden.',
+        steer_queued: 'In Warteschlange',
+        steer_delivered: 'Zugestellt',
+        steer_undelivered: 'Nicht zugestellt',
         attach_image_label: 'Bild anhängen',
         attach_image_tooltip: 'Bild anhängen — Einfügen oder Hineinziehen funktioniert auch',
         attach_menu_label: 'Hinzufügen',

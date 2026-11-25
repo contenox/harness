@@ -7,6 +7,26 @@ function run(...actions: Parameters<typeof acpSessionReducer>[1][]): AcpSessionS
 }
 
 describe('acpSessionReducer: unified timeline (D4)', () => {
+  it('separates assistant replies at delivery and settles pending messages on Stop', () => {
+    const state = run(
+      { type: 'prompt_start' },
+      { type: 'message_chunk', id: 'answer', text: 'Reading.' },
+      { type: 'steering_message', id: 's1', text: 'Windows only', status: 'queued' },
+      { type: 'steering_message', id: 's1', text: 'Windows only', status: 'delivered' },
+      { type: 'message_chunk', id: 'answer', text: 'Windows results.' },
+      { type: 'steering_message', id: 's2', text: 'Also Linux', status: 'queued' },
+      { type: 'prompt_end', stopReason: 'cancelled' },
+    );
+    expect(state.items.map(i => state.messages[i.id].text)).toEqual([
+      'Reading.',
+      'Windows only',
+      'Windows results.',
+      'Also Linux',
+    ]);
+    expect(state.messages.s1.delivery).toBe('delivered');
+    expect(state.messages.s2.delivery).toBe('undelivered');
+  });
+
   it('orders interleaved live messages and tool calls by first arrival, not by kind', () => {
     const state = run(
       { type: 'session_reset', sessionId: 'sess-1' },

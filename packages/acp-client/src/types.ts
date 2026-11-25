@@ -477,7 +477,12 @@ interface ToolCallFields {
 }
 
 export type SessionUpdate =
-  | { sessionUpdate: 'user_message_chunk'; content: ContentBlock; messageId?: string }
+  | {
+      sessionUpdate: 'user_message_chunk';
+      content: ContentBlock;
+      messageId?: string;
+      _meta?: Record<string, unknown>;
+    }
   | {
       sessionUpdate: 'agent_message_chunk';
       content: ContentBlock;

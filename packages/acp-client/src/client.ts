@@ -111,11 +111,13 @@ export interface SessionEventHandlers {
     audio?: AudioPart,
   ) => void;
   onThoughtChunk?: (text: string, messageId?: string) => void;
+  onSteeringMessage?: (text: string, id: string, status: SteeringStatus) => void;
   onUserMessageChunk?: (
     text: string,
     messageId?: string,
     image?: ImagePart,
     audio?: AudioPart,
+    attachmentIndex?: number,
   ) => void;
   onToolCall?: (event: ToolCallEvent) => void;
   onEventSeq?: (seq: number) => void;
@@ -234,7 +236,10 @@ function configOptionsOf(value: unknown): SessionConfigOption[] | null {
   return value.configOptions as SessionConfigOption[];
 }
 
+export type SteeringStatus = 'queued' | 'delivered' | 'undelivered';
+
 export class AcpClient {
+  supportsSteering = false;
   private readonly transport: Transport;
   private nextId = 1;
   private readonly pending = new Map<number, PendingCall>();
@@ -419,14 +424,31 @@ export class AcpClient {
 
   private routeSessionUpdate(update: SessionUpdate, handlers: SessionEventHandlers): void {
     switch (update.sessionUpdate) {
-      case 'user_message_chunk':
+      case 'user_message_chunk': {
+        const status = update._meta?.['contenox.delivery'];
+        if (
+          update.messageId &&
+          (status === 'queued' || status === 'delivered' || status === 'undelivered')
+        ) {
+          if (handlers.onSteeringMessage) {
+            handlers.onSteeringMessage(update.content.text ?? '', update.messageId, status);
+          } else if (status === 'queued') {
+            handlers.onUserMessageChunk?.(update.content.text ?? '', update.messageId);
+          }
+          return;
+        }
+        const index = update._meta?.['contenox.attachmentIndex'];
         handlers.onUserMessageChunk?.(
           update.content.text ?? '',
           update.messageId,
           imagePartFromBlock(update.content) ?? undefined,
           audioPartFromBlock(update.content) ?? undefined,
+          typeof index === 'number' && Number.isSafeInteger(index) && index >= 0
+            ? index
+            : undefined,
         );
         return;
+      }
       case 'agent_message_chunk':
         handlers.onMessageChunk?.(
           update.content.text ?? '',
@@ -484,11 +506,13 @@ export class AcpClient {
     clientInfo?: Implementation,
   ): Promise<InitializeResponse> {
     const providerCapabilities = this.capabilityProvider?.capabilities() ?? {};
-    return this.call<InitializeResponse>('initialize', {
+    const response = await this.call<InitializeResponse>('initialize', {
       protocolVersion: ACP_PROTOCOL_VERSION,
       clientCapabilities: { ...providerCapabilities, ...clientCapabilities },
       clientInfo,
     });
+    this.supportsSteering = response._meta?.['contenox.sessionSteering'] === true;
+    return response;
   }
 
   async newSession(
@@ -727,6 +751,16 @@ export class AcpClient {
 
   async listInbox(opts?: { limit?: number }): Promise<OperatorItemRow[]> {
     return this.call<OperatorItemRow[]>('_contenox/inbox/list', opts ?? {});
+  }
+
+  steer(
+    sessionId: SessionId,
+    prompt: ContentBlock[] | string,
+  ): Promise<{ queued: boolean; _meta?: Record<string, unknown> }> {
+    return this.call(
+      '_contenox/session/steer',
+      typeof prompt === 'string' ? { sessionId, text: prompt } : { sessionId, prompt },
+    );
   }
 
   async prompt(

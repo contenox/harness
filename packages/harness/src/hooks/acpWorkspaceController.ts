@@ -65,6 +65,14 @@ export interface AcpWorkspaceController {
   focusEmptyTab(): void;
   deleteSession(id: SessionId): Promise<void>;
   clearActiveSession(): void;
+  canSteer(sid: SessionId): boolean;
+  steer(
+    sid: SessionId,
+    text: string,
+    mentions?: WorkspaceFileRef[],
+    images?: PendingImageAttachment[],
+    audio?: PendingAudioAttachment[],
+  ): Promise<void>;
   sendPrompt(
     text: string,
     mentions?: WorkspaceFileRef[],
@@ -142,6 +150,9 @@ interface OpenSessionEntry {
   unsubscribe: () => void;
   currentTurnId: string;
   promptInFlight: boolean;
+  promptDone?: Promise<boolean>;
+  firstActivity?: Promise<void>;
+  signalActivity?: () => void;
   permissionResolve: ((optionId: string) => void) | null;
   permissionReject: ((err: Error) => void) | null;
   stallTimer: ReturnType<typeof setTimeout> | null;
@@ -383,6 +394,10 @@ export function createAcpWorkspaceController(
 
   function noteActivity(sid: SessionId): void {
     const entry = openSessions.get(sid);
+    if (entry?.signalActivity) {
+      entry.signalActivity();
+      entry.signalActivity = undefined;
+    }
     if (entry?.promptInFlight && !entry.turnSettled && entry.stallTimer) armStallTimer(sid);
   }
 
@@ -393,13 +408,17 @@ export function createAcpWorkspaceController(
       fn();
     };
     return {
-      onUserMessageChunk: (text, id, image) =>
+      onSteeringMessage: (text, id, status) =>
+        active(() => sessionDispatch(sid, { type: 'steering_message', id, text, status })),
+      onUserMessageChunk: (text, id, image, audio, attachmentIndex) =>
         active(() =>
           sessionDispatch(sid, {
             type: 'user_message_chunk',
             id: id ?? nextId('user'),
             text,
             image,
+            audio,
+            attachmentIndex,
           }),
         ),
       onMessageChunk: (text, id, image, meta) =>
@@ -919,15 +938,24 @@ export function createAcpWorkspaceController(
     images: PendingImageAttachment[] = [],
     audio: PendingAudioAttachment[] = [],
   ): boolean {
-    if (disposed || !client || !focusedSessionId || !text.trim()) return false;
-    const sid = focusedSessionId;
+    return !!focusedSessionId && sendPromptTo(focusedSessionId, text, mentions, images, audio);
+  }
+
+  function sendPromptTo(
+    sid: SessionId,
+    text: string,
+    mentions: WorkspaceFileRef[] = [],
+    images: PendingImageAttachment[] = [],
+    audio: PendingAudioAttachment[] = [],
+  ): boolean {
+    if (disposed || !client) return false;
     const entry = openSessions.get(sid);
     if (!entry || entry.promptInFlight) return false;
     const c = entryClient(sid);
     if (!c) return false;
-    entry.currentTurnId = nextId('assistant');
-
     const blocks = promptBlocksFromDraft(text, mentions, images, audio);
+    if (blocks.length === 0) return false;
+    entry.currentTurnId = nextId('assistant');
 
     const echoId = nextId('user');
     sessionDispatch(sid, { type: 'user_message_chunk', id: echoId, text });
@@ -950,30 +978,73 @@ export function createAcpWorkspaceController(
     sessionDispatch(sid, { type: 'prompt_start' });
     entry.promptInFlight = true;
     entry.turnSettled = false;
+    entry.firstActivity = new Promise<void>(resolve => {
+      entry.signalActivity = resolve;
+    });
     armStallTimer(sid);
 
-    c.prompt(sid, blocks)
+    const completion = c
+      .prompt(sid, blocks)
       .then(({ stopReason }) => {
         const e = openSessions.get(sid);
-        if (!e) return;
+        if (e !== entry || e.promptDone !== completion) return false;
         clearStallTimer(e);
-        if (e.turnSettled) return;
+        if (e.turnSettled) return false;
         e.turnSettled = true;
         e.promptInFlight = false;
         e.permissionResolve = null;
         e.permissionReject = null;
         sessionDispatch(sid, { type: 'prompt_end', stopReason });
+        return stopReason === 'end_turn';
       })
       .catch((err: unknown) => {
         const e = openSessions.get(sid);
+        if (e !== entry || e.promptDone !== completion) return false;
         clearStallTimer(e);
-        if (e) e.promptInFlight = false;
+        e.promptInFlight = false;
         if (!disposed) guardAuthRequired(err);
-        if (!e || e.turnSettled) return;
+        if (e.turnSettled) return false;
         e.turnSettled = true;
         sessionDispatch(sid, { type: 'prompt_error', message: errMessage(err) });
+        return false;
       });
+    entry.promptDone = completion;
     return true;
+  }
+
+  async function steer(
+    sid: SessionId,
+    text: string,
+    mentions: WorkspaceFileRef[] = [],
+    images: PendingImageAttachment[] = [],
+    audio: PendingAudioAttachment[] = [],
+  ): Promise<void> {
+    const entry = openSessions.get(sid);
+    const c = entryClient(sid);
+    const blocks = promptBlocksFromDraft(text, mentions, images, audio);
+    if (!entry || !c?.supportsSteering || !blocks.length) throw new Error('Steering unavailable');
+    const completion = entry.promptDone;
+    if (entry.promptInFlight) {
+      const starting = entry.signalActivity && entry.firstActivity;
+      if ((await c.steer(sid, blocks)).queued) return;
+      // Admission can also race the original prompt's startup. Retry once the
+      // runtime produces its first event if that prompt is still running.
+      if (starting) {
+        await Promise.race([starting, completion]);
+        if (
+          openSessions.get(sid) === entry &&
+          entry.promptDone === completion &&
+          entry.promptInFlight &&
+          (await c.steer(sid, blocks)).queued
+        )
+          return;
+      }
+    }
+    // The runtime finished between the keystroke and admission. Wait for its
+    // response before opening the follow-up on the same session, even if focus moved.
+    if (completion && !(await completion)) throw new Error('Turn interrupted');
+    if (openSessions.get(sid) !== entry || !sendPromptTo(sid, text, mentions, images, audio))
+      throw new Error('Follow-up unavailable');
   }
 
   async function runTerminal(command: string): Promise<void> {
@@ -1068,6 +1139,8 @@ export function createAcpWorkspaceController(
     deleteSession,
     clearActiveSession,
     sendPrompt,
+    canSteer: sid => entryClient(sid)?.supportsSteering === true,
+    steer,
     runTerminal,
     respondPermission,
     cancel,

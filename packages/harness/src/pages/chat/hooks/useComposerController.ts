@@ -1,11 +1,18 @@
 import { useAudioAttachments, useSlashCommandMenu } from '@contenox/ui/session-ui';
-import { useCallback, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react';
+import {
+  useCallback,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react';
 import { useFilePreview } from '../../../hooks/useFilePreview';
 import type { UseWorkspaceFilesResult } from '../../../hooks/useWorkspaceFiles';
 import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
 import type { PendingAudioAttachment } from '../lib/audioAttachments';
 import { activeMentions, mentionPreviewPath, type WorkspaceFileRef } from '../lib/mentions';
-import type { SubmitPayload } from '../lib/submitTurn';
+import type { PromptPayload, SubmitPayload } from '../lib/submitTurn';
 import { parseTerminalPassthrough } from '../lib/terminalPassthrough';
 import { useImageAttachments } from './useImageAttachments';
 import { useMentionMenu } from './useMentionMenu';
@@ -20,6 +27,7 @@ export interface UseComposerControllerArgs {
   availableCommands: AvailableCommand[];
   configOptions: readonly SessionConfigOption[];
   isPrompting: boolean;
+  onSteer?: (payload: PromptPayload) => Promise<void>;
   imagesSupported: boolean;
   audioSupported: boolean;
   onSubmit: (payload: SubmitPayload) => Promise<void>;
@@ -34,6 +42,7 @@ export function useComposerController({
   availableCommands,
   configOptions,
   isPrompting,
+  onSteer,
   imagesSupported,
   audioSupported,
   onSubmit,
@@ -52,6 +61,15 @@ export function useComposerController({
   } = audioAttachments;
   const [sendFailed, setSendFailed] = useState(false);
   const audioClipCount = audioAttachments.clips.length;
+  const submitting = useRef(false);
+  const hasAttachments = imageAttachments.images.length > 0 || audioClipCount > 0;
+  const hasContent = !!draft.trim() || hasAttachments;
+  const firstWord = draft.trimStart().split(/\s+/, 1)[0];
+  const canQueue =
+    !!onSteer &&
+    hasContent &&
+    !availableCommands.some(command => firstWord === '/' + command.name) &&
+    !parseTerminalPassthrough(draft);
 
   const mentionMenu = useMentionMenu({
     draft,
@@ -101,11 +119,8 @@ export function useComposerController({
     async (e: FormEvent) => {
       e.preventDefault();
       if (mentionMenu.open || slashMenu.acceptOnSubmit()) return;
-      // Stop is its own button (ChatComposer.onStop); a submit while the turn
-      // is running must not send the draft as a second prompt.
-      if (isPrompting) return;
       const text = draft.trim();
-      if (!text) return;
+      if (!hasContent || submitting.current || (isPrompting && !canQueue)) return;
       setSendFailed(false);
 
       const command = parseTerminalPassthrough(draft);
@@ -121,7 +136,7 @@ export function useComposerController({
         return;
       }
 
-      if (audioClipCount > 0 && !approveAudio(text)) return;
+      if (hasAttachments && !approveAudio(text)) return;
 
       const turnMentions = activeMentions(draft, mentions);
       const turnImages = takeImages();
@@ -132,8 +147,10 @@ export function useComposerController({
         turnAudio = takeAudio();
         return turnAudio;
       };
+      submitting.current = true;
       try {
-        await onSubmit({
+        const send = isPrompting && onSteer ? onSteer : onSubmit;
+        await send({
           kind: 'prompt',
           text,
           mentions: turnMentions,
@@ -141,20 +158,25 @@ export function useComposerController({
           takeAudio: takeTurnAudio,
         });
       } catch {
-        setDraft(text);
-        setMentions(turnMentions);
+        setDraft(current => [text, current].filter(Boolean).join('\n'));
+        setMentions(current => [...turnMentions, ...current]);
         restoreImages(turnImages);
         restoreAudio(turnAudio);
         setSendFailed(true);
+      } finally {
+        submitting.current = false;
       }
     },
     [
       slashMenu,
       mentionMenu.open,
       isPrompting,
+      canQueue,
+      hasContent,
+      hasAttachments,
+      onSteer,
       draft,
       mentions,
-      audioClipCount,
       approveAudio,
       takeImages,
       restoreImages,
@@ -166,6 +188,9 @@ export function useComposerController({
 
   return {
     draft,
+    canQueue,
+    hasContent,
+    hasAttachments,
     setDraft,
     slashMenu,
     mentionMenu,

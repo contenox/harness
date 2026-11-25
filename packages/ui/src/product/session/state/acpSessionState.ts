@@ -7,6 +7,7 @@ import type {
   RequestPermissionRequest,
   SessionConfigOption,
   StopReason,
+  SteeringStatus,
   TerminalOutputPayload,
   ToolCallContent,
   ToolCallEvent,
@@ -32,6 +33,7 @@ export interface AcpChatMessage {
   images?: ImagePart[];
   audio?: AudioPart[];
   droppedContent?: string[];
+  delivery?: SteeringStatus;
   streaming?: boolean;
   thinking?: string;
   thinkingStreaming?: boolean;
@@ -128,7 +130,15 @@ export const initialAcpSessionState: AcpSessionState = {
 export type AcpSessionAction =
   | { type: "session_reset"; sessionId: string | null }
   | { type: "event_seq"; seq: number }
-  | { type: "user_message_chunk"; id: string; text: string; image?: ImagePart; audio?: AudioPart }
+  | {
+      type: "user_message_chunk";
+      id: string;
+      text: string;
+      image?: ImagePart;
+      audio?: AudioPart;
+      attachmentIndex?: number;
+    }
+  | { type: "steering_message"; id: string; text: string; status: SteeringStatus }
   | {
       type: "message_chunk";
       id: string;
@@ -164,6 +174,12 @@ function ensureItem(
   return [...items, turnId !== undefined ? { kind, id, turnId } : { kind, id }];
 }
 
+function withAttachment<T>(existing: T[] = [], part: T, index = existing.length): T[] {
+  const parts = existing.slice();
+  parts[Math.min(index, parts.length)] = part;
+  return parts;
+}
+
 function upsertMessage(
   messages: Record<string, AcpChatMessage>,
   id: string,
@@ -173,6 +189,7 @@ function upsertMessage(
     thinking?: string;
     image?: ImagePart;
     audio?: AudioPart;
+    attachmentIndex?: number;
     missionAsk?: MissionAsk;
   },
   activeTurn: boolean,
@@ -184,11 +201,11 @@ function upsertMessage(
     next.streaming = activeTurn;
   }
   if (patch.image !== undefined) {
-    next.images = [...(next.images ?? []), patch.image];
+    next.images = withAttachment(next.images, patch.image, patch.attachmentIndex);
     next.streaming = activeTurn;
   }
   if (patch.audio !== undefined) {
-    next.audio = [...(next.audio ?? []), patch.audio];
+    next.audio = withAttachment(next.audio, patch.audio, patch.attachmentIndex);
     next.streaming = activeTurn;
   }
   if (patch.missionAsk !== undefined) {
@@ -201,11 +218,17 @@ function upsertMessage(
   return { ...messages, [id]: next };
 }
 
-function endStreaming(messages: Record<string, AcpChatMessage>): Record<string, AcpChatMessage> {
+function endStreaming(
+  messages: Record<string, AcpChatMessage>,
+  cancelled = false,
+): Record<string, AcpChatMessage> {
   let changed = false;
   const next: Record<string, AcpChatMessage> = {};
   for (const [id, m] of Object.entries(messages)) {
-    if (m.streaming || m.thinkingStreaming) {
+    if (cancelled && m.delivery === "queued") {
+      changed = true;
+      next[id] = { ...m, delivery: "undelivered" };
+    } else if (m.streaming || m.thinkingStreaming) {
       changed = true;
       next[id] = { ...m, streaming: false, thinkingStreaming: false };
     } else {
@@ -242,18 +265,33 @@ export function acpSessionReducer(
     case "session_reset":
       return { ...initialAcpSessionState, sessionId: action.sessionId };
 
+    case "steering_message": {
+      const previous = state.messages[action.id];
+      if (previous?.delivery && previous.delivery !== "queued") return state;
+      const delivered = action.status === "delivered";
+      return {
+        ...state,
+        userMessages: state.userMessages + (previous ? 0 : 1),
+        activeTurnMessageId: delivered ? null : state.activeTurnMessageId,
+        items: ensureItem(state.items, "message", action.id),
+        messages: {
+          ...(delivered ? endStreaming(state.messages) : state.messages),
+          [action.id]: {
+            ...previous,
+            id: action.id,
+            role: "user",
+            text: action.text,
+            delivery: action.status,
+          },
+        },
+      };
+    }
     case "user_message_chunk":
       return {
         ...state,
         userMessages: state.userMessages + (state.messages[action.id] ? 0 : 1),
         items: ensureItem(state.items, "message", action.id),
-        messages: upsertMessage(
-          state.messages,
-          action.id,
-          "user",
-          { text: action.text, image: action.image, audio: action.audio },
-          state.isPrompting,
-        ),
+        messages: upsertMessage(state.messages, action.id, "user", action, false),
       };
 
     case "message_chunk": {
@@ -431,7 +469,7 @@ export function acpSessionReducer(
         isPrompting: false,
         stopReason: action.stopReason,
         pendingPermission: null,
-        messages: endStreaming(state.messages),
+        messages: endStreaming(state.messages, action.stopReason === "cancelled"),
       };
 
     case "prompt_error": {

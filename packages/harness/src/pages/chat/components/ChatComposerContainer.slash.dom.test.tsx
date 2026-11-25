@@ -12,6 +12,7 @@ import {
   type FakeDomHandle,
 } from '../../../test/fakeDom';
 import type { ComposerFiles } from '../hooks/useComposerController';
+import type { PromptPayload } from '../lib/submitTurn';
 import { ChatComposerContainer } from './ChatComposerContainer';
 
 const COMMANDS: AvailableCommand[] = [
@@ -61,7 +62,9 @@ const FILES = {
   readFile: async () => null,
 } as unknown as ComposerFiles;
 
-async function renderComposer() {
+async function renderComposer(
+  overrides: Partial<React.ComponentProps<typeof ChatComposerContainer>> = {},
+) {
   const root = createRoot(dom.container as unknown as Element);
   await act(async () => {
     root.render(
@@ -78,6 +81,7 @@ async function renderComposer() {
         footerEnd: null,
         onSubmit: async () => {},
         onCancel: () => {},
+        ...overrides,
       }),
     );
   });
@@ -87,6 +91,76 @@ async function renderComposer() {
 }
 
 describe('ChatComposerContainer slash pickers', () => {
+  it('can retry an audio-only correction from the composer after admission fails', async () => {
+    vi.stubGlobal(
+      'FileReader',
+      class {
+        result = 'data:audio/wav;base64,d2F2';
+        onload?: () => void;
+        readAsDataURL() {
+          this.onload?.();
+        }
+      },
+    );
+    const sent: string[][] = [];
+    const onSteer = async (payload: PromptPayload) => {
+      expect(payload.text).toBe('');
+      sent.push(payload.takeAudio().map(clip => clip.data));
+      if (sent.length === 1) throw new Error('disconnected');
+    };
+    const { root } = await renderComposer({ isPrompting: true, audioSupported: true, onSteer });
+    try {
+      const input = findAll(
+        dom.container,
+        n => n.getAttribute?.('data-testid') === 'composer-audio-input',
+      )[0];
+      Object.assign(input, {
+        type: 'file',
+        files: [{ name: 'voice.wav', type: 'audio/wav', size: 3 }],
+      });
+      await act(async () => {
+        fireEvent(dom.container, input, 'change');
+      });
+      const form = findAll(dom.container, n => n.tagName === 'FORM')[0];
+      for (let attempt = 0; attempt < 2; attempt++) {
+        expect(
+          findAll(dom.container, n => n.tagName === 'BUTTON' && n.textContent === 'Queue message'),
+        ).toHaveLength(1);
+        await act(async () => {
+          fireEvent(dom.container, form, 'submit');
+        });
+      }
+      expect(sent).toEqual([['d2F2'], ['d2F2']]);
+      expect(
+        findAll(dom.container, n => n.tagName === 'BUTTON' && n.textContent === 'Queue message'),
+      ).toHaveLength(0);
+    } finally {
+      vi.unstubAllGlobals();
+      await act(async () => root.unmount());
+    }
+  });
+  it('queues a correction during a turn and keeps Stop available', async () => {
+    const onSteer = vi.fn(async () => {});
+    const onCancel = vi.fn();
+    const { root, textarea } = await renderComposer({ isPrompting: true, onSteer, onCancel });
+    typeInto(dom.container, textarea, 'Focus on Windows', fn => {
+      void act(fn);
+    });
+    expect(
+      findAll(dom.container, n => n.tagName === 'BUTTON' && n.textContent === 'Queue message'),
+    ).toHaveLength(1);
+    expect(findAll(dom.container, n => n.getAttribute?.('aria-label') === 'Stop')).toHaveLength(1);
+    const form = findAll(dom.container, n => n.tagName === 'FORM')[0];
+    await act(async () => {
+      fireEvent(dom.container, form, 'submit');
+    });
+    expect(onSteer).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ kind: 'prompt', text: 'Focus on Windows' }),
+    );
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(textarea.value).toBe('');
+    await act(async () => root.unmount());
+  });
   it('lists commands for /', async () => {
     const { root, textarea } = await renderComposer();
     typeInto(dom.container, textarea, '/', fn => {

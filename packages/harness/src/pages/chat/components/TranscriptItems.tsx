@@ -19,6 +19,7 @@ import {
   type ToolCallCardProps,
 } from '@contenox/ui';
 import { approvalDecisionFromMeta, toolCallError } from '@contenox/ui/session-lib';
+import { MessageAudio } from '@contenox/ui/session-ui';
 import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
@@ -225,6 +226,10 @@ const TranscriptMessage = memo(function TranscriptMessage({
         </ChatTranscriptStreamingPlaceholder>
       ) : null}
 
+      {message.delivery && (
+        <small className="text-muted-foreground">{t(`acp_chat.steer_${message.delivery}`)}</small>
+      )}
+      <MessageAudio message={message} />
       {message.missionAsk && (
         <MissionAskCard key={message.missionAsk.askId} ask={message.missionAsk} />
       )}

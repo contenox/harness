@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from '
 import { useTranslation } from 'react-i18next';
 import type { AvailableCommand, SessionConfigOption } from '../../../lib/acp';
 import { useComposerController, type ComposerFiles } from '../hooks/useComposerController';
-import type { SubmitPayload } from '../lib/submitTurn';
+import type { PromptPayload, SubmitPayload } from '../lib/submitTurn';
 import { ComposerFooterStart } from './ComposerFooter';
 import { ComposerImageAttachments, ImageAttachmentNoticeView } from './ComposerImageAttachments';
 import { MentionMenu } from './MentionMenu';
@@ -30,6 +30,7 @@ export interface ChatComposerContainerProps {
   /** The only thing that leaves the composer: a finished turn. Rejects if it could not be sent. */
   onSubmit: (payload: SubmitPayload) => Promise<void>;
   onCancel: () => void;
+  onSteer?: (payload: PromptPayload) => Promise<void>;
   onOpenMedia?: () => void;
   onOpenConnectors?: () => void;
 }
@@ -52,6 +53,7 @@ export function ChatComposerContainer({
   footerEnd,
   onSubmit,
   onCancel,
+  onSteer,
   onOpenMedia,
   onOpenConnectors,
 }: ChatComposerContainerProps) {
@@ -61,6 +63,7 @@ export function ChatComposerContainer({
     availableCommands,
     configOptions,
     isPrompting,
+    onSteer,
     imagesSupported,
     audioSupported,
     onSubmit,
@@ -119,7 +122,7 @@ export function ChatComposerContainer({
         isPending={false}
         disabled={disabled}
         canSubmit={ready || isPrompting}
-        allowEmptyMessage={isPrompting}
+        allowEmptyMessage={isPrompting || c.hasAttachments}
         submitLabel={isPrompting ? t('acp_chat.composer_stop') : t('acp_chat.composer_send')}
         submitIcon={
           isPrompting ? <Square className="size-3.5 fill-current" aria-hidden /> : undefined
@@ -158,7 +161,20 @@ export function ChatComposerContainer({
             onOpenConnectors={onOpenConnectors}
           />
         }
-        footerEnd={footerEnd}
+        footerEnd={
+          <>
+            {footerEnd}
+            {isPrompting && onSteer && c.hasContent && (
+              <button
+                type="submit"
+                disabled={disabled || !c.canQueue}
+                title={t('acp_chat.steer_hint')}
+                className="hover:bg-muted rounded px-2 py-1 text-sm font-medium disabled:opacity-50">
+                {t('acp_chat.steer_queue')}
+              </button>
+            )}
+          </>
+        }
         textareaProps={{
           onKeyDown: c.handleKeyDown,
           onKeyUp: c.trackCaret,

@@ -201,7 +201,10 @@ export const ChatSessionTab = memo(function ChatSessionTab({
             availableCommands={chat.availableCommands}
             configOptions={chat.configOptions}
             isPrompting={session.isPrompting}
-            disabled={session.pendingPermission != null || (!session.isPrompting && !ready)}
+            onSteer={chat.steer}
+            disabled={
+              (session.pendingPermission != null && !chat.steer) || (!session.isPrompting && !ready)
+            }
             ready={ready}
             imagesSupported={chat.imagesSupported}
             audioSupported={chat.audioSupported}

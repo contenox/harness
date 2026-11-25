@@ -130,7 +130,7 @@ function MessageImages({ message }: { message: AcpChatMessage }) {
   );
 }
 
-function MessageAudio({ message }: { message: AcpChatMessage }) {
+export function MessageAudio({ message }: { message: AcpChatMessage }) {
   const clips = message.audio ?? [];
   if (clips.length === 0) return null;
   const dropped = message.droppedContent?.includes(DROPPED_KIND_AUDIO) === true;

@@ -119,14 +119,18 @@ function setup(): Harness {
   return { controller, wsStore, sessionsStore, sessStore, sliceOf, transports };
 }
 
-async function connectReady(h: Harness): Promise<void> {
+async function connectReady(h: Harness, steering = false): Promise<void> {
   const p = h.controller.connect();
   await flushMicrotasks();
   const initReq = h.transports[0].lastSent();
   h.transports[0].feed({
     jsonrpc: '2.0',
     id: initReq.id,
-    result: { protocolVersion: 1, agentInfo: { name: 'contenox' } },
+    result: {
+      protocolVersion: 1,
+      agentInfo: { name: 'contenox' },
+      _meta: { 'contenox.sessionSteering': steering },
+    },
   });
   await flushMicrotasks();
   const listReq = h.transports[0].lastSent();
@@ -828,6 +832,127 @@ describe('acpWorkspaceController: focusEmptyTab() (additive empty surface — th
 });
 
 describe('acpWorkspaceController: sendPrompt()', () => {
+  it('keeps the prompt active and updates a queued correction in place', async () => {
+    const h = setup();
+    await connectReady(h, true);
+    const sid = await createSession(h, 'session-a');
+    h.controller.sendPrompt('Read the logs');
+    const wire = h.transports[0];
+    const prompt = wire.lastSent();
+    const image = { id: 'photo', name: 'dialog.png', mimeType: 'image/png', data: 'cG5n' };
+    const audio = { id: 'voice', name: 'voice.wav', mimeType: 'audio/wav', data: 'd2F2' };
+    const admission = h.controller.steer(
+      sid,
+      'Focus on Windows',
+      [{ name: 'release.log', path: 'release.log' }],
+      [image],
+      [audio],
+    );
+    const steer = wire.lastSent();
+    expect(steer).toMatchObject({
+      method: '_contenox/session/steer',
+      params: {
+        sessionId: sid,
+        prompt: [
+          { type: 'text', text: 'Focus on Windows' },
+          { type: 'resource_link', name: 'release.log', uri: 'release.log' },
+          { type: 'image', mimeType: image.mimeType, data: image.data },
+          { type: 'audio', mimeType: audio.mimeType, data: audio.data },
+        ],
+      },
+    });
+    wire.feed({ jsonrpc: '2.0', id: steer.id, result: { queued: true } });
+    await admission;
+    for (const status of ['queued', 'delivered', 'delivered']) {
+      wire.feed({
+        jsonrpc: '2.0',
+        method: 'session/update',
+        params: {
+          sessionId: sid,
+          update: {
+            sessionUpdate: 'user_message_chunk',
+            messageId: 'steer-1',
+            content: { type: 'text', text: 'Focus on Windows' },
+            _meta: { 'contenox.delivery': status },
+          },
+        },
+      });
+    }
+    for (const type of ['image', 'audio'] as const) {
+      const { mimeType, data } = type === 'image' ? image : audio;
+      const chunk = {
+        sessionUpdate: 'user_message_chunk',
+        messageId: 'steer-1',
+        content: { type, mimeType, data },
+        _meta: { 'contenox.attachmentIndex': 0 },
+      };
+      for (let replay = 0; replay < 2; replay++)
+        wire.feed({
+          jsonrpc: '2.0',
+          method: 'session/update',
+          params: { sessionId: sid, update: chunk },
+        });
+    }
+    expect(h.sliceOf(sid)?.messages['steer-1']).toMatchObject({
+      images: [{ mimeType: image.mimeType, data: image.data }],
+      audio: [{ mimeType: audio.mimeType, data: audio.data }],
+      text: 'Focus on Windows',
+      delivery: 'delivered',
+    });
+    expect(h.sliceOf(sid)?.userMessages).toBe(2);
+    expect(h.sliceOf(sid)?.isPrompting).toBe(true);
+    wire.feed({ jsonrpc: '2.0', id: prompt.id, result: { stopReason: 'end_turn' } });
+    await flushMicrotasks();
+    expect(h.sliceOf(sid)?.isPrompting).toBe(false);
+  });
+
+  it('starts a late follow-up in its original session after the prompt response', async () => {
+    const h = setup();
+    await connectReady(h, true);
+    const sid = await createSession(h, 'session-a');
+    h.controller.sendPrompt('Read the logs');
+    const wire = h.transports[0];
+    const prompt = wire.lastSent();
+    const admission = h.controller.steer(
+      sid,
+      '',
+      [],
+      [],
+      [{ id: 'clip', name: 'voice', data: 'd2F2', mimeType: 'audio/wav' }],
+    );
+    wire.feed({ jsonrpc: '2.0', id: wire.lastSent().id, result: { queued: false } });
+    await openTab(h, 'session-b');
+    wire.feed({ jsonrpc: '2.0', id: prompt.id, result: { stopReason: 'end_turn' } });
+    await admission;
+    expect(wire.lastSent()).toMatchObject({
+      method: 'session/prompt',
+      params: { sessionId: sid, prompt: [{ type: 'audio', data: 'd2F2', mimeType: 'audio/wav' }] },
+    });
+    expect(h.sliceOf(sid)?.isPrompting).toBe(true);
+    expect(h.sliceOf('session-b')?.userMessages).toBe(0);
+    wire.feed({ jsonrpc: '2.0', id: wire.lastSent().id, result: { stopReason: 'end_turn' } });
+  });
+
+  it('retries admission if the first prompt was still starting', async () => {
+    const h = setup();
+    await connectReady(h, true);
+    const sid = await createSession(h, 'session-a');
+    h.controller.sendPrompt('Read the logs');
+    const wire = h.transports[0];
+    const prompt = wire.lastSent();
+    const admission = h.controller.steer(sid, 'Focus on Windows');
+    const early = wire.lastSent();
+    wire.feed({ jsonrpc: '2.0', id: early.id, result: { queued: false } });
+    feedAgentChunk(wire, sid, 'answer', 'Reading');
+    await flushMicrotasks();
+    const retry = wire.lastSent();
+    expect(retry.method).toBe('_contenox/session/steer');
+    expect(retry.id).not.toBe(early.id);
+    wire.feed({ jsonrpc: '2.0', id: retry.id, result: { queued: true } });
+    await admission;
+    expect(wire.sent.filter(f => f.method === 'session/prompt')).toHaveLength(1);
+    wire.feed({ jsonrpc: '2.0', id: prompt.id, result: { stopReason: 'end_turn' } });
+  });
   it('no-ops with no active session', async () => {
     const h = setup();
     await connectReady(h);

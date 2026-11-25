@@ -16,6 +16,8 @@ export type SubmitPayload =
       takeAudio: () => PendingAudioAttachment[];
     };
 
+export type PromptPayload = Extract<SubmitPayload, { kind: 'prompt' }>;
+
 export interface SubmitTurnDeps {
   /** Null on the empty (new chat) surface. */
   sessionId: string | null;
